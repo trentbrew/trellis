@@ -6,17 +6,36 @@
  * structural metadata; the blob store stores byte-exact content.
  *
  * Storage format: `.trellis/blobs/{hash}` files on disk.
+ * Optional display metadata: `.trellis/blob-meta.json` (name / contentType).
  * Future: migrate to SQLite `blobs(hash TEXT PRIMARY KEY, content BLOB)`.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import {
+  createReadStream as fsCreateReadStream,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+  type ReadStream,
+} from 'fs';
 import { join } from 'path';
+
+export type BlobMeta = {
+  name?: string;
+  contentType?: string;
+  uploadedAt?: number;
+};
+
+type BlobMetaMap = Record<string, BlobMeta>;
 
 export class BlobStore {
   private blobDir: string;
+  private metaPath: string;
 
   constructor(trellisDir: string) {
     this.blobDir = join(trellisDir, 'blobs');
+    this.metaPath = join(trellisDir, 'blob-meta.json');
     if (!existsSync(this.blobDir)) {
       mkdirSync(this.blobDir, { recursive: true });
     }
@@ -66,6 +85,32 @@ export class BlobStore {
   }
 
   /**
+   * Byte length of a stored blob, or null if not found. Cheap stat — does not
+   * read the content. Used to answer Range/Content-Length without loading bytes.
+   */
+  size(hash: string): number | null {
+    const blobPath = join(this.blobDir, hash);
+    if (!existsSync(blobPath)) return null;
+    return statSync(blobPath).size;
+  }
+
+  /**
+   * Stream a blob (optionally a single byte range) from disk without buffering
+   * the whole file into memory. `start`/`end` are inclusive byte offsets, matching
+   * HTTP Range semantics. Returns null if the blob does not exist.
+   */
+  createReadStream(
+    hash: string,
+    range?: { start: number; end: number },
+  ): ReadStream | null {
+    const blobPath = join(this.blobDir, hash);
+    if (!existsSync(blobPath)) return null;
+    return range
+      ? fsCreateReadStream(blobPath, { start: range.start, end: range.end })
+      : fsCreateReadStream(blobPath);
+  }
+
+  /**
    * Compute SHA-256 hash of content (async).
    */
   async hash(content: Buffer | Uint8Array): Promise<string> {
@@ -86,15 +131,43 @@ export class BlobStore {
   }
 
   /**
+   * List stored blob hashes (sha256 hex filenames). Order is filesystem order.
+   */
+  listHashes(): string[] {
+    try {
+      const { readdirSync } = require('fs');
+      const HASH_RE = /^[a-f0-9]{64}$/;
+      return (readdirSync(this.blobDir) as string[]).filter((f) =>
+        HASH_RE.test(f),
+      );
+    } catch {
+      return [];
+    }
+  }
+
+  /** Optional display metadata (filename / mime) keyed by content hash. */
+  getMeta(hash: string): BlobMeta | undefined {
+    return this.readMetaMap()[hash];
+  }
+
+  setMeta(hash: string, meta: BlobMeta): void {
+    const map = this.readMetaMap();
+    const prev = map[hash] ?? {};
+    map[hash] = {
+      ...prev,
+      ...meta,
+      // Prefer a real filename over a later empty overwrite.
+      name: meta.name?.trim() || prev.name,
+      contentType: meta.contentType?.trim() || prev.contentType,
+    };
+    writeFileSync(this.metaPath, JSON.stringify(map));
+  }
+
+  /**
    * Returns the number of blobs stored.
    */
   count(): number {
-    try {
-      const { readdirSync } = require('fs');
-      return readdirSync(this.blobDir).length;
-    } catch {
-      return 0;
-    }
+    return this.listHashes().length;
   }
 
   /**
@@ -113,6 +186,17 @@ export class BlobStore {
       }, 0);
     } catch {
       return 0;
+    }
+  }
+
+  private readMetaMap(): BlobMetaMap {
+    try {
+      if (!existsSync(this.metaPath)) return {};
+      const parsed = JSON.parse(readFileSync(this.metaPath, 'utf8')) as unknown;
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+      return parsed as BlobMetaMap;
+    } catch {
+      return {};
     }
   }
 
