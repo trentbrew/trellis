@@ -1,0 +1,82 @@
+{
+  "version": "3.2.5",
+  "mode": "execute",
+  "ok": false,
+  "startedAt": "2026-07-11T02:17:14.913Z",
+  "finishedAt": "2026-07-11T02:21:37.755Z",
+  "failedStep": "trellis-docs-commit",
+  "preflight": {
+    "shipTmp": "/Users/trentbrew/TURTLE/Projects/TRELLIS/trellis-node/rug/tmp",
+    "disk": {
+      "ok": true,
+      "availMb": 11462,
+      "path": "/System/Volumes/Data"
+    },
+    "diskShipTmp": {
+      "ok": true,
+      "availMb": 11462,
+      "path": "/Users/trentbrew/TURTLE/Projects/TRELLIS/trellis-node/rug/tmp"
+    }
+  },
+  "steps": [
+    {
+      "id": "preflight",
+      "label": "preflight (disk + tmp)",
+      "status": "ok",
+      "startedAt": "2026-07-11T02:17:15.284Z",
+      "durationMs": 412
+    },
+    {
+      "id": "ship-check",
+      "label": "ship-check",
+      "status": "ok",
+      "startedAt": "2026-07-11T02:17:15.696Z",
+      "durationMs": 32342
+    },
+    {
+      "id": "test",
+      "label": "npm run test:ship",
+      "status": "ok",
+      "startedAt": "2026-07-11T02:17:48.038Z",
+      "durationMs": 44012
+    },
+    {
+      "id": "build",
+      "label": "npm run build",
+      "status": "ok",
+      "startedAt": "2026-07-11T02:18:32.050Z",
+      "durationMs": 143026
+    },
+    {
+      "id": "sync-downstream",
+      "label": "sync-downstream",
+      "status": "ok",
+      "startedAt": "2026-07-11T02:20:55.076Z",
+      "durationMs": 1369
+    },
+    {
+      "id": "kernel-commit",
+      "label": "kernel commit",
+      "status": "ok",
+      "startedAt": "2026-07-11T02:20:56.446Z",
+      "durationMs": 10991
+    },
+    {
+      "id": "create-trellis-commit",
+      "label": "create-trellis commit",
+      "status": "ok",
+      "startedAt": "2026-07-11T02:21:07.439Z",
+      "durationMs": 187
+    },
+    {
+      "id": "trellis-docs-commit",
+      "label": "trellis-docs commit",
+      "status": "fail",
+      "startedAt": "2026-07-11T02:21:07.626Z",
+      "error": "Command failed: git commit -m \"docs: trellis 3.2.5 — agent coordination guide and changelog\"",
+      "tail": "Command failed: git commit -m \"docs: trellis 3.2.5 — agent coordination guide and changelog\"",
+      "durationMs": 30129
+    }
+  ],
+  "totalSteps": 9
+}
