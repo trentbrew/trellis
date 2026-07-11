@@ -261,7 +261,7 @@ try {
     if (!skipCommit) {
       gitCommit(
         trellisDocs,
-        `Docs: trellis ${version} — agent coordination guide and changelog.`,
+        `docs: trellis ${version} — agent coordination guide and changelog`,
         ['content/', 'app/data/site-nav.ts'],
       );
     }
