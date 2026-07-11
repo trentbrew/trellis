@@ -153,6 +153,27 @@ describe('decompose', () => {
     expect(result.addFacts).toContainEqual({ e: 'milestone:abc', a: 'toOpHash', v: 'trellis:op:end' });
   });
 
+  test('issue claim release retracts concrete claim facts', () => {
+    const result = decompose(
+      makeOp('vcs:issueClaimRelease', {
+        issueId: 'TRL-42',
+        claimedLaneId: 'lane:executor',
+        claimedSessionId: 'cursor-tab-1',
+        claimedAt: '2026-03-29T00:00:00.000Z',
+      }),
+    );
+
+    expect(result.deleteFacts).toEqual([
+      { e: 'issue:TRL-42', a: 'claimedLaneId', v: 'lane:executor' },
+      { e: 'issue:TRL-42', a: 'claimedSessionId', v: 'cursor-tab-1' },
+      {
+        e: 'issue:TRL-42',
+        a: 'claimedAt',
+        v: '2026-03-29T00:00:00.000Z',
+      },
+    ]);
+  });
+
   test('returns empty result for op without vcs payload', () => {
     const op: VcsOp = {
       hash: 'trellis:op:test',

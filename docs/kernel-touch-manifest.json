@@ -1,0 +1,72 @@
+{
+  "version": "3.2.5",
+  "description": "Downstream consumers that must stay in sync with trellis kernel releases.",
+  "consumers": [
+    {
+      "id": "create-trellis",
+      "path": "../create-trellis",
+      "sync": [
+        {
+          "from": "skills/trellis-vcs/SKILL.md",
+          "to": "templates/_shared/skills/trellis-vcs/SKILL.md"
+        },
+        {
+          "from": "skills/trellis-graph/SKILL.md",
+          "to": "templates/_shared/skills/trellis-graph/SKILL.md"
+        }
+      ],
+      "pins": [
+        {
+          "glob": "templates/*/package.json",
+          "field": "dependencies.trellis",
+          "expect": "^3.2.5"
+        }
+      ],
+      "packageVersion": "0.2.0"
+    },
+    {
+      "id": "trellis-docs",
+      "path": "../../Packages/trellis-docs/www",
+      "pages": [
+        "content/8.changelog.md",
+        "content/4.cli/2.commands.md",
+        "content/6.integrations/3.git-bridge.md",
+        "content/2.guides/18.agent-coordination.md",
+        "content/2.guides/5.issue-tracking.md",
+        "app/data/site-nav.ts"
+      ],
+      "versionTable": {
+        "file": "content/8.changelog.md",
+        "kernelExpect": "3.2.5"
+      }
+    },
+    {
+      "id": "turtlecode-ide",
+      "path": "../../Packages/turtlecode/ide",
+      "sync": [
+        {
+          "from": "skills/trellis-vcs/SKILL.md",
+          "to": ".opencode/skill/trellis-vcs/SKILL.md"
+        }
+      ],
+      "actions": [
+        "script/sync-trellis-core.ts --pack"
+      ],
+      "files": [
+        "script/trellis-env.sh",
+        "RELEASE-3.2.5.md"
+      ]
+    },
+    {
+      "id": "cursor-global",
+      "path": "~/.cursor/hooks",
+      "note": "Desk-only — not npm-shipped. Verified by trellis-coordination-smoke.mjs",
+      "files": [
+        "trellis-session-lane.mjs",
+        "trellis-session-start.mjs",
+        "trellis-bind-role.mjs",
+        "trellis-lane-guard.mjs"
+      ]
+    }
+  ]
+}

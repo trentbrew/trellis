@@ -18,10 +18,12 @@ function setupTestRepo() {
 
 describe('TrellisVcsEngine', () => {
   beforeEach(() => {
+    process.env.TRELLIS_NO_SNAPSHOT = '1';
     setupTestRepo();
   });
 
   afterEach(() => {
+    delete process.env.TRELLIS_NO_SNAPSHOT;
     rmSync(TEST_DIR, { recursive: true, force: true });
   });
 

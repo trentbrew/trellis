@@ -11,12 +11,20 @@
 
 ---
 
-Most agent frameworks pour everything into the reasoning engine and treat state as an afterthought. Trellis inverts that. It is the **system of record for decisions**: a persistent, queryable, auditable memory where every thought, tool call, and file change is an immutable operation in a causal graph. It runs fully offline — servers may relay, accelerate, or back up, but never own your state.
+Most agent frameworks pour everything into the reasoning engine and treat state
+as an afterthought. Trellis inverts that. It is the **system of record for
+decisions**: a persistent, queryable, auditable memory where every thought, tool
+call, and file change is an immutable operation in a causal graph. It runs fully
+offline — servers may relay, accelerate, or back up, but never own your state.
 
-- **Durable memory** — every op is content-addressed and never rewritten or deleted.
-- **Explainable by default** — decision traces record not just *what* happened, but *why*.
-- **Safe to explore** — branch state to try multiple paths, then merge or discard.
-- **Realtime** — one write updates current state, durable history, and every live subscriber.
+- **Durable memory** — every op is content-addressed and never rewritten or
+  deleted.
+- **Explainable by default** — decision traces record not just _what_ happened,
+  but _why_.
+- **Safe to explore** — branch state to try multiple paths, then merge or
+  discard.
+- **Realtime** — one write updates current state, durable history, and every
+  live subscriber.
 
 ## Install
 
@@ -55,10 +63,13 @@ npm create trellis@latest
 ```
 
 ```ts
-import { defineType } from 'trellis/schema';
-import { z } from 'zod';
+import { defineType } from "trellis/schema";
+import { z } from "zod";
 
-export const Task = defineType('Task', { title: z.string(), done: z.boolean() });
+export const Task = defineType("Task", {
+  title: z.string(),
+  done: z.boolean(),
+});
 ```
 
 ```svelte
@@ -69,26 +80,28 @@ export const Task = defineType('Task', { title: z.string(), done: z.boolean() })
 </script>
 ```
 
-A single mutation produces current state, durable history, and a realtime push to every subscriber — the same write path.
+A single mutation produces current state, durable history, and a realtime push
+to every subscriber — the same write path.
 
 ## API surface
 
 The `trellis` package exposes focused subpaths:
 
-| Import | Purpose |
-| --- | --- |
-| `trellis/client` | Local + remote client SDK |
-| `trellis/schema` | `defineType`, typed entities, EQL-S queries |
-| `trellis/{react,vue,svelte}/typed` | Live, schema-typed reads + mutations |
-| `trellis/realtime` | Presence, chat, CRDT text |
-| `trellis/cms` | Read content collections over HTTP |
-| `trellis/server` | HTTP + WebSocket DB server |
+| Import                             | Purpose                                     |
+| ---------------------------------- | ------------------------------------------- |
+| `trellis/client`                   | Local + remote client SDK                   |
+| `trellis/schema`                   | `defineType`, typed entities, EQL-S queries |
+| `trellis/{react,vue,svelte}/typed` | Live, schema-typed reads + mutations        |
+| `trellis/realtime`                 | Presence, chat, CRDT text                   |
+| `trellis/cms`                      | Read content collections over HTTP          |
+| `trellis/server`                   | HTTP + WebSocket DB server                  |
 
 ## Documentation
 
 - **[trellis.computer](https://trellis.computer)** — full documentation
 - **[The Story](./docs/THE-STORY.md)** — why Trellis exists
-- **[Architecture](./docs/ARCHITECTURE.md)** · **[Design spec](./docs/DESIGN.md)** · **[Roadmap](./docs/ROADMAP.md)**
+- **[Architecture](./docs/ARCHITECTURE.md)** ·
+  **[Design spec](./docs/DESIGN.md)** · **[Roadmap](./docs/ROADMAP.md)**
 
 ## Develop
 
@@ -97,6 +110,19 @@ bun install   # requires Bun ≥ 1.0
 bun test
 bun run build
 ```
+
+Global `trellis` is the published npm package. To opt into this checkout without
+replacing it:
+
+```bash
+just alias-cli install   # adds `trellis-dev` to ~/.zshrc
+just build
+trellis-dev test --review -p /path/to/repo
+# or: just trellis-dev …
+```
+
+Source without rebuild: `just trellis …`. Systemwide local (replaces global):
+`just link-cli` / `just unlink-cli`.
 
 ## License
 

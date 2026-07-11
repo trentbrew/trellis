@@ -35,10 +35,32 @@
  * @module trellis/server
  */
 
-import type { Server as HttpServer, IncomingMessage } from 'node:http';
+import type {
+  Server as HttpServer,
+  IncomingMessage,
+  ServerResponse,
+} from 'node:http';
 import type { Duplex } from 'node:stream';
 import { RelayPersistence } from '../realtime/relay-persistence.js';
 import type { RealtimeMessage } from '../realtime/types.js';
+import type { BlobStore } from '../vcs/blob-store.js';
+import {
+  createBlobRequestHandler,
+  type BlobRequestHandlerOptions,
+} from './blob-handler.js';
+
+export {
+  createBlobRequestHandler,
+  BLOB_CORS,
+} from './blob-handler.js';
+export type { BlobRequestHandlerOptions } from './blob-handler.js';
+
+/** Mark set on `IncomingMessage` when the blob handler claims the request. */
+export const TRELLIS_BLOB_CLAIMED = Symbol.for('trellis.blobClaimed');
+
+export function isBlobRequestClaimed(req: IncomingMessage): boolean {
+  return Boolean((req as IncomingMessage & { [TRELLIS_BLOB_CLAIMED]?: boolean })[TRELLIS_BLOB_CLAIMED]);
+}
 
 /** Minimal structural view of a `ws` socket (avoids a hard `ws` type dep). */
 interface RelaySocket {
@@ -72,6 +94,19 @@ export interface RealtimeRelayOptions {
   replayGraceMs?: number;
   /** Injectable `ws` WebSocketServer ctor for tests. */
   WebSocketServerImpl?: unknown;
+  /**
+   * Optional BlobStore factory for content-addressed blob serving
+   * (`GET`/`HEAD /blob/:sha256`, `PUT /blob`). Pass `false` or omit to leave
+   * the blob surface off (default). Mirrors {@link persistence} injection.
+   */
+  blobStore?: false | (() => BlobStore);
+  /** Reject PUT bodies larger than this. Default 64 MiB → 413. */
+  maxBlobBytes?: number;
+  /**
+   * Gate blob writes. Return false → 401. Default: allow all.
+   * Production embedders should pass a real check.
+   */
+  authorizeBlobWrite?: BlobRequestHandlerOptions['authorizeBlobWrite'];
 }
 
 export interface RealtimeRelay {
@@ -93,6 +128,22 @@ const RELAY_HEALTH_CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
 } as const;
+
+function resolveBlobStore(
+  blobStore: RealtimeRelayOptions['blobStore'],
+): BlobStore | null {
+  if (blobStore === false || blobStore == null) return null;
+  return blobStore();
+}
+
+function blobHandlerOpts(
+  opts: RealtimeRelayOptions,
+): BlobRequestHandlerOptions {
+  return {
+    maxBlobBytes: opts.maxBlobBytes,
+    authorizeBlobWrite: opts.authorizeBlobWrite,
+  };
+}
 
 /**
  * Map an upgrade path to its room, or `null` if this relay shouldn't claim it.
@@ -125,10 +176,26 @@ export async function attachRealtimeRelay(
       ? null
       : (opts.persistence ?? (() => new RelayPersistence()));
 
+  const store = resolveBlobStore(opts.blobStore);
+  const handleBlob = store
+    ? createBlobRequestHandler(store, blobHandlerOpts(opts))
+    : null;
+
+  // Prepend so blob routes win over an embedder's catch-all. Embedders must
+  // skip writing when `res.writableEnded` (see node-adapter).
+  const onRequest = handleBlob
+    ? (req: IncomingMessage, res: ServerResponse): void => {
+        if (handleBlob(req, res)) {
+          (req as IncomingMessage & { [TRELLIS_BLOB_CLAIMED]?: boolean })[
+            TRELLIS_BLOB_CLAIMED
+          ] = true;
+        }
+      }
+    : null;
+  if (onRequest) server.prependListener('request', onRequest);
+
   const Wss = (opts.WebSocketServerImpl ??
-    (await import('ws')).WebSocketServer) as new (o: {
-    noServer: boolean;
-  }) => {
+    (await import('ws')).WebSocketServer) as new (o: { noServer: boolean }) => {
     handleUpgrade(
       req: IncomingMessage,
       socket: Duplex,
@@ -166,7 +233,12 @@ export async function attachRealtimeRelay(
     if (!st.persistence) return;
     const messages = st.persistence.buildReplay();
     if (messages.length === 0) return;
-    const frame: RealtimeMessage = { v: 1, t: 'replay', from: 'relay', messages };
+    const frame: RealtimeMessage = {
+      v: 1,
+      t: 'replay',
+      from: 'relay',
+      messages,
+    };
     ws.send(JSON.stringify(frame));
   };
 
@@ -184,8 +256,7 @@ export async function attachRealtimeRelay(
     };
 
     // Fallback for when the socket opens before the UI mounts subscribers.
-    const graceTimer =
-      graceMs > 0 ? setTimeout(deliverReplay, graceMs) : null;
+    const graceTimer = graceMs > 0 ? setTimeout(deliverReplay, graceMs) : null;
     graceTimer?.unref?.();
 
     ws.on('message', (data: unknown, isBinary: boolean) => {
@@ -242,6 +313,7 @@ export async function attachRealtimeRelay(
     close: () =>
       new Promise<void>((resolve) => {
         server.off('upgrade', onUpgrade);
+        if (onRequest) server.off('request', onRequest);
         for (const st of rooms.values()) {
           for (const ws of st.clients) {
             try {
@@ -273,10 +345,10 @@ export interface StandaloneRealtimeRelay extends RealtimeRelay {
 }
 
 /**
- * Spin up a standalone relay hub on its own HTTP server. The HTTP surface is a
- * health endpoint only (`200` on `/`, `404` elsewhere); the relay lives on the
- * WebSocket upgrade path. For embedding in an existing app server, use
- * {@link attachRealtimeRelay} instead.
+ * Spin up a standalone relay hub on its own HTTP server. The HTTP surface is
+ * health (`/` / `/health`) plus optional blob routes when `blobStore` is set;
+ * the relay lives on the WebSocket upgrade path. For embedding in an existing
+ * app server, use {@link attachRealtimeRelay} instead.
  *
  *   const relay = await createRealtimeRelay({ port: 8231 });
  *   // ws://localhost:8231/rt        → room 'default'
@@ -290,9 +362,17 @@ export async function createRealtimeRelay(
   const path = opts.path ?? '/rt';
   const port = opts.port ?? 8231;
   const hostname = opts.hostname ?? '0.0.0.0';
+  const store = resolveBlobStore(opts.blobStore);
+  // Standalone owns the request listener — don't also prepend via attach.
+  const handleBlob = store
+    ? createBlobRequestHandler(store, blobHandlerOpts(opts))
+    : null;
 
   const server = createServer((req, res) => {
+    if (handleBlob?.(req, res)) return;
+
     const reqPath = (req.url ?? '/').split('?')[0];
+
     if (reqPath === '/' || reqPath === '/health') {
       if (req.method === 'OPTIONS') {
         res.writeHead(204, RELAY_HEALTH_CORS);
@@ -308,10 +388,16 @@ export async function createRealtimeRelay(
         return;
       }
     }
+
     res.writeHead(404).end('not found');
   });
 
-  const relay = await attachRealtimeRelay(server, opts);
+  // Blob routes already handled above; skip attach's prepend to avoid double PUT.
+  const { blobStore: _blob, ...relayOpts } = opts;
+  const relay = await attachRealtimeRelay(server, {
+    ...relayOpts,
+    blobStore: false,
+  });
 
   await new Promise<void>((resolve) => server.listen(port, hostname, resolve));
   const addr = server.address();

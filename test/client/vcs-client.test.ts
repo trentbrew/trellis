@@ -13,6 +13,21 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function waitFor(
+  fn: () => boolean | Promise<boolean>,
+  timeoutMs = 2000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await fn()) return;
+    await sleep(10);
+  }
+  // Final check
+  if (!(await fn())) {
+    throw new Error(`waitFor condition not met within ${timeoutMs}ms`);
+  }
+}
+
 beforeEach(() => {
   if (existsSync(TMP)) rmSync(TMP, { recursive: true });
   mkdirSync(REPO_PATH, { recursive: true });
@@ -138,9 +153,10 @@ describe('TrellisClient (room sync)', () => {
     clientB.subscribe('issues', (issues) => bUpdates.push(issues));
 
     await clientA.createIssue('Fix auth', { lane: 'lane-a' });
-    await sleep(150);
-
-    expect(clientB.listIssues().some((i) => i.title === 'Fix auth')).toBe(true);
+    // Poll instead of fixed sleep: async crypto in the sync pipeline
+    // (verifyVcsOpHash → crypto.subtle.digest) yields to the event loop,
+    // and the debounced push runs with `void`, so the timing is non-deterministic.
+    await waitFor(() => clientB.listIssues().some((i) => i.title === 'Fix auth'));
     expect(bUpdates.length).toBeGreaterThan(1);
 
     clientA.close();

@@ -72,3 +72,6 @@ export type {
   RealtimeMessage,
   RealtimeTransport,
 } from './types.js';
+
+export { createBlobClient } from './blob-client.js';
+export type { BlobClient, BlobClientOptions } from './blob-client.js';

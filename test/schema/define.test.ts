@@ -82,6 +82,27 @@ describe('defineType → SchemaDefinition', () => {
       cardinality: 'many',
     });
   });
+
+  test('fieldSync sets PropertyValueSpecification.sync (ADR 0018)', () => {
+    const Transform = defineType(
+      'Transform',
+      {
+        position: z.tuple([z.number(), z.number(), z.number()]),
+        scale: z.tuple([z.number(), z.number(), z.number()]),
+      },
+      {
+        fieldSync: {
+          position: 'realtime',
+          scale: 'durable',
+        },
+      },
+    );
+    const f = Object.fromEntries(
+      Transform.definition.fields.map((x) => [x.name, x]),
+    );
+    expect(f.position.sync).toBe('realtime');
+    expect(f.scale.sync).toBe('durable');
+  });
 });
 
 describe('InferType', () => {

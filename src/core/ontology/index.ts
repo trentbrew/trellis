@@ -8,6 +8,7 @@
 export type {
   PropertyType,
   OntologyTier,
+  FieldSyncTier,
   PropertyValueSpecification,
   RelationConfig,
   RollupConfig,
@@ -25,6 +26,14 @@ export type {
   ValidationError,
   ValidationResult,
 } from './types.js';
+
+export {
+  effectiveFieldSync,
+  filterDurableAttributes,
+  findSchemaForType,
+  RealtimeFieldError,
+  EntityConflictError,
+} from './sync-policy.js';
 
 // Re-export Atom for convenience
 export type { Atom } from '../store/eav-store.js';

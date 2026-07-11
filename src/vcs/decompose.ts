@@ -50,6 +50,27 @@ function pickLinks(input: unknown): Link[] {
   });
 }
 
+function claimRetractionFacts(
+  entityId: string,
+  vcs: NonNullable<VcsOp['vcs']>,
+): Fact[] {
+  const facts: Fact[] = [];
+  if (vcs.claimedLaneId) {
+    facts.push({ e: entityId, a: 'claimedLaneId', v: vcs.claimedLaneId });
+  }
+  if (vcs.claimedSessionId) {
+    facts.push({
+      e: entityId,
+      a: 'claimedSessionId',
+      v: vcs.claimedSessionId,
+    });
+  }
+  if (vcs.claimedAt) {
+    facts.push({ e: entityId, a: 'claimedAt', v: vcs.claimedAt });
+  }
+  return facts;
+}
+
 /**
  * Decomposes a VcsOp into primitive store operations.
  */
@@ -366,6 +387,7 @@ export function decompose(op: VcsOp): DecomposedOp {
       if (vcs.pauseNote) {
         result.addFacts.push({ e: eid, a: 'pauseNote', v: vcs.pauseNote });
       }
+      result.deleteFacts.push(...claimRetractionFacts(eid, vcs));
       break;
     }
 
@@ -387,6 +409,31 @@ export function decompose(op: VcsOp): DecomposedOp {
         { e: eid, a: 'status', v: 'closed' },
         { e: eid, a: 'closedAt', v: op.timestamp },
       );
+      result.deleteFacts.push(...claimRetractionFacts(eid, vcs));
+      break;
+    }
+
+    case 'vcs:issueClaim': {
+      if (!vcs.issueId || !vcs.claimedLaneId) break;
+      const eid = issueEntityId(vcs.issueId);
+      result.addFacts.push(
+        { e: eid, a: 'claimedLaneId', v: vcs.claimedLaneId },
+        { e: eid, a: 'claimedAt', v: op.timestamp },
+      );
+      if (vcs.claimedSessionId) {
+        result.addFacts.push({
+          e: eid,
+          a: 'claimedSessionId',
+          v: vcs.claimedSessionId,
+        });
+      }
+      break;
+    }
+
+    case 'vcs:issueClaimRelease': {
+      if (!vcs.issueId) break;
+      const eid = issueEntityId(vcs.issueId);
+      result.deleteFacts.push(...claimRetractionFacts(eid, vcs));
       break;
     }
 
@@ -419,6 +466,13 @@ export function decompose(op: VcsOp): DecomposedOp {
           v: vcs.criterionCommand,
         });
       }
+      if (vcs.criterionSuite) {
+        result.addFacts.push({
+          e: ceid,
+          a: 'suite',
+          v: vcs.criterionSuite,
+        });
+      }
       result.addLinks.push({
         e1: ceid,
         a: 'criterionOf',
@@ -444,6 +498,56 @@ export function decompose(op: VcsOp): DecomposedOp {
         });
       }
       result.addFacts.push({ e: ceid, a: 'lastRunAt', v: op.timestamp });
+      break;
+    }
+
+    case 'vcs:testRun': {
+      if (!vcs.testRunId) break;
+      const rid = vcs.testRunId;
+      result.addFacts.push(
+        { e: rid, a: 'type', v: 'TestRun' },
+        { e: rid, a: 'createdAt', v: op.timestamp },
+        { e: rid, a: 'createdBy', v: op.agentId },
+      );
+      if (vcs.testRunStatus) {
+        result.addFacts.push({ e: rid, a: 'status', v: vcs.testRunStatus });
+      }
+      if (vcs.testRunSuite) {
+        result.addFacts.push({ e: rid, a: 'suite', v: vcs.testRunSuite });
+      }
+      if (vcs.testRunCommand) {
+        result.addFacts.push({ e: rid, a: 'command', v: vcs.testRunCommand });
+      }
+      if (vcs.testRunOutput) {
+        result.addFacts.push({ e: rid, a: 'lastOutput', v: vcs.testRunOutput });
+      }
+      if (vcs.testRunExitCode !== undefined) {
+        result.addFacts.push({
+          e: rid,
+          a: 'exitCode',
+          v: vcs.testRunExitCode,
+        });
+      }
+      if (vcs.testRunDurationMs !== undefined) {
+        result.addFacts.push({
+          e: rid,
+          a: 'durationMs',
+          v: vcs.testRunDurationMs,
+        });
+      }
+      if (vcs.testRunTrigger) {
+        result.addFacts.push({ e: rid, a: 'trigger', v: vcs.testRunTrigger });
+      }
+      if (vcs.laneId) {
+        result.addFacts.push({ e: rid, a: 'laneId', v: vcs.laneId });
+      }
+      if (vcs.issueId) {
+        result.addLinks.push({
+          e1: rid,
+          a: 'testRunOf',
+          e2: issueEntityId(vcs.issueId),
+        });
+      }
       break;
     }
 

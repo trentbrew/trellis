@@ -113,6 +113,47 @@ describe('Issue Primitives', () => {
     expect(engine.getIssue(orphanId)!.parentId).toBeUndefined();
   });
 
+  test('startIssue auto-attaches criteria from tests.json labels', async () => {
+    const dir = `/tmp/trellis-issue-ac-${Date.now()}`;
+    rmSync(dir, { recursive: true, force: true });
+    mkdirSync(join(dir, 'src'), { recursive: true });
+    writeFileSync(join(dir, 'src', 'index.ts'), 'export const x = 1;');
+
+    const engine = new TrellisVcsEngine({ rootPath: dir });
+    await engine.initRepo({ indexWorkspace: false });
+    writeFileSync(
+      join(dir, '.trellis', 'tests.json'),
+      JSON.stringify({
+        version: 1,
+        defaultSuite: 'unit',
+        suites: {
+          unit: { command: 'echo unit' },
+          e2e: { command: 'echo e2e' },
+        },
+        issueStart: {
+          default: [{ description: 'Unit tests pass', suite: 'unit' }],
+        },
+        issueLabels: {
+          'needs-e2e': [{ description: 'E2E suite passes', suite: 'e2e' }],
+        },
+      }),
+    );
+
+    const op = await engine.createIssue('E2E feature', {
+      labels: ['needs-e2e'],
+    });
+    const id = op.vcs!.issueId!;
+
+    await engine.startIssue(id, { lane: false });
+
+    const issue = engine.getIssue(id);
+    expect(issue!.criteria).toHaveLength(2);
+    expect(issue!.criteria[0].suite).toBe('unit');
+    expect(issue!.criteria[1].suite).toBe('e2e');
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
   test('startIssue sets in_progress, creates branch, auto-assigns', async () => {
     const engine = await initEngine();
 

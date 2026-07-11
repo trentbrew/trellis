@@ -30,6 +30,8 @@ import {
   runSpriteCopy,
   runSpriteExec,
   SPRITE_ENSURE_BUN_SH,
+  spriteStopServiceSh,
+  spriteStartServiceSh,
 } from './sprites.js';
 
 const GATEWAY_REMOTE_DIR = '/home/sprite/trellis-mcp-gateway';
@@ -132,22 +134,23 @@ export async function deployMcpGateway(
     );
   }
 
+  onProgress('Stopping previous gateway...');
+  await runSpriteExec(
+    name,
+    spriteStopServiceSh(GATEWAY_SERVICE, 'bun run gateway.js'),
+  );
+
   onProgress('Starting gateway (sprite-env service)...');
   const bun = bunPath.trim().split('\n').pop()!.trim();
   await runSpriteExec(
     name,
-    `
-export PATH="$HOME/.bun/bin:$PATH"
-ENV="/.sprite/bin/sprite-env"
-BUN="${bun}"
-$ENV services delete ${GATEWAY_SERVICE} 2>/dev/null || true
-$ENV services create ${GATEWAY_SERVICE} \\
-  --cmd "$BUN" \\
-  --args run,gateway.js \\
-  --dir ${GATEWAY_REMOTE_DIR} \\
-  --http-port ${listenPort} \\
-  --no-stream
-`.trim(),
+    spriteStartServiceSh({
+      service: GATEWAY_SERVICE,
+      bun,
+      script: 'gateway.js',
+      dir: GATEWAY_REMOTE_DIR,
+      port: listenPort,
+    }),
   );
 
   onProgress('Waiting for health check...');

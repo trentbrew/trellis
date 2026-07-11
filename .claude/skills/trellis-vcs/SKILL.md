@@ -74,10 +74,17 @@ This shows AST-level changes (symbolAdd, symbolRemove, symbolRename) instead of 
 trellis issue start TRL-1              # branch + lane (use --no-lane to skip)
 trellis lane enter <lane-id>
 trellis lane promote <lane-id>         # replay onto integration — do before close
+trellis lane promote <lane-id> --require-test   # gate on .trellis/tests.json promote.require
 export TRELLIS_LANE_ID=lane-…          # subprocess agents auto-enter
 ```
 
-**Worktree bind (3.2.3+):** add `"lanes": { "worktreeBind": true }` to `.trellis/config.json`. Lane create provisions `.trellis/worktrees/<shortId>/` — edit there, not the shared repo root. `lane enter` materializes lane file state into the worktree and rebinds the watcher.
+**Test runner:** `.trellis/tests.json` defines suites; `trellis test [suite]` emits `vcs:testRun` ops. Criteria can use `--suite` instead of raw commands. Runs are lane-worktree-aware when worktree bind is on.
+
+```bash
+trellis test --list
+trellis test unit
+trellis issue ac TRL-1 "Unit green" --suite unit
+```
 
 **Not the same as graph MCP `agent:<id>` lanes** — those attribute graph writes only.
 
@@ -106,6 +113,8 @@ trellis whereami checkpoint
 | `trellis garden list` | Show abandoned work clusters |
 | `trellis garden revive <id>` | Revive cluster into a branch |
 | `trellis lane create \| enter \| promote \| drop` | Agent lane lifecycle |
+| `trellis test [suite]` | Run `.trellis/tests.json` suites (`vcs:testRun` ops) |
+| `trellis issue check <id>` | Run acceptance criteria (lane worktree-aware) |
 | `trellis protocol send` | Record handoff envelope as child issue |
 | `trellis whereami` | Re-entry orientation dump |
 | `trellis watch` | Watch for file changes |
@@ -116,6 +125,7 @@ If the TrellisVCS MCP server is connected, use tool calls instead of CLI:
 - `trellis_status` / `trellis_log` / `trellis_files`
 - `trellis_milestone` / `trellis_branch`
 - `trellis_garden` / `trellis_diff`
+- `trellis_test` / `trellis_issue_check`
 - `trellis_parse` / `trellis_semantic_diff`
 
 ## Guidelines

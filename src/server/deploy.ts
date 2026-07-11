@@ -39,6 +39,8 @@ import {
   runSpriteCopy,
   runSpriteExec,
   SPRITE_ENSURE_BUN_SH,
+  SPRITE_STOP_TRELLIS_DB_SH,
+  spriteStartTrellisDbSh,
 } from './sprites.js';
 
 // ---------------------------------------------------------------------------
@@ -143,22 +145,16 @@ export async function deploy(opts: DeployOptions): Promise<DeployResult> {
   }
 
   // ── Step 7: Register Trellis DB as a Sprite service (survives hibernation) ─
+  // `services delete` alone does not reclaim the port if an orphaned bun process
+  // from a prior boot is still bound to 8080 — stop explicitly before recreate.
+  onProgress('Stopping previous server...');
+  await runSpriteExec(name, SPRITE_STOP_TRELLIS_DB_SH);
+
   onProgress('Starting server (sprite-env service)...');
   const bun = bunPath.trim().split('\n').pop()!.trim();
   await runSpriteExec(
     name,
-    `
-export PATH="$HOME/.bun/bin:$PATH"
-ENV="/.sprite/bin/sprite-env"
-BUN="${bun}"
-$ENV services delete trellis-db 2>/dev/null || true
-$ENV services create trellis-db \\
-  --cmd "$BUN" \\
-  --args run,server.js \\
-  --dir /home/sprite/trellis-db \\
-  --http-port ${listenPort} \\
-  --no-stream
-`.trim(),
+    spriteStartTrellisDbSh({ bun, port: listenPort }),
   );
 
   onProgress('Waiting for health check...');

@@ -37,6 +37,7 @@ import type { Atom } from '../core/store/eav-store.js';
 import type {
   AttrType,
   AttributeDef,
+  FieldSyncTier,
   OntologySchema,
   OntologyTier,
   PropertyType,
@@ -222,6 +223,8 @@ export interface DefineTypeOptions<
   title?: Extract<keyof Z, string>;
   relations?: R;
   computed?: C;
+  /** Per-field sync tier (ADR 0018). */
+  fieldSync?: Partial<Record<Extract<keyof Z, string>, FieldSyncTier>>;
   /** Defaults to 'user'. Core/system are reserved for shipped schemas. */
   tier?: OntologyTier;
   version?: string;
@@ -244,9 +247,11 @@ export function defineType<
   const computed = (opts.computed ?? {}) as C;
 
   const fields: PropertyValueSpecification[] = [
-    ...Object.entries(shape).map(([name, zt]) =>
-      zodToSpec(name, zt as z.ZodTypeAny, name === opts.title),
-    ),
+    ...Object.entries(shape).map(([name, zt]) => {
+      const spec = zodToSpec(name, zt as z.ZodTypeAny, name === opts.title);
+      const sync = opts.fieldSync?.[name as Extract<keyof Z, string>];
+      return sync ? { ...spec, sync } : spec;
+    }),
     ...Object.entries(relations).map(([name, r]) => relationToSpec(name, r)),
     ...Object.entries(computed).map(
       ([name, c]) => ({ name, required: false, ...c.spec }) as PropertyValueSpecification,

@@ -8,6 +8,7 @@ import { decompose } from './decompose.js';
 import { buildFileStateAtOp, type FileState } from './diff.js';
 import { threeWayTextMerge } from './merge.js';
 import { createVcsOp } from './ops.js';
+import type { GitSyncResult } from '../git/git-sync.js';
 import type { LaneMeta } from './lane.js';
 import type { VcsOp, VcsOpKind } from './types.js';
 
@@ -49,6 +50,7 @@ export interface LanePromoteResult extends LanePromotePlan {
   promoted: boolean;
   integrationOpsAppended?: number;
   completeOpHash?: string;
+  gitSync?: GitSyncResult;
 }
 
 export interface PlanLanePromoteParams {
@@ -70,6 +72,7 @@ const SKIP_PROMOTE_KINDS = new Set<string>([
   'vcs:lanePromoteStart',
   'vcs:lanePromoteComplete',
   'vcs:lanePromoteAbort',
+  'vcs:testRun',
 ]);
 
 const FILE_OP_KINDS = new Set<string>([

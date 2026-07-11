@@ -7,6 +7,7 @@
  */
 
 import type { AuthConfig } from './auth.js';
+import { roomMcpPathForUrl } from '../mcp/room-registry.js';
 
 export function oauthProtectedResourceMetadata(origin: string, resourcePath = '/mcp') {
   const resource = `${origin.replace(/\/$/, '')}${resourcePath}`;
@@ -21,8 +22,10 @@ export function oauthProtectedResourceMetadata(origin: string, resourcePath = '/
 export function oauthAuthorizationServerMetadata(
   origin: string,
   providers: string[] = ['google', 'github'],
+  resourcePath = '/mcp',
 ) {
   const base = origin.replace(/\/$/, '');
+  const mcpResource = `${base}${resourcePath.startsWith('/') ? resourcePath : `/${resourcePath}`}`;
   return {
     issuer: base,
     authorization_endpoint: `${base}/auth/oauth/google`,
@@ -32,7 +35,7 @@ export function oauthAuthorizationServerMetadata(
     response_types_supported: ['code'],
     grant_types_supported: ['authorization_code', 'password'],
     code_challenge_methods_supported: ['S256'],
-    mcp_resource: `${base}/mcp`,
+    mcp_resource: mcpResource,
     oauth_providers: providers.map((p) => ({
       name: p,
       authorization_endpoint: `${base}/auth/oauth/${p}`,
@@ -45,10 +48,12 @@ export function mcpServiceDocument(
   authConfig: AuthConfig,
 ): Record<string, unknown> {
   const base = origin.replace(/\/$/, '');
+  const mcpPath = roomMcpPathForUrl(base);
   return {
     name: 'trellis-room',
     version: '0.3.0',
-    mcp: `${base}/mcp`,
+    mcp: `${base}${mcpPath}`,
+    mcpSprites: `${base}/trellis/mcp`,
     mcpGateway: `${base}/gateway/mcp`,
     health: `${base}/health`,
     oauth: {

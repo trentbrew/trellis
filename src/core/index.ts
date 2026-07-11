@@ -75,6 +75,11 @@ export {
   validateEntity,
   validateStore,
   createValidationMiddleware,
+  effectiveFieldSync,
+  filterDurableAttributes,
+  findSchemaForType,
+  RealtimeFieldError,
+  EntityConflictError,
 } from './ontology/index.js';
 export {
   projectOntology,
@@ -85,6 +90,7 @@ export {
 export type {
   AttrType,
   AttributeDef,
+  FieldSyncTier,
   RelationDef,
   EntityDef,
   OntologySchema,

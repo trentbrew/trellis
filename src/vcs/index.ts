@@ -24,3 +24,5 @@ export * from './issue.js';
 export * from './op-log.js';
 export * from './idb-op-log.js';
 export * from './lane.js';
+export * from './test-manifest.js';
+export * from './test-runner.js';

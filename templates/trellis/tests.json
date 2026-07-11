@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "defaultSuite": "unit",
+  "suites": {
+    "unit": {
+      "description": "Unit tests",
+      "command": "npm test"
+    },
+    "e2e": {
+      "description": "End-to-end tests",
+      "command": "npx playwright test",
+      "timeoutMs": 600000
+    },
+    "browser-smoke": {
+      "description": "Live-tab smoke via Trellis extension",
+      "kind": "browser",
+      "command": "trellis browser verify browser-smoke",
+      "stepsFile": ".trellis/browser-suites/browser-smoke.json",
+      "timeoutMs": 30000
+    }
+  },
+  "promote": {
+    "require": ["unit"]
+  },
+  "issueStart": {
+    "default": [
+      { "description": "Unit tests pass", "suite": "unit" }
+    ]
+  },
+  "issueLabels": {
+    "needs-e2e": [
+      { "description": "E2E suite passes", "suite": "e2e" }
+    ]
+  },
+  "review": {
+    "check": "unit",
+    "e2e": "e2e"
+  }
+}

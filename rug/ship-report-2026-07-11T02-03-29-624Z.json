@@ -1,0 +1,82 @@
+{
+  "version": "3.2.5",
+  "mode": "dry-run",
+  "ok": true,
+  "startedAt": "2026-07-11T02:03:29.624Z",
+  "finishedAt": "2026-07-11T02:03:29.774Z",
+  "failedStep": null,
+  "preflight": {},
+  "steps": [
+    {
+      "id": "preflight",
+      "label": "preflight (disk + tmp)",
+      "status": "ok",
+      "startedAt": "2026-07-11T02:03:29.770Z",
+      "durationMs": 0
+    },
+    {
+      "id": "ship-check",
+      "label": "ship-check",
+      "status": "ok",
+      "startedAt": "2026-07-11T02:03:29.770Z",
+      "durationMs": 0
+    },
+    {
+      "id": "test",
+      "label": "npm run test:ship",
+      "status": "ok",
+      "startedAt": "2026-07-11T02:03:29.770Z",
+      "durationMs": 0
+    },
+    {
+      "id": "build",
+      "label": "npm run build",
+      "status": "ok",
+      "startedAt": "2026-07-11T02:03:29.770Z",
+      "durationMs": 1
+    },
+    {
+      "id": "sync-downstream",
+      "label": "sync-downstream",
+      "status": "ok",
+      "startedAt": "2026-07-11T02:03:29.771Z",
+      "durationMs": 0
+    },
+    {
+      "id": "kernel-commit",
+      "label": "kernel commit",
+      "status": "ok",
+      "startedAt": "2026-07-11T02:03:29.771Z",
+      "durationMs": 0
+    },
+    {
+      "id": "create-trellis-commit",
+      "label": "create-trellis commit",
+      "status": "ok",
+      "startedAt": "2026-07-11T02:03:29.771Z",
+      "durationMs": 0
+    },
+    {
+      "id": "trellis-docs-commit",
+      "label": "trellis-docs commit",
+      "status": "ok",
+      "startedAt": "2026-07-11T02:03:29.771Z",
+      "durationMs": 3
+    },
+    {
+      "id": "npm-publish",
+      "label": "npm publish (kernel + create-trellis)",
+      "status": "ok",
+      "startedAt": "2026-07-11T02:03:29.774Z",
+      "durationMs": 0
+    },
+    {
+      "id": "turtlecode-sync",
+      "label": "turtlecode sync + commit",
+      "status": "ok",
+      "startedAt": "2026-07-11T02:03:29.774Z",
+      "durationMs": 0
+    }
+  ],
+  "totalSteps": 9
+}

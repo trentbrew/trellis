@@ -31,6 +31,15 @@ export type {
   TrellisType,
 } from './define.js';
 
+export type { FieldSyncTier } from '../core/ontology/types.js';
+export {
+  effectiveFieldSync,
+  filterDurableAttributes,
+  findSchemaForType,
+  RealtimeFieldError,
+  EntityConflictError,
+} from '../core/ontology/sync-policy.js';
+
 // EQL-S query builders (shared by the typed read adapters)
 export {
   entitiesQuery,

@@ -1,0 +1,6 @@
+{
+  "status": 0,
+  "stdout": "\n RUN  v2.1.9 /Users/trentbrew/TURTLE/Projects/TRELLIS/trellis-node\n\n ✓ test/vcs/test-runner.test.ts (6 tests) 710ms\n\n Test Files  1 passed (1)\n      Tests  6 passed (6)\n   Start at  18:43:08\n   Duration  3.22s (transform 988ms, setup 0ms, collect 1.36s, tests 710ms, environment 0ms, prepare 112ms)\n\n",
+  "stderr": "",
+  "error": null
+}

@@ -4,6 +4,8 @@
 
 import type { Command } from 'commander';
 import chalk from 'chalk';
+import { existsSync } from 'fs';
+import { join } from 'path';
 import { TrellisVcsEngine } from '../engine.js';
 import type { LaneMeta } from '../vcs/lane.js';
 import * as lanePromoteMod from '../vcs/lane-promote.js';
@@ -105,6 +107,7 @@ export function registerLaneCommands(program: Command): void {
     .option('--from <branch>', 'Base branch (default: current)')
     .option('--to <branch>', 'Promotion target branch')
     .option('--issue <id>', 'Link to issue id')
+    .option('--session <id>', 'Bind to agent session (Cursor conversation id)')
     .option('--agent <agentId>', 'Agent attribution override')
     .option('--worktree <path>', 'Optional git worktree path (W5)')
     .option('-p, --path <path>', 'Repository path', '.')
@@ -117,6 +120,7 @@ export function registerLaneCommands(program: Command): void {
           fromBranch: opts.from,
           targetBranch: opts.to,
           issueId: opts.issue,
+          sessionId: opts.session,
           worktreePath: opts.worktree,
         });
 
@@ -128,6 +132,9 @@ export function registerLaneCommands(program: Command): void {
         }
         if (meta.issueId) {
           console.log(`  ${chalk.dim('Issue:')}    ${meta.issueId}`);
+        }
+        if (meta.sessionId) {
+          console.log(`  ${chalk.dim('Session:')}  ${meta.sessionId}`);
         }
         console.log(
           chalk.dim(`  Enter: trellis lane enter ${meta.id}  |  export TRELLIS_LANE_ID=${meta.id}`),
@@ -146,7 +153,37 @@ export function registerLaneCommands(program: Command): void {
     });
 
   laneCmd
-    .command('list')
+    .command('ensure')
+    .description('Find or create a session-scoped lane (Cursor tab isolation)')
+    .requiredOption('--session <id>', 'Session / conversation id')
+    .option('--issue <id>', 'Link to issue id')
+    .option('--enter', 'Enter the lane after ensure')
+    .option('-p, --path <path>', 'Repository path', '.')
+    .action(async (opts) => {
+      const rootPath = resolveRepoRoot(opts.path);
+      const engine = await openEngine(rootPath);
+
+      try {
+        const meta = await engine.ensureSessionLane({
+          sessionId: opts.session,
+          issueId: opts.issue,
+          enter: opts.enter,
+        });
+
+        console.log(chalk.green(`✓ Session lane: ${chalk.bold(meta.id)}`));
+        if (meta.worktreePath) {
+          console.log(`  ${chalk.dim('Worktree:')} ${meta.worktreePath}`);
+        }
+        console.log(
+          chalk.dim(`  export TRELLIS_LANE_ID=${meta.id}`),
+        );
+      } catch (err: unknown) {
+        console.error(chalk.red((err as Error).message));
+        process.exit(1);
+      }
+    });
+
+  laneCmd
     .description('List agent lanes')
     .option('--active', 'Show only active lanes')
     .option('--stale', 'Show only stale active lanes (lease expired or >24h)')
@@ -340,6 +377,8 @@ export function registerLaneCommands(program: Command): void {
     .option('--to <branch>', 'Target branch (default: lane target)')
     .option('--dry-run', 'Run conflict detection only; no writes')
     .option('--explain', 'Human-readable conflict report')
+    .option('--require-test', 'Run promote.require suites before promoting')
+    .option('--force-lock', 'Clear promote lock and proceed (use when lock is stale)')
     .option('-p, --path <path>', 'Repository path', '.')
     .action(async (id, opts) => {
       const rootPath = resolveRepoRoot(opts.path);
@@ -350,6 +389,8 @@ export function registerLaneCommands(program: Command): void {
           dryRun: opts.dryRun,
           explain: opts.explain,
           toBranch: opts.to,
+          requireTest: opts.requireTest,
+          forceLock: opts.forceLock,
         });
 
         if (opts.explain || opts.dryRun || !result.canPromote) {
@@ -362,6 +403,13 @@ export function registerLaneCommands(program: Command): void {
               `✓ Promoted ${chalk.bold(id)} — ${result.integrationOpsAppended ?? 0} integration ops`,
             ),
           );
+          if (result.gitSync?.committed) {
+            console.log(
+              `  ${chalk.dim('Git:')}      committed ${result.gitSync.commitHash?.slice(0, 12) ?? ''}`,
+            );
+          } else if (result.gitSync && !result.gitSync.committed) {
+            console.log(chalk.dim('  Git:      working tree already matches integration'));
+          }
         } else if (!opts.dryRun && !result.canPromote) {
           process.exit(1);
         } else if (opts.dryRun && !result.canPromote) {
@@ -372,6 +420,84 @@ export function registerLaneCommands(program: Command): void {
       } catch (err: unknown) {
         console.error(chalk.red((err as Error).message));
         process.exit(1);
+      }
+    });
+
+  laneCmd
+    .command('watch')
+    .description('Live lane dashboard in the browser (SSE)')
+    .option('-p, --path <path>', 'Repository path', '.')
+    .option('--port <port>', 'HTTP port', '3939')
+    .option('--poll <ms>', 'Snapshot poll interval (ms)', '1000')
+    .option('--no-open', 'Do not auto-open browser')
+    .action(async (opts) => {
+      const rootPath = resolveRepoRoot(opts.path);
+      const port = parseInt(opts.port, 10) || 3939;
+      const pollMs = parseInt(opts.poll, 10) || 1000;
+
+      const { startLanesDashboard } = await import('../ui/lanes-dashboard.js');
+
+      try {
+        const handle = await startLanesDashboard({ rootPath, port, pollMs });
+        const url = `http://localhost:${handle.port}/`;
+
+        console.log(chalk.green(`✓ Lane dashboard → ${chalk.bold(url)}`));
+        console.log(chalk.dim('  SSE stream: /api/lanes/stream'));
+        console.log(chalk.dim('  Press Ctrl+C to stop\n'));
+
+        if (opts.open !== false) {
+          const { exec } = await import('child_process');
+          const cmd =
+            process.platform === 'darwin'
+              ? 'open'
+              : process.platform === 'win32'
+                ? 'start'
+                : 'xdg-open';
+          exec(`${cmd} ${url}`);
+        }
+
+        process.on('SIGINT', () => {
+          handle.stop();
+          console.log(chalk.dim('\nDashboard stopped.'));
+          process.exit(0);
+        });
+      } catch (err: unknown) {
+        console.error(chalk.red((err as Error).message));
+        process.exit(1);
+      }
+    });
+
+  laneCmd
+    .command('lock-status')
+    .description('Show promote lock status for this repo')
+    .option('-p, --path <path>', 'Repository path', '.')
+    .action(async (opts) => {
+      const rootPath = resolveRepoRoot(opts.path);
+      const trellisDir = join(rootPath, '.trellis');
+      if (!existsSync(trellisDir)) {
+        console.log(chalk.dim('Not a Trellis workspace'));
+        process.exit(1);
+      }
+      const { getPromoteLockStatus } = await import('../vcs/promote-lock.js');
+      const status = getPromoteLockStatus(trellisDir);
+      if (!status.record) {
+        console.log(chalk.dim('No promote lock'));
+        return;
+      }
+      const rec = status.record;
+      if (status.locked) {
+        console.log(
+          chalk.yellow(
+            `Locked: lane ${rec.laneId} · pid ${rec.pid} · since ${rec.acquiredAt}`,
+          ),
+        );
+      } else if (status.stale) {
+        console.log(
+          chalk.dim(
+            `Stale lock: lane ${rec.laneId} · pid ${rec.pid} · since ${rec.acquiredAt}`,
+          ),
+        );
+        console.log(chalk.dim('  Use trellis lane promote <id> --force-lock to clear'));
       }
     });
 

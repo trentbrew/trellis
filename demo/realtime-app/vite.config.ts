@@ -14,10 +14,15 @@ const trellisWs = trellisApi.replace(/^http/, 'ws');
 
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
+	optimizeDeps: {
+		// Linked `trellis` dist updates without Vite invalidating prebundled deps.
+		exclude: ['trellis/client/sdk'],
+	},
 	ssr: {
 		noExternal: ['trellis', 'bits-ui', 'carbon-icons-svelte']
 	},
 	server: {
+		host: true,
 		fs: {
 			allow: [appRoot, repoRoot]
 		},

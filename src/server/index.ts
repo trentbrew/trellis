@@ -69,12 +69,17 @@ export type {
 export {
   attachRealtimeRelay,
   createRealtimeRelay,
+  createBlobRequestHandler,
+  BLOB_CORS,
+  isBlobRequestClaimed,
+  TRELLIS_BLOB_CLAIMED,
 } from '../realtime/relay-server.js';
 export type {
   RealtimeRelay,
   RealtimeRelayOptions,
   StandaloneRealtimeRelay,
   StandaloneRealtimeRelayOptions,
+  BlobRequestHandlerOptions,
 } from '../realtime/relay-server.js';
 
 // Import

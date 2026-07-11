@@ -1,0 +1,6 @@
+{
+  "steps": [
+    { "type": "visible", "selector": "body" },
+    { "type": "noConsoleErrors" }
+  ]
+}

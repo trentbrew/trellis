@@ -1,0 +1,55 @@
+
+ RUN  v2.1.9 /Users/trentbrew/TURTLE/Projects/TRELLIS/trellis-node
+
+ × test/vcs/op-log-perf.test.ts > JsonOpLog incremental append > incremental appends produce valid JSON reloadable from disk
+   → Unexpected token ',', ",
+  {
+    "... is not valid JSON
+ × test/vcs/op-log-perf.test.ts > JsonOpLog incremental append > second instance reconciles ops appended by another instance
+   → expected 1 to be 2 // Object.is equality
+ ✓ test/p4/lane-op-log.test.ts > LaneOpLog > two lane journals append concurrently without cross-contamination
+ ✓ test/vcs/op-log-perf.test.ts > JsonOpLog incremental append > incremental append is faster than full rewrite at scale 696ms
+ ✓ test/cli/issue-cli.test.ts > trellis issue CLI > lists issues without error
+ ✓ test/cli/issue-cli.test.ts > trellis issue CLI > creates, updates, describes, and adds acceptance criteria 1258ms
+ ✓ test/cli/issue-cli.test.ts > trellis issue CLI > surfaces errors for missing parent and empty update 674ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/vcs/op-log-perf.test.ts > JsonOpLog incremental append > incremental appends produce valid JSON reloadable from disk
+SyntaxError: Unexpected token ',', ",
+  {
+    "... is not valid JSON
+ ❯ test/vcs/op-log-perf.test.ts:43:10
+     41| 
+     42|     expect(log.count()).toBe(25);
+     43|     JSON.parse(readFileSync(logPath, 'utf-8'));
+       |          ^
+     44| 
+     45|     const reloaded = new JsonOpLog(logPath);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  test/vcs/op-log-perf.test.ts > JsonOpLog incremental append > second instance reconciles ops appended by another instance
+AssertionError: expected 1 to be 2 // Object.is equality
+
+- Expected
++ Received
+
+- 2
++ 1
+
+ ❯ test/vcs/op-log-perf.test.ts:64:30
+     62|     const reloaded = new JsonOpLog(logPath);
+     63|     reloaded.load();
+     64|     expect(reloaded.count()).toBe(2);
+       |                              ^
+     65|     expect(reloaded.readAll().map((o) => o.vcs?.decisionId)).toEqual([
+     66|       'decision:1',
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  2 failed | 5 passed (7)
+   Start at  19:05:10
+   Duration  4.47s (transform 999ms, setup 0ms, collect 1.63s, tests 3.30s, environment 1ms, prepare 774ms)
+

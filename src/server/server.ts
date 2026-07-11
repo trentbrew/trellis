@@ -14,6 +14,7 @@
  *   POST   /upload                     File upload → blob hash
  *   GET    /files/:hash                Download blob
  *   GET    /health                     Health check
+ *   GET    /cron/status                Cron scheduler probe (ADR 0019)
  *   GET    /admin/usage?tenant=<id>    Day-bucket usage (TURTLEDB_ADMIN_KEY)
  *
  * Auth:
@@ -38,6 +39,7 @@ import { fileURLToPath } from 'url';
 const __moduleDir =
   (import.meta as any).dir ?? dirname(fileURLToPath(import.meta.url));
 import { parseSimple } from '../core/query/index.js';
+import { RealtimeFieldError } from '../core/ontology/sync-policy.js';
 import {
   entityRecordToPlain,
   hydrateBindings,
@@ -76,6 +78,8 @@ import {
   oauthAuthorizationServerMetadata,
   oauthProtectedResourceMetadata,
 } from './mcp-oauth-metadata.js';
+import { requestPublicOrigin } from './public-origin.js';
+import { roomMcpPathForUrl } from '../mcp/room-registry.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -89,6 +93,11 @@ export interface ServerConfig {
   oauthProviders?: Record<string, import('./auth.js').OAuthProvider>;
   /** Mount a cross-browser presence relay at `/rt` on the same HTTP server. */
   presenceRelay?: boolean | { path?: string };
+  /**
+   * Graph-native cron (ADR 0019). Default: attach when `TRELLIS_CRON !== '0'`.
+   * Pass `false` to disable even when the env gate would allow it.
+   */
+  cron?: boolean | { tickMs?: number };
 }
 
 // ---------------------------------------------------------------------------
@@ -112,7 +121,10 @@ export async function startServer(
  */
 export const startServerCrossRuntime = startServer;
 
-function buildServerContext(opts: ServerConfig) {
+function buildServerContext(
+  opts: ServerConfig,
+  cronScheduler: import('../plugins/cron/scheduler.js').CronScheduler | null,
+) {
   const { pool, permissions, config } = opts;
   const port = opts.port ?? config.port ?? 3000;
 
@@ -145,6 +157,7 @@ function buildServerContext(opts: ServerConfig) {
         authConfig,
         config,
         oauthProviders: opts.oauthProviders ?? {},
+        cronScheduler,
       });
     } catch (err) {
       if (err instanceof PermissionError) {
@@ -181,10 +194,21 @@ function buildServerContext(opts: ServerConfig) {
 }
 
 async function startServerNode(opts: ServerConfig): Promise<TrellisHttpServer> {
-  const { port, subs, handleHttp } = buildServerContext(opts);
+  let cronScheduler: import('../plugins/cron/scheduler.js').CronScheduler | null =
+    null;
+  if (opts.cron !== false) {
+    const { attachCronToPool } = await import('../plugins/cron/plugin.js');
+    const tickMs =
+      typeof opts.cron === 'object' && opts.cron?.tickMs
+        ? opts.cron.tickMs
+        : undefined;
+    cronScheduler = attachCronToPool(opts.pool, { tickMs });
+  }
+
+  const { port, subs, handleHttp } = buildServerContext(opts, cronScheduler);
   const { startNodeServer } = await import('./node-adapter.js');
 
-  return startNodeServer({
+  const server = await startNodeServer({
     port,
     fetch: handleHttp,
     attachPresenceRelay: opts.presenceRelay,
@@ -218,6 +242,15 @@ async function startServerNode(opts: ServerConfig): Promise<TrellisHttpServer> {
       },
     },
   });
+
+  return {
+    port: server.port,
+    hostname: server.hostname,
+    stop(closeActiveConnections?: boolean) {
+      cronScheduler?.stop();
+      return server.stop(closeActiveConnections);
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -232,6 +265,7 @@ interface RouteCtx {
   authConfig: AuthConfig;
   config: TrellisDbConfig;
   oauthProviders: Record<string, import('./auth.js').OAuthProvider>;
+  cronScheduler: import('../plugins/cron/scheduler.js').CronScheduler | null;
 }
 
 function recordGraphIo(ctx: RouteCtx, tenantId: string | null): void {
@@ -322,15 +356,20 @@ async function route(
   }
 
   if (method === 'GET' && path === '/.well-known/oauth-protected-resource') {
-    return json(oauthProtectedResourceMetadata(url.origin));
+    const origin = requestPublicOrigin(req, url);
+    const mcpPath = roomMcpPathForUrl(origin);
+    return json(oauthProtectedResourceMetadata(origin, mcpPath));
   }
 
   if (method === 'GET' && path === '/.well-known/oauth-authorization-server') {
-    return json(oauthAuthorizationServerMetadata(url.origin));
+    const origin = requestPublicOrigin(req, url);
+    const mcpPath = roomMcpPathForUrl(origin);
+    return json(oauthAuthorizationServerMetadata(origin, undefined, mcpPath));
   }
 
   if (method === 'GET' && path === '/.well-known/trellis-mcp') {
-    return json(mcpServiceDocument(url.origin, ctx.authConfig));
+    const origin = requestPublicOrigin(req, url);
+    return json(mcpServiceDocument(origin, ctx.authConfig));
   }
 
   // ── Health ────────────────────────────────────────────────────────────────
@@ -349,6 +388,16 @@ async function route(
         authorizationServer: '/.well-known/oauth-authorization-server',
       },
     });
+  }
+
+  // ── Cron probe (ADR 0019) ─────────────────────────────────────────────────
+  if (method === 'GET' && path === '/cron/status') {
+    const status = ctx.cronScheduler?.getStatus() ?? {
+      running: false,
+      tickMs: 0,
+      jobCount: 0,
+    };
+    return json(status);
   }
 
   // ── Admin usage (TurtleDB Cloud C1 stub) ───────────────────────────────────
@@ -435,6 +484,7 @@ async function handleCreate(
 ): Promise<Response> {
   const body = (await req.json()) as {
     type: string;
+    id?: string;
     attributes?: Record<string, unknown>;
     links?: Array<{ attribute: string; targetEntityId: string }>;
   };
@@ -444,7 +494,21 @@ async function handleCreate(
   ctx.permissions?.assert(auth, body.type, 'create');
 
   const kernel = await ctx.pool.preload(tenantId);
-  const entityId = `${body.type.toLowerCase()}:${crypto.randomUUID()}`;
+
+  let entityId: string;
+  if (body.id !== undefined) {
+    const trimmed = String(body.id).trim();
+    if (!trimmed) {
+      return json({ error: 'id must be a non-empty string' }, 400);
+    }
+    if (kernel.getEntity(trimmed)) {
+      return json({ error: 'Conflict', id: trimmed }, 409);
+    }
+    entityId = trimmed;
+  } else {
+    entityId = `${body.type.toLowerCase()}:${crypto.randomUUID()}`;
+  }
+
   const attrs: Record<string, import('../core/store/eav-store.js').Atom> = {
     ...(body.attributes as any),
   };
@@ -452,16 +516,23 @@ async function handleCreate(
   if (auth.userId) attrs.createdBy = auth.userId;
   if (auth.tenantId) attrs.tenantId = auth.tenantId;
 
-  const result = await kernel.createEntity(
-    entityId,
-    body.type,
-    attrs,
-    body.links,
-  );
-  recordGraphIo(ctx, tenantId);
-  await ctx.subs.notify(tenantId);
+  try {
+    const result = await kernel.createEntity(
+      entityId,
+      body.type,
+      attrs,
+      body.links,
+    );
+    recordGraphIo(ctx, tenantId);
+    await ctx.subs.notify(tenantId);
 
-  return json({ id: entityId, op: result.op.hash }, 201);
+    return json({ id: entityId, op: result.op.hash }, 201);
+  } catch (err) {
+    if (err instanceof RealtimeFieldError) {
+      return json({ error: err.message, field: err.field }, 400);
+    }
+    throw err;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -501,7 +572,14 @@ async function handleUpdate(
   ctx.permissions?.assert(auth, entity.type, 'update', entity);
 
   const updates = (await req.json()) as Record<string, unknown>;
-  await kernel.updateEntity(id, updates as any);
+  try {
+    await kernel.updateEntity(id, updates as any);
+  } catch (err) {
+    if (err instanceof RealtimeFieldError) {
+      return json({ error: err.message, field: err.field }, 400);
+    }
+    throw err;
+  }
   recordGraphIo(ctx, tenantId);
   await ctx.subs.notify(tenantId);
 
@@ -729,7 +807,24 @@ async function handleCreateOntology(
     .listOntologies()
     .some((ont) => ont['@id'] === schema['@id']);
   if (exists) {
-    return json({ id: schema['@id'], registered: false, existed: true }, 200);
+    // Re-register syncs field specs (e.g. checkbox vs rich_text drift) so
+    // defineType hot-reload / StrictMode remounts actually take effect.
+    try {
+      kernel.updateOntology(schema['@id'], {
+        fields: schema.fields,
+        label: schema.label,
+        version: schema.version,
+        subClassOf: schema.subClassOf,
+      });
+      recordGraphIo(ctx, tenantId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return json({ error: 'Could not update schema', message: msg }, 400);
+    }
+    return json(
+      { id: schema['@id'], registered: false, existed: true, updated: true },
+      200,
+    );
   }
 
   try {
@@ -738,7 +833,21 @@ async function handleCreateOntology(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes('already exists')) {
-      return json({ id: schema['@id'], registered: false, existed: true }, 200);
+      try {
+        kernel.updateOntology(schema['@id'], {
+          fields: schema.fields,
+          label: schema.label,
+          version: schema.version,
+          subClassOf: schema.subClassOf,
+        });
+        recordGraphIo(ctx, tenantId);
+      } catch {
+        // fall through — still idempotent
+      }
+      return json(
+        { id: schema['@id'], registered: false, existed: true, updated: true },
+        200,
+      );
     }
     return json({ error: 'Could not register schema', message: msg }, 409);
   }
