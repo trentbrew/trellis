@@ -137,7 +137,7 @@ export async function deployMcpGateway(
   onProgress('Stopping previous gateway...');
   await runSpriteExec(
     name,
-    spriteStopServiceSh(GATEWAY_SERVICE, 'bun run gateway.js'),
+    spriteStopServiceSh(GATEWAY_SERVICE, '[t]rellis-gateway/gateway.js'),
   );
 
   onProgress('Starting gateway (sprite-env service)...');
