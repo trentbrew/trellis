@@ -80,10 +80,18 @@ import {
 } from './mcp-oauth-metadata.js';
 import { requestPublicOrigin } from './public-origin.js';
 import { roomMcpPathForUrl } from '../mcp/room-registry.js';
+import type { RealtimeRelayOptions } from '../realtime/relay-server.js';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+/**
+ * Presence / blob relay mount options for {@link startServer}.
+ * `true` → `{ path: '/rt' }` (WS only). Pass a full
+ * {@link RealtimeRelayOptions} object to enable `/blob` via `blobStore`.
+ */
+export type PresenceRelayOptions = boolean | RealtimeRelayOptions;
 
 export interface ServerConfig {
   port?: number;
@@ -92,7 +100,7 @@ export interface ServerConfig {
   permissions?: PermissionRegistry;
   oauthProviders?: Record<string, import('./auth.js').OAuthProvider>;
   /** Mount a cross-browser presence relay at `/rt` on the same HTTP server. */
-  presenceRelay?: boolean | { path?: string };
+  presenceRelay?: PresenceRelayOptions;
   /**
    * Graph-native cron (ADR 0019). Default: attach when `TRELLIS_CRON !== '0'`.
    * Pass `false` to disable even when the env gate would allow it.

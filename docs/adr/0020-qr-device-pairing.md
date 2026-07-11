@@ -6,10 +6,10 @@
 > **account** login (magic email) and from future **passkey unlock** (biometric
 > latch on local key material).
 
-**Status:** Accepted  
-**Date:** 2026-07-10  
-**Issue:** TRL-87 (proposal), TRL-88 (spec), TRL-92 (impl)  
-**Depends on:** `src/identity/` (Ed25519 + signing middleware)  
+**Status:** Accepted\
+**Date:** 2026-07-10\
+**Issue:** TRL-87 (proposal), TRL-88 (spec), TRL-92 (impl)\
+**Depends on:** `src/identity/` (Ed25519 + signing middleware)\
 **Supersedes:** nothing
 
 ## Context

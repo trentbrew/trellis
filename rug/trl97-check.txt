@@ -1,0 +1,27 @@
+Running criteria for TRL-97...
+
+  ✗ FAILED  npx vitest run test/server/presence-relay-blob.test.ts test/server/deploy-entrypoint-blob.test.ts
+    $ npx vitest run test/server/presence-relay-blob.test.ts test/server/deploy-entrypoint-blob.test.ts
+    RUN  v2.1.9 /Users/trentbrew/TURTLE/Projects/TRELLIS/trellis-node
+    
+    
+    filter:  test/server/presence-relay-blob.test.ts, test/server/deploy-entrypoint-blob.test.ts
+    include: test/**/*.test.ts
+  ✗ FAILED  npx vitest run test/server/presence-relay-blob.test.ts test/server/deploy-entrypoint-blob.test.ts
+    $ npx vitest run test/server/presence-relay-blob.test.ts test/server/deploy-entrypoint-blob.test.ts
+    RUN  v2.1.9 /Users/trentbrew/TURTLE/Projects/TRELLIS/trellis-node
+    
+    
+    filter:  test/server/presence-relay-blob.test.ts, test/server/deploy-entrypoint-blob.test.ts
+    include: test/**/*.test.ts
+  ○ SKIPPED  ServerConfig.presenceRelay and NodeAdapterOptions.attachPresenceRelay accept RealtimeRelayOptions (blobStore, maxBlobBytes, authorizeBlobWrite, path)
+  ○ SKIPPED  generateServerEntrypoint imports BlobStore and passes presenceRelay with blobStore at /home/sprite/trellis-db
+  ○ SKIPPED  Embedded startServer with blobStore: PUT sha256, HEAD 200, GET bytes; /rt WS works
+  ○ SKIPPED  presenceRelay:true leaves /blob 404; standalone blob-server.integration tests still pass
+  ○ SKIPPED  BlobStore re-exported from trellis/server
+  ✓ PASSED  Existing blob integration suite green
+    $ npx vitest run test/realtime/blob-server.integration.test.ts
+  ✓ PASSED  Typecheck green
+    $ npm run check
+
+2/9 criteria passing.
