@@ -1,0 +1,89 @@
+{
+  "version": "3.2.6",
+  "mode": "execute",
+  "ok": false,
+  "startedAt": "2026-07-11T07:58:19.017Z",
+  "finishedAt": "2026-07-11T07:58:59.086Z",
+  "failedStep": "npm-publish",
+  "preflight": {
+    "shipTmp": "/Users/trentbrew/TURTLE/Projects/TRELLIS/trellis-node/rug/tmp",
+    "disk": {
+      "ok": true,
+      "availMb": 19436,
+      "path": "/System/Volumes/Data"
+    },
+    "diskShipTmp": {
+      "ok": true,
+      "availMb": 19436,
+      "path": "/Users/trentbrew/TURTLE/Projects/TRELLIS/trellis-node/rug/tmp"
+    }
+  },
+  "steps": [
+    {
+      "id": "preflight",
+      "label": "preflight (disk + tmp)",
+      "status": "ok",
+      "startedAt": "2026-07-11T07:58:19.021Z",
+      "durationMs": 8
+    },
+    {
+      "id": "ship-check",
+      "label": "ship-check",
+      "status": "ok",
+      "startedAt": "2026-07-11T07:58:19.029Z",
+      "durationMs": 2118
+    },
+    {
+      "id": "test",
+      "label": "npm run test:ship",
+      "status": "ok",
+      "startedAt": "2026-07-11T07:58:21.147Z",
+      "durationMs": 2694
+    },
+    {
+      "id": "build",
+      "label": "npm run build",
+      "status": "ok",
+      "startedAt": "2026-07-11T07:58:23.841Z",
+      "durationMs": 4016
+    },
+    {
+      "id": "sync-downstream",
+      "label": "sync-downstream",
+      "status": "ok",
+      "startedAt": "2026-07-11T07:58:27.857Z",
+      "durationMs": 65
+    },
+    {
+      "id": "kernel-commit",
+      "label": "kernel commit",
+      "status": "ok",
+      "startedAt": "2026-07-11T07:58:27.922Z",
+      "durationMs": 240
+    },
+    {
+      "id": "create-trellis-commit",
+      "label": "create-trellis commit",
+      "status": "ok",
+      "startedAt": "2026-07-11T07:58:28.162Z",
+      "durationMs": 24
+    },
+    {
+      "id": "trellis-docs-commit",
+      "label": "trellis-docs commit",
+      "status": "ok",
+      "startedAt": "2026-07-11T07:58:28.186Z",
+      "durationMs": 35
+    },
+    {
+      "id": "npm-publish",
+      "label": "npm publish (kernel + create-trellis)",
+      "status": "fail",
+      "startedAt": "2026-07-11T07:58:28.221Z",
+      "error": "Command failed: npm publish",
+      "tail": "Command failed: npm publish",
+      "durationMs": 30865
+    }
+  ],
+  "totalSteps": 9
+}
