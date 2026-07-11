@@ -85,6 +85,9 @@ command -v bun
 /**
  * Stop a Sprite service and kill orphaned bun processes that may still hold
  * the HTTP port after `services delete`.
+ *
+ * Use a path-based pkill pattern (not `bun run server.js`) so the remote
+ * `bash -c '…pkill…'` command line does not match itself → exit 143.
  */
 export function spriteStopServiceSh(
   service: string,
@@ -94,8 +97,10 @@ export function spriteStopServiceSh(
 export PATH="$HOME/.bun/bin:$PATH"
 ENV="/.sprite/bin/sprite-env"
 $ENV services delete ${service} 2>/dev/null || true
+# Bracket trick / path pattern: avoid matching this bash -c argv.
 pkill -f "${pkillPattern}" 2>/dev/null || true
 sleep 2
+exit 0
 `.trim();
 }
 
@@ -124,7 +129,8 @@ $ENV services create ${service} \\
 /** Stop trellis-db room service (see spriteStopServiceSh). */
 export const SPRITE_STOP_TRELLIS_DB_SH = spriteStopServiceSh(
   'trellis-db',
-  'bun run server.js',
+  // Bracket so this bash -c argv does not match the pkill regex (else exit 143).
+  '[t]rellis-db/server.js',
 );
 
 /** Start trellis-db room service. */
