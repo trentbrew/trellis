@@ -22,13 +22,14 @@ Desk issue: **TRL-35** (W0), **TRL-36** (W1). Plan:
 
 ### Core VCS / EAV
 
-| ADR                                                 | Title                                  | Decision                                                                                     |
-| --------------------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------- |
-| [0008](./0008-store-op-decomposition.md)            | Store op decomposition                 | CMS facts materialize via `decompose()` for `vcs:storeAssert` / Retract / Link / Unlink      |
-| [0009](./0009-kernel-formula-syntax.md)             | Kernel vs CMS formula syntax           | Kernel `$fn` via `ExprEvaluator`; CMS `{field}` stays client-side (TRL-20)                   |
-| [0010](./0010-kernel-rollups-and-relations.md)      | Kernel rollups and relations           | `evaluateRollup` + relation projection in logic middleware                                   |
-| [0018](./0018-explicit-ids-and-field-sync-tiers.md) | Explicit entity ids + field sync tiers | Optional `id` on create; `durable`/`realtime`/`derived` on properties (**accepted**, TRL-63) |
-| [0019](./0019-graph-native-cron.md)                 | Graph-native cron                      | Durable CronJob/CronRun + in-process CronScheduler on `db serve` (**accepted**, TRL-77)      |
+| ADR                                                 | Title                                  | Decision                                                                                                  |
+| --------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| [0008](./0008-store-op-decomposition.md)            | Store op decomposition                 | CMS facts materialize via `decompose()` for `vcs:storeAssert` / Retract / Link / Unlink                   |
+| [0009](./0009-kernel-formula-syntax.md)             | Kernel vs CMS formula syntax           | Kernel `$fn` via `ExprEvaluator`; CMS `{field}` stays client-side (TRL-20)                                |
+| [0010](./0010-kernel-rollups-and-relations.md)      | Kernel rollups and relations           | `evaluateRollup` + relation projection in logic middleware                                                |
+| [0018](./0018-explicit-ids-and-field-sync-tiers.md) | Explicit entity ids + field sync tiers | Optional `id` on create; `durable`/`realtime`/`derived` on properties (**accepted**, TRL-63)              |
+| [0019](./0019-graph-native-cron.md)                 | Graph-native cron                      | Durable CronJob/CronRun + in-process CronScheduler on `db serve` (**accepted**, TRL-77)                   |
+| [0020](./0020-qr-device-pairing.md)                 | QR device pairing                      | Delegated device keys under Ed25519 identity; OOB QR/code; magic email non-root (**accepted**, TRL-87/88/92) |
 
 ### Product / explorer shell
 

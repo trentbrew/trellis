@@ -19,18 +19,20 @@ import { signMessage, verifySignature } from './identity.js';
 
 /**
  * Sign a VcsOp in-place using the given private key.
- * Sets `vcs.signature` and `vcs.signedBy` on the op.
+ * Sets `vcs.signature`, `vcs.signedBy`, and optionally `vcs.signedWith` (ADR 0020).
  */
 export function signOp(
   op: VcsOp,
   privateKeyBase64: string,
   identityEntityId: string,
+  signedWith: string = 'root',
 ): VcsOp {
   if (!op.vcs) {
     op.vcs = {};
   }
   op.vcs.signature = signMessage(op.hash, privateKeyBase64);
   op.vcs.signedBy = identityEntityId;
+  op.vcs.signedWith = signedWith;
   return op;
 }
 
@@ -52,8 +54,15 @@ export function verifyOp(
 // ---------------------------------------------------------------------------
 
 export interface IdentityResolver {
-  /** Resolve an identity entity ID to its public key (base64). */
+  /** Resolve an identity entity ID to its root/bootstrap public key (base64). */
   resolvePublicKey(entityId: string): string | null;
+  /** ADR 0020 — resolve a specific device key under an identity. */
+  resolveDevicePublicKey?(
+    identityEntityId: string,
+    deviceId: string,
+  ): string | null;
+  /** ADR 0020 — all authorized keys (root + devices) for try-all legacy verify. */
+  resolvePublicKeys?(identityEntityId: string): string[];
 }
 
 export interface SignatureVerificationResult {
@@ -62,9 +71,31 @@ export interface SignatureVerificationResult {
   reason?: string;
 }
 
+function resolveKeysForOp(
+  op: VcsOp,
+  resolver: IdentityResolver,
+): string[] {
+  const identityId = op.vcs!.signedBy!;
+  const deviceId = op.vcs!.signedWith;
+
+  if (deviceId && resolver.resolveDevicePublicKey) {
+    const key = resolver.resolveDevicePublicKey(identityId, deviceId);
+    if (key) return [key];
+  }
+
+  if (resolver.resolvePublicKeys) {
+    const keys = resolver.resolvePublicKeys(identityId);
+    if (keys.length) return keys;
+  }
+
+  const root = resolver.resolvePublicKey(identityId);
+  return root ? [root] : [];
+}
+
 /**
  * Verify all signatures on a batch of ops.
  * Returns results for ops that have signatures.
+ * Supports ADR 0020 device keys via signedWith + resolveDevicePublicKey.
  */
 export function verifyOpBatch(
   ops: VcsOp[],
@@ -75,17 +106,21 @@ export function verifyOpBatch(
   for (const op of ops) {
     if (!op.vcs?.signature || !op.vcs?.signedBy) continue;
 
-    const publicKey = resolver.resolvePublicKey(op.vcs.signedBy);
-    if (!publicKey) {
+    const keys = resolveKeysForOp(op, resolver);
+    if (!keys.length) {
       results.push({
         valid: false,
         op,
-        reason: `Unknown identity: ${op.vcs.signedBy}`,
+        reason: `Unknown identity/device: ${op.vcs.signedBy}${
+          op.vcs.signedWith ? ` / ${op.vcs.signedWith}` : ''
+        }`,
       });
       continue;
     }
 
-    const valid = verifySignature(op.hash, op.vcs.signature, publicKey);
+    const valid = keys.some((publicKey) =>
+      verifySignature(op.hash, op.vcs!.signature!, publicKey),
+    );
     results.push({
       valid,
       op,
