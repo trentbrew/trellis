@@ -95,6 +95,8 @@ export interface VcsPayload {
   // Signature
   signature?: string;
   signedBy?: string;
+  /** Device id that held the private key (`root` or paired deviceId). ADR 0020. */
+  signedWith?: string;
 
   // Issue tracking
   issueId?: string;

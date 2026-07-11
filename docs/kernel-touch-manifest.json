@@ -1,5 +1,5 @@
 {
-  "version": "3.2.5",
+  "version": "3.2.6",
   "description": "Downstream consumers that must stay in sync with trellis kernel releases.",
   "consumers": [
     {
@@ -19,7 +19,7 @@
         {
           "glob": "templates/*/package.json",
           "field": "dependencies.trellis",
-          "expect": "^3.2.5"
+          "expect": "^3.2.6"
         }
       ],
       "packageVersion": "0.2.0"
@@ -37,7 +37,7 @@
       ],
       "versionTable": {
         "file": "content/8.changelog.md",
-        "kernelExpect": "3.2.5"
+        "kernelExpect": "3.2.6"
       }
     },
     {
@@ -54,7 +54,7 @@
       ],
       "files": [
         "script/trellis-env.sh",
-        "RELEASE-3.2.5.md"
+        "RELEASE-3.2.6.md"
       ]
     },
     {

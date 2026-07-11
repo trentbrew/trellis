@@ -39,6 +39,15 @@ import {
   loadIdentity,
   hasIdentity,
   toPublicIdentity,
+  pairStart,
+  pairJoin,
+  pairApprove,
+  pairAccept,
+  listDevices,
+  revokeDevice,
+  deviceFingerprint,
+  decodePayload,
+  JOIN_PREFIX,
 } from '../identity/index.js';
 import {
   loadProfile,
@@ -2658,6 +2667,156 @@ program
     console.log(`  ${chalk.dim('Entity ID:')}  ${pub.entityId}`);
     console.log(`  ${chalk.dim('Public Key:')} ${pub.publicKey.slice(0, 32)}…`);
     console.log(`  ${chalk.dim('Created:')}    ${pub.createdAt}`);
+  });
+
+// ---------------------------------------------------------------------------
+// trellis pair (ADR 0020 Phase 0)
+// ---------------------------------------------------------------------------
+
+program
+  .command('pair')
+  .description(
+    'Device pairing under local Ed25519 identity (ADR 0020). Subcommands: start, join, approve, accept, list, revoke',
+  )
+  .argument(
+    '<action>',
+    'start | join | approve | accept | list | revoke',
+  )
+  .argument('[payload]', 'Challenge / join / auth payload (or deviceId for revoke)')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .option('--label <label>', 'Device label (join)')
+  .option('--yes', 'Confirm approve after reviewing fingerprint')
+  .action((action, payload, opts) => {
+    const rootPath = resolve(opts.path);
+    const trellisDir = join(rootPath, '.trellis');
+
+    try {
+      if (action === 'start') {
+        const { payload: out, shortCode, challenge } = pairStart(trellisDir);
+        console.log(chalk.green('✓ Pairing challenge created'));
+        console.log(
+          `  ${chalk.dim('Expires:')}   ${new Date(challenge.exp * 1000).toISOString()}`,
+        );
+        console.log(
+          `  ${chalk.dim('Short code:')} ${shortCode} ${chalk.dim('(display only — peer needs full payload)')}`,
+        );
+        console.log(`  ${chalk.dim('Payload:')}`);
+        console.log(out);
+        return;
+      }
+
+      if (action === 'join') {
+        if (!payload) {
+          console.error(chalk.red('Usage: trellis pair join <challenge-payload>'));
+          process.exit(1);
+        }
+        const { payload: out, local } = pairJoin(trellisDir, payload, {
+          deviceLabel: opts.label,
+        });
+        console.log(chalk.green('✓ Join response ready — send to approving device'));
+        console.log(`  ${chalk.dim('Device:')} ${local.deviceId}`);
+        console.log(
+          `  ${chalk.dim('Fingerprint:')} ${deviceFingerprint(local.publicKey)}`,
+        );
+        console.log(`  ${chalk.dim('Payload:')}`);
+        console.log(out);
+        return;
+      }
+
+      if (action === 'approve') {
+        if (!payload) {
+          console.error(
+            chalk.red('Usage: trellis pair approve <join-payload> --yes'),
+          );
+          process.exit(1);
+        }
+        if (!opts.yes) {
+          try {
+            const join = decodePayload<{ devicePublicKey: string }>(
+              JOIN_PREFIX,
+              payload,
+            );
+            console.log(
+              chalk.yellow(
+                `Fingerprint: ${deviceFingerprint(join.devicePublicKey)}`,
+              ),
+            );
+            console.log(
+              chalk.dim('Re-run with --yes to authorize after verifying fingerprint.'),
+            );
+          } catch (e) {
+            console.error(chalk.red((e as Error).message));
+          }
+          process.exit(1);
+        }
+        const { payload: out, fingerprint, signed } = pairApprove(
+          trellisDir,
+          payload,
+          { yes: true },
+        );
+        console.log(chalk.green('✓ Device authorized'));
+        console.log(
+          `  ${chalk.dim('Device ID:')} ${signed.authorization.deviceId}`,
+        );
+        console.log(`  ${chalk.dim('Fingerprint:')} ${fingerprint}`);
+        console.log(
+          `  ${chalk.dim('Auth payload (send to joining device):')}`,
+        );
+        console.log(out);
+        return;
+      }
+
+      if (action === 'accept') {
+        if (!payload) {
+          console.error(chalk.red('Usage: trellis pair accept <auth-payload>'));
+          process.exit(1);
+        }
+        const { local, authorization } = pairAccept(trellisDir, payload);
+        console.log(chalk.green('✓ Pairing accepted — this device can sign as identity'));
+        console.log(`  ${chalk.dim('Identity:')} ${authorization.identityEntityId}`);
+        console.log(`  ${chalk.dim('Device:')}   ${local.deviceId}`);
+        return;
+      }
+
+      if (action === 'list') {
+        const devices = listDevices(trellisDir);
+        if (!devices.length) {
+          console.log(chalk.dim('No paired devices in local registry.'));
+          return;
+        }
+        console.log(chalk.bold('Paired devices (local registry)\n'));
+        for (const d of devices) {
+          console.log(
+            `  ${d.deviceId}  ${chalk.dim(d.deviceLabel ?? '')}  fp=${deviceFingerprint(d.devicePublicKey)}`,
+          );
+        }
+        return;
+      }
+
+      if (action === 'revoke') {
+        if (!payload) {
+          console.error(chalk.red('Usage: trellis pair revoke <deviceId>'));
+          process.exit(1);
+        }
+        const ok = revokeDevice(trellisDir, payload);
+        if (!ok) {
+          console.error(chalk.red(`Device not found or already revoked: ${payload}`));
+          process.exit(1);
+        }
+        console.log(chalk.green(`✓ Revoked ${payload} (local registry only)`));
+        return;
+      }
+
+      console.error(
+        chalk.red(
+          `Unknown action "${action}". Use: start | join | approve | accept | list | revoke`,
+        ),
+      );
+      process.exit(1);
+    } catch (err) {
+      console.error(chalk.red((err as Error).message));
+      process.exit(1);
+    }
   });
 
 // ---------------------------------------------------------------------------
