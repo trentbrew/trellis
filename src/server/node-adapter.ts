@@ -14,6 +14,7 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import type { Server as NodeHttpServer } from 'http';
 
+import type { RealtimeRelayOptions } from '../realtime/relay-server.js';
 import type { TrellisHttpServer } from './server-shared.js';
 
 export interface NodeAdapterOptions {
@@ -33,8 +34,9 @@ export interface NodeAdapterOptions {
   /**
    * Mount a presence relay on `/rt` (or custom path). Coexists with the graph
    * subscription socket at `/realtime` when upgrades are path-scoped.
+   * Pass full {@link RealtimeRelayOptions} to enable `/blob` via `blobStore`.
    */
-  attachPresenceRelay?: boolean | { path?: string };
+  attachPresenceRelay?: boolean | RealtimeRelayOptions;
 }
 
 /**

@@ -1,0 +1,15 @@
+TrellisVCS Status
+
+  Branch:        issue/TRL-92-impl-qr-device-pairing-phase-0-adr-0020
+  Total ops:     6141
+  Tracked files: 1494
+
+  Last op:      vcs:branchAdvance
+    at:          2026-07-11T06:35:58.175Z
+
+  Recent activity:
+    →branch  1m ago
+    vcs:criterionAdd  1m ago
+    →branch  1m ago
+    ★milestone  just now
+    →branch  just now

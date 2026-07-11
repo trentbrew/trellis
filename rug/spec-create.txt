@@ -1,0 +1,6 @@
+✓ Issue created: TRL-97
+  Title:    Spec: Durable sprite relay BlobStore
+  Priority: high
+  Labels:   spec
+  Parent:   TRL-95
+  Criteria: 2 acceptance criteria

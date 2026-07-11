@@ -255,15 +255,18 @@ function resolveTrellisImports(): { server: string; client: string } {
 /**
  * Generate a self-contained server entrypoint script that starts the
  * Trellis DB HTTP server with the given config baked in.
+ *
+ * Sprite deploys mount a durable {@link BlobStore} under
+ * `/home/sprite/trellis-db` so `/blob` survives restarts alongside graph data.
  */
-function generateServerEntrypoint(opts: {
+export function generateServerEntrypoint(opts: {
   port: number;
   apiKey: string;
   jwtSecret: string;
 }): string {
   const { server, client } = resolveTrellisImports();
   return `
-import { TenantPool, startServer } from '${server}';
+import { TenantPool, startServer, BlobStore } from '${server}';
 import { readConfig, defaultLocalConfig, writeConfig } from '${client}';
 import { join } from 'path';
 import { existsSync } from 'fs';
@@ -282,7 +285,15 @@ const config = readConfig(configDir)!;
 const pool = new TenantPool(dbPath, { backend: { backend: 'sqljs' } });
 await pool.preload();
 
-await startServer({ port: ${opts.port}, config, pool, presenceRelay: true });
+await startServer({
+  port: ${opts.port},
+  config,
+  pool,
+  presenceRelay: {
+    path: '/rt',
+    blobStore: () => new BlobStore('/home/sprite/trellis-db'),
+  },
+});
 
 console.log('Trellis DB running on port ${opts.port}');
 console.log(\`Listening on port ${opts.port}\`);

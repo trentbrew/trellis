@@ -11,7 +11,15 @@
 
 // Server
 export { startServer, startServerCrossRuntime } from './server.js';
-export type { ServerConfig, TrellisHttpServer } from './server.js';
+export type {
+  ServerConfig,
+  TrellisHttpServer,
+  PresenceRelayOptions,
+} from './server.js';
+
+// Content-addressed blob store (sprite deploy + embedders)
+export { BlobStore } from '../vcs/blob-store.js';
+export type { BlobMeta } from '../vcs/blob-store.js';
 
 // Auth
 export {
@@ -87,7 +95,7 @@ export { importFile, importRecords } from './import.js';
 export type { ImportOptions, ImportResult } from './import.js';
 
 // Deploy
-export { deploy } from './deploy.js';
+export { deploy, generateServerEntrypoint } from './deploy.js';
 export type { DeployOptions, DeployResult } from './deploy.js';
 export {
   validateDeployName,
