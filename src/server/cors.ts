@@ -9,7 +9,7 @@
 
 const DEFAULT_METHODS = 'GET, POST, PUT, DELETE, OPTIONS';
 const DEFAULT_HEADERS =
-  'Content-Type, Authorization, mcp-session-id, mcp-protocol-version, Last-Event-ID, Accept, X-Trellis-Lane, X-Trellis-Tenant';
+  'Content-Type, Authorization, mcp-session-id, mcp-protocol-version, Last-Event-ID, Accept, X-Trellis-Lane, X-Trellis-Tenant, X-Trellis-Transport';
 
 export function corsEnabledForConfig(apiKey?: string): boolean {
   return Boolean(process.env.TRELLIS_CORS_ORIGINS) || Boolean(apiKey);
@@ -36,11 +36,16 @@ export function corsHeaders(req: Request): Record<string, string> {
     }
   }
 
+  // Echo requested headers when present so new client headers (e.g. X-Trellis-Transport)
+  // don't require a server bump for every addition.
+  const requested = req.headers.get('Access-Control-Request-Headers');
+  const allowHeaders = requested?.trim() || DEFAULT_HEADERS;
+
   return {
     'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Methods': DEFAULT_METHODS,
-    'Access-Control-Allow-Headers': DEFAULT_HEADERS,
-    Vary: 'Origin',
+    'Access-Control-Allow-Headers': allowHeaders,
+    Vary: 'Origin, Access-Control-Request-Headers',
   };
 }
 

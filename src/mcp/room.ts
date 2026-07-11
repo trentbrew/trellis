@@ -24,7 +24,11 @@ import {
   resolveUsageTenantId,
   type UsageMeter,
 } from '../server/usage-meter.js';
-import { buildRoomGraphSummary } from './graph-summary.js';
+import {
+  assertMcpWriteAuthorized,
+  McpAuthError,
+  type McpWriteAuthGate,
+} from './mcp-auth.js';
 import {
   assertMcpBudget,
   collectionSlugFromMetaId,
@@ -33,6 +37,7 @@ import {
   writeContext,
 } from './room-helpers.js';
 import { scheduleRoomMcpAudit } from './room-audit.js';
+import { buildRoomGraphSummary } from './graph-summary.js';
 import type { MiddlewareContext } from '../core/kernel/middleware.js';
 import type { TrellisKernel } from '../core/kernel/trellis-kernel.js';
 
@@ -40,12 +45,11 @@ import type { TrellisKernel } from '../core/kernel/trellis-kernel.js';
 // Context
 // ---------------------------------------------------------------------------
 
-export interface RoomMcpContext {
+export interface RoomMcpContext extends McpWriteAuthGate {
   pool: TenantPool;
   permissions: PermissionRegistry | null;
   subs: SubscriptionManager;
   meter: UsageMeter | null;
-  auth: AuthContext;
   tenantId: string | null;
   /** From `X-Trellis-Lane` header when present. */
   headerLane?: string | null;
@@ -100,7 +104,11 @@ function jsonText(data: unknown) {
 }
 
 function toolError(err: unknown) {
-  if (err instanceof PermissionError || err instanceof McpRateLimitError) {
+  if (
+    err instanceof PermissionError ||
+    err instanceof McpRateLimitError ||
+    err instanceof McpAuthError
+  ) {
     return text(err.message);
   }
   return text(err instanceof Error ? err.message : String(err));
@@ -301,6 +309,7 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
     },
     async ({ type, id, attributes, links, lane, tenantId, room }) => {
       try {
+        assertMcpWriteAuthorized(ctx);
         const effectiveTenant = resolveToolTenant(ctx, { tenantId, room });
         ctx.permissions?.assert(ctx.auth, type, 'create');
         const wctx = writeContext(lane, ctx.auth, ctx.headerLane);
@@ -359,6 +368,7 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
     },
     async ({ id, attributes, lane, tenantId, room }) => {
       try {
+        assertMcpWriteAuthorized(ctx);
         const effectiveTenant = resolveToolTenant(ctx, { tenantId, room });
         const wctx = writeContext(lane, ctx.auth, ctx.headerLane);
         return await withMcpIo(ctx, effectiveTenant, async () => {
@@ -403,6 +413,7 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
     },
     async ({ id, lane, tenantId, room }) => {
       try {
+        assertMcpWriteAuthorized(ctx);
         const effectiveTenant = resolveToolTenant(ctx, { tenantId, room });
         const wctx = writeContext(lane, ctx.auth, ctx.headerLane);
         return await withMcpIo(ctx, effectiveTenant, async () => {
@@ -486,6 +497,7 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
       room,
     }) => {
       try {
+        assertMcpWriteAuthorized(ctx);
         const effectiveTenant = resolveToolTenant(ctx, { tenantId, room });
         ctx.permissions?.assert(ctx.auth, 'CollectionRecord', 'create');
         const wctx = writeContext(lane, ctx.auth, ctx.headerLane);
@@ -601,6 +613,7 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
     },
     async ({ e1, relation, e2, lane, tenantId, room }) => {
       try {
+        assertMcpWriteAuthorized(ctx);
         const effectiveTenant = resolveToolTenant(ctx, { tenantId, room });
         const wctx = writeContext(lane, ctx.auth, ctx.headerLane);
         return await withMcpIo(ctx, effectiveTenant, async () => {

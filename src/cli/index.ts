@@ -16,7 +16,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { resolve, join, dirname } from 'path';
-import { select, checkbox, confirm } from '@inquirer/prompts';
+// @inquirer/prompts is lazy-imported only in init command (saves ~116ms on every other command)
 import { TrellisVcsEngine } from '../engine.js';
 import { TrellisKernel } from '../core/kernel/trellis-kernel.js';
 import { SqliteKernelBackend } from '../core/persist/sqlite-backend.js';
@@ -54,6 +54,8 @@ import {
 import { cliVersion, findRepoRoot, resolveRepoRoot } from './repo-path.js';
 import { handleCliError } from './errors.js';
 import { registerLaneCommands } from './lane.js';
+import { registerTestCommands } from './test-cli.js';
+import { registerBrowserCommands } from './browser-cli.js';
 import { registerProtocolCommands } from './protocol.js';
 
 export type IdeType =
@@ -161,6 +163,7 @@ async function runInit(
   }
 
   if (isInteractive) {
+    const { select, checkbox } = await import('@inquirer/prompts');
     console.log(chalk.cyan('\n  Configuring workspace...'));
 
     const setupType = await select({
@@ -960,6 +963,48 @@ program
     } catch (err: any) {
       console.error(chalk.red(`\nExport failed: ${err.message}`));
       process.exit(1);
+    }
+  });
+
+// ---------------------------------------------------------------------------
+// trellis git — mirror integration to main (git adapter)
+// ---------------------------------------------------------------------------
+
+const gitCmd = program
+  .command('git')
+  .description('Git mirror adapter — Trellis owns semantics, git is downstream');
+
+gitCmd
+  .command('sync')
+  .description('Mirror Trellis integration state to the primary git branch')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .option('--push', 'Push to configured remote after commit')
+  .option('-m, --message <msg>', 'Commit message override')
+  .action(async (opts) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    const engine = new TrellisVcsEngine({ rootPath });
+    engine.open();
+
+    const result = engine.syncGitIntegration({
+      message: opts.message,
+      push: opts.push,
+      force: true,
+    });
+
+    if (result.committed) {
+      console.log(
+        chalk.green(
+          `✓ Git sync committed ${result.commitHash?.slice(0, 12) ?? ''}`,
+        ),
+      );
+      if (result.pushed) {
+        console.log(chalk.green('✓ Pushed to remote'));
+      }
+    } else {
+      console.log(chalk.dim('Git working tree already matches integration'));
+      if (result.pushed) {
+        console.log(chalk.green('✓ Pushed to remote'));
+      }
     }
   });
 
@@ -1916,6 +1961,16 @@ issueCmd
     if (issue.branchName) {
       console.log(`  ${chalk.dim('Branch:')}    ${issue.branchName}`);
     }
+    if (issue.claimedLaneId) {
+      const claimParts = [issue.claimedLaneId];
+      if (issue.claimedSessionId) {
+        claimParts.push(`session ${issue.claimedSessionId}`);
+      }
+      if (issue.claimedAt) {
+        claimParts.push(formatRelativeTime(issue.claimedAt));
+      }
+      console.log(`  ${chalk.dim('Claim:')}     ${claimParts.join(' · ')}`);
+    }
     if ((issue.blockedBy?.length ?? 0) > 0) {
       console.log(
         `  ${chalk.dim('Blocked by:')} ${issue.blockedBy.map((b) => chalk.yellow(b)).join(', ')}`,
@@ -1964,7 +2019,10 @@ issueCmd
     const engine = new TrellisVcsEngine({ rootPath });
     engine.open();
 
-    await engine.startIssue(id, { lane: !opts.noLane });
+    await engine.startIssue(id, {
+      lane: !opts.noLane,
+      sessionId: process.env.TRELLIS_SESSION_ID?.trim() || undefined,
+    });
     const issue = engine.getIssue(id);
     console.log(chalk.green(`✓ Started issue ${chalk.bold(id)}`));
     if (issue?.branchName) {
@@ -2127,6 +2185,7 @@ issueCmd
   .argument('<id>', 'Issue ID')
   .argument('<description>', 'Criterion description')
   .option('--test <command>', 'Shell command to validate (exit 0 = pass)')
+  .option('--suite <id>', 'Test suite id from .trellis/tests.json')
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (id, description, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
@@ -2134,8 +2193,15 @@ issueCmd
     const engine = new TrellisVcsEngine({ rootPath });
     engine.open();
 
-    await engine.addCriterion(id, description, opts.test);
-    const cmdNote = opts.test ? chalk.dim(` (test: ${opts.test})`) : '';
+    await engine.addCriterion(id, description, {
+      command: opts.test,
+      suite: opts.suite,
+    });
+    const cmdNote = opts.test
+      ? chalk.dim(` (test: ${opts.test})`)
+      : opts.suite
+        ? chalk.dim(` (suite: ${opts.suite})`)
+        : '';
     console.log(
       chalk.green(
         `✓ Added criterion to ${chalk.bold(id)}: ${description}${cmdNote}`,
@@ -2239,6 +2305,9 @@ issueCmd
   .description('Close an issue (requires all criteria pass + --confirm)')
   .argument('<id>', 'Issue ID')
   .option('--confirm', 'Confirm closure after criteria pass')
+  .option('--push', 'Push git main after close (requires git.sync or prior promote sync)')
+  .option('--no-promote', 'Fail instead of auto-promoting unpromoted lane ops on close')
+  .option('--require-test', 'Run promote.require test suites during auto-promote')
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
@@ -2248,19 +2317,26 @@ issueCmd
 
     const lane = engine.findLaneForIssue(id);
     if (
+      opts.confirm &&
       lane &&
       lane.status === 'active' &&
-      engine.getLaneOpCount(lane.id) > 0
+      engine.getLaneOpCount(lane.id) > 0 &&
+      !opts.noPromote
     ) {
       console.log(
-        chalk.yellow(
-          `⚠ Lane ${lane.id} has unpromoted ops — promote before close when W3 lands (trellis lane promote)`,
+        chalk.dim(
+          `Auto-promoting lane ${lane.id} before close…`,
         ),
       );
     }
 
     try {
-      const result = await engine.closeIssue(id, { confirm: opts.confirm });
+      const result = await engine.closeIssue(id, {
+        confirm: opts.confirm,
+        push: opts.push,
+        noPromote: opts.noPromote,
+        requireTest: opts.requireTest,
+      });
 
       if (!result.op) {
         // Criteria passed but no --confirm
@@ -2280,6 +2356,23 @@ issueCmd
       }
 
       console.log(chalk.green(`✓ Issue ${chalk.bold(id)} closed`));
+      if (result.promoteResult?.promoted) {
+        console.log(
+          chalk.dim(
+            `  Promoted lane before close (${result.promoteResult.integrationOpsAppended ?? 0} integration ops)`,
+          ),
+        );
+      }
+      if (result.gitSync?.committed) {
+        console.log(
+          chalk.dim(
+            `  Git commit ${result.gitSync.commitHash?.slice(0, 12) ?? ''}`,
+          ),
+        );
+      }
+      if (result.gitSync?.pushed) {
+        console.log(chalk.dim('  Pushed to remote'));
+      }
     } catch (err: any) {
       console.error(chalk.red(err.message));
       process.exit(1);
@@ -5644,6 +5737,8 @@ gatewayProgram
 // ---------------------------------------------------------------------------
 
 registerLaneCommands(program);
+registerTestCommands(program);
+registerBrowserCommands(program);
 registerProtocolCommands(program);
 
 // ---------------------------------------------------------------------------

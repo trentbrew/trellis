@@ -29,9 +29,19 @@ function canonicalRoot(dir: string): string {
 /** Walk up from path (or cwd) and return the nearest Trellis repo root, if any. */
 export function findRepoRoot(pathOpt?: string): string | undefined {
   const start = resolve(pathOpt ?? process.cwd());
+  const home = process.env.HOME || process.env.USERPROFILE || '';
   let dir = start;
   while (true) {
-    if (TrellisVcsEngine.isRepo(dir)) return canonicalRoot(dir);
+    if (TrellisVcsEngine.isRepo(dir)) {
+      // Skip home-directory repos unless the starting path IS home itself.
+      // Home dirs tend to have massive ops journals (tracking everything)
+      // and cause 30-90s full replays on every command.
+      if (dir === home && start !== home) {
+        /* skip — walk up */
+      } else {
+        return canonicalRoot(dir);
+      }
+    }
     const parent = dirname(dir);
     if (parent === dir) return undefined;
     dir = parent;

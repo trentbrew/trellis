@@ -20,6 +20,7 @@
  */
 
 import type { SchemaDefinition } from '../core/ontology/types.js';
+import { EntityConflictError } from '../core/ontology/sync-policy.js';
 import type { ResolveSpec } from '../schema/resolve.js';
 import type { TenantPool } from '../server/tenancy.js';
 
@@ -32,6 +33,14 @@ export interface EntityData {
   type: string;
   [key: string]: unknown;
 }
+
+/** Options for {@link TrellisDb.create} (ADR 0018). */
+export interface CreateEntityOptions {
+  /** Stable id (e.g. entity:player-1). Omit → `${type.toLowerCase()}:${uuid}`. */
+  id?: string;
+}
+
+export { EntityConflictError };
 
 export interface ListResult<T = EntityData> {
   data: T[];
@@ -146,18 +155,20 @@ export class TrellisDb {
 
   /**
    * Create a new entity.
-   * Returns the generated entity ID.
+   * Returns the entity ID (generated or caller-supplied via options.id).
    */
   async create(
     type: string,
     attributes: Record<string, unknown> = {},
     links?: Array<{ attribute: string; targetEntityId: string }>,
+    options?: CreateEntityOptions,
   ): Promise<string> {
     if (isRemote(this.opts)) {
       const res = await this._fetch('POST', '/entities', {
         type,
         attributes,
         links,
+        ...(options?.id !== undefined ? { id: options.id } : {}),
       });
       return (res as { id: string }).id;
     }
@@ -165,7 +176,21 @@ export class TrellisDb {
     const pool = await this._getPool();
     const tenantId = (this.opts as TrellisDbLocalOptions).tenantId ?? null;
     const kernel = pool.get(tenantId);
-    const entityId = `${type.toLowerCase()}:${crypto.randomUUID()}`;
+
+    let entityId: string;
+    if (options?.id !== undefined) {
+      const trimmed = options.id.trim();
+      if (!trimmed) {
+        throw new Error('create options.id must be a non-empty string');
+      }
+      if (kernel.getEntity(trimmed)) {
+        throw new EntityConflictError(trimmed);
+      }
+      entityId = trimmed;
+    } else {
+      entityId = `${type.toLowerCase()}:${crypto.randomUUID()}`;
+    }
+
     await kernel.createEntity(entityId, type, attributes as any, links);
     return entityId;
   }
@@ -319,12 +344,29 @@ export class TrellisDb {
     const exists = kernel
       .listOntologies()
       .some((ont) => ont['@id'] === def['@id']);
-    if (exists) return;
+    if (exists) {
+      // Sync field specs on re-register (checkbox/number drift, hot reload).
+      kernel.updateOntology(def['@id'], {
+        fields: def.fields,
+        label: def.label,
+        version: def.version,
+        subClassOf: def.subClassOf,
+      });
+      return;
+    }
     try {
       kernel.createOntology(def);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes('already exists')) return;
+      if (msg.includes('already exists')) {
+        kernel.updateOntology(def['@id'], {
+          fields: def.fields,
+          label: def.label,
+          version: def.version,
+          subClassOf: def.subClassOf,
+        });
+        return;
+      }
       throw err;
     }
   }

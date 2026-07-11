@@ -13,6 +13,7 @@ import {
   closeSync,
   unlinkSync,
   renameSync,
+  statSync,
 } from 'fs';
 import { dirname } from 'path';
 import type { VcsOp } from './types.js';
@@ -51,10 +52,19 @@ function lockTimeoutMs(): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 5000;
 }
 
+interface DiskCache {
+  mtimeMs: number;
+  size: number;
+  ops: VcsOp[];
+}
+
 export class JsonOpLog implements OpLog {
   private ops: VcsOp[] = [];
   private filePath: string;
   private lockPath: string;
+  private diskCache: DiskCache | null = null;
+  /** When memory matches the last persisted journal tail, skip disk re-parse. */
+  private memorySyncedWithDisk = false;
 
   constructor(filePath: string) {
     this.filePath = filePath;
@@ -66,29 +76,46 @@ export class JsonOpLog implements OpLog {
   }
 
   load(): void {
+    this.diskCache = null;
+    this.memorySyncedWithDisk = false;
     if (existsSync(this.filePath)) {
       const raw = readFileSync(this.filePath, 'utf-8');
       try {
         this.ops = JSON.parse(raw);
+        this.seedDiskCache(this.ops);
+        this.memorySyncedWithDisk = true;
       } catch {
         const backupPath = this.filePath + '.bak';
         if (existsSync(backupPath)) {
           const backupRaw = readFileSync(backupPath, 'utf-8');
           this.ops = JSON.parse(backupRaw);
           writeFileSync(this.filePath, backupRaw);
+          this.seedDiskCache(this.ops);
+          this.memorySyncedWithDisk = true;
         } else {
           throw new Error(
             `Corrupted ops log at ${this.filePath} and no backup found. Run \`trellis repair\` to attempt recovery.`,
           );
         }
       }
+    } else {
+      this.ops = [];
     }
   }
 
   append(op: VcsOp): void {
     this.withLock(() => {
-      const diskOps = this.readOpsFromDisk();
-      this.ops = diskOps;
+      const diskOps =
+        process.env.TRELLIS_OPLOG_FULL_WRITE === '1'
+          ? this.readOpsFromDisk()
+          : this.canUseMemoryWithoutDiskRead()
+            ? [...this.ops]
+            : this.readOpsFromDisk();
+
+      if (this.shouldReconcileFromDisk(diskOps)) {
+        this.ops = [...diskOps];
+        this.memorySyncedWithDisk = false;
+      }
 
       if (this.ops.some((existing) => existing.hash === op.hash)) {
         return;
@@ -96,6 +123,7 @@ export class JsonOpLog implements OpLog {
 
       this.ops.push(op);
       this.writeOpsToDisk();
+      this.memorySyncedWithDisk = true;
     });
   }
 
@@ -111,38 +139,101 @@ export class JsonOpLog implements OpLog {
     return this.ops.length;
   }
 
+  private canUseMemoryWithoutDiskRead(): boolean {
+    if (!this.memorySyncedWithDisk) return false;
+    if (!existsSync(this.filePath)) return this.ops.length === 0;
+    const stat = statSync(this.filePath);
+    return (
+      this.diskCache !== null &&
+      this.diskCache.mtimeMs === stat.mtimeMs &&
+      this.diskCache.size === stat.size
+    );
+  }
+
+  private shouldReconcileFromDisk(diskOps: VcsOp[]): boolean {
+    if (diskOps.length > this.ops.length) return true;
+    if (diskOps.length === 0 || this.ops.length === 0) {
+      return false;
+    }
+    return (
+      diskOps[diskOps.length - 1]?.hash !==
+      this.ops[this.ops.length - 1]?.hash
+    );
+  }
+
   private writeOpsToDisk(): void {
     const dir = dirname(this.filePath);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    if (existsSync(this.filePath)) {
-      const backupPath = this.filePath + '.bak';
-      try {
-        copyFileSync(this.filePath, backupPath);
-      } catch {
-        // best-effort
-      }
-    }
+    this.backupCurrentFile();
+
     const tempPath = `${this.filePath}.tmp`;
-    writeFileSync(tempPath, JSON.stringify(this.ops, null, 2));
+    const payload =
+      process.env.TRELLIS_OPLOG_FULL_WRITE === '1'
+        ? JSON.stringify(this.ops, null, 2)
+        : JSON.stringify(this.ops);
+    writeFileSync(tempPath, payload);
     renameSync(tempPath, this.filePath);
+    this.seedDiskCache(this.ops);
+  }
+
+  private backupCurrentFile(): void {
+    if (!existsSync(this.filePath)) return;
+    const backupPath = this.filePath + '.bak';
+    try {
+      copyFileSync(this.filePath, backupPath);
+    } catch {
+      // best-effort
+    }
+  }
+
+  private seedDiskCache(ops: VcsOp[]): void {
+    if (!existsSync(this.filePath)) {
+      this.diskCache = null;
+      return;
+    }
+    const stat = statSync(this.filePath);
+    this.diskCache = {
+      mtimeMs: stat.mtimeMs,
+      size: stat.size,
+      ops: [...ops],
+    };
   }
 
   private readOpsFromDisk(): VcsOp[] {
     if (!existsSync(this.filePath)) {
+      this.memorySyncedWithDisk = false;
       return [];
+    }
+
+    const stat = statSync(this.filePath);
+    if (
+      this.diskCache &&
+      this.diskCache.mtimeMs === stat.mtimeMs &&
+      this.diskCache.size === stat.size
+    ) {
+      return this.diskCache.ops;
     }
 
     const raw = readFileSync(this.filePath, 'utf-8');
     try {
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
+      const ops = Array.isArray(parsed) ? parsed : [];
+      this.diskCache = {
+        mtimeMs: stat.mtimeMs,
+        size: stat.size,
+        ops,
+      };
+      this.memorySyncedWithDisk = false;
+      return ops;
     } catch {
       const backupPath = this.filePath + '.bak';
       if (existsSync(backupPath)) {
         const backupRaw = readFileSync(backupPath, 'utf-8');
         const parsedBackup = JSON.parse(backupRaw);
         writeFileSync(this.filePath, backupRaw);
-        return Array.isArray(parsedBackup) ? parsedBackup : [];
+        const ops = Array.isArray(parsedBackup) ? parsedBackup : [];
+        this.seedDiskCache(ops);
+        return ops;
       }
       throw new Error(
         `Corrupted ops log at ${this.filePath} and no backup found. Run \`trellis repair\` to attempt recovery.`,

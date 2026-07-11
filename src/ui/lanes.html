@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trellis — Agent Lanes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #09090b;
+  --surface: #15161b;
+  --surface2: #1a1b22;
+  --border: #25262e;
+  --text: #e4e4e7;
+  --text2: #a1a1aa;
+  --text3: #63637a;
+  --accent: #6d5bfa;
+  --accent-glow: rgba(109,91,250,0.12);
+  --green: #34d399;
+  --yellow: #fbbf24;
+  --blue: #60a5fa;
+  --red: #f87171;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font: 'Inter', -apple-system, sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 24px;
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+h1 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+h1 span { color: var(--text3); font-weight: 400; font-size: 13px; margin-left: 8px; }
+.live {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 500 11px var(--mono);
+  color: var(--text3);
+}
+.live-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 2s infinite;
+}
+.live.off .live-dot { background: var(--red); box-shadow: 0 0 8px var(--red); animation: none; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+.meta {
+  margin-left: auto;
+  font: 400 11px var(--mono);
+  color: var(--text3);
+  text-align: right;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .4px; }
+.stat-value { font: 600 22px var(--font); margin-top: 4px; }
+.stat-value small { font-size: 12px; color: var(--text3); font-weight: 400; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-glow), 0 8px 32px rgba(0,0,0,.35);
+}
+.card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.lane-id {
+  font: 600 13px var(--mono);
+  word-break: break-all;
+}
+.badge {
+  font: 600 10px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.badge.active { background: rgba(52,211,153,.15); color: var(--green); }
+.badge.promoting { background: rgba(251,191,36,.15); color: var(--yellow); }
+.badge.promoted { background: rgba(96,165,250,.15); color: var(--blue); }
+.badge.dropped { background: rgba(99,99,122,.15); color: var(--text3); }
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255,255,255,.03);
+}
+.row:last-child { border-bottom: none; }
+.row .k { color: var(--text3); }
+.row .v { color: var(--text2); font-family: var(--mono); font-size: 11px; text-align: right; max-width: 65%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.issue-block {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border-radius: 8px;
+  font-size: 12px;
+}
+.issue-block .issue-id { font: 600 11px var(--mono); color: var(--accent); }
+.issue-block .issue-title { color: var(--text2); margin-top: 4px; line-height: 1.35; }
+.empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 48px;
+  color: var(--text3);
+  font-size: 14px;
+}
+.lock-banner {
+  background: rgba(251,191,36,.08);
+  border: 1px solid rgba(251,191,36,.25);
+  color: var(--yellow);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font: 500 12px var(--mono);
+}
+section h2 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--text3);
+  margin: 28px 0 12px;
+}
+.issue-list { display: flex; flex-direction: column; gap: 8px; }
+.issue-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+}
+.issue-row .id { font: 600 11px var(--mono); color: var(--accent); min-width: 72px; }
+.issue-row .title { flex: 1; color: var(--text2); }
+.issue-row .claim { font: 400 10px var(--mono); color: var(--text3); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Trellis <span>Agent Lanes</span></h1>
+  <div class="live" id="live"><span class="live-dot"></span><span id="live-label">connecting…</span></div>
+  <div class="meta">
+    <div id="repo">—</div>
+    <div id="updated">—</div>
+  </div>
+</header>
+
+<div id="lock" hidden class="lock-banner"></div>
+
+<div class="stats" id="stats"></div>
+
+<div class="grid" id="lanes"></div>
+
+<section id="issues-section" hidden>
+  <h2>In progress</h2>
+  <div class="issue-list" id="issues"></div>
+</section>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+function fmtTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function shortPath(p) {
+  if (!p) return '—';
+  const parts = p.split('/');
+  return parts.length > 3 ? '…/' + parts.slice(-3).join('/') : p;
+}
+
+function render(snap) {
+  $('repo').textContent = shortPath(snap.rootPath);
+  $('updated').textContent = 'updated ' + fmtTime(snap.at);
+
+  const active = snap.lanes.filter(l => l.status === 'active').length;
+  $('stats').innerHTML = `
+    <div class="stat"><div class="stat-label">Active lanes</div><div class="stat-value">${active}</div></div>
+    <div class="stat"><div class="stat-label">Total lanes</div><div class="stat-value">${snap.lanes.length}</div></div>
+    <div class="stat"><div class="stat-label">Integration</div><div class="stat-value"><small>${snap.integrationBranch}</small></div></div>
+    <div class="stat"><div class="stat-label">In progress</div><div class="stat-value">${snap.inProgressIssues.length}</div></div>
+  `;
+
+  const lock = snap.promoteLock;
+  const lockEl = $('lock');
+  if (lock && lock.locked) {
+    lockEl.hidden = false;
+    lockEl.textContent = `Promote lock: ${lock.laneId} · pid ${lock.pid} · since ${fmtTime(lock.acquiredAt)}`;
+  } else if (lock && lock.stale) {
+    lockEl.hidden = false;
+    lockEl.textContent = `Stale promote lock: ${lock.laneId} — clear with trellis lane promote --force-lock`;
+  } else {
+    lockEl.hidden = true;
+  }
+
+  const lanesEl = $('lanes');
+  if (!snap.lanes.length) {
+    lanesEl.innerHTML = '<div class="empty">No lanes yet — open an Agent tab or run <code>trellis lane ensure --session …</code></div>';
+  } else {
+    lanesEl.innerHTML = snap.lanes.map(lane => `
+      <article class="card${lane.isActive ? ' active' : ''}">
+        <div class="card-head">
+          <div class="lane-id">${lane.id}</div>
+          <span class="badge ${lane.status}">${lane.status}${lane.isActive ? ' · current' : ''}</span>
+        </div>
+        <div class="row"><span class="k">Agent</span><span class="v" title="${lane.agentId}">${lane.agentId}</span></div>
+        <div class="row"><span class="k">Session</span><span class="v" title="${lane.sessionId || ''}">${lane.sessionId || '—'}</span></div>
+        <div class="row"><span class="k">Ops / files</span><span class="v">${lane.opCount} / ${lane.fileCount}</span></div>
+        <div class="row"><span class="k">Branch</span><span class="v" title="${lane.targetBranch}">${lane.targetBranch}</span></div>
+        <div class="row"><span class="k">Worktree</span><span class="v" title="${lane.worktreePath || ''}">${shortPath(lane.worktreePath)}</span></div>
+        <div class="row"><span class="k">Updated</span><span class="v">${fmtTime(lane.updatedAt)}</span></div>
+        ${lane.issueId ? `
+          <div class="issue-block">
+            <div class="issue-id">${lane.issueId.replace(/^issue:/, '')}</div>
+            <div class="issue-title">${lane.issueTitle || ''}</div>
+          </div>` : ''}
+      </article>
+    `).join('');
+  }
+
+  const issues = snap.inProgressIssues || [];
+  const sec = $('issues-section');
+  if (issues.length) {
+    sec.hidden = false;
+    $('issues').innerHTML = issues.map(i => `
+      <div class="issue-row">
+        <span class="id">${i.id}</span>
+        <span class="title">${i.title || ''}</span>
+        <span class="claim">${i.claimedLaneId ? i.claimedLaneId : 'unclaimed'}</span>
+      </div>
+    `).join('');
+  } else {
+    sec.hidden = true;
+  }
+}
+
+function connect() {
+  const es = new EventSource('/api/lanes/stream');
+  es.onopen = () => {
+    $('live').classList.remove('off');
+    $('live-label').textContent = 'live';
+  };
+  es.onmessage = (ev) => {
+    try { render(JSON.parse(ev.data)); } catch (e) { console.error(e); }
+  };
+  es.onerror = () => {
+    $('live').classList.add('off');
+    $('live-label').textContent = 'reconnecting…';
+    es.close();
+    setTimeout(connect, 2000);
+  };
+}
+connect();
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/issue.test.ts > Issue Primitives > startIssue auto-attaches criteria from tests.json labels
+SyntaxError: Unexpected token ',', ",
+  {
+    "... is not valid JSON
+ ❯ JsonOpLog.load src/vcs/op-log.ts:99:27
+     97|         if (existsSync(backupPath)) {
+     98|           const backupRaw = readFileSync(backupPath, 'utf-8');
+     99|           this.ops = JSON.parse(backupRaw);
+       |                           ^
+    100|           writeFileSync(this.filePath, backupRaw);
+    101|           this.seedDiskCache(this.ops);
+ ❯ TrellisVcsEngine.open src/engine.ts:458:16
+ ❯ initEngine test/issue.test.ts:17:10
+ ❯ test/issue.test.ts:117:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

@@ -11,6 +11,7 @@ import type { SchemaDefinition } from '../core/ontology/types.js';
 import type { ResolveSpec } from '../schema/resolve.js';
 import type {
   AuthResult,
+  CreateEntityOptions,
   EntityData,
   ListResult,
   QueryResult,
@@ -24,6 +25,7 @@ import type {
 
 export type {
   AuthResult,
+  CreateEntityOptions,
   EntityData,
   ListResult,
   QueryResult,
@@ -142,17 +144,19 @@ export class TrellisDb {
 
   /**
    * Create a new entity.
-   * Returns the generated entity ID.
+   * Returns the entity ID (generated or caller-supplied via options.id).
    */
   async create(
     type: string,
     attributes: Record<string, unknown> = {},
     links?: Array<{ attribute: string; targetEntityId: string }>,
+    options?: CreateEntityOptions,
   ): Promise<string> {
     const res = await this._fetch('POST', '/entities', {
       type,
       attributes,
       links,
+      ...(options?.id !== undefined ? { id: options.id } : {}),
     });
     return (res as { id: string }).id;
   }
@@ -580,3 +584,12 @@ export class FetchError extends Error {
     return extra.length ? `${this.message} (${extra.join(', ')})` : this.message;
   }
 }
+
+export {
+  clearDevRegistry,
+  getDevRegistry,
+  registerDevRegistry,
+  type FractalShellName,
+  type TrellisDevRegistry,
+  type TrellisFractalDev,
+} from './dev-registry.js';

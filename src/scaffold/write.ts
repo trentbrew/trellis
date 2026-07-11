@@ -267,7 +267,7 @@ You are operating in a Trellis-tracked repository. Follow these guidelines:
 3. **Check \`workflows/\`** for repeatable task procedures. Favor existing workflows before improvising.
 4. **Update this file** as the project evolves — new teammates, new goals, new tools.
 5. **Communicate through Trellis** — prefer writing to the graph kernel over mutating files directly when recording decisions or state.
-6. **Multi-agent lanes** — use \`trellis issue start\` or \`trellis lane\`; set \`lanes.worktreeBind\` in \`.trellis/config.json\` to edit under \`.trellis/worktrees/<shortId>/\` per agent.
+6. **Multi-agent lanes** — use \`trellis issue start\` or \`trellis lane\`; \`trellis init\` sets \`lanes.worktreeBind\` and \`git.syncOnPromote\` by default.
 7. **Run \`trellis season\`** if context seems incomplete or out of date.
 
 ---

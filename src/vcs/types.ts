@@ -41,8 +41,11 @@ export type VcsOpKind =
   | 'vcs:issueResume'
   | 'vcs:issueClose'
   | 'vcs:issueReopen'
+  | 'vcs:issueClaim'
+  | 'vcs:issueClaimRelease'
   | 'vcs:criterionAdd'
   | 'vcs:criterionUpdate'
+  | 'vcs:testRun'
   // Issue blocking
   | 'vcs:issueBlock'
   | 'vcs:issueUnblock'
@@ -121,8 +124,20 @@ export interface VcsPayload {
   criterionId?: string;
   criterionDescription?: string;
   criterionCommand?: string;
+  /** Manifest suite id from `.trellis/tests.json` when command is omitted. */
+  criterionSuite?: string;
   criterionStatus?: 'pending' | 'passed' | 'failed';
   criterionOutput?: string;
+
+  // Test runs (vcs:testRun)
+  testRunId?: string;
+  testRunSuite?: string;
+  testRunCommand?: string;
+  testRunStatus?: 'passed' | 'failed';
+  testRunOutput?: string;
+  testRunExitCode?: number;
+  testRunDurationMs?: number;
+  testRunTrigger?: 'manual' | 'watch' | 'pre-promote' | 'pre-close' | 'criterion';
 
   // Agent lanes
   laneId?: string;
@@ -132,6 +147,9 @@ export interface VcsPayload {
   forkKind?: 'sibling' | 'child';
   virtualBaseOpHash?: string;
   sessionId?: string;
+  claimedLaneId?: string;
+  claimedSessionId?: string;
+  claimedAt?: string;
 
   // EAV store (CMS / knowledge graph) — see ADR 0008
   facts?: Fact[];
@@ -201,6 +219,10 @@ export function criterionEntityId(issueId: string, index: number): string {
   return `criterion:${bare}:ac-${index}`;
 }
 
+export function testRunEntityId(id: string): string {
+  return id.startsWith('testRun:') ? id : `testRun:${id}`;
+}
+
 export function decisionEntityId(id: string): string {
   return id.startsWith('decision:') ? id : `decision:${id}`;
 }
@@ -234,8 +256,20 @@ export interface TrellisVcsConfig {
 
   /** Agent lane filesystem bind (ADR 0014 Phase 2). */
   lanes?: {
-    /** Provision git worktrees per lane; default false. */
+    /** Provision git worktrees per lane; default true on init. */
     worktreeBind?: boolean;
+  };
+
+  /** Git mirror adapter — sync integration to main at promote/close. */
+  git?: {
+    /** Auto-commit on lane promote (default true on init). */
+    syncOnPromote?: boolean;
+    /** Push on issue close when --push or this flag is set. */
+    pushOnClose?: boolean;
+    /** Remote name for push (default origin). */
+    remote?: string;
+    /** Branch to commit on (default defaultBranch). */
+    branch?: string;
   };
 }
 

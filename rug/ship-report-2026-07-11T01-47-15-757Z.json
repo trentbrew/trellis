@@ -1,0 +1,47 @@
+{
+  "version": "3.2.5",
+  "mode": "execute",
+  "ok": false,
+  "startedAt": "2026-07-11T01:47:15.757Z",
+  "finishedAt": "2026-07-11T01:47:22.109Z",
+  "failedStep": "test",
+  "preflight": {
+    "shipTmp": "/Users/trentbrew/TURTLE/Projects/TRELLIS/trellis-node/rug/tmp",
+    "disk": {
+      "ok": true,
+      "availMb": 11475,
+      "path": "/System/Volumes/Data"
+    },
+    "diskShipTmp": {
+      "ok": true,
+      "availMb": 11475,
+      "path": "/Users/trentbrew/TURTLE/Projects/TRELLIS/trellis-node/rug/tmp"
+    }
+  },
+  "steps": [
+    {
+      "id": "preflight",
+      "label": "preflight (disk + tmp)",
+      "status": "ok",
+      "startedAt": "2026-07-11T01:47:15.766Z",
+      "durationMs": 11
+    },
+    {
+      "id": "ship-check",
+      "label": "ship-check",
+      "status": "ok",
+      "startedAt": "2026-07-11T01:47:15.777Z",
+      "durationMs": 2905
+    },
+    {
+      "id": "test",
+      "label": "npm run test:ship",
+      "status": "fail",
+      "startedAt": "2026-07-11T01:47:18.682Z",
+      "error": "Command failed: npm run test:ship",
+      "tail": "Command failed: npm run test:ship",
+      "durationMs": 3427
+    }
+  ],
+  "totalSteps": 9
+}

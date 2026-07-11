@@ -723,6 +723,48 @@ export function createTrellisMcpServer(): McpServer {
   );
 
   // -----------------------------------------------------------------------
+  // Tool: trellis_test
+  // -----------------------------------------------------------------------
+  server.registerTool(
+    'trellis_test',
+    {
+      description:
+        'Run test suites from .trellis/tests.json. Records vcs:testRun ops.',
+      inputSchema: {
+        path: z.string().default('.').describe('Repository path'),
+        suite: z
+          .string()
+          .optional()
+          .describe('Suite id (default: defaultSuite or all)'),
+        all: z.boolean().optional().describe('Run every configured suite'),
+      },
+    },
+    async ({ path, suite, all }) => {
+      const engine = getEngine(path);
+      let suiteIds: string[] | undefined;
+      if (suite) suiteIds = [suite];
+      else if (!all) {
+        const { loadTestManifest } = await import('../vcs/test-manifest.js');
+        const manifest = loadTestManifest(path);
+        if (manifest?.defaultSuite) suiteIds = [manifest.defaultSuite];
+      }
+      const results = await engine.runTests({ suiteIds });
+      if (results.length === 0) return text('No test suites ran.');
+      const lines = results.map(
+        (r) =>
+          `[${r.status.toUpperCase()}] ${r.suite ?? r.command}` +
+          (r.status === 'failed' && r.output
+            ? `\n  ${r.output.split('\n')[0]}`
+            : ''),
+      );
+      const passed = results.filter((r) => r.status === 'passed').length;
+      return text(
+        `Test results (${passed}/${results.length} passed):\n${lines.join('\n')}`,
+      );
+    },
+  );
+
+  // -----------------------------------------------------------------------
   // Tool: trellis_issue_check
   // -----------------------------------------------------------------------
   server.registerTool(

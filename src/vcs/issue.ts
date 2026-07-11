@@ -6,8 +6,6 @@
  * acceptance criteria, and queries.
  */
 
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import {
   existsSync,
   readFileSync,
@@ -22,8 +20,11 @@ import { createVcsOp } from './ops.js';
 import type { VcsOp } from './types.js';
 import { issueEntityId, criterionEntityId } from './types.js';
 import type { EngineContext } from './engine-context.js';
-
-const execAsync = promisify(exec);
+import {
+  loadTestManifest,
+  resolveIssueStartCriteria,
+  type CriterionTemplate,
+} from './test-manifest.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -56,6 +57,9 @@ export interface IssueInfo {
   closedAt?: string;
   parentId?: string;
   branchName?: string;
+  claimedLaneId?: string;
+  claimedSessionId?: string;
+  claimedAt?: string;
   blockedBy: string[];
   blocking: string[];
   isBlocked: boolean;
@@ -66,6 +70,7 @@ export interface CriterionInfo {
   id: string;
   description?: string;
   command?: string;
+  suite?: string;
   status?: string;
   lastRunAt?: string;
   lastOutput?: string;
@@ -95,7 +100,7 @@ export interface IssueCreateOptions {
   parentId?: string;
   description?: string;
   status?: 'backlog' | 'queue';
-  criteria?: Array<{ description: string; command?: string }>;
+  criteria?: Array<{ description: string; command?: string; suite?: string }>;
   /**
    * Creates a collision-resistant canonical ID scoped to this lane, e.g.
    * `issue:lane-a:1`. Omit to keep the legacy repo-wide `TRL-N` allocator.
@@ -215,15 +220,17 @@ function issueInfoIdFromEntityId(entityId: string): string {
 function getCriteriaForIssue(
   ctx: EngineContext,
   issueId: string,
+  criterionCeids?: string[],
 ): CriterionInfo[] {
   const eid = issueEntityId(issueId);
-  // Find all criterion entities linked to this issue
-  const criterionLinks = ctx.store
-    .getLinksByAttribute('criterionOf')
-    .filter((l) => l.e2 === eid);
+  const ceids =
+    criterionCeids ??
+    ctx.store
+      .getLinksByAttribute('criterionOf')
+      .filter((l) => l.e2 === eid)
+      .map((l) => l.e1);
 
-  return criterionLinks.map((link) => {
-    const ceid = link.e1;
+  return ceids.map((ceid) => {
     const facts = ctx.store.getFactsByEntity(ceid);
     const getLast = (a: string) => {
       const matches = facts.filter((f) => f.a === a);
@@ -235,6 +242,7 @@ function getCriteriaForIssue(
       id: ceid,
       description: getLast('description'),
       command: getLast('command'),
+      suite: getLast('suite'),
       status: getLast('status'),
       lastRunAt: getLast('lastRunAt'),
       lastOutput: getLast('lastOutput'),
@@ -242,7 +250,36 @@ function getCriteriaForIssue(
   });
 }
 
-function buildIssueInfo(ctx: EngineContext, entityId: string): IssueInfo {
+interface IssueLinkIndexes {
+  /** Reverse blockedBy index: blocked entity -> blockers. */
+  blockedByReverse: Map<string, string[]>;
+  /** criterionOf index: issue entity -> criterion entities. */
+  criterionByIssue: Map<string, string[]>;
+}
+
+function buildIssueLinkIndexes(ctx: EngineContext): IssueLinkIndexes {
+  const blockedByReverse = new Map<string, string[]>();
+  for (const link of ctx.store.getLinksByAttribute('blockedBy')) {
+    const blockers = blockedByReverse.get(link.e2) ?? [];
+    blockers.push(link.e1);
+    blockedByReverse.set(link.e2, blockers);
+  }
+
+  const criterionByIssue = new Map<string, string[]>();
+  for (const link of ctx.store.getLinksByAttribute('criterionOf')) {
+    const criteria = criterionByIssue.get(link.e2) ?? [];
+    criteria.push(link.e1);
+    criterionByIssue.set(link.e2, criteria);
+  }
+
+  return { blockedByReverse, criterionByIssue };
+}
+
+function buildIssueInfo(
+  ctx: EngineContext,
+  entityId: string,
+  indexes?: IssueLinkIndexes,
+): IssueInfo {
   const facts = ctx.store.getFactsByEntity(entityId);
   // Use last matching fact for each attribute (latest is authoritative)
   const get = (a: string) => {
@@ -273,11 +310,14 @@ function buildIssueInfo(ctx: EngineContext, entityId: string): IssueInfo {
   const blockedByLinks = getIssueLinks(ctx, entityId, 'blockedBy');
   const blockedBy = blockedByLinks.map(issueInfoIdFromEntityId);
 
-  // Blocking: reverse blockedBy links (this issue blocks...)
-  const allBlockedByLinks = ctx.store.getLinksByAttribute('blockedBy');
-  const blocking = allBlockedByLinks
-    .filter((l) => l.e2 === entityId)
-    .map((l) => issueInfoIdFromEntityId(l.e1));
+  const blocking = indexes
+    ? (indexes.blockedByReverse.get(entityId) ?? []).map(
+        issueInfoIdFromEntityId,
+      )
+    : ctx.store
+        .getLinksByAttribute('blockedBy')
+        .filter((l) => l.e2 === entityId)
+        .map((l) => issueInfoIdFromEntityId(l.e1));
 
   // Derived: isBlocked if any blocker is not closed
   const isBlocked = blockedByLinks.some((blockerEid) => {
@@ -302,10 +342,17 @@ function buildIssueInfo(ctx: EngineContext, entityId: string): IssueInfo {
     closedAt: get('closedAt'),
     parentId,
     branchName,
+    claimedLaneId: get('claimedLaneId'),
+    claimedSessionId: get('claimedSessionId'),
+    claimedAt: get('claimedAt'),
     blockedBy,
     blocking,
     isBlocked,
-    criteria: getCriteriaForIssue(ctx, issueId),
+    criteria: getCriteriaForIssue(
+      ctx,
+      issueId,
+      indexes?.criterionByIssue.get(entityId),
+    ),
   };
 }
 
@@ -359,12 +406,11 @@ export async function createIssue(
   // Add acceptance criteria if provided
   if (opts?.criteria) {
     for (let i = 0; i < opts.criteria.length; i++) {
-      await addCriterion(
-        ctx,
-        id,
-        opts.criteria[i].description,
-        opts.criteria[i].command,
-      );
+      const c = opts.criteria[i];
+      await addCriterion(ctx, id, c.description, {
+        command: c.command,
+        suite: c.suite,
+      });
     }
   }
 
@@ -467,6 +513,30 @@ export async function startIssue(
 }
 
 /**
+ * Auto-attach acceptance criteria from `.trellis/tests.json` on issue start.
+ * Skips when the issue already has criteria.
+ */
+export async function applyIssueStartCriteria(
+  ctx: EngineContext,
+  issueId: string,
+  rootPath: string,
+  labels: string[] = [],
+): Promise<CriterionTemplate[]> {
+  const existing = getCriteriaForIssue(ctx, issueId);
+  if (existing.length > 0) return [];
+
+  const manifest = loadTestManifest(rootPath);
+  const templates = resolveIssueStartCriteria(manifest, labels);
+  for (const t of templates) {
+    await addCriterion(ctx, issueId, t.description, {
+      command: t.command,
+      suite: t.suite,
+    });
+  }
+  return templates;
+}
+
+/**
  * Pause an in-progress issue.
  */
 export async function pauseIssue(
@@ -488,13 +558,19 @@ export async function pauseIssue(
     );
   }
 
+  const claimedLaneId = getIssueFact(ctx, eid, 'claimedLaneId');
+  const claimedSessionId = getIssueFact(ctx, eid, 'claimedSessionId');
+  const claimedAt = getIssueFact(ctx, eid, 'claimedAt');
   const op = await createVcsOp('vcs:issuePause', {
     agentId: ctx.agentId,
     previousHash: ctx.getLastOp()?.hash,
-    vcs: { 
-      issueId: id, 
+    vcs: {
+      issueId: id,
       oldIssueStatus: status as any,
-      pauseNote: note.trim() 
+      pauseNote: note.trim(),
+      claimedLaneId,
+      claimedSessionId,
+      claimedAt,
     },
   });
   await ctx.applyOp(op);
@@ -567,11 +643,20 @@ export async function closeIssue(
 
   // Compute duration from startedAt
   const startedAt = getIssueFact(ctx, eid, 'startedAt');
+  const claimedLaneId = getIssueFact(ctx, eid, 'claimedLaneId');
+  const claimedSessionId = getIssueFact(ctx, eid, 'claimedSessionId');
+  const claimedAt = getIssueFact(ctx, eid, 'claimedAt');
 
   const op = await createVcsOp('vcs:issueClose', {
     agentId: ctx.agentId,
     previousHash: ctx.getLastOp()?.hash,
-    vcs: { issueId: id, oldIssueStatus: status as any },
+    vcs: {
+      issueId: id,
+      oldIssueStatus: status as any,
+      claimedLaneId,
+      claimedSessionId,
+      claimedAt,
+    },
   });
   await ctx.applyOp(op);
 
@@ -702,7 +787,7 @@ export async function addCriterion(
   ctx: EngineContext,
   issueId: string,
   description: string,
-  command?: string,
+  opts?: { command?: string; suite?: string },
 ): Promise<VcsOp> {
   // Count existing criteria to determine index
   const existing = getCriteriaForIssue(ctx, issueId);
@@ -716,7 +801,8 @@ export async function addCriterion(
       issueId,
       criterionId: cid,
       criterionDescription: description,
-      criterionCommand: command,
+      criterionCommand: opts?.command,
+      criterionSuite: opts?.suite,
     },
   });
   await ctx.applyOp(op);
@@ -755,18 +841,27 @@ export async function setCriterionStatus(
 
 /**
  * Run all acceptance criteria for an issue. Executes test commands
- * and emits criterionUpdate ops with results.
+ * and emits criterionUpdate + vcs:testRun ops with results.
  */
 export async function runCriteria(
   ctx: EngineContext,
   issueId: string,
-  rootPath: string,
+  cwd: string,
+  opts?: { laneId?: string; manifestRoot?: string },
 ): Promise<CriterionResult[]> {
+  const manifestRoot = opts?.manifestRoot ?? cwd;
+  const { loadTestManifest, resolveCriterionCommand } = await import(
+    './test-manifest.js'
+  );
+  const { emitTestRunOp, executeTestCommand } = await import('./test-runner.js');
+
+  const manifest = loadTestManifest(manifestRoot);
   const criteria = getCriteriaForIssue(ctx, issueId);
   const results: CriterionResult[] = [];
 
   for (const c of criteria) {
-    if (!c.command) {
+    const command = resolveCriterionCommand(manifest, c);
+    if (!command) {
       // No command — check-only criterion, skip automated run
       results.push({
         id: c.id,
@@ -776,24 +871,26 @@ export async function runCriteria(
       continue;
     }
 
-    let status: 'passed' | 'failed' = 'failed';
-    let output = '';
-    let exitCode = 1;
+    const executed = await executeTestCommand({
+      command,
+      cwd,
+    });
 
-    try {
-      const result = await execAsync(c.command, {
-        cwd: rootPath,
-        timeout: 120_000,
-      });
-      output = (result.stdout + '\n' + result.stderr).trim();
-      exitCode = 0;
-      status = 'passed';
-    } catch (err: any) {
-      output = (err.stdout ?? '') + '\n' + (err.stderr ?? err.message ?? '');
-      output = output.trim();
-      exitCode = err.code ?? 1;
-      status = 'failed';
-    }
+    const status = executed.status;
+    const output = executed.output;
+    const exitCode = executed.exitCode;
+
+    await emitTestRunOp(ctx, {
+      suiteId: c.suite,
+      command,
+      status,
+      output,
+      exitCode,
+      durationMs: executed.durationMs,
+      laneId: opts?.laneId,
+      issueId,
+      trigger: 'criterion',
+    });
 
     // Emit criterionUpdate op
     const updateOp = await createVcsOp('vcs:criterionUpdate', {
@@ -810,7 +907,7 @@ export async function runCriteria(
     results.push({
       id: c.id,
       description: c.description,
-      command: c.command,
+      command,
       status,
       output,
       exitCode,
@@ -835,7 +932,8 @@ export function listIssues(
     .getFactsByAttribute('type')
     .filter((f) => f.v === 'Issue');
 
-  let issues = issueFacts.map((f) => buildIssueInfo(ctx, f.e));
+  const indexes = buildIssueLinkIndexes(ctx);
+  let issues = issueFacts.map((f) => buildIssueInfo(ctx, f.e, indexes));
 
   if (filters?.status) {
     issues = issues.filter((i) => i.status === filters.status);

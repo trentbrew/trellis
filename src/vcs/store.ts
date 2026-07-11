@@ -11,7 +11,7 @@ import { createVcsOp } from './ops.js';
 import type { VcsOp } from './types.js';
 import type { EngineContext } from './engine-context.js';
 
-const VCS_ENTITY_PREFIXES = ['issue:', 'file:', 'dir:', 'branch:', 'milestone:', 'checkpoint:', 'criterion:', 'lane:', 'decision:'];
+const VCS_ENTITY_PREFIXES = ['issue:', 'file:', 'dir:', 'branch:', 'milestone:', 'checkpoint:', 'criterion:', 'lane:', 'decision:', 'testRun:'];
 
 export interface StoreEntityCreateOptions {
   links?: Array<{ attribute: string; targetEntityId: string }>;

@@ -1,0 +1,4 @@
+blob store: /Users/trentbrew/TURTLE/Projects/TRELLIS/trellis-node/.trellis-relay-blobs/blobs (RELAY_BLOBS=0 to disable)
+presence relay listening on ws://localhost:8231/rt
+blob HTTP: http://localhost:8231/blob/:sha256
+demos auto-wire when started via just run / just presence-relay

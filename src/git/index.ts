@@ -5,6 +5,18 @@
 export { GitReader } from './git-reader.js';
 export { importFromGit } from './git-importer.js';
 export { exportToGit } from './git-exporter.js';
+export {
+  syncIntegrationToGit,
+  buildPromoteCommitMessage,
+  resolveIntegrationHead,
+  readGitSyncConfig,
+} from './git-sync.js';
+export type {
+  GitSyncOptions,
+  GitSyncResult,
+  GitSyncConfig,
+  PromoteCommitMessageParams,
+} from './git-sync.js';
 export type {
   ImportOptions,
   ImportResult,

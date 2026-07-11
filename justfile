@@ -13,6 +13,76 @@ trellis *args="status":
 # Development
 # ---------------------------------------------------------------------------
 
+# Local checkout CLI via dist/ (keeps published `trellis` intact).
+# Prefer this over `npm link` for runner work. Needs a prior `just build`
+# (auto-builds if dist/cli is missing).
+# Usage: just trellis-dev test --review -p /path/to/repo
+trellis-dev *args:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  ROOT="{{justfile_directory()}}"
+  if [ ! -f "$ROOT/dist/cli/index.js" ]; then
+    echo "dist/cli missing — building…"
+    just build
+  fi
+  exec node "$ROOT/bin/trellis.mjs" {{args}}
+
+# Print (and optionally install) a shell alias that opts into this checkout.
+# Usage: just alias-cli
+#        just alias-cli install
+alias-cli mode="":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  ROOT="{{justfile_directory()}}"
+  LINE="alias trellis-dev='node ${ROOT}/bin/trellis.mjs'"
+  echo "── trellis-dev (opt-in local CLI; published \`trellis\` stays intact) ──"
+  echo ""
+  echo "  ${LINE}"
+  echo ""
+  echo "  After build:  trellis-dev test --review -p /path/to/repo"
+  echo "  Or from here: just trellis-dev test --review -p /path/to/repo"
+  echo "  Source-only:  just trellis test --review -p /path/to/repo"
+  echo ""
+  if [ "{{mode}}" = "install" ]; then
+    RC="${ZDOTDIR:-$HOME}/.zshrc"
+    if [ ! -f "$RC" ]; then
+      echo "✗ ${RC} not found"; exit 1
+    fi
+    if grep -qF "alias trellis-dev=" "$RC" 2>/dev/null; then
+      echo "✓ trellis-dev alias already present in ${RC}"
+    else
+      {
+        echo ""
+        echo "# Trellis local checkout CLI (opt-in; keeps global \`trellis\` = published npm)"
+        echo "${LINE}"
+      } >> "$RC"
+      echo "✓ Appended to ${RC} — run: source ${RC}"
+    fi
+  else
+    echo "Install into ~/.zshrc: just alias-cli install"
+  fi
+
+# Replace global trellis with this package (every shell hits local).
+# Prefer trellis-dev / just trellis-dev unless you want systemwide local.
+link-cli: build
+  #!/usr/bin/env bash
+  set -euo pipefail
+  npm link
+  echo ""
+  echo "✓ Global trellis → $(pwd) ($(node -p "require('./package.json').version"))"
+  echo "  which trellis → $(which trellis)"
+  echo "  Restore published: just unlink-cli"
+
+# Undo npm link; reinstall published trellis@latest
+unlink-cli:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  npm unlink -g trellis 2>/dev/null || true
+  npm install -g trellis@latest
+  echo ""
+  echo "✓ Restored published trellis ($(trellis --version 2>/dev/null || echo '?'))"
+  echo "  which trellis → $(which trellis)"
+
 # Start the app — graph explorer on current directory (inits repo if needed)
 run port="4000" trellis_port="3920":
   #!/usr/bin/env bash
@@ -42,6 +112,34 @@ test-core:
 build:
   rm -rf dist
   bun run build
+
+# Copy skills + verify pins in create-trellis / turtlecode (see docs/kernel-touch-manifest.json)
+sync-downstream:
+  node scripts/sync-downstream.mjs
+
+# Pre-publish: coordination smoke + downstream drift check
+ship-check:
+  node scripts/ship-check.mjs
+
+# Full-stack release (dry-run by default). Pass flags after recipe name:
+#   just ship
+#   just ship --verify
+#   just ship --execute
+#   just ship --execute --skip-publish
+#   just ship --execute --full-test
+ship *FLAGS='':
+  node scripts/ship-release.mjs {{FLAGS}}
+
+# Convenience aliases (avoid boolean recipe params — they did not forward reliably)
+ship-verify:
+  node scripts/ship-release.mjs --verify
+
+ship-release *FLAGS='':
+  node scripts/ship-release.mjs --execute {{FLAGS}}
+
+# Agent coordination smoke (global Cursor hooks + kernel defaults)
+coordination-smoke:
+  node scripts/trellis-coordination-smoke.mjs
 
 # Test the `pnpm create trellis` scaffolder locally → ../create-trellis/sandbox
 # Usage: just create [name] [framework] [template] [install]

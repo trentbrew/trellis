@@ -82,6 +82,65 @@ fi
 command -v bun
 `.trim();
 
+/**
+ * Stop a Sprite service and kill orphaned bun processes that may still hold
+ * the HTTP port after `services delete`.
+ */
+export function spriteStopServiceSh(
+  service: string,
+  pkillPattern: string,
+): string {
+  return `
+export PATH="$HOME/.bun/bin:$PATH"
+ENV="/.sprite/bin/sprite-env"
+$ENV services delete ${service} 2>/dev/null || true
+pkill -f "${pkillPattern}" 2>/dev/null || true
+sleep 2
+`.trim();
+}
+
+/** Register a bun script as a sprite-env service on the given HTTP port. */
+export function spriteStartServiceSh(opts: {
+  service: string;
+  bun: string;
+  script: string;
+  dir: string;
+  port: number;
+}): string {
+  const { service, bun, script, dir, port } = opts;
+  return `
+export PATH="$HOME/.bun/bin:$PATH"
+ENV="/.sprite/bin/sprite-env"
+BUN="${bun}"
+$ENV services create ${service} \\
+  --cmd "$BUN" \\
+  --args run,${script} \\
+  --dir ${dir} \\
+  --http-port ${port} \\
+  --no-stream
+`.trim();
+}
+
+/** Stop trellis-db room service (see spriteStopServiceSh). */
+export const SPRITE_STOP_TRELLIS_DB_SH = spriteStopServiceSh(
+  'trellis-db',
+  'bun run server.js',
+);
+
+/** Start trellis-db room service. */
+export function spriteStartTrellisDbSh(opts: {
+  bun: string;
+  port: number;
+}): string {
+  return spriteStartServiceSh({
+    service: 'trellis-db',
+    bun: opts.bun,
+    script: 'server.js',
+    dir: '/home/sprite/trellis-db',
+    port: opts.port,
+  });
+}
+
 /** Parse `sprite url` stdout → `https://…` (no trailing slash). */
 export function parseSpriteUrlOutput(stdout: string): string {
   const match = stdout.match(/URL:\s*(https:\/\/\S+)/i);

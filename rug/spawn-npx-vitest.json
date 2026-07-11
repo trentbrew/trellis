@@ -1,0 +1,6 @@
+{
+  "status": 0,
+  "stdout": "\n RUN  v2.1.9 /Users/trentbrew/TURTLE/Projects/TRELLIS/trellis-node\n\n ✓ test/vcs/test-runner.test.ts (6 tests) 1900ms\n   ✓ VCS test runner > runCriteria resolves suite from manifest 421ms\n   ✓ VCS test runner > getEditRoot uses lane worktree when bound 333ms\n   ✓ VCS test runner > promoteLane requireTest throws when suite fails 381ms\n\n Test Files  1 passed (1)\n      Tests  6 passed (6)\n   Start at  18:45:50\n   Duration  39.38s (transform 7.74s, setup 0ms, collect 10.02s, tests 1.90s, environment 0ms, prepare 4.55s)\n\n",
+  "stderr": "",
+  "error": null
+}

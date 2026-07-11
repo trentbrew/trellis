@@ -40,6 +40,7 @@ export class RoomMcpGateway {
       tenantId,
       headerLane: req.headers.get('x-trellis-lane'),
       headerTenant: req.headers.get('x-trellis-tenant'),
+      requireAuthForWrites: Boolean(ctx.authConfig.apiKey),
     };
 
     return this.gateway.handle(req, () => createRoomMcpServer(roomCtx));

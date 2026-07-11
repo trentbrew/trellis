@@ -53,6 +53,16 @@ export async function startNodeServer(
 
   const httpServer = http.createServer(
     async (req: IncomingMessage, res: ServerResponse) => {
+      // Blob routes may be claimed by attachRealtimeRelay's prepended listener
+      // (PUT is async — check the claim flag, not just headersSent).
+      const claimed = Boolean(
+        (req as IncomingMessage & { [key: symbol]: boolean })[
+          Symbol.for('trellis.blobClaimed')
+        ],
+      );
+      if (claimed || res.headersSent || res.writableEnded) {
+        return;
+      }
       try {
         const fetchReq = await toFetchRequest(req);
         const fetchRes = await opts.fetch(fetchReq);

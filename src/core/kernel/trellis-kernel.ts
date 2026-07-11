@@ -31,6 +31,10 @@ import type {
   OntologyTier,
 } from '../ontology/types.js';
 import { CORE_ONTOLOGY } from '../ontology/core-ontology.js';
+import {
+  filterDurableAttributes,
+  findSchemaForType,
+} from '../ontology/sync-policy.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -401,15 +405,21 @@ export class TrellisKernel {
     links?: Array<{ attribute: string; targetEntityId: string }>,
     ctx?: Partial<MiddlewareContext>,
   ): Promise<MutateResult> {
+    const schema = findSchemaForType(this.ontologies.values(), type);
+    const filtered = filterDurableAttributes(
+      attributes as Record<string, unknown>,
+      schema,
+    ) as Record<string, Atom>;
+
     const facts: Fact[] = [{ e: entityId, a: 'type', v: type }];
 
     // Kernel metadata uses ISO strings; app schemas may define their own
     // `createdAt` (e.g. chat message epoch ms). Do not inject a duplicate.
-    if (attributes.createdAt === undefined) {
+    if (filtered.createdAt === undefined) {
       facts.push({ e: entityId, a: 'createdAt', v: new Date().toISOString() });
     }
 
-    for (const [attr, value] of Object.entries(attributes)) {
+    for (const [attr, value] of Object.entries(filtered)) {
       facts.push({ e: entityId, a: attr, v: value });
     }
 
@@ -454,14 +464,23 @@ export class TrellisKernel {
     updates: Record<string, Atom>,
     ctx?: Partial<MiddlewareContext>,
   ): Promise<MutateResult> {
+    const existing = this.getEntity(entityId);
+    const schema = existing
+      ? findSchemaForType(this.ontologies.values(), existing.type)
+      : undefined;
+    const filtered = filterDurableAttributes(
+      updates as Record<string, unknown>,
+      schema,
+    ) as Record<string, Atom>;
+
     const existingFacts = this.store.getFactsByEntity(entityId);
     const deleteFacts: Fact[] = [];
     const addFacts: Fact[] = [];
 
-    for (const [attr, newValue] of Object.entries(updates)) {
+    for (const [attr, newValue] of Object.entries(filtered)) {
       // Find existing facts for this attribute
-      const existing = existingFacts.filter((f) => f.a === attr);
-      deleteFacts.push(...existing);
+      const existingAttr = existingFacts.filter((f) => f.a === attr);
+      deleteFacts.push(...existingAttr);
       addFacts.push({ e: entityId, a: attr, v: newValue });
     }
 

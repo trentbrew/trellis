@@ -1,6 +1,6 @@
 
-import { TenantPool, startServer } from 'trellis/server';
-import { readConfig, defaultLocalConfig, writeConfig } from 'trellis/client';
+import { TenantPool, startServer } from '/Users/trentbrew/TURTLE/Projects/TRELLIS/trellis-node/dist/server/index.js';
+import { readConfig, defaultLocalConfig, writeConfig } from '/Users/trentbrew/TURTLE/Projects/TRELLIS/trellis-node/dist/client/index.js';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
@@ -18,7 +18,7 @@ const config = readConfig(configDir)!;
 const pool = new TenantPool(dbPath, { backend: { backend: 'sqljs' } });
 await pool.preload();
 
-const server = startServer({ port: 8080, config, pool });
+await startServer({ port: 8080, config, pool, presenceRelay: true });
 
 console.log('Trellis DB running on port 8080');
 console.log(`Listening on port 8080`);

@@ -1,0 +1,15 @@
+
+ RUN  v2.1.9 /Users/trentbrew/TURTLE/Projects/TRELLIS/trellis-node
+
+ ✓ test/vcs/test-runner.test.ts (8 tests | 6 skipped) 21ms
+ ❯ test/issue.test.ts (37 tests | 1 failed | 36 skipped) 43ms
+   × Issue Primitives > startIssue auto-attaches criteria from tests.json labels 42ms
+     → Unexpected token ',', ",
+  {
+    "... is not valid JSON
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 2 passed | 42 skipped (45)
+   Start at  19:29:15
+   Duration  2.19s (transform 614ms, setup 0ms, collect 1.84s, tests 64ms, environment 0ms, prepare 562ms)
+

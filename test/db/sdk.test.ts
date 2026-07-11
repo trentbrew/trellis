@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdirSync, rmSync, existsSync } from 'fs';
-import { join } from 'path';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 import { TrellisDb } from '../../src/client/sdk.js';
 import { writeConfig } from '../../src/client/config.js';
 
-const TMP = join(import.meta.dir, '__tmp_sdk_test');
+const TMP = join(dirname(fileURLToPath(import.meta.url)), '__tmp_sdk_test');
 const DB_PATH = join(TMP, 'data');
 
 beforeEach(() => {
@@ -117,13 +118,35 @@ describe('TrellisDb (local mode)', () => {
   it('fromConfig reads local config', async () => {
     writeConfig({ mode: 'local', dbPath: DB_PATH }, TMP);
     const db = await TrellisDb.fromConfig(TMP);
-    const id = await db.create('Thing', { name: 'test' });
+    const id = await db.create('Post', { name: 'test' });
     expect(typeof id).toBe('string');
     db.close();
   });
 
   it('fromConfig throws when no config', async () => {
     await expect(TrellisDb.fromConfig(TMP + '/missing')).rejects.toThrow();
+  });
+
+  it('accepts explicit create id and round-trips (ADR 0018)', async () => {
+    const db = new TrellisDb({ path: DB_PATH });
+    const id = await db.create('GameEntity', { label: 'Hero' }, undefined, {
+      id: 'entity:fixture-1',
+    });
+    expect(id).toBe('entity:fixture-1');
+    const entity = await db.read('entity:fixture-1');
+    expect(entity?.label).toBe('Hero');
+    db.close();
+  });
+
+  it('rejects duplicate explicit create id with conflict (ADR 0018)', async () => {
+    const db = new TrellisDb({ path: DB_PATH });
+    await db.create('GameEntity', { label: 'A' }, undefined, {
+      id: 'entity:dup',
+    });
+    await expect(
+      db.create('GameEntity', { label: 'B' }, undefined, { id: 'entity:dup' }),
+    ).rejects.toMatchObject({ name: 'EntityConflictError', status: 409 });
+    db.close();
   });
 });
 

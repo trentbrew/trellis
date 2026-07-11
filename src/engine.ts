@@ -35,6 +35,8 @@ import * as checkpointMod from './vcs/checkpoint.js';
 import * as diffMod from './vcs/diff.js';
 import * as mergeMod from './vcs/merge.js';
 import * as issueMod from './vcs/issue.js';
+import * as testRunnerMod from './vcs/test-runner.js';
+import { ensureDefaultTestManifest } from './vcs/test-manifest.js';
 import * as storeMod from './vcs/store.js';
 import type { Atom } from './core/store/eav-store.js';
 import type { EntityRecord } from './core/kernel/trellis-kernel.js';
@@ -70,7 +72,19 @@ import type {
   IntegrationCache,
   MaterializationStats,
 } from './vcs/lane-materialize.js';
+import {
+  integrationSnapshotPath,
+  savePersistedSnapshot,
+} from './vcs/integration-snapshot.js';
 import * as laneWorktreeMod from './vcs/lane-worktree.js';
+import * as issueClaimMod from './vcs/issue-claim.js';
+import * as promoteLockMod from './vcs/promote-lock.js';
+import {
+  buildPromoteCommitMessage,
+  resolveIntegrationHead,
+  syncIntegrationToGit,
+  type GitSyncResult,
+} from './git/git-sync.js';
 import * as laneDiskMod from './vcs/lane-disk-materialize.js';
 
 /**
@@ -146,6 +160,7 @@ interface PersistedConfig {
   defaultBranch: string;
   indexWorkspace?: boolean;
   lanes?: TrellisVcsConfig['lanes'];
+  git?: TrellisVcsConfig['git'];
   agentId: string;
   createdAt: string;
 }
@@ -186,6 +201,8 @@ const ISSUE_INTEGRATION_KINDS = new Set<string>([
   'vcs:issueResume',
   'vcs:issueClose',
   'vcs:issueReopen',
+  'vcs:issueClaim',
+  'vcs:issueClaimRelease',
   'vcs:criterionAdd',
   'vcs:criterionUpdate',
   'vcs:issueBlock',
@@ -290,6 +307,7 @@ export class TrellisVcsEngine {
       defaultBranch: this.config.defaultBranch,
       indexWorkspace: this.config.indexWorkspace,
       lanes: this.config.lanes,
+      git: this.config.git,
       agentId: this.agentId,
       createdAt: createdAt ?? existing?.createdAt ?? new Date().toISOString(),
     };
@@ -386,6 +404,17 @@ export class TrellisVcsEngine {
 
     ensureTrellisGitignoreEntry(this.config.rootPath);
 
+    // Agent coordination defaults — always persisted on init (git adapter no-ops without .git).
+    this.config.lanes = {
+      worktreeBind: true,
+      ...this.config.lanes,
+    };
+    this.config.git = {
+      syncOnPromote: true,
+      remote: 'origin',
+      ...this.config.git,
+    };
+
     const trellisDir = join(this.config.rootPath, '.trellis');
     if (!existsSync(trellisDir)) {
       mkdirSync(trellisDir, { recursive: true });
@@ -396,6 +425,7 @@ export class TrellisVcsEngine {
 
     // Write config
     this.writePersistedConfig();
+    ensureDefaultTestManifest(this.config.rootPath);
 
     // Load existing ops (empty for new repo)
     this.opLog.load();
@@ -470,6 +500,9 @@ export class TrellisVcsEngine {
       if (persisted.lanes) {
         this.config.lanes = persisted.lanes;
       }
+      if (persisted.git) {
+        this.config.git = persisted.git;
+      }
     }
 
     // Load branch + lane session state
@@ -525,10 +558,19 @@ export class TrellisVcsEngine {
   }
 
   private getWatcherRoot(): string {
-    if (!this.isWorktreeBindEnabled() || !this.activeLaneId) {
+    return this.getEditRoot();
+  }
+
+  /**
+   * Directory where agents should run tests and edit files for a lane.
+   * Uses the lane worktree when `lanes.worktreeBind` is enabled.
+   */
+  getEditRoot(laneId?: string): string {
+    const id = laneId ?? this.activeLaneId;
+    if (!id || !this.isWorktreeBindEnabled()) {
       return this.config.rootPath;
     }
-    const meta = this.getLaneMeta(this.activeLaneId);
+    const meta = this.getLaneMeta(id);
     return meta?.worktreePath ?? this.config.rootPath;
   }
 
@@ -985,6 +1027,165 @@ export class TrellisVcsEngine {
     );
   }
 
+  /** Active lane bound to a Cursor/agent session id. */
+  findLaneForSession(sessionId: string): LaneMeta | undefined {
+    return this.listLanes().find(
+      (lane) => lane.sessionId === sessionId && lane.status === 'active',
+    );
+  }
+
+  /**
+   * Find or create a lane for a session. Used by Cursor hooks for tab isolation.
+   */
+  async ensureSessionLane(opts: {
+    sessionId: string;
+    issueId?: string;
+    enter?: boolean;
+  }): Promise<LaneMeta> {
+    const issueKey = opts.issueId
+      ? opts.issueId.startsWith('issue:')
+        ? opts.issueId
+        : `issue:${opts.issueId}`
+      : undefined;
+    const issueIdPlain = issueKey?.replace(/^issue:/, '');
+
+    if (issueIdPlain) {
+      const existingIssueLane = this.findLaneForIssue(issueIdPlain);
+      if (existingIssueLane) {
+        if (
+          existingIssueLane.sessionId &&
+          existingIssueLane.sessionId !== opts.sessionId
+        ) {
+          throw new Error(
+            `Issue ${issueIdPlain} is active on lane ${existingIssueLane.id} (session ${existingIssueLane.sessionId}).`,
+          );
+        }
+        await issueClaimMod.claimIssue(
+          this._ctx(),
+          {
+            issueId: issueIdPlain,
+            laneId: existingIssueLane.id,
+            sessionId: opts.sessionId,
+          },
+          this.config.rootPath,
+        );
+        if (opts.enter) {
+          await this.enterLane(existingIssueLane.id);
+        }
+        return existingIssueLane;
+      }
+
+      const claim = issueClaimMod.getIssueClaim(
+        this._ctx(),
+        issueIdPlain,
+        this.config.rootPath,
+      );
+      if (claim?.sessionId && claim.sessionId !== opts.sessionId) {
+        throw new Error(
+          `Issue ${issueIdPlain} claimed by lane ${claim.laneId} (session ${claim.sessionId}).`,
+        );
+      }
+    }
+
+    const existing = this.findLaneForSession(opts.sessionId);
+    if (existing) {
+      if (opts.enter) {
+        await this.enterLane(existing.id);
+      }
+      if (issueIdPlain) {
+        await issueClaimMod.claimIssue(
+          this._ctx(),
+          {
+            issueId: issueIdPlain,
+            laneId: existing.id,
+            sessionId: opts.sessionId,
+          },
+          this.config.rootPath,
+        );
+      }
+      return existing;
+    }
+
+    const lane = await this.createLane({
+      sessionId: opts.sessionId,
+      issueId: issueKey,
+    });
+    if (issueIdPlain) {
+      await issueClaimMod.claimIssue(
+        this._ctx(),
+        {
+          issueId: issueIdPlain,
+          laneId: lane.id,
+          sessionId: opts.sessionId,
+        },
+        this.config.rootPath,
+      );
+    }
+    if (opts.enter) {
+      await this.enterLane(lane.id);
+    }
+    return lane;
+  }
+
+  /**
+   * Mirror integration branch file state to the primary git worktree and commit.
+   */
+  syncGitIntegration(opts?: {
+    message?: string;
+    push?: boolean;
+    lane?: LaneMeta;
+    laneOps?: VcsOp[];
+    /** When true, sync even if git.syncOnPromote is false. */
+    force?: boolean;
+  }): GitSyncResult {
+    if (!this._blobStore || !laneWorktreeMod.isGitRepo(this.config.rootPath)) {
+      return { committed: false, pushed: false, filesMaterialized: 0 };
+    }
+
+    const autoSync = this.config.git?.syncOnPromote !== false;
+    if (!autoSync && !opts?.force && !opts?.push) {
+      return { committed: false, pushed: false, filesMaterialized: 0 };
+    }
+
+    const branch =
+      this.config.git?.branch ?? this.config.defaultBranch ?? 'main';
+    const integrationOps = this.opLog.readAll();
+    const headOpHash =
+      resolveIntegrationHead(integrationOps, branch) ??
+      branchMod.getBranchHeadOpHash(this._ctx(), branch) ??
+      integrationOps.at(-1)?.hash;
+    if (!headOpHash) {
+      return { committed: false, pushed: false, filesMaterialized: 0 };
+    }
+
+    let message = opts?.message;
+    if (!message && opts?.lane && opts.laneOps) {
+      let issueTitle: string | undefined;
+      if (opts.lane.issueId) {
+        const issueId = opts.lane.issueId.replace(/^issue:/, '');
+        const issue = issueMod.getIssue(this._ctx(), issueId);
+        issueTitle = issue?.title;
+      }
+      message = buildPromoteCommitMessage({
+        lane: opts.lane,
+        laneOps: opts.laneOps,
+        issueTitle,
+      });
+    }
+    message ??= `trellis: sync integration @ ${headOpHash.slice(0, 12)}`;
+
+    return syncIntegrationToGit({
+      rootPath: this.config.rootPath,
+      blobStore: this._blobStore,
+      integrationOps,
+      headOpHash,
+      branch,
+      remote: this.config.git?.remote ?? 'origin',
+      message,
+      push: opts?.push,
+    });
+  }
+
   /**
    * Enter lane from TRELLIS_LANE_ID when set (hooks/MCP/subprocess agents).
    */
@@ -1054,6 +1255,16 @@ export class TrellisVcsEngine {
       throw new Error(
         `No integration head on branch '${baseBranch}' to fork lane from`,
       );
+    }
+
+    if (opts?.issueId) {
+      const issuePlain = opts.issueId.replace(/^issue:/, '');
+      const duplicate = this.findLaneForIssue(issuePlain);
+      if (duplicate) {
+        throw new Error(
+          `Active lane ${duplicate.id} already linked to ${issuePlain}`,
+        );
+      }
     }
 
     const meta = laneMod.createLaneMeta(this.trellisDir(), {
@@ -1271,7 +1482,14 @@ export class TrellisVcsEngine {
   }
   async promoteLane(
     laneId: string,
-    opts?: { dryRun?: boolean; explain?: boolean; toBranch?: string },
+    opts?: {
+      dryRun?: boolean;
+      explain?: boolean;
+      toBranch?: string;
+      requireTest?: boolean;
+      /** Break a stale or abandoned promote lock (dangerous if another promote is live). */
+      forceLock?: boolean;
+    },
   ): Promise<LanePromoteResult> {
     const meta = this.getLaneMeta(laneId);
     if (!meta) {
@@ -1279,6 +1497,23 @@ export class TrellisVcsEngine {
     }
     if (meta.status !== 'active') {
       throw new Error(`Lane '${laneId}' is ${meta.status} — cannot promote`);
+    }
+
+    if (opts?.requireTest && !opts.dryRun) {
+      const testResults = await testRunnerMod.runPromoteRequiredTests(
+        this._ctx(),
+        this.getEditRoot(laneId),
+        laneId,
+        this.config.rootPath,
+      );
+      if (!testRunnerMod.allTestRunsPassed(testResults)) {
+        const failed = testResults
+          .filter((r) => r.status === 'failed')
+          .map((r) => r.suite ?? r.command)
+          .join(', ');
+        throw new Error(`Promote blocked — required tests failed: ${failed}`);
+      }
+      await this.flushAutoCheckpoint();
     }
 
     if (this.activeLaneId === laneId) {
@@ -1322,6 +1557,11 @@ export class TrellisVcsEngine {
       return { ...plan, promoted: false };
     }
 
+    promoteLockMod.acquirePromoteLock(this.trellisDir(), laneId, {
+      force: opts?.forceLock,
+    });
+
+    try {
     meta.status = 'promoting';
     meta.updatedAt = new Date().toISOString();
     laneMod.saveLaneMeta(this.trellisDir(), meta);
@@ -1413,12 +1653,59 @@ export class TrellisVcsEngine {
     this.refreshMaterializedStore(this.opLog.readAll());
     this.syncIngestionLastOpHash();
 
+    let gitSync: GitSyncResult | undefined;
+    if (this.config.git?.syncOnPromote !== false) {
+      gitSync = this.syncGitIntegration({
+        lane: meta,
+        laneOps,
+        force: true,
+      });
+    }
+
     return {
       ...plan,
       promoted: true,
       integrationOpsAppended: opsAppended + 2,
       completeOpHash: completeOp.hash,
+      gitSync,
     };
+    } finally {
+      promoteLockMod.releasePromoteLock(this.trellisDir(), laneId);
+    }
+  }
+
+  /**
+   * Promote active issue lane before close when it has unpromoted journal ops.
+   */
+  private async autoPromoteIssueLaneBeforeClose(
+    id: string,
+    opts?: { noPromote?: boolean; requireTest?: boolean },
+  ): Promise<LanePromoteResult | undefined> {
+    const lane = this.findLaneForIssue(id);
+    if (!lane || lane.status !== 'active') {
+      return undefined;
+    }
+
+    const opCount = this.getLaneOpCount(lane.id);
+    if (opCount === 0) {
+      return undefined;
+    }
+
+    if (opts?.noPromote) {
+      throw new Error(
+        `Lane ${lane.id} has ${opCount} unpromoted ops — promote first or omit --no-promote to auto-promote on close.`,
+      );
+    }
+
+    const result = await this.promoteLane(lane.id, {
+      requireTest: opts?.requireTest,
+    });
+    if (!result.promoted) {
+      throw new Error(
+        `Auto-promote blocked for lane ${lane.id} — resolve conflicts and retry.`,
+      );
+    }
+    return result;
   }
 
   // -------------------------------------------------------------------------
@@ -1645,7 +1932,10 @@ export class TrellisVcsEngine {
     return op;
   }
 
-  async startIssue(id: string, opts?: { lane?: boolean }): Promise<VcsOp> {
+  async startIssue(
+    id: string,
+    opts?: { lane?: boolean; sessionId?: string },
+  ): Promise<VcsOp> {
     if (this.activeLaneId) {
       await this.leaveLane();
     }
@@ -1671,16 +1961,40 @@ export class TrellisVcsEngine {
     // Emit the issueStart op
     const op = await issueMod.startIssue(this._ctx(), id, branchName);
 
+    await issueMod.applyIssueStartCriteria(
+      this._ctx(),
+      id,
+      this.config.rootPath,
+      issue.labels,
+    );
+
     // Switch to the branch
     this.switchBranch(branchName);
 
     if (opts?.lane !== false) {
       const issueKey = id.startsWith('issue:') ? id : `issue:${id}`;
-      let lane = this.findLaneForIssue(issueKey);
+      let lane = this.findLaneForIssue(id);
+      if (lane?.sessionId && opts?.sessionId && lane.sessionId !== opts.sessionId) {
+        throw new Error(
+          `Issue ${id} is active on lane ${lane.id} (session ${lane.sessionId}).`,
+        );
+      }
       if (!lane) {
-        lane = await this.createLane({ issueId: issueKey });
+        lane = await this.createLane({
+          issueId: issueKey,
+          sessionId: opts?.sessionId,
+        });
       }
       await this.enterLane(lane.id);
+      await issueClaimMod.claimIssue(
+        this._ctx(),
+        {
+          issueId: id,
+          laneId: lane.id,
+          sessionId: opts?.sessionId ?? lane.sessionId,
+        },
+        this.config.rootPath,
+      );
     }
 
     await this.flushAutoCheckpoint();
@@ -1701,7 +2015,10 @@ export class TrellisVcsEngine {
     return op;
   }
 
-  async resumeIssue(id: string, opts?: { lane?: boolean }): Promise<VcsOp> {
+  async resumeIssue(
+    id: string,
+    opts?: { lane?: boolean; sessionId?: string },
+  ): Promise<VcsOp> {
     const issue = issueMod.getIssue(this._ctx(), id);
     if (!issue) throw new Error(`Issue ${id} not found.`);
     if (!issue.branchName)
@@ -1713,10 +2030,27 @@ export class TrellisVcsEngine {
     this.switchBranch(issue.branchName);
 
     if (opts?.lane !== false) {
-      const issueKey = id.startsWith('issue:') ? id : `issue:${id}`;
-      const lane = this.findLaneForIssue(issueKey);
+      const lane = this.findLaneForIssue(id);
       if (lane) {
+        if (
+          lane.sessionId &&
+          opts?.sessionId &&
+          lane.sessionId !== opts.sessionId
+        ) {
+          throw new Error(
+            `Issue ${id} is on lane ${lane.id} (session ${lane.sessionId}).`,
+          );
+        }
         await this.enterLane(lane.id);
+        await issueClaimMod.claimIssue(
+          this._ctx(),
+          {
+            issueId: id,
+            laneId: lane.id,
+            sessionId: opts?.sessionId ?? lane.sessionId,
+          },
+          this.config.rootPath,
+        );
       }
     }
 
@@ -1726,17 +2060,47 @@ export class TrellisVcsEngine {
 
   async closeIssue(
     id: string,
-    opts?: { confirm?: boolean },
-  ): Promise<{ op?: VcsOp; criteriaResults: issueMod.CriterionResult[] }> {
+    opts?: {
+      confirm?: boolean;
+      push?: boolean;
+      noPromote?: boolean;
+      requireTest?: boolean;
+    },
+  ): Promise<{
+    op?: VcsOp;
+    criteriaResults: issueMod.CriterionResult[];
+    gitSync?: GitSyncResult;
+    promoteResult?: lanePromoteMod.LanePromoteResult;
+  }> {
     if (this.activeLaneId) {
       await this.leaveLane();
+    }
+
+    let promoteResult: lanePromoteMod.LanePromoteResult | undefined;
+    if (opts?.confirm) {
+      promoteResult = await this.autoPromoteIssueLaneBeforeClose(id, opts);
     }
 
     const result = await issueMod.closeIssue(this._ctx(), id, opts);
     if (result.op) {
       await this.flushAutoCheckpoint();
+
+      const shouldPush =
+        opts?.push === true || this.config.git?.pushOnClose === true;
+      if (shouldPush) {
+        const issue = issueMod.getIssue(this._ctx(), id);
+        const message = issue?.title
+          ? `${id}: ${issue.title}`
+          : `${id}: issue close`;
+        const gitSync = this.syncGitIntegration({
+          message,
+          push: true,
+          force: true,
+        });
+        return { ...result, gitSync, promoteResult };
+      }
     }
-    return result;
+    return { ...result, promoteResult };
   }
 
   async triageIssue(id: string): Promise<VcsOp> {
@@ -1776,13 +2140,15 @@ export class TrellisVcsEngine {
   async addCriterion(
     issueId: string,
     description: string,
-    command?: string,
+    opts?: string | { command?: string; suite?: string },
   ): Promise<VcsOp> {
+    const normalized =
+      typeof opts === 'string' ? { command: opts } : (opts ?? undefined);
     const op = await issueMod.addCriterion(
       this._ctx(),
       issueId,
       description,
-      command,
+      normalized,
     );
     await this.flushAutoCheckpoint();
     return op;
@@ -1804,7 +2170,52 @@ export class TrellisVcsEngine {
   }
 
   async runCriteria(issueId: string): Promise<issueMod.CriterionResult[]> {
-    return issueMod.runCriteria(this._ctx(), issueId, this.config.rootPath);
+    const results = await issueMod.runCriteria(
+      this._ctx(),
+      issueId,
+      this.getEditRoot(),
+      {
+        laneId: this.activeLaneId,
+        manifestRoot: this.config.rootPath,
+      },
+    );
+    await this.flushAutoCheckpoint();
+    return results;
+  }
+
+  async runTests(opts?: {
+    suiteIds?: string[];
+    laneId?: string;
+    issueId?: string;
+    trigger?: testRunnerMod.TestRunTrigger;
+  }): Promise<testRunnerMod.TestRunResult[]> {
+    const laneId = opts?.laneId ?? this.activeLaneId;
+    const cwd = this.getEditRoot(laneId);
+    const manifest = testRunnerMod.tryLoadTestManifest(this.config.rootPath);
+    if (!manifest) {
+      throw new Error(
+        'No test manifest at .trellis/tests.json — add suites before running trellis test',
+      );
+    }
+
+    const suiteIds =
+      opts?.suiteIds ??
+      (manifest.defaultSuite ? [manifest.defaultSuite] : Object.keys(manifest.suites));
+    if (suiteIds.length === 0) {
+      throw new Error('No test suites defined in .trellis/tests.json');
+    }
+
+    const results = await testRunnerMod.runTestSuites(this._ctx(), {
+      cwd,
+      manifestRoot: this.config.rootPath,
+      suiteIds,
+      manifest,
+      laneId,
+      issueId: opts?.issueId,
+      trigger: opts?.trigger ?? 'manual',
+    });
+    await this.flushAutoCheckpoint();
+    return results;
   }
 
   listIssues(filters?: issueMod.IssueFilters): issueMod.IssueInfo[] {
@@ -2015,6 +2426,7 @@ export class TrellisVcsEngine {
       integrationOps,
       this.integrationCache,
       tailHash,
+      { snapshotPath: integrationSnapshotPath(this.trellisDir()) },
     );
     this.integrationCache = cache;
 
@@ -2044,6 +2456,7 @@ export class TrellisVcsEngine {
       integrationOps,
       this.integrationCache,
       tailHash,
+      { snapshotPath: integrationSnapshotPath(this.trellisDir()) },
     );
     this.integrationCache = cache;
     this.store = store;
@@ -2158,6 +2571,11 @@ export class TrellisVcsEngine {
       } else {
         this.integrationCache.tailHash = opToApply.hash;
       }
+      savePersistedSnapshot(
+        integrationSnapshotPath(this.trellisDir()),
+        opToApply.hash,
+        this.store,
+      );
     }
 
     if (

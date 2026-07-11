@@ -77,6 +77,14 @@ export interface AiGeneratedConfig {
   model?: string;
 }
 
+/**
+ * Persistence / replication policy for a property (ADR 0018).
+ * - durable (default): KernelOp / causal op-log
+ * - realtime: ephemeral mesh only — never append to causal history
+ * - derived: computed locally; strip from durable writes
+ */
+export type FieldSyncTier = 'durable' | 'realtime' | 'derived';
+
 export interface PropertyValueSpecification {
   name: string;
   valueType: PropertyType;
@@ -92,6 +100,8 @@ export interface PropertyValueSpecification {
   display?: 'pill' | 'toggle' | 'inline-input' | 'popover';
   editable?: boolean;
   computed?: boolean;
+  /** Field sync tier — see {@link FieldSyncTier}. */
+  sync?: FieldSyncTier;
   modes?: ('view' | 'create' | 'edit')[];
   defaultValue?: Atom;
   // Number constraints

@@ -7,7 +7,18 @@
 
 import { EAVStore } from '../core/store/eav-store.js';
 import { decompose } from './decompose.js';
+import {
+  findTailIndex,
+  loadPersistedSnapshot,
+  savePersistedSnapshot,
+  snapshotsEnabled,
+} from './integration-snapshot.js';
 import type { VcsOp } from './types.js';
+
+export interface MaterializeIntegrationOptions {
+  /** Path to `.trellis/integration-snapshot.json` for cold-start acceleration. */
+  snapshotPath?: string;
+}
 
 export interface MaterializationStats {
   /** Integration ops replayed in the last materialize call (0 = cache hit). */
@@ -16,6 +27,8 @@ export interface MaterializationStats {
   laneOpsReplayed: number;
   /** True when integration cache tail matched the journal tail. */
   integrationCacheHit: boolean;
+  /** True when integration state was restored from a persisted snapshot with no tail replay. */
+  integrationSnapshotHit: boolean;
   /** Integration journal tail hash after last materialize. */
   integrationTailHash?: string;
 }
@@ -30,6 +43,7 @@ export function emptyMaterializationStats(): MaterializationStats {
     integrationOpsReplayed: 0,
     laneOpsReplayed: 0,
     integrationCacheHit: false,
+    integrationSnapshotHit: false,
   };
 }
 
@@ -52,6 +66,7 @@ export function materializeIntegrationOps(
   ops: VcsOp[],
   cache: IntegrationCache | null,
   tailHash: string | undefined,
+  opts?: MaterializeIntegrationOptions,
 ): { store: EAVStore; cache: IntegrationCache; stats: MaterializationStats } {
   if (cache && cache.tailHash === tailHash) {
     return {
@@ -61,14 +76,47 @@ export function materializeIntegrationOps(
         integrationOpsReplayed: 0,
         laneOpsReplayed: 0,
         integrationCacheHit: true,
+        integrationSnapshotHit: false,
         integrationTailHash: tailHash,
       },
     };
   }
 
+  const snapshotPath = opts?.snapshotPath;
+  if (snapshotPath && snapshotsEnabled()) {
+    const persisted = loadPersistedSnapshot(snapshotPath);
+    if (persisted) {
+      const idx = findTailIndex(ops, persisted.tailHash);
+      if (idx >= 0) {
+        const store = new EAVStore();
+        store.restore(persisted.store);
+        for (let i = idx + 1; i < ops.length; i++) {
+          replayOpIntoStore(store, ops[i]!);
+        }
+        const opsReplayed = ops.length - idx - 1;
+        savePersistedSnapshot(snapshotPath, tailHash, store);
+        return {
+          store,
+          cache: { tailHash, store },
+          stats: {
+            integrationOpsReplayed: opsReplayed,
+            laneOpsReplayed: 0,
+            integrationCacheHit: false,
+            integrationSnapshotHit: opsReplayed === 0,
+            integrationTailHash: tailHash,
+          },
+        };
+      }
+    }
+  }
+
   const store = new EAVStore();
   for (const op of ops) {
     replayOpIntoStore(store, op);
+  }
+
+  if (snapshotPath && snapshotsEnabled()) {
+    savePersistedSnapshot(snapshotPath, tailHash, store);
   }
 
   return {
@@ -78,6 +126,7 @@ export function materializeIntegrationOps(
       integrationOpsReplayed: ops.length,
       laneOpsReplayed: 0,
       integrationCacheHit: false,
+      integrationSnapshotHit: false,
       integrationTailHash: tailHash,
     },
   };
@@ -156,6 +205,7 @@ export function materializeChildForkEntry(
       integrationOpsReplayed: integrationReplayed,
       laneOpsReplayed: parentLaneOps.length + childLaneOps.length,
       integrationCacheHit: false,
+      integrationSnapshotHit: false,
       integrationTailHash: integrationOps[integrationOps.length - 1]?.hash,
     },
   };

@@ -1,66 +1,141 @@
 # Changelog
 
-Notable changes by release date and version. See [trellis.computer/changelog](https://trellis.computer/changelog) for the public site copy.
+Notable changes by release date and version. See
+[trellis.computer/changelog](https://trellis.computer/changelog) for the public
+site copy.
+
+## trellis [3.2.5] — 2026-07-11
+
+- **Agent coordination (Phase 2):** session-scoped lanes via
+  `trellis lane ensure --session <id>`; issue claim lock (`vcs:issueClaim`);
+  repo-wide promote mutex (`.trellis/locks/promote.lock`);
+  `trellis lane lock-status`, `promote --force-lock`.
+- **Git adapter:** `trellis git sync [--push]` mirrors integration → `main` with
+  op-log-derived commit messages; auto-sync on `lane promote` when
+  `git.syncOnPromote` (default on init).
+- **Issue close:** auto-promotes unpromoted lane ops by default (`--no-promote`
+  to skip); optional `--push` after close.
+- **Init defaults:** every `trellis init` writes `lanes.worktreeBind: true` and
+  `git.syncOnPromote: true` in `.trellis/config.json` (no longer gated on `.git`
+  existing).
+- **Lane watch dashboard:** `trellis lane watch` — SSE live view at `:3939`
+  (lanes, claims, promote lock, in-progress issues).
+- **Test manifest:** `.trellis/tests.json` seeded on init; `trellis test`,
+  `lane promote --require-test`, suite-aware `issue check`.
+- **Coordination smoke:** `scripts/trellis-coordination-smoke.mjs` validates
+  global Cursor hooks + kernel defaults.
+- **Touch manifest:** `docs/kernel-touch-manifest.json` +
+  `scripts/sync-downstream.mjs` for create-trellis / docs / turtlecode sync.
+
+## trellis [3.2.4] — 2026-07-08
+
+- Workspace-only coordination wedge (session lanes, git sync, claims) — ship as
+  **3.2.5** on npm if 3.2.4 was not published.
 
 ## trellis [3.2.3] — 2026-06-29
 
-- **Agent handoff protocol (TRL-41 / ADR 0015):** `trellis protocol send` records trellis-handoffs YAML envelopes as child issues (`label: message` | `label: decision`); `trellis whereami` (+ `checkpoint`) for WAITING / ACTIVE / MOVED re-entry.
-- **`src/protocol/`:** envelope parse/validate, `isWaitingOnHuman`, lane-aware active context.
-- **Desk harness:** `templates/trellis-harness/trellis-cli.sh` — `trellis_harness_lane_worktree` / `trellis_harness_edit_root` for session hooks when `lanes.worktreeBind` is on.
-- **Agent lane worktree bind (W5 / TRL-40):** optional `lanes.worktreeBind` in `.trellis/config.json` provisions a per-lane git worktree at `.trellis/worktrees/<shortId>/` on `lane create` / `issue start`.
-- **`enterLane` materialize:** lane file blobs replay to the bound worktree; file watcher rebinds to the worktree root.
-- **`dropLane` cleanup:** removes the git worktree when `worktreePath` was provisioned.
-- **ADR 0014:** git materialization + lane worktrees spec (`docs/adr/0014-git-materialization-and-lane-worktrees.md`).
+- **Agent handoff protocol (TRL-41 / ADR 0015):** `trellis protocol send`
+  records trellis-handoffs YAML envelopes as child issues (`label: message` |
+  `label: decision`); `trellis whereami` (+ `checkpoint`) for WAITING / ACTIVE /
+  MOVED re-entry.
+- **`src/protocol/`:** envelope parse/validate, `isWaitingOnHuman`, lane-aware
+  active context.
+- **Desk harness:** `templates/trellis-harness/trellis-cli.sh` —
+  `trellis_harness_lane_worktree` / `trellis_harness_edit_root` for session
+  hooks when `lanes.worktreeBind` is on.
+- **Agent lane worktree bind (W5 / TRL-40):** optional `lanes.worktreeBind` in
+  `.trellis/config.json` provisions a per-lane git worktree at
+  `.trellis/worktrees/<shortId>/` on `lane create` / `issue start`.
+- **`enterLane` materialize:** lane file blobs replay to the bound worktree;
+  file watcher rebinds to the worktree root.
+- **`dropLane` cleanup:** removes the git worktree when `worktreePath` was
+  provisioned.
+- **ADR 0014:** git materialization + lane worktrees spec
+  (`docs/adr/0014-git-materialization-and-lane-worktrees.md`).
 
 ## trellis [3.2.2] — 2026-06-10
 
-- **`trellis db serve` on Node:** preloads the default tenant with sql.js / better-sqlite3 before accepting traffic — fixes `create-trellis` scaffolds and any `npx trellis db serve` flow that hit `SqliteKernelBackend requires the Bun runtime`.
-- **`TenantPool.get()` on Node:** fails fast with a preload hint instead of attempting `bun:sqlite`.
-- **`TRELLIS_BACKEND`:** `sqljs` or `better-sqlite` env override for `db serve` and custom hosts (`resolvePoolBackendFromEnv`).
-- **Gitignore:** `.trellis-db/`, `.trellis-db.json`, `.trellis-deploy/` at repo root.
+- **`trellis db serve` on Node:** preloads the default tenant with sql.js /
+  better-sqlite3 before accepting traffic — fixes `create-trellis` scaffolds and
+  any `npx trellis db serve` flow that hit
+  `SqliteKernelBackend requires the Bun runtime`.
+- **`TenantPool.get()` on Node:** fails fast with a preload hint instead of
+  attempting `bun:sqlite`.
+- **`TRELLIS_BACKEND`:** `sqljs` or `better-sqlite` env override for `db serve`
+  and custom hosts (`resolvePoolBackendFromEnv`).
+- **Gitignore:** `.trellis-db/`, `.trellis-db.json`, `.trellis-deploy/` at repo
+  root.
 
 ## trellis [3.2.0] — 2026-06-08
 
-- **Typed realtime SDK:** `trellis/schema` — `defineType`, `entityQuery`, `WhereFilter` operators, nested `InferResolvedType`, server `hydrateAndResolve` on subscription push.
-- **Live client:** `liveEntities` / `liveEntity` in `trellis/client` with id-scoped subscriptions (`entityQuery`) instead of full-type scans.
-- **Framework hooks:** `trellis/svelte/typed`, `trellis/vue/typed`, `trellis/react/typed` — typed `useEntities` / `useEntity` adapters.
-- **Studio plugin exports:** `trellis/plugins/plan-approval`, `proactive-watcher`, `idea-garden`, `agent-memory` ship in `dist/` for npm consumers (Trellis Studio / opencode).
-- **Ontology:** idempotent `registerType` — duplicate schema registration returns quietly (409 swallowed client-side).
-- **Realtime:** explorer graph-nav + collections demos; collab presence session lifecycle hardening.
+- **Typed realtime SDK:** `trellis/schema` — `defineType`, `entityQuery`,
+  `WhereFilter` operators, nested `InferResolvedType`, server
+  `hydrateAndResolve` on subscription push.
+- **Live client:** `liveEntities` / `liveEntity` in `trellis/client` with
+  id-scoped subscriptions (`entityQuery`) instead of full-type scans.
+- **Framework hooks:** `trellis/svelte/typed`, `trellis/vue/typed`,
+  `trellis/react/typed` — typed `useEntities` / `useEntity` adapters.
+- **Studio plugin exports:** `trellis/plugins/plan-approval`,
+  `proactive-watcher`, `idea-garden`, `agent-memory` ship in `dist/` for npm
+  consumers (Trellis Studio / opencode).
+- **Ontology:** idempotent `registerType` — duplicate schema registration
+  returns quietly (409 swallowed client-side).
+- **Realtime:** explorer graph-nav + collections demos; collab presence session
+  lifecycle hardening.
 
 ## trellis [3.1.32] — 2026-05-29
 
-- **Agent Lanes (W1–W4):** `trellis lane` — isolated per-agent op journals under `.trellis/lanes/`, `create` / `enter` / `leave` / `status` / `diff` / `promote` / `drop`.
-- **`trellis lane promote`:** replay lane ops onto integration with `--dry-run`, `--explain`, and hard/soft/file conflict detection.
-- **`trellis issue start`:** auto-creates and enters a lane (opt out with `--no-lane`).
-- **`TRELLIS_LANE_ID`:** subprocess agents auto-enter the lane via `syncEnvLaneFromEnv()`.
-- **Lazy replay (W4):** integration materialization cache; `leaveLane` restores integration view without full journal replay.
-- **`getBranchHeadOpHash`:** latest `headOpHash` fact wins (fixes stale head during promote).
+- **Agent Lanes (W1–W4):** `trellis lane` — isolated per-agent op journals under
+  `.trellis/lanes/`, `create` / `enter` / `leave` / `status` / `diff` /
+  `promote` / `drop`.
+- **`trellis lane promote`:** replay lane ops onto integration with `--dry-run`,
+  `--explain`, and hard/soft/file conflict detection.
+- **`trellis issue start`:** auto-creates and enters a lane (opt out with
+  `--no-lane`).
+- **`TRELLIS_LANE_ID`:** subprocess agents auto-enter the lane via
+  `syncEnvLaneFromEnv()`.
+- **Lazy replay (W4):** integration materialization cache; `leaveLane` restores
+  integration view without full journal replay.
+- **`getBranchHeadOpHash`:** latest `headOpHash` fact wins (fixes stale head
+  during promote).
 - **Op log lock:** configurable timeout via `TRELLIS_OPLOG_LOCK_MS`.
 
 ## trellis [3.1.14] — 2026-05-22
 
-- CLI `trellis --version` now reports the real package version from `package.json` (was hardcoded `0.1.0`).
-- CLI `-p` / cwd resolution walks up to the nearest `.trellis` repo root (monorepo subfolders work without passing the root path).
+- CLI `trellis --version` now reports the real package version from
+  `package.json` (was hardcoded `0.1.0`).
+- CLI `-p` / cwd resolution walks up to the nearest `.trellis` repo root
+  (monorepo subfolders work without passing the root path).
 - Clearer "not a repository" errors: show looked-from path, cwd, and `-p` hint.
 - `issue create` accepts `--description` as an alias for `--desc`.
-- `bin/trellis.mjs` launcher finds Homebrew Bun when Node's `PATH` is minimal (`npx trellis` / agent shells).
+- `bin/trellis.mjs` launcher finds Homebrew Bun when Node's `PATH` is minimal
+  (`npx trellis` / agent shells).
 
 ## trellis [3.1.2] — 2026-05-12
 
-- Fixed `trellis/cms` collection reads for inferred collections whose normalized key differs from the stored entity type casing, such as `blogpost` reading `BlogPost` entities.
-- Added graph-link awareness to CMS entries so reference links such as `post --author--> author` appear in `fields` and can be expanded.
-- Added `status` fact fallback when `cms_status` is absent, preserving content created by agents or lower-level store tools.
-- Added shared polling for CMS subscriptions so duplicate subscribers to the same collection or entry reuse one poll stream.
+- Fixed `trellis/cms` collection reads for inferred collections whose normalized
+  key differs from the stored entity type casing, such as `blogpost` reading
+  `BlogPost` entities.
+- Added graph-link awareness to CMS entries so reference links such as
+  `post --author--> author` appear in `fields` and can be expanded.
+- Added `status` fact fallback when `cms_status` is absent, preserving content
+  created by agents or lower-level store tools.
+- Added shared polling for CMS subscriptions so duplicate subscribers to the
+  same collection or entry reuse one poll stream.
 - Added `onError` and custom `equals` subscription options.
-- Fixed CMS entity pagination to respect the opencode store route's 1000-entity page limit.
+- Fixed CMS entity pagination to respect the opencode store route's 1000-entity
+  page limit.
 - Added CMS client/scaffold tests and included them in the default test script.
-- Added `directory` support to CMS consumer scaffolds for multi-instance opencode routing.
+- Added `directory` support to CMS consumer scaffolds for multi-instance
+  opencode routing.
 
 ## trellis [3.1.1] — 2026-05-12
 
-- Published the first `trellis/cms` SDK package update after adding scaffold helpers.
+- Published the first `trellis/cms` SDK package update after adding scaffold
+  helpers.
 
 ## trellis [3.1.0] — 2026-05-12
 
-- Added the `trellis/cms` subpath with `createCmsClient`, collection reads, entry reads, polling subscriptions, reference expansion, collection discovery, and consumer scaffold helpers for vanilla, React, Solid, and Vue.
+- Added the `trellis/cms` subpath with `createCmsClient`, collection reads,
+  entry reads, polling subscriptions, reference expansion, collection discovery,
+  and consumer scaffold helpers for vanilla, React, Solid, and Vue.

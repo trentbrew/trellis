@@ -4,6 +4,9 @@
 	import { Select, Slider, ToggleGroup } from 'bits-ui';
 	import ChevronDown from 'carbon-icons-svelte/lib/ChevronDown.svelte';
 	import Checkmark from 'carbon-icons-svelte/lib/Checkmark.svelte';
+	import { registerDevRegistry } from 'trellis/client/sdk';
+	import { createFractalDevRegistry } from '$lib/dev/register-fractal';
+	import { resolveShell } from '$lib/fractal/shells';
 	import { getCustomEntities } from '../data.remote';
 	import Thing from '$lib/fractal/Thing.svelte';
 	import LiveIndicator from '$lib/ui/LiveIndicator.svelte';
@@ -24,9 +27,38 @@
 
 	const LANES = ['main', 'agent:demo'];
 	const SPECTRUM = [2, 5, 8];
+
+	let defaultThingId = $state<string | null>(null);
+
+	$effect(() => {
+		void Promise.resolve(entities).then((list: Array<{ id: string }>) => {
+			defaultThingId = list[0]?.id ?? null;
+		});
+	});
+
+	const registryThingId = $derived(selectedId ?? defaultThingId);
+	const fractalShell = $derived(resolveShell(vantage));
+
+	$effect(() => {
+		registerDevRegistry(
+			createFractalDevRegistry({
+				lane: () => lane,
+				vantage: () => vantage,
+				thingId: () => registryThingId,
+			}),
+		);
+	});
 </script>
 
-<main class="mx-auto max-w-3xl space-y-6 p-6" data-testid="fractal-app" data-hydrated={hydrated}>
+<main
+	class="mx-auto max-w-3xl space-y-6 p-6"
+	data-testid="fractal-app"
+	data-hydrated={hydrated}
+	data-trellis-vantage={vantage}
+	data-trellis-shell={fractalShell}
+	data-trellis-lane={lane}
+	data-trellis-thing-id={registryThingId ?? ''}
+>
 	<header class="flex items-start justify-between gap-4">
 		<div class="space-y-1">
 			<h1 class="carbon-section-title">Fractal wedge</h1>
