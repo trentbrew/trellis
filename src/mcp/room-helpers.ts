@@ -5,6 +5,7 @@
  */
 
 import type { MiddlewareContext } from '../core/kernel/middleware.js';
+import { PROVENANCE } from '../core/persist/canonical-op.js';
 import type { AuthContext } from '../server/auth.js';
 import {
   McpRateLimitError,
@@ -38,6 +39,9 @@ export function writeContext(
 ): Partial<MiddlewareContext> {
   return {
     agentId: resolveWriteAgentId(lane, auth, headerLane),
+    // ADR 0021: every MCP-originated op is attributed to the MCP surface.
+    // Set here rather than at each tool so new tools inherit it.
+    provenance: PROVENANCE.mcp,
   };
 }
 

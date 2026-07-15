@@ -12,7 +12,6 @@
 export * from './types.js';
 export * from './ops.js';
 export * from './decompose.js';
-export * from './vcs-middleware.js';
 export * from './blob-store.js';
 export * from './engine-context.js';
 export * from './branch.js';

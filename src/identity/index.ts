@@ -52,6 +52,10 @@ export type {
   LocalDeviceKey,
 } from './pairing.js';
 
+export { renderPairingQr, encodePairingQr } from './qr.js';
+
+export type { PairQrOptions, PairQrEcc } from './qr.js';
+
 export { evaluatePolicy, createPolicy } from './governance.js';
 
 export type {

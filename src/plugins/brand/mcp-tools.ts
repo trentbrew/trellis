@@ -10,9 +10,13 @@
 
 import { z } from 'zod';
 import type { Atom } from '../../core/store/eav-store.js';
+import { PROVENANCE } from '../../core/persist/canonical-op.js';
 import type { TrellisKernel, EntityRecord } from '../../core/kernel/trellis-kernel.js';
 import { generateBrandCatalog, type KernelReader } from './catalog-generator.js';
 import { CatalogCache } from './cache.js';
+
+/** ADR 0021: these are MCP tools — every write is an agent assertion over MCP. */
+const MCP_CTX = { provenance: PROVENANCE.mcp };
 
 // ---------------------------------------------------------------------------
 // Types
@@ -87,7 +91,7 @@ export const brandCreateGuide: McpToolDef<{
     if (complianceMode) attrs.complianceMode = complianceMode;
     if (voiceTone) attrs.voiceTone = voiceTone;
 
-    await kernel.createEntity(guideId, 'BrandGuide', attrs);
+    await kernel.createEntity(guideId, 'BrandGuide', attrs, undefined, MCP_CTX);
     return text(`Created BrandGuide "${name}" (${guideId})`);
   },
 };
@@ -144,14 +148,18 @@ export const brandUpsertToken: McpToolDef<{
     if (input.wcagAAA !== undefined) attrs.wcagAAA = input.wcagAAA;
 
     if (existing) {
-      await kernel.updateEntity(input.tokenId, attrs);
+      await kernel.updateEntity(input.tokenId, attrs, MCP_CTX);
       return text(`Updated DesignToken "${input.name}" (${input.tokenId})`);
     } else {
-      await kernel.createEntity(input.tokenId, 'DesignToken', attrs, [
-        { attribute: 'hasToken', targetEntityId: input.guideId },
-      ]);
+      await kernel.createEntity(
+        input.tokenId,
+        'DesignToken',
+        attrs,
+        [{ attribute: 'hasToken', targetEntityId: input.guideId }],
+        MCP_CTX,
+      );
       // Also add link from guide → token
-      await kernel.addLink(input.guideId, 'hasToken', input.tokenId);
+      await kernel.addLink(input.guideId, 'hasToken', input.tokenId, MCP_CTX);
       return text(`Created DesignToken "${input.name}" (${input.tokenId}) linked to ${input.guideId}`);
     }
   },
@@ -171,7 +179,7 @@ export const brandDeleteToken: McpToolDef<{ tokenId: string }> = {
     const entity = kernel.getEntity(tokenId);
     if (!entity) return text(`Token "${tokenId}" not found`);
 
-    await kernel.deleteEntity(tokenId);
+    await kernel.deleteEntity(tokenId, MCP_CTX);
     return text(`Deleted DesignToken "${tokenId}"`);
   },
 };

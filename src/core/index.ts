@@ -14,6 +14,8 @@ export type {
   Atom,
   EntityRef,
   Fact,
+  FactMeta,
+  Source,
   Link,
   CatalogEntry,
   QueryTraceEntry,
@@ -44,6 +46,22 @@ export type { SqlJsKernelBackendOptions } from './persist/sqljs-backend.js';
 // Runtime-selecting backend factory
 export { createKernelBackend } from './persist/factory.js';
 export type { CreateKernelBackendOptions } from './persist/factory.js';
+
+// ADR 0021: canonical op hashing
+export {
+  verifyOpHash,
+  hashKernelOp,
+  canonicalOpBody,
+  canonicalOpBodyFromOp,
+  OP_PREIMAGE_VERSION,
+  PROVENANCE,
+} from './persist/canonical-op.js';
+export type {
+  OpProvenance,
+  OpHeader,
+  OpPayloadInput,
+  VerifyResult,
+} from './persist/canonical-op.js';
 
 // Query engine
 export {

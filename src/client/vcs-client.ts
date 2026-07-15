@@ -24,6 +24,7 @@ import { JsonOpLog } from '../vcs/op-log.js';
 import type { OpLog } from '../vcs/op-log.js';
 import type { IssueCreateOptions, IssueInfo } from '../vcs/issue.js';
 import { Signal } from './reactive.js';
+import { PROVENANCE } from '../core/persist/canonical-op.js';
 
 export type TrellisClientTopic =
   | 'ops'
@@ -154,6 +155,7 @@ export class TrellisClient {
       rootPath: opts.repo,
       agentId: client._peerId,
       opLog: client._opLog,
+      provenance: PROVENANCE.sdk,
     });
 
     client._engine.open();

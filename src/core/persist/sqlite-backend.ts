@@ -15,6 +15,7 @@
 // runtime imports, which would re-introduce the unresolvable static
 // `bun:sqlite` import in the dist.
 import type { KernelOp, KernelBackend } from './backend.js';
+import { canonicalOpBodyFromOp } from './canonical-op.js';
 
 // Minimal structural type for the parts of bun:sqlite's Database we use.
 type Database = any;
@@ -159,14 +160,7 @@ export class SqliteKernelBackend implements KernelBackend {
   // -------------------------------------------------------------------------
 
   append(op: KernelOp): void {
-    const payload = JSON.stringify({
-      facts: op.facts,
-      links: op.links,
-      ...(op.deleteFacts?.length ? { deleteFacts: op.deleteFacts } : {}),
-      ...(op.deleteLinks?.length ? { deleteLinks: op.deleteLinks } : {}),
-      ...((op as any).vcs ? { vcs: (op as any).vcs } : {}),
-      ...((op as any).signature ? { signature: (op as any).signature } : {}),
-    });
+    const payload = canonicalOpBodyFromOp(op);
 
     this._stmts!.insert.run({
       $hash: op.hash,
@@ -329,7 +323,8 @@ function rowToOp(row: any): KernelOp {
   if (payload.links) op.links = payload.links;
   if (payload.deleteFacts) op.deleteFacts = payload.deleteFacts;
   if (payload.deleteLinks) op.deleteLinks = payload.deleteLinks;
-  if (payload.vcs) op.vcs = payload.vcs;
-  if (payload.signature) op.signature = payload.signature;
+  // ADR 0021: `v` absent ⇒ legacy v1 op, never reverified.
+  if (payload.v !== undefined) op.v = payload.v;
+  if (payload.provenance) op.provenance = payload.provenance;
   return op;
 }

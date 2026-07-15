@@ -89,7 +89,7 @@ export async function createEntity(
   const op = await createVcsOp('vcs:storeAssert', {
     agentId: ctx.agentId,
     previousHash: ctx.getLastOp()?.hash,
-    vcs: { facts },
+    vcs: { facts, provenance: ctx.provenance },
   });
   await ctx.applyOp(op);
 
@@ -128,7 +128,7 @@ export async function updateEntity(
     const retractOp = await createVcsOp('vcs:storeRetract', {
       agentId: ctx.agentId,
       previousHash: ctx.getLastOp()?.hash,
-      vcs: { facts: deleteFacts },
+      vcs: { facts: deleteFacts, provenance: ctx.provenance },
     });
     await ctx.applyOp(retractOp);
   }
@@ -136,7 +136,7 @@ export async function updateEntity(
   const op = await createVcsOp('vcs:storeAssert', {
     agentId: ctx.agentId,
     previousHash: ctx.getLastOp()?.hash,
-    vcs: { facts: addFacts },
+    vcs: { facts: addFacts, provenance: ctx.provenance },
   });
   await ctx.applyOp(op);
   return op;
@@ -158,7 +158,7 @@ export async function deleteEntity(
     lastOp = await createVcsOp('vcs:storeRetract', {
       agentId: ctx.agentId,
       previousHash: ctx.getLastOp()?.hash,
-      vcs: { facts },
+      vcs: { facts, provenance: ctx.provenance },
     });
     await ctx.applyOp(lastOp);
   }
@@ -167,7 +167,7 @@ export async function deleteEntity(
     lastOp = await createVcsOp('vcs:storeUnlink', {
       agentId: ctx.agentId,
       previousHash: ctx.getLastOp()?.hash,
-      vcs: { links },
+      vcs: { links, provenance: ctx.provenance },
     });
     await ctx.applyOp(lastOp);
   }
@@ -184,7 +184,7 @@ export async function addFact(
   const op = await createVcsOp('vcs:storeAssert', {
     agentId: ctx.agentId,
     previousHash: ctx.getLastOp()?.hash,
-    vcs: { facts: [{ e: entityId, a: attribute, v: value }] },
+    vcs: { facts: [{ e: entityId, a: attribute, v: value }], provenance: ctx.provenance },
   });
   await ctx.applyOp(op);
   return op;
@@ -199,7 +199,7 @@ export async function removeFact(
   const op = await createVcsOp('vcs:storeRetract', {
     agentId: ctx.agentId,
     previousHash: ctx.getLastOp()?.hash,
-    vcs: { facts: [{ e: entityId, a: attribute, v: value }] },
+    vcs: { facts: [{ e: entityId, a: attribute, v: value }], provenance: ctx.provenance },
   });
   await ctx.applyOp(op);
   return op;
@@ -215,7 +215,7 @@ export async function addLink(
   const op = await createVcsOp('vcs:storeLink', {
     agentId: ctx.agentId,
     previousHash: ctx.getLastOp()?.hash,
-    vcs: { links: [link] },
+    vcs: { links: [link], provenance: ctx.provenance },
   });
   await ctx.applyOp(op);
   return op;
@@ -231,7 +231,7 @@ export async function removeLink(
   const op = await createVcsOp('vcs:storeUnlink', {
     agentId: ctx.agentId,
     previousHash: ctx.getLastOp()?.hash,
-    vcs: { links: [link] },
+    vcs: { links: [link], provenance: ctx.provenance },
   });
   await ctx.applyOp(op);
   return op;

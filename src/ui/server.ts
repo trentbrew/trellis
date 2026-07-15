@@ -20,6 +20,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { startNodeServer } from '../server/node-adapter.js';
 import { TrellisVcsEngine } from '../engine.js';
+import { PROVENANCE } from '../core/persist/canonical-op.js';
 import {
   buildRefIndex,
   createResolverContext,
@@ -464,7 +465,7 @@ export async function startUIServer(opts: UIServerOptions): Promise<{
   port: number;
   stop: () => void;
 }> {
-  const engine = new TrellisVcsEngine({ rootPath: opts.rootPath });
+  const engine = new TrellisVcsEngine({ rootPath: opts.rootPath, provenance: PROVENANCE.http });
   engine.open();
 
   // Resolve client.html — cwd (WebContainer/npx), import.meta (bundled), argv (bin).

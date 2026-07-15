@@ -12,6 +12,10 @@ import type { LLMMessage } from '../../llm/types.js';
 import type { ContextManager } from '../../context/types.js';
 import type { TrellisKernel } from '../../core/kernel/trellis-kernel.js';
 import type { Atom } from '../../core/store/eav-store.js';
+import { PROVENANCE } from '../../core/persist/canonical-op.js';
+
+/** ADR 0021: conversation memory is written by and for AI agents. */
+const AGENT_CTX = { provenance: PROVENANCE.agent };
 
 // ---------------------------------------------------------------------------
 // Types
@@ -77,7 +81,7 @@ export class GraphContextManager implements ContextManager {
     if (opts.model) attrs.model = opts.model;
     if (opts.createdBy) attrs.createdBy = opts.createdBy;
 
-    await this.kernel.createEntity(id, 'Conversation', attrs);
+    await this.kernel.createEntity(id, 'Conversation', attrs, undefined, AGENT_CTX);
     this.conversationId = id;
     this.cache = [];
     this.messageCounter = 0;
@@ -110,7 +114,7 @@ export class GraphContextManager implements ContextManager {
    */
   async archiveConversation(): Promise<void> {
     if (!this.conversationId) return;
-    await this.kernel.updateEntity(this.conversationId, { status: 'archived' });
+    await this.kernel.updateEntity(this.conversationId, { status: 'archived' }, AGENT_CTX);
     this.conversationId = null;
     this.cache = [];
   }
@@ -147,7 +151,7 @@ export class GraphContextManager implements ContextManager {
       ])
       .then(() => {
         // Link from conversation to message
-        return this.kernel.addLink(this.conversationId!, 'hasMessage', entityId);
+        return this.kernel.addLink(this.conversationId!, 'hasMessage', entityId, AGENT_CTX);
       })
       .catch((err) => {
         console.error(`GraphContextManager: Failed to persist message ${entityId}:`, err);

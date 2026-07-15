@@ -8,6 +8,7 @@
  */
 
 import type { KernelOp, KernelBackend } from './backend.js';
+import { canonicalOpBodyFromOp } from './canonical-op.js';
 
 // ---------------------------------------------------------------------------
 // Schema
@@ -122,12 +123,7 @@ export class BetterSqliteKernelBackend implements KernelBackend {
   }
 
   append(op: KernelOp): void {
-    const payload = JSON.stringify({
-      facts: op.facts,
-      links: op.links,
-      deleteFacts: op.deleteFacts,
-      deleteLinks: op.deleteLinks,
-    });
+    const payload = canonicalOpBodyFromOp(op);
 
     this._stmts.insert.run(
       op.hash,
@@ -265,6 +261,9 @@ export class BetterSqliteKernelBackend implements KernelBackend {
       links: payload.links,
       deleteFacts: payload.deleteFacts,
       deleteLinks: payload.deleteLinks,
+      // ADR 0021: `v` absent ⇒ legacy v1 op, never reverified.
+      v: payload.v,
+      provenance: payload.provenance ?? undefined,
     };
   }
 }
