@@ -8,6 +8,26 @@
 
 **Status:** Accepted
 **Date:** 2026-07-15
+
+**Impl:** Phases 0–2 in `src/identity/capability.ts`; Phase 4 (per-writer refs) in
+`src/vcs/branch.ts` + `src/vcs/decompose.ts`. **Phase 3 (kernel deny-by-default)
+is NOT started.**
+
+> **Grants are ops, not store writes.** The first implementation wrote grants
+> straight to `EAVStore`. That store is *derived* — rebuilt by op replay on boot
+> — so those grants vanished on restart, never replicated, were not hash-covered
+> and carried no provenance. Because Phase 3 is deny-by-default enforcement,
+> building it on that would have meant the first reboot dropped every grant,
+> `resolveCapability` returned `None` for everyone, and the repo locked itself
+> out. Writes now mint `vcs:zoneDefine` / `zoneRename` / `grantSet` /
+> `grantRetract` through `EngineContext`; reads still run against the
+> materialized store. Regression covered by `test/p4/capability-persistence.test.ts`
+> against a real engine and a real reboot — the original tests were
+> store-isolated and could not have caught it.
+>
+> Authorization ops get their own kinds rather than riding a generic
+> `vcs:storeAssert`: a grant you cannot name in the log is a grant you cannot
+> audit.
 **Issue:** TRL-102 (refs / lane-hash), TRL-97 (sprite relay blobstore)
 **Depends on:** `src/identity/` (Ed25519 + signing middleware, ADR 0020),
 `src/identity/governance.ts`
@@ -171,6 +191,20 @@ stays readable. Ship no zone to a peer you would not show the whole zone to, for
 
 **Costs / risks**
 
+- **`alias` is an unbounded-domain register and fails the §2 audit's second half.**
+  `decompose` is pure and cannot read the store, so `vcs:zoneRename` carries the
+  prior alias on the op in order to delete it. Exact for sequential renames;
+  two co-owners renaming concurrently can leave two `alias` facts, which
+  `getZone`'s `find()` then resolves by insertion order. Grants avoid this
+  because their domain *is* bounded — `decompose` enumerates and deletes every
+  prior level. Same shape as `headOpHash`, one field over.
+- **Authority is checked at mint, not at ingest.** `assertOwner` stops an honest
+  caller; a peer that mints a `vcs:grantSet` directly is not stopped by anything
+  yet. That is Phase 3, and until it lands the model is advisory against a
+  hostile peer.
+- `writerPrincipal` falls back to the self-asserted `agentId` for unsigned ops,
+  which contradicts §4's "not `agentId`". Spoofable until ADR 0020 signing is
+  enforced at ingest.
 - `vcs:branchAdvance` semantics change for personal branches (leave the graph); only
   `integration` keeps it as an audit op.
 - Encryption-at-rest per zone key (AES-256-GCM / argon2id) is a follow-on ADR — this

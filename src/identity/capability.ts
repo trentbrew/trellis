@@ -11,9 +11,24 @@
  * Grants are explicit (principal, zoneId, level) facts. Absence = `None`
  * (deny-by-default). Revocation retracts the grant fact; `None` is never
  * persisted. Nesting via `parentZone` yields a capability closure.
+ *
+ * **Writes mint ops; reads run against the materialized store.** The store is
+ * derived — rebuilt by op replay on boot — so writing to it directly would give
+ * grants that vanish on restart, never replicate to peers, are not hash-covered
+ * and carry no provenance. An authorization change a peer cannot see is not a
+ * boundary, so every mutation here goes through the journal as a first-class,
+ * nameable op (`vcs:zoneDefine` / `zoneRename` / `grantSet` / `grantRetract`).
+ *
+ * **Authority is checked at mint, not enforced at ingest.** `assertOwner` stops
+ * an honest caller from over-reaching, but a peer can mint a grant op directly.
+ * Enforcing that is the kernel deny-by-default boundary (ADR 0022 consequence,
+ * Phase 3) and is deliberately not attempted here.
  */
 
-import type { EAVStore, Fact } from '../core/store/eav-store.js';
+import type { EAVStore } from '../core/store/eav-store.js';
+import type { EngineContext } from '../vcs/engine-context.js';
+import type { VcsOp } from '../vcs/types.js';
+import { createVcsOp } from '../vcs/ops.js';
 
 // ---------------------------------------------------------------------------
 // Capability levels
@@ -94,19 +109,24 @@ export function zoneOwnerDid(zoneId: ZoneId): string | null {
  * The zone's owner (from the id) is auto-granted `Owner` so the zone is
  * administerable from creation; subsequent grants are Owner-gated.
  */
-export function defineZone(store: EAVStore, zone: Zone): void {
-  const e = grantEntity(zone.zoneId);
-  const facts: Fact[] = [
-    { e, a: 'type', v: 'Zone' },
-    { e, a: 'zoneId', v: zone.zoneId },
-    { e, a: 'alias', v: zone.alias },
-    { e, a: 'defaultVisibility', v: zone.defaultVisibility },
-    { e, a: grantAttr(zoneOwner(zone.zoneId)), v: CapabilityLevel.Owner },
-  ];
-  if (zone.parentZone) {
-    facts.push({ e, a: 'parentZone', v: zone.parentZone });
-  }
-  store.addFacts(facts);
+export async function defineZone(
+  ctx: EngineContext,
+  zone: Zone,
+): Promise<VcsOp> {
+  zoneOwner(zone.zoneId); // throws on a malformed id before anything is minted
+  const op = await createVcsOp('vcs:zoneDefine', {
+    agentId: ctx.agentId,
+    previousHash: ctx.getLastOp()?.hash,
+    vcs: {
+      zoneId: zone.zoneId,
+      zoneAlias: zone.alias,
+      zoneDefaultVisibility: zone.defaultVisibility,
+      ...(zone.parentZone ? { zoneParent: zone.parentZone } : {}),
+      provenance: ctx.provenance,
+    },
+  });
+  await ctx.applyOp(op);
+  return op;
 }
 
 /** Owner principal derived from the zoneId's authority. */
@@ -120,11 +140,28 @@ function zoneOwner(zoneId: ZoneId): string {
  * Rename a zone. Edits only the `alias` fact — `zoneId` and all grants are
  * untouched. This is the rename-proof guarantee (ADR 0022 §2).
  */
-export function renameZone(store: EAVStore, zoneId: ZoneId, alias: string): void {
-  const e = grantEntity(zoneId);
-  const prior = readAlias(store, zoneId) ?? '';
-  store.deleteFacts([{ e, a: 'alias', v: prior }]);
-  store.addFacts([{ e, a: 'alias', v: alias }]);
+export async function renameZone(
+  ctx: EngineContext,
+  zoneId: ZoneId,
+  alias: string,
+): Promise<VcsOp> {
+  // `alias` is unbounded, so the prior value has to ride on the op: `decompose`
+  // is pure and cannot read the store to find what to delete. Exact for
+  // sequential renames; concurrent renames by co-owners can leave two alias
+  // facts (ADR 0022 §2's "totally ordered writes" half failing).
+  const prior = readAlias(ctx.store, zoneId) ?? '';
+  const op = await createVcsOp('vcs:zoneRename', {
+    agentId: ctx.agentId,
+    previousHash: ctx.getLastOp()?.hash,
+    vcs: {
+      zoneId,
+      zoneAlias: alias,
+      oldZoneAlias: prior,
+      provenance: ctx.provenance,
+    },
+  });
+  await ctx.applyOp(op);
+  return op;
 }
 
 function readAlias(store: EAVStore, zoneId: ZoneId): string | undefined {
@@ -156,37 +193,53 @@ export function getZone(store: EAVStore, zoneId: ZoneId): Zone | undefined {
  * (ADR 0022 invariant). `level` of `None` is rejected — revoke via
  * `retractGrant` instead, so `None` is never persisted.
  */
-export function setGrant(
-  store: EAVStore,
+export async function setGrant(
+  ctx: EngineContext,
   grant: Grant,
   actor: string,
-): void {
+): Promise<VcsOp> {
   if (grant.level === CapabilityLevel.None) {
     throw new Error('CapabilityLevel.None is never persisted; use retractGrant');
   }
-  assertOwner(store, grant.zoneId, actor);
-  const e = grantEntity(grant.zoneId);
-  // Replace any prior grant for this principal on this zone (bounded domain).
-  retractGrant(store, grant.zoneId, grant.principal, actor);
-  store.addFacts([{ e, a: grantAttr(grant.principal), v: grant.level }]);
+  assertOwner(ctx.store, grant.zoneId, actor);
+  // No prior level is carried: the grant domain is bounded, so `decompose`
+  // enumerates and deletes every possible prior exhaustively.
+  const op = await createVcsOp('vcs:grantSet', {
+    agentId: ctx.agentId,
+    previousHash: ctx.getLastOp()?.hash,
+    vcs: {
+      zoneId: grant.zoneId,
+      grantPrincipal: grant.principal,
+      grantLevel: grant.level,
+      provenance: ctx.provenance,
+    },
+  });
+  await ctx.applyOp(op);
+  return op;
 }
 
 /**
  * Retract a grant (revocation). Owner-gated. Removes the grant fact; the
  * principal falls back to `defaultVisibility` / `None`.
  */
-export function retractGrant(
-  store: EAVStore,
+export async function retractGrant(
+  ctx: EngineContext,
   zoneId: ZoneId,
   principal: string,
   actor: string,
-): void {
-  assertOwner(store, zoneId, actor);
-  const e = grantEntity(zoneId);
-  const existing = store
-    .getFactsByEntity(e)
-    .filter((f) => f.a === grantAttr(principal));
-  store.deleteFacts(existing);
+): Promise<VcsOp> {
+  assertOwner(ctx.store, zoneId, actor);
+  const op = await createVcsOp('vcs:grantRetract', {
+    agentId: ctx.agentId,
+    previousHash: ctx.getLastOp()?.hash,
+    vcs: {
+      zoneId,
+      grantPrincipal: principal,
+      provenance: ctx.provenance,
+    },
+  });
+  await ctx.applyOp(op);
+  return op;
 }
 
 function assertOwner(store: EAVStore, zoneId: ZoneId, actor: string): void {

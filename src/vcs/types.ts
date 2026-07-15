@@ -47,6 +47,13 @@ export type VcsOpKind =
   | 'vcs:criterionUpdate'
   | 'vcs:criterionRemove'
   | 'vcs:testRun'
+  // Zone capability model (ADR 0022). Authorization changes get their own kinds
+  // rather than riding a generic storeAssert: a grant you cannot name in the log
+  // is a grant you cannot audit.
+  | 'vcs:zoneDefine'
+  | 'vcs:zoneRename'
+  | 'vcs:grantSet'
+  | 'vcs:grantRetract'
   // Issue blocking
   | 'vcs:issueBlock'
   | 'vcs:issueUnblock'
@@ -163,6 +170,24 @@ export interface VcsPayload {
   claimedLaneId?: string;
   claimedSessionId?: string;
   claimedAt?: string;
+
+  // Zone capability model (ADR 0022)
+  /** Immutable, authority-bearing zone id: `turtle://<ownerDid>/zone/<uuid>`. */
+  zoneId?: string;
+  /** Mutable human name. Renaming edits only this — never the id or grants. */
+  zoneAlias?: string;
+  /** Prior alias, so rename is delete-then-add rather than an append. */
+  oldZoneAlias?: string;
+  /** Opaque parent zoneId for nesting → grant inheritance closure. */
+  zoneParent?: string;
+  /** Level granted to anon (Reader = public, None = private). */
+  zoneDefaultVisibility?: number;
+  /** Principal a grant applies to (Agent Ed25519 did:key entity id). */
+  grantPrincipal?: string;
+  /** Granted level. `None` is never persisted — retraction removes the fact. */
+  grantLevel?: number;
+  /** Prior level, so a grant change is delete-then-add over a bounded domain. */
+  oldGrantLevel?: number;
 
   // EAV store (CMS / knowledge graph) — see ADR 0008
   facts?: Fact[];
