@@ -520,8 +520,61 @@ clients via Iroh. Every layer under `view` already exists.
 
 ## 11. Open decisions
 
+0. **Peer materialization — the fork that gates the rest** (TRL-110, and see
+   `trl-108-op-stream-findings.md`). Does a peer apply ops to its own store and
+   query locally, or receive server-derived projections? **Recommend
+   materialize.** Iroh peers must (no server to ask), so the alternative is two
+   divergent paths for one job — which is how the VcsOp/KernelOp split happened.
+   The infrastructure already exists and was never wired up: `SqlJsKernelBackend`
+   ("pure-WASM SQLite … browser"), `IdbOpLog` ("browser-side companion to
+   JsonOpLog"), and EQL-S has no node-only imports. Nobody builds an IndexedDB op
+   log for a thin client.
+   - **Refinement:** ship *decomposed payloads + `kind`*. The peer then needs
+     only apply-facts and query — not `decompose.ts`, not the 33-kind vocabulary.
+     `kind` rides as metadata for legibility but is never interpreted. This
+     dissolves the consensus risk (a pure `decompose` run client-side makes two
+     peers on different versions derive different state from identical
+     hash-verified ops) and makes the store a pure function of ops received —
+     convergence by construction.
+   - **Cost, stated honestly:** materialization makes the *replication unit* the
+     *authorization unit*. A peer that materializes holds every fact you shipped
+     it, so per-fact read filtering is client-side theatre. §5 stops being
+     deferrable. That is a feature: server projections let you pretend you have
+     per-fact auth while being a thin client.
+   - **Would change the answer:** an EQL-S + sql.js bundle too large for the
+     browser (unmeasured); a real per-fact authorization need rooms cannot
+     express.
+   - **This decision precedes 1 and 4 below** — a DSL binds to a substrate, and
+     `tx-query`/`use:query` reads identically whether it runs locally or asks a
+     server. Design it first and you may write syntax the client cannot execute.
+
 1. **Novel language vs. embedded DSL** (§3) — recommend embedded. **Needs your
    call.**
+   - **Option C — htmx-style attribute DSL** (proposed 2026-07-15). Philosophy:
+     *"the graph is the engine of application state"* — decorate markup with
+     graph relationships instead of HTTP requests. Four primitives: `query`
+     (derive), `op` (mutate), `live` (subscribe), `ref` (bind to identity).
+     `live` is the real differentiator: it is exactly what htmx lacks and Trellis
+     has.
+   - **Take the philosophy; reject the string form.** `tx-query="todos.where(done
+     = false)"` *is* a novel language — §3's Option A wearing an attribute, and
+     worse on every axis §3 cared about: no type-check, no autocomplete, no LSP,
+     runtime errors instead of compile errors, and invisible to tooling
+     (including the `pnpm check` promote gate). §3's own argument — "agents
+     already speak TypeScript … strictly better for the AX thesis" — is decisive
+     against it: an agent that writes `don = false` gets a blank div and no
+     diagnostic.
+   - **Synthesis:** keep the four primitives, bind them to *typed expressions*,
+     which lands on §4's existing Svelte-runes recommendation:
+     `<ul use:query={todos.where(t => !t.done)} use:live>`. htmx needed attribute
+     strings because HTML had no other extension mechanism; we control the
+     compiler and do not inherit that constraint.
+   - **Two flagged before this becomes a spec:** (a) `tx-agent` is a capability
+     grant in markup — "who may invoke this, on whose behalf, reading what" is §5
+     + capability middleware, and must exist before the syntax; (b) optimistic
+     update/rollback does *not* "emerge from the four primitives" — it is a
+     protocol concern (SPEC-v1.1+) that depends on what the server does with a
+     rejected op.
 2. **Read-authorization model** (§5) — needs a dedicated ADR before `rule Read`
    is real. Blocking for Campus "room = file."
 3. **Reads/writes enforcement unification** — one mechanism or two? Today it's
