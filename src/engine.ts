@@ -998,9 +998,16 @@ export class TrellisVcsEngine {
     return this.currentBranch;
   }
 
-  /** Integration branch head op hash from the materialized store (ADR 0004). */
-  getBranchHeadOpHash(branchName: string = this.currentBranch): string | undefined {
-    return branchMod.getBranchHeadOpHash(this._ctx(), branchName);
+  /**
+   * Integration branch head op hash from the materialized store (ADR 0004).
+   * Pass `principal` to resolve a single writer's per-principal ref zone
+   * (ADR 0022 §4) — two writers on the same personal branch keep separate heads.
+   */
+  getBranchHeadOpHash(
+    branchName: string = this.currentBranch,
+    principal?: string,
+  ): string | undefined {
+    return branchMod.getBranchHeadOpHash(this._ctx(), branchName, principal);
   }
 
   getActiveLaneId(): string | undefined {

@@ -51,6 +51,50 @@ function isStaleLane(lane: LaneMeta): boolean {
   return ageMs > 24 * 60 * 60 * 1000;
 }
 
+async function listLanesAction(opts: {
+  active?: boolean;
+  stale?: boolean;
+  path: string;
+}): Promise<void> {
+  const rootPath = resolveRepoRoot(opts.path);
+  const engine = await openEngine(rootPath);
+
+  let lanes = engine.listLanes();
+  if (opts.active) {
+    lanes = lanes.filter((l) => l.status === 'active');
+  }
+  if (opts.stale) {
+    lanes = lanes.filter((l) => isStaleLane(l));
+  }
+
+  if (lanes.length === 0) {
+    console.log(chalk.dim('No lanes'));
+    return;
+  }
+
+  console.log(chalk.bold('Agent Lanes\n'));
+  for (const lane of lanes) {
+    const marker =
+      engine.getActiveLaneId() === lane.id ? chalk.green('* ') : '  ';
+    const opCount = engine.getLaneOpCount(lane.id);
+    const issue = lane.issueId ? chalk.dim(` · ${lane.issueId}`) : '';
+    console.log(
+      `${marker}${chalk.cyan(lane.id)}  ${formatLaneStatus(lane.status)}  ${chalk.dim(`${opCount} ops`)}${issue}`,
+    );
+    console.log(
+      `    ${chalk.dim('fork')} ${lane.baseBranch} · ${formatRelativeTime(lane.createdAt)}`,
+    );
+    if (lane.parentLaneId) {
+      console.log(
+        `    ${chalk.dim('from')} ${lane.parentLaneId}${lane.forkKind ? ` (${lane.forkKind})` : ''}`,
+      );
+    }
+    if (lane.worktreePath) {
+      console.log(`    ${chalk.dim('worktree')} ${lane.worktreePath}`);
+    }
+  }
+}
+
 export function registerLaneCommands(program: Command): void {
   const laneCmd = program
     .command('lane')
@@ -189,45 +233,15 @@ export function registerLaneCommands(program: Command): void {
     .option('--active', 'Show only active lanes')
     .option('--stale', 'Show only stale active lanes (lease expired or >24h)')
     .option('-p, --path <path>', 'Repository path', '.')
-    .action(async (opts) => {
-      const rootPath = resolveRepoRoot(opts.path);
-      const engine = await openEngine(rootPath);
+    .action(listLanesAction);
 
-      let lanes = engine.listLanes();
-      if (opts.active) {
-        lanes = lanes.filter((l) => l.status === 'active');
-      }
-      if (opts.stale) {
-        lanes = lanes.filter((l) => isStaleLane(l));
-      }
-
-      if (lanes.length === 0) {
-        console.log(chalk.dim('No lanes'));
-        return;
-      }
-
-      console.log(chalk.bold('Agent Lanes\n'));
-      for (const lane of lanes) {
-        const marker =
-          engine.getActiveLaneId() === lane.id ? chalk.green('* ') : '  ';
-        const opCount = engine.getLaneOpCount(lane.id);
-        const issue = lane.issueId ? chalk.dim(` · ${lane.issueId}`) : '';
-        console.log(
-          `${marker}${chalk.cyan(lane.id)}  ${formatLaneStatus(lane.status)}  ${chalk.dim(`${opCount} ops`)}${issue}`,
-        );
-        console.log(
-          `    ${chalk.dim('fork')} ${lane.baseBranch} · ${formatRelativeTime(lane.createdAt)}`,
-        );
-        if (lane.parentLaneId) {
-          console.log(
-            `    ${chalk.dim('from')} ${lane.parentLaneId}${lane.forkKind ? ` (${lane.forkKind})` : ''}`,
-          );
-        }
-        if (lane.worktreePath) {
-          console.log(`    ${chalk.dim('worktree')} ${lane.worktreePath}`);
-        }
-      }
-    });
+  laneCmd
+    .command('list')
+    .description('List agent lanes')
+    .option('--active', 'Show only active lanes')
+    .option('--stale', 'Show only stale active lanes (lease expired or >24h)')
+    .option('-p, --path <path>', 'Repository path', '.')
+    .action(listLanesAction);
 
   laneCmd
     .command('enter <id>')

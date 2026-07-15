@@ -85,6 +85,21 @@ export function buildRepoExamples(input: {
 
   if (issues.length) {
     eql.push(formatEqlQuery('find ?e where type = "Issue" and status = "backlog"'));
+    eql.push(
+      formatEqlQuery(
+        'SELECT ?blocker ?target WHERE { (?blocker "blockedBy" ?target) }',
+      ),
+    );
+    eql.push(
+      formatEqlQuery(
+        'SELECT ?e WHERE { [?e "type" "Issue"] NOT [?e "assignee" ?a] }',
+      ),
+    );
+    eql.push(
+      formatEqlQuery(
+        'SELECT ?e ?status ?priority WHERE { [?e "type" "Issue"] [?e "status" ?status] [?e "priority" ?priority] } FILTER ?priority = "critical"',
+      ),
+    );
     const sample = issues[0];
     if (sample.title) {
       eql.push(formatEqlQuery(`find ?e where title = ${eqlLiteral(sample.title)}`));

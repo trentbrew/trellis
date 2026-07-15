@@ -216,6 +216,60 @@ describe('QueryEngine', () => {
     expect(alphaRow?.cnt).toBe(2);
   });
 
+  it('should project aggregate columns even when not in select', () => {
+    const query: Query = {
+      select: ['proj'],
+      where: [
+        { kind: 'link', source: variable('user'), attribute: literal('memberOf'), target: variable('proj') },
+      ],
+      filters: [],
+      aggregates: [{ op: 'count', variable: 'user', as: 'cnt' }],
+      orderBy: [],
+      limit: 0,
+      offset: 0,
+    };
+    const result = engine.execute(query);
+    expect(result.bindings.every((b) => b.cnt !== undefined)).toBe(true);
+    const alphaRow = result.bindings.find((b) => b.proj === 'proj:alpha');
+    expect(alphaRow?.cnt).toBe(2);
+  });
+
+  it('should order by semantic enum rank (priority/status), not lexicographically', () => {
+    const store = new EAVStore();
+    store.addFacts([
+      { e: 'i:1', a: 'type', v: 'Issue' },
+      { e: 'i:1', a: 'priority', v: 'medium' },
+      { e: 'i:2', a: 'type', v: 'Issue' },
+      { e: 'i:2', a: 'priority', v: 'critical' },
+      { e: 'i:3', a: 'type', v: 'Issue' },
+      { e: 'i:3', a: 'priority', v: 'low' },
+      { e: 'i:4', a: 'type', v: 'Issue' },
+      { e: 'i:4', a: 'priority', v: 'high' },
+    ]);
+    const engine = new QueryEngine(store);
+
+    const query: Query = {
+      select: ['e', 'priority'],
+      where: [
+        { kind: 'fact', entity: variable('e'), attribute: literal('type'), value: literal('Issue') },
+        { kind: 'fact', entity: variable('e'), attribute: literal('priority'), value: variable('priority') },
+      ],
+      filters: [],
+      aggregates: [],
+      orderBy: [{ variable: 'priority', direction: 'asc' }],
+      limit: 0,
+      offset: 0,
+    };
+    const result = engine.execute(query);
+    // Semantic rank (critical < high < medium < low), not alphabetical (critical < high < low < medium)
+    expect(result.bindings.map((b) => b.priority)).toEqual([
+      'critical',
+      'high',
+      'medium',
+      'low',
+    ]);
+  });
+
   it('should order results', () => {
     const query: Query = {
       select: ['name'],

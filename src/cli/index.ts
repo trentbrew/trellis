@@ -28,6 +28,8 @@ import {
   builtinOntologies,
 } from '../core/ontology/index.js';
 import { buildRAGContext } from '../embeddings/auto-embed.js';
+import { buildView, STATUS_ORDER, type IssueGroup } from './views.js';
+import type { IssueInfo } from '../vcs/issue.js';
 import { VectorStore } from '../embeddings/store.js';
 import { embed } from '../embeddings/model.js';
 import { EmbeddingManager } from '../embeddings/search.js';
@@ -1029,6 +1031,7 @@ program
   .argument('[name]', 'Branch name to create or switch to')
   .option('-d, --delete <name>', 'Delete a branch')
   .option('-l, --list', 'List all branches')
+  .option('--json', 'Emit machine-readable JSON (no color)')
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (name, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
@@ -1081,7 +1084,28 @@ program
     // List (default)
     const branches = engine.listBranches();
     if (branches.length === 0) {
-      console.log(chalk.dim('No branches'));
+      if (opts.json) {
+        console.log(JSON.stringify({ branches: [] }, null, 2));
+      } else {
+        console.log(chalk.dim('No branches'));
+      }
+      return;
+    }
+
+    if (opts.json) {
+      console.log(
+        JSON.stringify(
+          {
+            branches: branches.map((b) => ({
+              name: b.name,
+              isCurrent: b.isCurrent,
+              createdAt: b.createdAt ?? null,
+            })),
+          },
+          null,
+          2,
+        ),
+      );
       return;
     }
 
@@ -1105,6 +1129,7 @@ program
   .option('-m, --message <message>', 'Milestone message')
   .option('--from <hash>', 'Start op hash for the milestone range')
   .option('--to <hash>', 'End op hash for the milestone range')
+  .option('--json', 'Emit machine-readable JSON (no color)')
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (action, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
@@ -1139,7 +1164,29 @@ program
     // List (default)
     const milestones = engine.listMilestones();
     if (milestones.length === 0) {
-      console.log(chalk.dim('No milestones'));
+      if (opts.json) {
+        console.log(JSON.stringify({ milestones: [] }, null, 2));
+      } else {
+        console.log(chalk.dim('No milestones'));
+      }
+      return;
+    }
+
+    if (opts.json) {
+      console.log(
+        JSON.stringify(
+          {
+            milestones: milestones.map((m) => ({
+              id: m.id,
+              message: m.message ?? null,
+              createdAt: m.createdAt ?? null,
+              affectedFiles: m.affectedFiles ?? [],
+            })),
+          },
+          null,
+          2,
+        ),
+      );
       return;
     }
 
@@ -1557,6 +1604,7 @@ program
   .option('-k, --keyword <keyword>', 'Filter by keyword')
   .option('-s, --status <status>', 'Filter by status (abandoned|draft|revived)')
   .option('-n, --limit <n>', 'Max results', parseInt as any)
+  .option('--json', 'Emit machine-readable JSON (no color)')
   .action((action, id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
@@ -1661,7 +1709,33 @@ program
     });
 
     if (clusters.length === 0) {
-      console.log(chalk.dim('No idea clusters found. The garden is empty.'));
+      if (opts.json) {
+        console.log(JSON.stringify({ clusters: [] }, null, 2));
+      } else {
+        console.log(chalk.dim('No idea clusters found. The garden is empty.'));
+      }
+      return;
+    }
+
+    if (opts.json) {
+      console.log(
+        JSON.stringify(
+          {
+            clusters: clusters.map((c) => ({
+              id: c.id,
+              status: c.status,
+              detectedBy: c.detectedBy,
+              createdAt: c.createdAt ?? null,
+              abandonedAt: c.abandonedAt ?? null,
+              ops: c.ops.length,
+              affectedFiles: c.affectedFiles,
+              estimatedIntent: c.estimatedIntent ?? null,
+            })),
+          },
+          null,
+          2,
+        ),
+      );
       return;
     }
 
@@ -1840,99 +1914,203 @@ issueCmd
   .option('--parent <id>', 'Filter by parent issue')
   .option('--remote <remote>', 'Filter by remote workspace')
   .option('--all', 'Include issues from all remotes')
+  .option('--view <view>', 'View: list, table, kanban', 'list')
+  .option(
+    '--sort <sort>',
+    'Sort by: priority, created, started, progress, blocked',
+  )
+  .option(
+    '--group-by <group>',
+    'Group by: status, priority, label, assignee',
+  )
+  .option('--json', 'Emit machine-readable JSON (no color)')
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (opts) => {
-    const rootPath = resolveRepoRoot(opts.path);
+    await listIssuesAction(opts);
+  });
 
-    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
-    engine.open();
+async function listIssuesAction(opts: any): Promise<void> {
+  const rootPath = resolveRepoRoot(opts.path);
 
-    let issues = engine.listIssues({
-      status: opts.status,
-      label: opts.label,
-      assignee: opts.assignee,
-      parentId: opts.parent,
-    });
+  const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
+  engine.open();
 
-    // Handle remote filtering
-    if (opts.remote || opts.all) {
-      const { RemoteManager } = await import('../federation/remote-manager.js');
-      const remoteManager = new RemoteManager(join(rootPath, '.trellis'));
+  let issues = engine.listIssues({
+    status: opts.status,
+    label: opts.label,
+    assignee: opts.assignee,
+    parentId: opts.parent,
+  });
 
-      if (opts.all) {
-        // Get all remotes and filter issues from them
-        const remotes = remoteManager.listRemotes();
-        const remoteIssues = issues.filter((issue) =>
-          remotes.some((remote) => issue.id.startsWith(`${remote.name}:`)),
-        );
+  // Handle remote filtering
+  if (opts.remote || opts.all) {
+    const { RemoteManager } = await import('../federation/remote-manager.js');
+    const remoteManager = new RemoteManager(join(rootPath, '.trellis'));
 
-        if (opts.remote) {
-          // Filter by specific remote when --all is also used
-          issues = remoteIssues.filter((issue) =>
-            issue.id.startsWith(`${opts.remote}:`),
-          );
-        } else {
-          issues = remoteIssues;
-        }
-      } else if (opts.remote) {
-        // Filter by specific remote only
-        issues = issues.filter((issue) =>
+    if (opts.all) {
+      // Get all remotes and filter issues from them
+      const remotes = remoteManager.listRemotes();
+      const remoteIssues = issues.filter((issue) =>
+        remotes.some((remote) => issue.id.startsWith(`${remote.name}:`)),
+      );
+
+      if (opts.remote) {
+        // Filter by specific remote when --all is also used
+        issues = remoteIssues.filter((issue) =>
           issue.id.startsWith(`${opts.remote}:`),
         );
+      } else {
+        issues = remoteIssues;
       }
+    } else if (opts.remote) {
+      // Filter by specific remote only
+      issues = issues.filter((issue) =>
+        issue.id.startsWith(`${opts.remote}:`),
+      );
     }
+  }
 
-    if (issues.length === 0) {
+  if (issues.length === 0) {
+    if (opts.json) {
+      console.log(JSON.stringify({ issues: [] }, null, 2));
+    } else {
       console.log(chalk.dim('No issues found.'));
-      return;
     }
+    return;
+  }
 
-    // Group by remote for display
-    const groupedIssues =
-      opts.all || opts.remote
-        ? issues.reduce(
-            (groups, issue) => {
-              const colonIndex = issue.id.indexOf(':');
-              const remote =
-                colonIndex > 0 ? issue.id.substring(0, colonIndex) : 'local';
-              if (!groups[remote]) groups[remote] = [];
-              groups[remote].push(issue);
-              return groups;
-            },
-            {} as Record<string, typeof issues>,
-          )
-        : { local: issues };
+  // Agent contract: stable, color-free JSON regardless of --view.
+  if (opts.json) {
+    console.log(
+      JSON.stringify(
+        {
+          issues: issues.map((i) => ({
+            id: i.id,
+            title: i.title ?? null,
+            status: i.status ?? null,
+            priority: i.priority ?? null,
+            labels: i.labels ?? [],
+            assignee: i.assignee ?? null,
+            parentId: i.parentId ?? null,
+            isBlocked: i.isBlocked,
+            blockedBy: i.blockedBy ?? [],
+            startedAt: i.startedAt ?? null,
+            createdAt: i.createdAt ?? null,
+            closedAt: i.closedAt ?? null,
+            criteria: (i.criteria ?? []).map((c) => ({
+              id: c.id,
+              status: c.status ?? null,
+              description: c.description ?? null,
+            })),
+          })),
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
 
-    console.log(chalk.bold(`Issues (${issues.length})\n`));
-
-    for (const [remote, remoteIssues] of Object.entries(groupedIssues)) {
-      if (opts.all || opts.remote) {
-        console.log(chalk.cyan(`\n${remote === 'local' ? 'Local' : remote}:`));
-      }
-
-      for (const issue of remoteIssues) {
-        const labels =
-          (issue.labels?.length ?? 0) > 0
-            ? chalk.dim(` [${issue.labels.join(',')}]`)
-            : '';
-        const assignee = issue.assignee
-          ? chalk.dim(` → ${issue.assignee}`)
-          : '';
-        const parent = issue.parentId ? chalk.dim(` ← ${issue.parentId}`) : '';
-        const blocked = issue.isBlocked ? chalk.yellow(' 🔒 blocked') : '';
-        const criteria =
-          (issue.criteria?.length ?? 0) > 0
-            ? chalk.dim(
-                ` (${issue.criteria.filter((c) => c.status === 'passed').length}/${issue.criteria.length} AC)`,
-              )
-            : '';
-        const displayId = opts.all || opts.remote ? issue.id : issue.id;
-        console.log(
-          `  ${formatPriority(issue.priority)} ${chalk.bold(displayId)} ${formatIssueStatus(issue.status)} ${issue.title ?? ''}${labels}${assignee}${parent}${blocked}${criteria}`,
-        );
-      }
-    }
+  const view = opts.view as 'list' | 'table' | 'kanban';
+  const groups = buildView(issues, {
+    sort: opts.sort,
+    groupBy: opts.groupBy,
   });
+
+  if (view === 'kanban') {
+    renderKanban(groups);
+  } else if (view === 'table') {
+    renderTable(groups);
+  } else {
+    renderList(groups, opts.all || opts.remote);
+  }
+}
+
+// Bare `trellis issue` defaults to listing (agent DX parity with other entities).
+issueCmd
+  .action(async (opts) => {
+    await listIssuesAction({ ...opts, path: opts.path ?? '.' });
+  });
+
+/**
+ * Kanban: one column per status (backlog → closed), issues listed inside.
+ * Remote scoping already narrowed `issues`; we re-derive columns here.
+ */
+function renderKanban(groups: IssueGroup[]): void {
+  // When grouped by something other than status, fall back to a grouped list.
+  const flatten = groups.flatMap((g) => g.rows.map((r) => r.issue));
+  const byStatus = new Map<string, IssueInfo[]>();
+  for (const issue of flatten) {
+    const s = issue.status ?? 'unknown';
+    if (!byStatus.has(s)) byStatus.set(s, []);
+    byStatus.get(s)!.push(issue);
+  }
+  const columns = STATUS_ORDER.filter((s) => byStatus.has(s));
+  for (const status of columns) {
+    const col = byStatus.get(status)!;
+    console.log(
+      `\n${formatIssueStatus(status)} ${chalk.dim(`(${col.length})`)}`,
+    );
+    for (const issue of col) {
+      console.log(
+        `  ${chalk.bold(issue.id)} ${issue.title ?? ''}${formatRowTail(issue)}`,
+      );
+    }
+  }
+}
+
+function formatRowTail(issue: IssueInfo): string {
+  const parts: string[] = [];
+  if (issue.labels?.length) parts.push(chalk.dim(` [${issue.labels.join(',')}]`));
+  if (issue.assignee) parts.push(chalk.dim(` → ${issue.assignee}`));
+  if (issue.claimedLaneId) parts.push(chalk.dim(` ⤷ ${issue.claimedLaneId}`));
+  if (issue.isBlocked) parts.push(chalk.yellow(' 🔒 blocked'));
+  if (issue.criteria?.length) {
+    const passed = issue.criteria.filter((c) => c.status === 'passed').length;
+    parts.push(chalk.dim(` (${passed}/${issue.criteria.length} AC)`));
+  }
+  return parts.join('');
+}
+
+function renderTable(groups: IssueGroup[]): void {
+  const showGroup = groups.length > 1 || groups[0]?.key !== 'all';
+  for (const group of groups) {
+    if (showGroup) {
+      console.log(
+        `\n${chalk.bold(group.label)} ${chalk.dim(`(${group.rows.length})`)}`,
+      );
+    }
+    for (const row of group.rows) {
+      const i = row.issue;
+      const ac = row.ac
+        ? chalk.dim(` ${row.ac.passed}/${row.ac.total} AC`)
+        : '';
+      console.log(
+        `  ${formatPriority(i.priority)} ${chalk.bold(i.id)} ${formatIssueStatus(i.status)} ${i.title ?? ''}${ac}${formatRowTail(i)}`,
+      );
+    }
+  }
+}
+
+function renderList(
+  groups: IssueGroup[],
+  remoteScoped: boolean,
+): void {
+  const showGroup = groups.length > 1 || groups[0]?.key !== 'all';
+  for (const group of groups) {
+    if (showGroup) {
+      console.log(
+        `\n${chalk.bold(group.label)} ${chalk.dim(`(${group.rows.length})`)}`,
+      );
+    }
+    for (const row of group.rows) {
+      const i = row.issue;
+      console.log(
+        `  ${formatPriority(i.priority)} ${chalk.bold(i.id)} ${formatIssueStatus(i.status)} ${i.title ?? ''}${formatRowTail(i)}`,
+      );
+    }
+  }
+}
 
 issueCmd
   .command('show')
@@ -2529,30 +2707,65 @@ decisionCmd
   )
   .option('-e, --entity <id>', 'Filter by related entity ID')
   .option('-n, --limit <n>', 'Max results', '20')
+  .option('--json', 'Emit machine-readable JSON (no color)')
   .action((opts) => {
-    const rootPath = resolveRepoRoot(opts.path);
+    listDecisionsAction(opts);
+  });
 
-    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
-    engine.open();
+function listDecisionsAction(opts: any): void {
+  const rootPath = resolveRepoRoot(opts.path);
 
-    const decisions = engine.queryDecisions({
-      toolPattern: opts.tool,
-      entityId: opts.entity,
-      limit: parseInt(opts.limit, 10),
-    });
+  const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
+  engine.open();
 
-    if (decisions.length === 0) {
+  const decisions = engine.queryDecisions({
+    toolPattern: opts.tool,
+    entityId: opts.entity,
+    limit: parseInt(opts.limit, 10),
+  });
+
+  if (decisions.length === 0) {
+    if (opts.json) {
+      console.log(JSON.stringify({ decisions: [] }, null, 2));
+    } else {
       console.log(chalk.dim('No decision traces found.'));
-      return;
     }
+    return;
+  }
 
-    for (const d of decisions) {
-      const ts = d.createdAt ? chalk.dim(d.createdAt) : '';
-      console.log(`${chalk.cyan(d.id)}  ${chalk.white(d.toolName)}  ${ts}`);
-      if (d.rationale) {
-        console.log(`  ${chalk.dim('→')} ${d.rationale}`);
-      }
+  if (opts.json) {
+    console.log(
+      JSON.stringify(
+        {
+          decisions: decisions.map((d) => ({
+            id: d.id,
+            toolName: d.toolName,
+            createdAt: d.createdAt ?? null,
+            createdBy: d.createdBy ?? null,
+            rationale: d.rationale ?? null,
+            relatedEntities: d.relatedEntities ?? [],
+          })),
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+
+  for (const d of decisions) {
+    const ts = d.createdAt ? chalk.dim(d.createdAt) : '';
+    console.log(`${chalk.cyan(d.id)}  ${chalk.white(d.toolName)}  ${ts}`);
+    if (d.rationale) {
+      console.log(`  ${chalk.dim('→')} ${d.rationale}`);
     }
+  }
+}
+
+// Bare `trellis decision` defaults to listing (agent DX parity with other entities).
+decisionCmd
+  .action((opts) => {
+    listDecisionsAction({ ...opts, path: opts.path ?? '.' });
   });
 
 decisionCmd
@@ -3760,7 +3973,9 @@ program
 
     console.log(chalk.cyan('EQL-S queries'));
     console.log(
-      chalk.dim('  (requires kernel materialization — run after init)\n'),
+      chalk.dim(
+        '  (quote the whole query; double-quote string literals: trellis query \'find ?e where type = "Issue"\')\n',
+      ),
     );
     for (const cmd of examples.eql) {
       console.log(`  ${chalk.dim('$')} ${cmd}`);
@@ -3775,18 +3990,19 @@ program
   .command('query')
   .description('Execute an EQL-S query against the graph')
   .argument(
-    '<query>',
-    'EQL-S query string (or "find ?e where attr = value" shorthand)',
+    '<query...>',
+    'EQL-S query string (or "find ?e where attr = value" shorthand). Quote the whole thing: trellis query \'find ?e where type = "Issue"\'',
   )
   .option('-p, --path <path>', 'Repository path', '.')
   .option('--json', 'Output as JSON')
-  .action(async (queryStr: string, opts: any) => {
+  .action(async (queryArgs: string[], opts: any) => {
+    const queryStr = queryArgs.join(' ');
     const rootPath = resolveRepoRoot(opts.path);
 
-    const kernel = await bootKernel(rootPath);
-    try {
-      const store = kernel.getStore();
-      const engine = new QueryEngine(store);
+    await withGraphStore(rootPath, async ({ mode, engine, kernel }) => {
+      const store =
+        mode === 'vcs' && engine ? engine.getEavStore() : kernel!.getStore();
+      const queryEngine = new QueryEngine(store);
 
       let q;
       try {
@@ -3801,7 +4017,7 @@ program
         }
       }
 
-      const result = engine.execute(q!);
+      const result = queryEngine.execute(q!);
 
       if (opts.json) {
         console.log(JSON.stringify(result.bindings, null, 2));
@@ -3829,9 +4045,7 @@ program
           );
         }
       }
-    } finally {
-      kernel.close();
-    }
+    });
   });
 
 // ---------------------------------------------------------------------------
@@ -3845,9 +4059,23 @@ program
   .action(async (opts: any) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const kernel = await bootKernel(rootPath);
-    const store = kernel.getStore();
-    const engine = new QueryEngine(store);
+    let store: any;
+    let engine: QueryEngine;
+    let closeStore: () => void = () => {};
+
+    if (TrellisVcsEngine.isRepo(rootPath)) {
+      const vcsEngine = new TrellisVcsEngine({
+        rootPath,
+        provenance: PROVENANCE.cli,
+      });
+      vcsEngine.open();
+      store = vcsEngine.getEavStore();
+    } else {
+      const kernel = await bootKernel(rootPath);
+      store = kernel.getStore();
+      closeStore = () => kernel.close();
+    }
+    engine = new QueryEngine(store);
 
     console.log(chalk.cyan.bold('Trellis EQL-S REPL'));
     console.log(
@@ -3874,7 +4102,7 @@ program
       }
 
       if (trimmed === '.exit' || trimmed === '.quit') {
-        kernel.close();
+        closeStore();
         rl.close();
         return;
       }
@@ -3906,7 +4134,7 @@ ${chalk.bold('Commands:')}
         const facts = store.getAllFacts();
         const links = store.getAllLinks();
         const types = new Set(
-          facts.filter((f) => f.a === 'type').map((f) => f.v),
+          facts.filter((f: any) => f.a === 'type').map((f: any) => f.v),
         );
         console.log(`  Facts: ${facts.length}`);
         console.log(`  Links: ${links.length}`);
@@ -3947,7 +4175,7 @@ ${chalk.bold('Commands:')}
     });
 
     rl.on('close', () => {
-      kernel.close();
+      closeStore();
       console.log(chalk.dim('Goodbye.'));
     });
   });
@@ -4462,13 +4690,13 @@ db.command('list')
   });
 
 // trellis db query
-db.command('query <eql>')
-  .description('Run an EQL-S query')
+db.command('query <eql...>')
+  .description('Run an EQL-S query (quote the whole query)')
   .option('--config-dir <dir>', 'Config directory', '.')
-  .action(async (eql, opts) => {
+  .action(async (eql: string[], opts) => {
     const { TrellisDb } = await import('../client/sdk.js');
     const db = await TrellisDb.fromConfig(opts.configDir);
-    const result = await db.query(eql);
+    const result = await db.query(eql.join(' '));
     console.log(JSON.stringify(result.bindings, null, 2));
     console.log(chalk.dim(`Execution time: ${result.executionTime}ms`));
     db.close();

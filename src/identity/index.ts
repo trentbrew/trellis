@@ -63,3 +63,17 @@ export type {
   PolicyViolation,
   GovernanceResult,
 } from './governance.js';
+
+export {
+  CapabilityLevel,
+  makeZoneId,
+  zoneOwnerDid,
+  defineZone,
+  renameZone,
+  getZone,
+  setGrant,
+  retractGrant,
+  resolveCapability,
+} from './capability.js';
+
+export type { ZoneId, Zone, Grant } from './capability.js';

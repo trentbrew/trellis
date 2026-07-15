@@ -39,15 +39,73 @@ export function shouldAdvanceBranchHead(kind: string): boolean {
   return !BRANCH_ADVANCE_SKIP_KINDS.has(kind);
 }
 
-/** Read branch:NAME headOpHash from the materialized store (latest wins). */
+/**
+ * Read branch:NAME headOpHash.
+ *
+ * Resolved from the causally-ordered op log, NOT the materialized fact-set. The
+ * `headOpHash` facts are accumulated add-only (ADR 0022 §1) so their store
+ * insertion order is network-arrival order — two peers with identical ops would
+ * otherwise resolve different heads. The ops themselves are hash-chained and
+ * timestamp-ordered, so the last `branchAdvance` for the branch is deterministic
+ * across peers.
+ *
+ * `principal` scopes the head to one writer's per-principal ref zone (ADR 0022 §4):
+ * two writers advancing the *same* personal branch never share a pointer, so the
+ * order-dependence dissolves instead of needing a convergence rule. When omitted,
+ * the head is the integration-style single-owner ref — the one audit trail where
+ * position-order is meaningful because a single principal advances it. The writer
+ * key is the signed `did:key` principal (`vcs.signedBy`), falling back to the
+ * self-asserted `agentId` for unsigned ops.
+ */
 export function getBranchHeadOpHash(
   ctx: EngineContext,
   branchName: string,
+  principal?: string,
 ): string | undefined {
-  const facts = ctx.store
-    .getFactsByEntity(`branch:${branchName}`)
-    .filter((f) => f.a === 'headOpHash');
-  return facts[facts.length - 1]?.v as string | undefined;
+  let advances = ctx
+    .readAllOps()
+    .filter(
+      (op) =>
+        op.kind === 'vcs:branchAdvance' &&
+        op.vcs?.branchName === branchName &&
+        op.vcs?.targetOpHash,
+    );
+  if (principal) {
+    advances = advances.filter(
+      (op) => writerPrincipal(op) === principal,
+    );
+  }
+  // Hash tiebreak: two writers can advance in the same millisecond, and
+  // Array.prototype.sort is stable — an unbroken tie falls back to journal
+  // order, which on a syncing peer is ARRIVAL order. That reopens the exact
+  // divergence this resolver exists to close. The hash is hash-covered by
+  // definition and identical across peers, so it is the deterministic break.
+  const sorted = advances.sort(
+    (a, b) => a.timestamp.localeCompare(b.timestamp) || a.hash.localeCompare(b.hash),
+  );
+  return sorted.at(-1)?.vcs?.targetOpHash as string | undefined;
+}
+
+/** Writer identity = signed Agent Ed25519 principal; unsigned ops fall back to `agentId`. */
+export function writerPrincipal(op: VcsOp): string {
+  return op.vcs?.signedBy ?? op.agentId;
+}
+
+/**
+ * Resolve the entity id of a per-writer branch head ("ref zone"). `integration`
+ * and the default branch collapse to the shared `branch:NAME` entity; every
+ * other branch gets a per-writer entity `branch:NAME@<principal>` so each writer
+ * owns their own ref (ADR 0022 §4).
+ */
+export function branchHeadEntity(
+  branchName: string,
+  principal?: string,
+  defaultBranch = 'main',
+): string {
+  if (!principal || branchName === defaultBranch || branchName === 'integration') {
+    return `branch:${branchName}`;
+  }
+  return `branch:${branchName}@${principal}`;
 }
 
 // ---------------------------------------------------------------------------

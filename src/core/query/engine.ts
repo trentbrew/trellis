@@ -83,8 +83,12 @@ export class QueryEngine {
     if (query.offset > 0) results = results.slice(query.offset);
     if (query.limit > 0) results = results.slice(0, query.limit);
 
-    // Project selected variables
-    const projected = this._project(results, query.select);
+    // Project selected variables (plus any aggregate output columns)
+    const projectVars =
+      query.select.length > 0
+        ? [...query.select, ...query.aggregates.map((a) => a.as)]
+        : [];
+    const projected = this._project(results, projectVars);
 
     return {
       bindings: projected,
@@ -376,6 +380,25 @@ export class QueryEngine {
   // Ordering
   // -------------------------------------------------------------------------
 
+  /**
+   * Semantic rank for known enum values. EQL-S stores these as raw strings, so
+   * a plain `<`/`>` comparison would be lexicographic (medium > critical).
+   * Mapping values to ranks lets `ORDER BY ?priority` / `ORDER BY ?status`
+   * honor the workflow order. Keyed by value (not attribute) since the tokens
+   * are unambiguous across the two enums.
+   */
+  private static readonly ENUM_RANKS: Record<string, number> = {
+    critical: 0,
+    high: 1,
+    medium: 2,
+    low: 3,
+    backlog: 0,
+    queue: 1,
+    in_progress: 2,
+    paused: 3,
+    closed: 4,
+  };
+
   private _order(bindings: Bindings[], orderBy: OrderBy[]): Bindings[] {
     return [...bindings].sort((a, b) => {
       for (const o of orderBy) {
@@ -384,7 +407,19 @@ export class QueryEngine {
         if (va === vb) continue;
         if (va === undefined) return 1;
         if (vb === undefined) return -1;
-        const cmp = (va as any) < (vb as any) ? -1 : 1;
+
+        const sa = String(va);
+        const sb = String(vb);
+        const ra = QueryEngine.ENUM_RANKS[sa];
+        const rb = QueryEngine.ENUM_RANKS[sb];
+        const cmp =
+          ra !== undefined && rb !== undefined
+            ? ra < rb
+              ? -1
+              : 1
+            : sa < sb
+              ? -1
+              : 1;
         return o.direction === 'asc' ? cmp : -cmp;
       }
       return 0;
