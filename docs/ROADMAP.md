@@ -13,6 +13,14 @@ Trellis is a local-first agentic OS runtime. The local graph kernel, causal op l
 
 ## Planned Milestone Sequence
 
+> **Issue ids below are stale except where noted.** `TRL-7` … `TRL-14` were
+> written before those numbers were reused by the presence wedge, so every one
+> of them now resolves to an unrelated (mostly closed) issue — e.g. this
+> document's `TRL-12` "Spike Iroh transport" is really "Track universal-presence
+> example in git", closed. Milestones 4 and 5 have been re-pointed at real
+> issues (`TRL-110`, `TRL-111`). The rest are prose, not tracked work: cut an
+> issue before starting one, and update the reference here.
+
 ### Milestone 0 — Local-First OS Architecture
 
 Issue: `TRL-7` — Codify local-first Trellis OS architecture
@@ -79,7 +87,7 @@ Outcome:
 
 ### Milestone 4 — Graph Op Sync Protocol
 
-Issue: `TRL-11` — Generalize graph op sync protocol
+Issue: `TRL-110` — SPEC-v1.1: generalize the graph op sync protocol
 
 Checkpoint message:
 
@@ -95,7 +103,7 @@ Outcome:
 
 ### Milestone 5 — Iroh P2P Transport
 
-Issue: `TRL-12` — Spike Iroh transport for Trellis sync
+Issue: `TRL-111` — Spike Iroh transport for Trellis sync (blocked by `TRL-110`)
 
 Checkpoint message:
 
