@@ -436,6 +436,61 @@ section h2 {
 .dialog-lane-card .lane-detail .k { color: var(--text3); }
 .dialog-lane-card .lane-detail .v { font-family: var(--mono); color: var(--text2); }
 .dialog-empty { color: var(--text3); font-size: 12px; text-align: center; padding: 16px; }
+
+/* Op log — real ops off the stream (TRL-108) */
+.log-list { display: flex; flex-direction: column; gap: 2px; }
+.log-row {
+  display: grid;
+  grid-template-columns: 80px 190px 1fr 72px;
+  gap: 12px;
+  align-items: baseline;
+  padding: 7px 12px;
+  border-radius: 6px;
+  font: 400 11px var(--mono);
+  border: 1px solid transparent;
+}
+.log-row:nth-child(odd) { background: rgba(255,255,255,.02); }
+.log-row:hover { border-color: var(--border); background: var(--surface); }
+.log-time { color: var(--text3); }
+.log-kind { color: var(--accent); font-weight: 500; }
+.log-detail { color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log-hash { color: var(--text3); text-align: right; opacity: .65; }
+.log-empty { color: var(--text3); font-size: 13px; text-align: center; padding: 40px; }
+
+/* Toasts */
+.toast-wrap {
+  position: fixed;
+  bottom: 20px; right: 20px;
+  display: flex; flex-direction: column; gap: 8px;
+  z-index: 800;
+  pointer-events: none;
+}
+.toast {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent);
+  border-radius: 8px;
+  padding: 9px 14px;
+  font: 400 11px var(--mono);
+  box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  animation: toast-in .18s ease-out;
+  max-width: 380px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.toast.out { animation: toast-out .3s ease-in forwards; }
+.toast .op-kind { color: var(--accent); font-weight: 500; }
+.toast .op-file { color: var(--text2); margin-left: 6px; }
+@keyframes toast-in { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
+@keyframes toast-out { to { opacity: 0; transform: translateX(12px); } }
+
+/* Flash the card an op touched */
+.flash { animation: flash .7s ease-out; }
+@keyframes flash {
+  0% { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-glow); }
+  100% { border-color: var(--border); box-shadow: none; }
+}
 </style>
 </head>
 <body>
@@ -491,9 +546,8 @@ const ISSUE_COLUMNS = [
 ];
 let currentView = localStorage.getItem('trellis-lanes-view') || 'grid';
 let lastSnap = null;
-let prevLaneIds = new Set();
-let prevIssueIds = new Set();
 let opLog = [];
+let lastOpHash = null; // resume point for the op stream
 const MAX_LOG = 200;
 
 function fmtTime(iso) {
@@ -659,58 +713,51 @@ function closeDialog() {
   $('dialog-backdrop').classList.remove('open');
 }
 
-function renderLogs(snap) {
+function renderLogs() {
   const sec = $('logs-section');
   sec.hidden = false;
   const list = $('log-list');
   if (!opLog.length) {
-    list.innerHTML = '<div class="log-empty">No ops recorded yet</div>';
+    list.innerHTML = '<div class="log-empty">No ops yet — waiting on the stream</div>';
     return;
   }
+  // Real ops now: real kinds, real content-addressed hashes.
   list.innerHTML = opLog.slice(-100).reverse().map(op => `
-    <div class="log-row" data-op="${op.hash || ''}">
-      <span class="log-time">${fmtTime(op.at)}</span>
-      <span class="log-kind">${op.kind || op.type || 'op'}</span>
-      <span class="log-detail">${op.file || op.detail || op.laneId || ''}</span>
+    <div class="log-row" data-op="${op.hash}" title="${op.hash}">
+      <span class="log-time">${fmtTime(op.timestamp)}</span>
+      <span class="log-kind">${op.kind}</span>
+      <span class="log-detail">${opDetail(op)}</span>
+      <span class="log-hash">${op.hash.replace(/^trellis:op:/, '').slice(0, 8)}</span>
     </div>
   `).join('');
 }
 
-function detectChanges(snap) {
-  const newLaneIds = new Set(snap.lanes.map(l => l.id));
-  const newIssueIds = new Set((snap.inProgressIssues || []).map(i => i.id));
-
-  for (const id of newLaneIds) {
-    if (!prevLaneIds.has(id)) {
-      toast(`<span class="op-kind">lane created</span> <span class="op-file">${id}</span>`);
-      const el = document.querySelector(`[data-id="${id}"]`);
-      flashEl(el);
-    }
-  }
-  for (const id of newIssueIds) {
-    if (!prevIssueIds.has(id)) {
-      toast(`<span class="op-kind">issue added</span> <span class="op-file">${id}</span>`);
-    }
-  }
-
-  for (const l of snap.lanes) {
-    const prev = opLog.findLast(o => o.laneId === l.id && o.opCount === l.opCount);
-    if (!prev && l.opCount > 0) {
-      const lastLogged = opLog.findLast(o => o.laneId === l.id);
-      if (!lastLogged || l.opCount > (lastLogged.opCount || 0)) {
-        opLog.push({ at: snap.at, kind: 'op', detail: `${l.opCount} ops`, laneId: l.id, file: l.id, opCount: l.opCount, hash: snap.at + l.id });
-        toast(`<span class="op-kind">op logged</span> <span class="op-file">${l.id}</span>`);
-      }
-    }
-  }
+// TRL-108: ops arrive as ops. This used to reconstruct them by diffing opCount
+// between snapshots and synthesising hashes (`snap.at + l.id`) — an op log
+// reverse-engineered from counter deltas, in a system built on an op log.
+function onOp(op) {
+  opLog.push(op);
   if (opLog.length > MAX_LOG) opLog = opLog.slice(-MAX_LOG);
+  lastOpHash = op.hash;
 
-  prevLaneIds = newLaneIds;
-  prevIssueIds = newIssueIds;
+  toast(`<span class="op-kind">${op.kind}</span> <span class="op-file">${opDetail(op)}</span>`);
+
+  const target = op.laneId || op.vcs?.issueId;
+  if (target) flashEl(document.querySelector(`[data-id="${target}"]`));
+
+  if (currentView === 'logs') renderLogs();
+}
+
+/** Pull the one human-meaningful field out of an op's payload. */
+function opDetail(op) {
+  const v = op.vcs || {};
+  return (
+    v.filePath || v.issueId || v.laneId || v.branchName || v.message ||
+    v.criterionId || v.decisionId || op.agentId || ''
+  );
 }
 
 function render(snap) {
-  detectChanges(snap);
   lastSnap = snap;
   $('repo').textContent = shortPath(snap.rootPath);
   $('updated').textContent = 'updated ' + fmtTime(snap.at);
@@ -744,7 +791,7 @@ function render(snap) {
   } else if (currentView === 'logs') {
     lanesEl.innerHTML = '';
     lanesEl.className = 'grid';
-    renderLogs(snap);
+    renderLogs();
   } else {
     logsSec.hidden = true;
     lanesEl.className = 'grid';
@@ -757,14 +804,29 @@ $('btn-kanban').classList.toggle('active', currentView === 'kanban');
 $('btn-logs').classList.toggle('active', currentView === 'logs');
 
 function connect() {
-  const es = new EventSource('/api/lanes/stream');
+  // Resume from the last op we saw, so a reconnect replays only what we missed
+  // rather than re-sending the world.
+  const qs = lastOpHash ? `?since=${encodeURIComponent(lastOpHash)}` : '';
+  const es = new EventSource('/api/lanes/stream' + qs);
+
   es.onopen = () => {
     $('live').classList.remove('off');
     $('live-label').textContent = 'live';
   };
-  es.onmessage = (ev) => {
+
+  // Projections (lanes/issues) are still server-derived; ops are the events.
+  es.addEventListener('snapshot', (ev) => {
     try { render(JSON.parse(ev.data)); } catch (e) { console.error(e); }
-  };
+  });
+
+  es.addEventListener('op', (ev) => {
+    try { onOp(JSON.parse(ev.data)); } catch (e) { console.error(e); }
+  });
+
+  es.addEventListener('error', (ev) => {
+    if (ev.data) { try { console.error('stream:', JSON.parse(ev.data)); } catch {} }
+  });
+
   es.onerror = () => {
     $('live').classList.add('off');
     $('live-label').textContent = 'reconnecting…';
