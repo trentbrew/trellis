@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { TrellisVcsEngine } from '../engine.js';
+import type { VcsOp } from '../vcs/types.js';
 import { startNodeServer } from '../server/node-adapter.js';
 import { buildLanesSnapshot } from './lanes-snapshot.js';
 import { PROVENANCE } from '../core/persist/canonical-op.js';
@@ -80,19 +81,56 @@ export async function startLanesDashboard(
     }
 
     if (path === '/api/lanes/stream') {
+      // TRL-108: the client is a peer. It receives real ops, not a snapshot it
+      // has to diff. `since` (or Last-Event-ID on reconnect) resumes the op
+      // stream; an unknown hash replays from the start.
+      const since =
+        url.searchParams.get('since') ??
+        req.headers.get('last-event-id') ??
+        undefined;
+
       const stream = new ReadableStream({
         start(controller) {
           const enc = new TextEncoder();
           let closed = false;
+          let lastOpHash: string | undefined = since;
+          let sentInitial = false;
+
+          const send = (event: string, data: unknown, id?: string) => {
+            const idLine = id ? `id: ${id}\n` : '';
+            controller.enqueue(
+              enc.encode(
+                `${idLine}event: ${event}\ndata: ${JSON.stringify(data)}\n\n`,
+              ),
+            );
+          };
+
+          /** Ops after `lastOpHash`. Unknown hash ⇒ replay all (peer is behind or forked). */
+          const opsSince = (all: VcsOp[]): VcsOp[] => {
+            if (!lastOpHash) return all;
+            const idx = all.findIndex((o) => o.hash === lastOpHash);
+            return idx >= 0 ? all.slice(idx + 1) : all;
+          };
 
           const push = () => {
             if (closed) return;
             try {
               engine.open();
-              const snap = buildLanesSnapshot(engine, opts.rootPath);
-              controller.enqueue(
-                enc.encode(`data: ${JSON.stringify(snap)}\n\n`),
-              );
+              const all = engine.getOps();
+              const fresh = opsSince(all);
+
+              // Idle means silence. Previously this re-sent the entire snapshot
+              // once a second regardless of whether anything had happened.
+              if (!fresh.length && sentInitial) return;
+
+              // Projections (lanes/issues) are still server-derived — see the
+              // TRL-108 writeup: a read-only peer either gets projections or
+              // materializes the store itself, and that is SPEC-v1.1's call.
+              send('snapshot', buildLanesSnapshot(engine, opts.rootPath));
+              for (const op of fresh) send('op', op, op.hash);
+
+              if (all.length) lastOpHash = all[all.length - 1]!.hash;
+              sentInitial = true;
             } catch (err) {
               controller.enqueue(
                 enc.encode(
