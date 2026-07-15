@@ -56,7 +56,8 @@ export async function startLanesDashboard(
   const engine = new TrellisVcsEngine({ rootPath: opts.rootPath, provenance: PROVENANCE.http });
   engine.open();
 
-  const lanesHtml = readFileSync(findLanesHtml(), 'utf-8');
+  const lanesHtmlPath = findLanesHtml();
+  const readHtml = () => readFileSync(lanesHtmlPath, 'utf-8');
   const pollMs = opts.pollMs ?? 1000;
   const requestedPort = opts.port ?? 3939;
 
@@ -126,8 +127,8 @@ export async function startLanesDashboard(
     }
 
     if (path === '/' || path === '/lanes' || path === '/lanes.html') {
-      return new Response(lanesHtml, {
-        headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8' },
+      return new Response(readHtml(), {
+        headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' },
       });
     }
 

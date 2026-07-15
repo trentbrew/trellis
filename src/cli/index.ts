@@ -2221,6 +2221,24 @@ issueCmd
   });
 
 issueCmd
+  .command('ac-rm')
+  .description('Remove an acceptance criterion from an issue')
+  .argument('<id>', 'Issue ID')
+  .argument('<index>', 'Criterion number (1-based)')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (id, index, opts) => {
+    const rootPath = resolveRepoRoot(opts.path);
+
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
+    engine.open();
+
+    await engine.removeCriterion(id, parseInt(index, 10));
+    console.log(
+      chalk.green(`✓ Criterion #${index} removed from ${chalk.bold(id)}`),
+    );
+  });
+
+issueCmd
   .command('ac-pass')
   .description('Manually mark an acceptance criterion as passed')
   .argument('<id>', 'Issue ID')

@@ -207,6 +207,7 @@ const ISSUE_INTEGRATION_KINDS = new Set<string>([
   'vcs:issueClaimRelease',
   'vcs:criterionAdd',
   'vcs:criterionUpdate',
+  'vcs:criterionRemove',
   'vcs:issueBlock',
   'vcs:issueUnblock',
 ]);
@@ -1625,9 +1626,11 @@ export class TrellisVcsEngine {
           vcs: {
             filePath: action.sourceOp.vcs.filePath,
             contentHash,
-            laneId: action.sourceOp.vcs.laneId ?? laneId,
           },
         });
+        // Lane is envelope provenance, not identity (TRL-102) — a merged
+        // fileModify must hash on its path + content, not on its lane.
+        opToApply.laneId = action.sourceOp.laneId ?? laneId;
       } else {
         opToApply = await lanePromoteMod.rechainOpForIntegration(
           action.sourceOp,
@@ -2166,6 +2169,20 @@ export class TrellisVcsEngine {
     return op;
   }
 
+  /** Retract an acceptance criterion by its 1-based index in the live list (TRL-1). */
+  async removeCriterion(
+    issueId: string,
+    criterionIndex: number,
+  ): Promise<VcsOp> {
+    const op = await issueMod.removeCriterion(
+      this._ctx(),
+      issueId,
+      criterionIndex,
+    );
+    await this.flushAutoCheckpoint();
+    return op;
+  }
+
   async setCriterionStatus(
     issueId: string,
     criterionIndex: number,
@@ -2492,9 +2509,21 @@ export class TrellisVcsEngine {
     }
   }
 
+  /**
+   * Tag an op with the lane it was minted in (TRL-102).
+   *
+   * Writes the ENVELOPE field, not `op.vcs`. `createVcsOp` has already hashed
+   * `vcs` by the time we get here, so mutating the payload silently invalidated
+   * the hash — every op in every lane journal failed `verifyVcsOpHash`, and
+   * would be rejected as `hash-mismatch` at any ingest boundary.
+   *
+   * The lane is ambient context, not identity: the same semantic op in two
+   * lanes must hash identically, or peers lose dedup and cherry-pick rewrites
+   * identity. `laneId` is outside the preimage by construction.
+   */
   private stampLaneId(op: VcsOp): void {
     if (!this.activeLaneId) return;
-    op.vcs = { ...op.vcs, laneId: this.activeLaneId };
+    op.laneId = this.activeLaneId;
   }
 
   private requireActiveLaneLog(): LaneOpLog {

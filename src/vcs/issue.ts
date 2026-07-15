@@ -74,6 +74,8 @@ export interface CriterionInfo {
   status?: string;
   lastRunAt?: string;
   lastOutput?: string;
+  /** Retracted via `vcs:criterionRemove`. Hidden from projections; the entity survives so its id is never reused. */
+  retracted?: boolean;
 }
 
 export interface CriterionResult {
@@ -217,10 +219,19 @@ function issueInfoIdFromEntityId(entityId: string): string {
   return bare.includes(':') ? entityId : bare;
 }
 
+/**
+ * Criteria for an issue.
+ *
+ * Retracted criteria are excluded by default — every caller except id minting
+ * wants the live list, and display indices address positions in it.
+ * `includeRetracted` is for `addCriterion`, which must count *all* criteria
+ * ever added so `ac-${n}` ids stay monotonic and can never collide.
+ */
 function getCriteriaForIssue(
   ctx: EngineContext,
   issueId: string,
   criterionCeids?: string[],
+  opts?: { includeRetracted?: boolean },
 ): CriterionInfo[] {
   const eid = issueEntityId(issueId);
   const ceids =
@@ -230,7 +241,7 @@ function getCriteriaForIssue(
       .filter((l) => l.e2 === eid)
       .map((l) => l.e1);
 
-  return ceids.map((ceid) => {
+  const all = ceids.map((ceid) => {
     const facts = ctx.store.getFactsByEntity(ceid);
     const getLast = (a: string) => {
       const matches = facts.filter((f) => f.a === a);
@@ -246,8 +257,11 @@ function getCriteriaForIssue(
       status: getLast('status'),
       lastRunAt: getLast('lastRunAt'),
       lastOutput: getLast('lastOutput'),
+      retracted: facts.some((f) => f.a === 'retracted' && f.v === true),
     };
   });
+
+  return opts?.includeRetracted ? all : all.filter((c) => !c.retracted);
 }
 
 interface IssueLinkIndexes {
@@ -789,8 +803,13 @@ export async function addCriterion(
   description: string,
   opts?: { command?: string; suite?: string },
 ): Promise<VcsOp> {
-  // Count existing criteria to determine index
-  const existing = getCriteriaForIssue(ctx, issueId);
+  // Count ALL criteria ever added — including retracted ones — so ids stay
+  // monotonic. Counting only live criteria would reuse the id of a surviving
+  // criterion after a middle removal (remove ac-2 of 3 -> next add mints ac-3,
+  // colliding with the existing ac-3 and merging their facts).
+  const existing = getCriteriaForIssue(ctx, issueId, undefined, {
+    includeRetracted: true,
+  });
   const index = existing.length + 1;
   const cid = criterionEntityId(issueId, index);
 
@@ -833,6 +852,41 @@ export async function setCriterionStatus(
       issueId,
       criterionId: c.id,
       criterionStatus: status,
+    },
+  });
+  await ctx.applyOp(op);
+  return op;
+}
+
+/**
+ * Retract an acceptance criterion (TRL-1).
+ *
+ * `criterionIndex` is 1-based over the *live* criteria, matching what
+ * `issue show` prints and what `ac-pass` / `ac-fail` accept.
+ *
+ * The criterion entity is not deleted — `vcs:criterionRemove` marks it
+ * retracted, so no existing op is rewritten (TRL-1 AC#1) and the id is
+ * retired rather than freed for reuse.
+ */
+export async function removeCriterion(
+  ctx: EngineContext,
+  issueId: string,
+  criterionIndex: number,
+): Promise<VcsOp> {
+  const criteria = getCriteriaForIssue(ctx, issueId);
+  if (criterionIndex < 1 || criterionIndex > criteria.length) {
+    throw new Error(
+      `Criterion index ${criterionIndex} out of range (1–${criteria.length})`,
+    );
+  }
+  const c = criteria[criterionIndex - 1];
+
+  const op = await createVcsOp('vcs:criterionRemove', {
+    agentId: ctx.agentId,
+    previousHash: ctx.getLastOp()?.hash,
+    vcs: {
+      issueId,
+      criterionId: c.id,
     },
   });
   await ctx.applyOp(op);

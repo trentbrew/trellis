@@ -25,6 +25,18 @@ export interface LaneRow {
   updatedAt: string;
 }
 
+export interface IssueRow {
+  id: string;
+  title?: string;
+  status?: string;
+  priority?: string;
+  labels: string[];
+  claimedLaneId?: string;
+  claimedSessionId?: string;
+  laneCount: number;
+  laneIds: string[];
+}
+
 export interface LanesSnapshot {
   at: string;
   rootPath: string;
@@ -38,6 +50,7 @@ export interface LanesSnapshot {
     acquiredAt?: string;
   };
   lanes: LaneRow[];
+  issues: IssueRow[];
   inProgressIssues: Array<{
     id: string;
     title?: string;
@@ -94,6 +107,33 @@ export function buildLanesSnapshot(
     claimedSessionId: issue.claimedSessionId,
   }));
 
+  // Query issues from the global integration store, not lane-scoped
+  const savedLaneId = engine.getActiveLaneId();
+  const savedLaneLog = (engine as any).activeLaneLog;
+  (engine as any).activeLaneId = undefined;
+  (engine as any).activeLaneLog = null;
+  engine.open();
+
+  const allIssues = engine.listIssues().map((issue) => {
+    const issueLanes = lanes.filter(l => l.issueId === issue.id || l.issueId === `issue:${issue.id}`);
+    return {
+      id: issue.id,
+      title: issue.title,
+      status: issue.status,
+      priority: issue.priority,
+      labels: issue.labels || [],
+      claimedLaneId: issue.claimedLaneId,
+      claimedSessionId: issue.claimedSessionId,
+      laneCount: issueLanes.length,
+      laneIds: issueLanes.map(l => l.id),
+    } satisfies IssueRow;
+  });
+
+  // Restore lane context
+  (engine as any).activeLaneId = savedLaneId;
+  (engine as any).activeLaneLog = savedLaneLog;
+  if (savedLaneId) engine.open();
+
   return {
     at: new Date().toISOString(),
     rootPath,
@@ -107,6 +147,7 @@ export function buildLanesSnapshot(
       acquiredAt: lock.record?.acquiredAt,
     },
     lanes,
+    issues: allIssues,
     inProgressIssues,
   };
 }

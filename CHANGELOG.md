@@ -4,6 +4,64 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [3.4.0] — 2026-07-15
+
+**Lane ops were unverifiable; criterion removal (TRL-1, TRL-102).**
+
+- **Every op minted inside a lane failed hash verification — fixed (TRL-102).**
+  `createVcsOp` hashes `{kind, timestamp, agentId, previousHash, vcs}`, and
+  `stampLaneId` then mutated `op.vcs` — *after* the hash was computed. Measured
+  on this repo: **1334 of 1334 ops across 27 lane journals failed
+  `verifyVcsOpHash`; 1334 of 1334 verified once `vcs.laneId` was removed.** Both
+  ingest paths reject on `hash-mismatch`, so lane ops could never have been
+  exchanged with a peer — this gated peer sync of agent lanes and any Iroh
+  transport work.
+- **Lane is now envelope, not identity.** `VcsOp.laneId` is a top-level field,
+  outside the preimage by construction. The same semantic op in two lanes now
+  hashes identically — required for cross-peer dedup and for cherry-pick not to
+  rewrite op identity, both of which set-reconciliation depends on.
+- **`vcs.laneId` is retained where it is *subject* data.** `vcs:laneCreate`,
+  `vcs:laneDrop` and `vcs:testRun` are *about* a lane, pass `laneId` at mint, and
+  keep it hashed — excluding it would collapse `laneCreate lane-A` and
+  `laneCreate lane-B` to one identity. Promote paths carry the source lane as
+  envelope provenance instead of baking it into a promoted op's hash.
+- **Existing journals migrated in place, no hash rewritten.** The stored hashes
+  were already correct for lane-free payloads, so migration only relocated the
+  field: 0/1334 → **1334/1334 verifying**. Verify-guided — an op was rewritten
+  only if it failed verification *and* stripping `laneId` made it pass.
+  Integration's 47 subject-role ops were untouched.
+- **`VcsOp` envelope vs payload is now explicit.** `vcs` is payload (hashed);
+  top-level fields are envelope (not hashed). `facts`/`links` were already used
+  this way — `RemoteManager` tags pulled ops with `{e:'op', a:'remote'}` so
+  `trellis log --remote` can filter them *without* invalidating the remote's
+  hash. Documented rather than discovered.
+- **Criterion removal (TRL-1):** `trellis issue ac-rm <id> <index>` and
+  `vcs:criterionRemove`. Removal is a **tombstone, not an erasure** — ids are
+  minted as `ac-${count+1}`, so deleting the entity would let a later add mint
+  the id of a *surviving* criterion (remove ac-2 of 3, next add collides with
+  ac-3 and merges into it). Retracted criteria keep their id and are filtered
+  from projections.
+- **Promote gate now typechecks.** `promote.require` was `["smoke"]` — a single
+  VCS test file that cannot see a type break. An agent widened an exported
+  interface and the gate waved it through. Added a `check` suite (`npm run
+  check`, ~3s); `promote.require` is now `["smoke", "check"]`.
+- **`.gitignore`: `.trellis/tests.json` was never actually tracked.** Git cannot
+  re-include a file whose parent directory is excluded, so `.trellis/` +
+  `!.trellis/tests.json` silently ignored the manifest — the file defining the
+  promote gate was unversioned. Now `/.trellis/*` + negation, plus
+  `*/**/.trellis/` for stray repos created by running the CLI in a subdirectory
+  (which root-anchoring would otherwise have un-ignored).
+
+**Breaking**
+
+- `VcsOp.vcs.laneId` is no longer set on stamped ops; read `VcsOp.laneId`
+  instead. Subject ops (`laneCreate`/`laneDrop`/`testRun`) are unchanged.
+- New op kind `vcs:criterionRemove`; older readers will not project it.
+
+**Migration:** lane journals in existing repos still carry `vcs.laneId` and will
+fail verification until relocated. No hashes change — the stored hash is already
+the lane-free one.
+
 ## trellis [3.3.0] — 2026-07-14
 
 **Canonical op hashing + op provenance (ADR 0021).** Op hashes are now

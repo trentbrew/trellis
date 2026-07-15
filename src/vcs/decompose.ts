@@ -501,6 +501,17 @@ export function decompose(op: VcsOp): DecomposedOp {
       break;
     }
 
+    case 'vcs:criterionRemove': {
+      if (!vcs.criterionId) break;
+      // Retraction is a tombstone, not an erasure. The criterion entity stays
+      // in the store so its id is never reused — addCriterion mints
+      // `ac-${count+1}` over ALL criteria, so deleting the entity would let a
+      // later add collide with a surviving one (remove ac-2 of 3, next add
+      // mints ac-3). Projections filter on `retracted` instead.
+      result.addFacts.push({ e: vcs.criterionId, a: 'retracted', v: true });
+      break;
+    }
+
     case 'vcs:testRun': {
       if (!vcs.testRunId) break;
       const rid = vcs.testRunId;
