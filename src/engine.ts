@@ -210,6 +210,12 @@ const ISSUE_INTEGRATION_KINDS = new Set<string>([
   'vcs:criterionRemove',
   'vcs:issueBlock',
   'vcs:issueUnblock',
+  // ADR 0022: zone/grant ops are repo-level authorization. A grant that stayed
+  // lane-local would be invisible until promote — a boundary nobody can see.
+  'vcs:zoneDefine',
+  'vcs:zoneRename',
+  'vcs:grantSet',
+  'vcs:grantRetract',
 ]);
 
 export type IntegrateOpRejectReason =
@@ -1008,6 +1014,16 @@ export class TrellisVcsEngine {
     principal?: string,
   ): string | undefined {
     return branchMod.getBranchHeadOpHash(this._ctx(), branchName, principal);
+  }
+
+  /**
+   * Engine context for the zone capability module (ADR 0022).
+   *
+   * Capability writes mint ops through this rather than touching the store,
+   * so grants survive a reboot, replicate to peers, and are hash-covered.
+   */
+  capabilityContext(): EngineContext {
+    return this._ctx();
   }
 
   getActiveLaneId(): string | undefined {

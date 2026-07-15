@@ -8,6 +8,15 @@
 import type { Fact, Link } from '../core/store/eav-store.js';
 import type { VcsOp } from './types.js';
 import { writerPrincipal, branchHeadEntity } from './branch.js';
+
+/**
+ * Owner principal encoded in a zoneId (`turtle://<ownerDid>/zone/<uuid>`).
+ * Local to keep `decompose` free of an identity-module import cycle.
+ */
+function zoneOwnerPrincipal(zoneId: string): string | null {
+  const m = /^turtle:\/\/(.+?)\/zone\/.+$/.exec(zoneId);
+  return m ? `identity:${m[1]}` : null;
+}
 import {
   fileEntityId,
   dirEntityId,
@@ -723,6 +732,72 @@ export function decompose(op: VcsOp): DecomposedOp {
     }
 
     // ----- EAV store (CMS / knowledge graph) -----
+
+    // -----------------------------------------------------------------------
+    // Zone capability model (ADR 0022)
+    // -----------------------------------------------------------------------
+
+    case 'vcs:zoneDefine': {
+      if (!vcs.zoneId) break;
+      const e = `zone:${vcs.zoneId}`;
+      const owner = zoneOwnerPrincipal(vcs.zoneId);
+      if (!owner) break; // malformed zoneId ⇒ no authority ⇒ project nothing
+      result.addFacts.push(
+        { e, a: 'type', v: 'Zone' },
+        { e, a: 'zoneId', v: vcs.zoneId },
+        { e, a: 'alias', v: vcs.zoneAlias ?? '' },
+        { e, a: 'defaultVisibility', v: vcs.zoneDefaultVisibility ?? 0 },
+        // The zone owner is Owner from creation — authority is self-describing
+        // in the id, so this is derived rather than asserted.
+        { e, a: `grant:${owner}`, v: 3 /* CapabilityLevel.Owner */ },
+      );
+      if (vcs.zoneParent) {
+        result.addFacts.push({ e, a: 'parentZone', v: vcs.zoneParent });
+      }
+      break;
+    }
+
+    case 'vcs:zoneRename': {
+      if (!vcs.zoneId || vcs.zoneAlias === undefined) break;
+      const e = `zone:${vcs.zoneId}`;
+      // `alias` is an UNBOUNDED-domain register, so decompose (which is pure and
+      // cannot read the store) relies on the minter supplying the prior value to
+      // delete. Sequential renames are exact; concurrent renames by co-owners can
+      // leave two alias facts — the ADR 0022 §2 audit criterion failing on the
+      // "totally ordered writes" half. Tracked as a known limitation.
+      if (vcs.oldZoneAlias !== undefined) {
+        result.deleteFacts.push({ e, a: 'alias', v: vcs.oldZoneAlias });
+      }
+      result.addFacts.push({ e, a: 'alias', v: vcs.zoneAlias });
+      break;
+    }
+
+    case 'vcs:grantSet': {
+      if (!vcs.zoneId || !vcs.grantPrincipal || !vcs.grantLevel) break;
+      const e = `zone:${vcs.zoneId}`;
+      const a = `grant:${vcs.grantPrincipal}`;
+      // Grants are a BOUNDED domain (Reader|Member|Owner), so we can enumerate
+      // and delete every prior value exhaustively — the safe register pattern
+      // from ADR 0022 §2, and the reason this needs no `oldGrantLevel` from the
+      // minter. `None` is never persisted: it is the absence of the fact.
+      for (const prior of [1, 2, 3]) {
+        result.deleteFacts.push({ e, a, v: prior });
+      }
+      result.addFacts.push({ e, a, v: vcs.grantLevel });
+      break;
+    }
+
+    case 'vcs:grantRetract': {
+      if (!vcs.zoneId || !vcs.grantPrincipal) break;
+      const e = `zone:${vcs.zoneId}`;
+      const a = `grant:${vcs.grantPrincipal}`;
+      // Revocation removes the fact rather than writing None, so the principal
+      // falls back to defaultVisibility. Enumerated for the same reason as above.
+      for (const prior of [1, 2, 3]) {
+        result.deleteFacts.push({ e, a, v: prior });
+      }
+      break;
+    }
 
     case 'vcs:storeAssert': {
       result.addFacts.push(...pickFacts(vcs.facts));
