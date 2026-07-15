@@ -146,18 +146,42 @@ permanent v1 prefix. That is the cost of having hashed intent for a year.
 
 ## §2a — Not all state is in the graph: refs. NEEDS A DECISION.
 
-Found while checking §2's own claims, and it is the gap in this spec rather than
-a detail.
+Found while checking §2's own claims. **An earlier revision of this section said
+branch heads are side files. That was wrong** — see
+`docs/planning/spec-v1.1-refs-and-authz.md` for the full map.
 
-**Branch and lane heads are mutable pointers in side files, not facts.**
-`saveBranchState()` does `writeFileSync(.trellis/state.json)`; lane heads live in
-`lanes/<id>/meta.json` via `updateLaneHead`. They are not in the op log and not in
-the EAV store. That is why `vcs:merge` — the one live unmapped kind — decomposes
-to nothing: its effect is on a ref, not on the graph.
+`vcs:branchAdvance` *does* decompose to a fact:
 
-So §1's "a peer materializes the store and can answer any question" is **not
-true as stated**. A peer that replays every op still does not know what `main`
-points at.
+```ts
+result.addFacts.push({ e: `branch:${name}`, a: 'headOpHash', v: targetOpHash });
+```
+
+Branch heads are in the graph. `state.json` holds only `currentBranch` — a name,
+not a hash — which is local checkout state and correctly local. Lane heads *are*
+files (`lanes/<id>/meta.json`), so the two disagree, but that is the smaller
+problem.
+
+**The real problem is that refs are order-dependent registers.**
+`branchAdvance` only *adds*; it never deletes the prior head. `branch:main` has
+accumulated **1,128 `headOpHash` facts** in this repo, and the head is resolved
+positionally — `branch.ts:42` returns `facts[facts.length - 1]`. Insertion order
+decides, and for concurrent advances insertion order is *arrival* order.
+
+So two peers, holding an identical op set in which every hash verifies, **resolve
+`main` to different values depending on the order ops arrived.** Set union is
+complete and they still disagree.
+
+`criterionUpdate` gets this right by deleting all priors before adding — but only
+because its domain is bounded (`pending|passed|failed`). `headOpHash`'s domain is
+every hash that has ever existed, so the priors cannot be enumerated, and the
+register degrades to an append log read by position.
+
+This generalizes: **any unbounded-domain "latest wins" field is order-dependent**,
+and `getLast()` in `issue.ts` uses the same pattern. Single-writer today; it bites
+when there are peers.
+
+`vcs:merge` — the one live kind `decompose` does not map — is a symptom of the
+same thing: its effect is on a pointer, not on the graph.
 
 **This is Git's shape, and Git already solved it:** *negotiate refs, transfer
 objects*. The wire conversation is about branches ("I want `refs/heads/main`, I
@@ -182,11 +206,21 @@ append-only op (churn for a pointer) or every op carries a mutable label
    are stored today (`meta.json`), so the two disagree.
 
 The system currently does **3 for branches and 1-without-a-channel for lanes**,
-which is why lane heads are a file. Pick one.
+which is why they disagree. Pick one.
 
-**Until this is decided, a peer cannot converge on anything ref-shaped**, which
-includes "what is the current branch" and "where does this lane end". Ops alone
-are not enough, and no amount of materialization fixes it.
+**Recommendation: refs are per-writer and namespaced, never shared-mutable.**
+Git never converges `main` for you — it gives you `main` and `origin/main` and
+makes the merge explicit. Refs are per-peer; convergence is a decision, not a
+protocol guarantee. **Trellis already has this and calls it lanes**: a lane *is*
+a per-writer ref, and `promote` *is* the explicit merge. The model is already
+right; only the storage disagrees with itself.
+
+If no two writers ever write the same ref, no convergence rule is needed — which
+dissolves the order-dependence above rather than papering over it.
+
+**Until this is decided, peers cannot agree on anything ref-shaped**, and no
+amount of materialization fixes it, because the disagreement is in the resolution
+rule rather than in the data.
 
 ## §3 — Envelope vs payload. DECIDED (TRL-102 set the principle).
 
