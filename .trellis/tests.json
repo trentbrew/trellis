@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "defaultSuite": "unit",
+  "suites": {
+    "unit": {
+      "description": "Core unit tests (vitest)",
+      "command": "npm run test",
+      "timeoutMs": 300000
+    },
+    "smoke": {
+      "description": "Fast VCS smoke",
+      "command": "npx vitest run test/vcs/test-runner.test.ts",
+      "timeoutMs": 120000
+    },
+    "check": {
+      "description": "Typecheck — catches contract breaks a lane cannot see (~3s)",
+      "command": "npm run check",
+      "timeoutMs": 120000
+    },
+    "e2e": {
+      "description": "Playwright e2e",
+      "command": "npx playwright test",
+      "timeoutMs": 600000
+    }
+  },
+  "promote": {
+    "require": ["smoke", "check"]
+  },
+  "issueStart": {
+    "default": [
+      { "description": "Unit tests pass", "suite": "unit" }
+    ]
+  },
+  "issueLabels": {
+    "needs-e2e": [
+      { "description": "E2E suite passes", "suite": "e2e" }
+    ],
+    "impl": [
+      { "description": "VCS smoke passes", "suite": "smoke" }
+    ]
+  }
+}

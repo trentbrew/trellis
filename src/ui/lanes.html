@@ -163,26 +163,290 @@ section h2 {
   color: var(--text3);
   margin: 28px 0 12px;
 }
-.issue-list { display: flex; flex-direction: column; gap: 8px; }
-.issue-row {
+#issues-section { margin-bottom: 24px; }
+.orphan-section { margin-bottom: 20px; }
+.orphan-section h2 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--text3);
+  margin-bottom: 10px;
+}
+.orphan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow: hidden;
+  position: relative;
+}
+.orphan-list.expanded { max-height: none; }
+.orphan-list:not(.expanded)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(transparent, var(--bg));
+  pointer-events: none;
+}
+.orphan-toggle {
+  font: 500 11px var(--mono);
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-top: 4px;
+}
+.orphan-toggle:hover { text-decoration: underline; }
+.orphan-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 10px 14px;
+  padding: 8px 12px;
   font-size: 12px;
 }
-.issue-row .id { font: 600 11px var(--mono); color: var(--accent); min-width: 72px; }
-.issue-row .title { flex: 1; color: var(--text2); }
-.issue-row .claim { font: 400 10px var(--mono); color: var(--text3); }
+.orphan-row .orphan-id { font: 600 11px var(--mono); color: var(--green); min-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.orphan-row .orphan-agent { color: var(--text2); flex: 1; }
+.orphan-row .orphan-ops { font: 400 11px var(--mono); color: var(--text3); }
+.orphan-row .orphan-updated { font: 400 11px var(--mono); color: var(--text3); }
+.view-toggle {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.view-toggle button {
+  font: 500 11px var(--mono);
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.view-toggle button.active {
+  background: var(--accent);
+  color: #fff;
+}
+.view-toggle button:hover:not(.active) {
+  background: var(--surface2);
+  color: var(--text2);
+}
+.kanban {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 16px;
+  min-height: 200px;
+}
+.kanban-col {
+  min-width: 300px;
+  max-width: 340px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.kanban-col-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px 10px 0 0;
+  border-bottom: none;
+}
+.kanban-col-head .col-title {
+  font: 600 12px var(--font);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.kanban-col-head .col-count {
+  font: 600 10px var(--mono);
+  background: var(--surface2);
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: var(--text3);
+}
+.kanban-col-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  min-height: 80px;
+}
+.kanban-col-body .card {
+  flex: none;
+}
+.kanban-empty {
+  color: var(--text3);
+  font-size: 12px;
+  text-align: center;
+  padding: 24px 8px;
+}
+.issue-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+.issue-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-glow);
+}
+.issue-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.issue-card .issue-id { font: 600 12px var(--mono); color: var(--accent); }
+.issue-card .issue-title { font-size: 13px; color: var(--text); margin-bottom: 8px; line-height: 1.4; }
+.issue-card .issue-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.issue-card .lane-badge {
+  font: 500 10px var(--mono);
+  background: rgba(52,211,153,.1);
+  border: 1px solid rgba(52,211,153,.3);
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: var(--green);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: middle;
+}
+.issue-card .lane-badge.none {
+  background: var(--surface2);
+  border-color: var(--border);
+  color: var(--text3);
+}
+.issue-card .agent-msg {
+  font: 400 10px var(--mono);
+  color: var(--text3);
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.issue-card .priority-badge {
+  font: 600 9px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.priority-badge.critical { background: rgba(248,113,113,.15); color: var(--red); }
+.priority-badge.high { background: rgba(248,113,113,.15); color: var(--red); }
+.priority-badge.medium { background: rgba(251,191,36,.15); color: var(--yellow); }
+.priority-badge.low { background: rgba(99,99,122,.15); color: var(--text3); }
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+.dialog-backdrop.open { opacity: 1; pointer-events: auto; }
+.dialog {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  width: 90%;
+  max-width: 560px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 24px;
+  transform: translateY(12px);
+  transition: transform .2s;
+}
+.dialog-backdrop.open .dialog { transform: translateY(0); }
+.dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.dialog-head .dialog-title { font: 600 15px var(--font); }
+.dialog-close {
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.dialog-close:hover { background: var(--surface); color: var(--text); }
+.dialog-section { margin-top: 16px; }
+.dialog-section h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--text3);
+  margin-bottom: 8px;
+}
+.dialog-lane-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+.dialog-lane-card .lane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.dialog-lane-card .lane-id { font: 600 12px var(--mono); }
+.dialog-lane-card .lane-detail {
+  font-size: 11px;
+  color: var(--text2);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dialog-lane-card .lane-detail span { display: flex; justify-content: space-between; }
+.dialog-lane-card .lane-detail .k { color: var(--text3); }
+.dialog-lane-card .lane-detail .v { font-family: var(--mono); color: var(--text2); }
+.dialog-empty { color: var(--text3); font-size: 12px; text-align: center; padding: 16px; }
 </style>
 </head>
 <body>
 <header>
   <h1>Trellis <span>Agent Lanes</span></h1>
   <div class="live" id="live"><span class="live-dot"></span><span id="live-label">connecting…</span></div>
+  <div class="view-toggle">
+    <button id="btn-grid" class="active" onclick="setView('grid')">Grid</button>
+    <button id="btn-kanban" onclick="setView('kanban')">Kanban</button>
+    <button id="btn-logs" onclick="setView('logs')">Logs</button>
+  </div>
   <div class="meta">
     <div id="repo">—</div>
     <div id="updated">—</div>
@@ -193,20 +457,53 @@ section h2 {
 
 <div class="stats" id="stats"></div>
 
+<section id="orphan-section" class="orphan-section" hidden>
+  <h2>Unassigned lanes</h2>
+  <div class="orphan-list" id="orphan-list"></div>
+  <button class="orphan-toggle" id="orphan-toggle" onclick="toggleOrphans()">show more</button>
+</section>
+
 <div class="grid" id="lanes"></div>
 
-<section id="issues-section" hidden>
-  <h2>In progress</h2>
-  <div class="issue-list" id="issues"></div>
+<section id="logs-section" hidden>
+  <h2>Op log</h2>
+  <div class="log-list" id="log-list"></div>
 </section>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<div class="dialog-backdrop" id="dialog-backdrop" onclick="if(event.target===this)closeDialog()">
+  <div class="dialog" id="dialog">
+    <div class="dialog-head">
+      <div class="dialog-title" id="dialog-title">—</div>
+      <button class="dialog-close" onclick="closeDialog()">&times;</button>
+    </div>
+    <div id="dialog-body"></div>
+  </div>
+</div>
 
 <script>
 const $ = (id) => document.getElementById(id);
+const ISSUE_COLUMNS = [
+  { key: 'backlog', label: 'Backlog', statuses: ['backlog', 'queue'] },
+  { key: 'in_progress', label: 'In Progress', statuses: ['in_progress', 'paused'] },
+  { key: 'done', label: 'Done', statuses: ['closed'] },
+];
+let currentView = localStorage.getItem('trellis-lanes-view') || 'grid';
+let lastSnap = null;
+let prevLaneIds = new Set();
+let prevIssueIds = new Set();
+let opLog = [];
+const MAX_LOG = 200;
 
 function fmtTime(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
-  return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const now = new Date();
+  const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  if (d.toDateString() === now.toDateString()) return time;
+  const date = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return date + ' ' + time;
 }
 
 function shortPath(p) {
@@ -215,16 +512,216 @@ function shortPath(p) {
   return parts.length > 3 ? '…/' + parts.slice(-3).join('/') : p;
 }
 
+function toast(html) {
+  const wrap = $('toasts');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = html;
+  wrap.appendChild(el);
+  setTimeout(() => { el.classList.add('out'); }, 3500);
+  setTimeout(() => { el.remove(); }, 3800);
+  if (wrap.children.length > 5) wrap.firstChild.remove();
+}
+
+function flashEl(el) {
+  if (!el) return;
+  el.classList.remove('flash');
+  void el.offsetWidth;
+  el.classList.add('flash');
+}
+
+function setView(view) {
+  currentView = view;
+  localStorage.setItem('trellis-lanes-view', view);
+  $('btn-grid').classList.toggle('active', view === 'grid');
+  $('btn-kanban').classList.toggle('active', view === 'kanban');
+  $('btn-logs').classList.toggle('active', view === 'logs');
+  if (lastSnap) render(lastSnap);
+}
+
+function laneCard(lane, idAttr) {
+  return `
+    <article class="card${lane.isActive ? ' active' : ''}" ${idAttr ? `data-id="${idAttr}"` : ''}>
+      <div class="card-head">
+        <div class="lane-id">${lane.id}</div>
+        <span class="badge ${lane.status}">${lane.status}${lane.isActive ? ' · current' : ''}</span>
+      </div>
+      <div class="row"><span class="k">Agent</span><span class="v" title="${lane.agentId}">${lane.agentId}</span></div>
+      <div class="row"><span class="k">Session</span><span class="v" title="${lane.sessionId || ''}">${lane.sessionId || '—'}</span></div>
+      <div class="row"><span class="k">Ops / files</span><span class="v">${lane.opCount} / ${lane.fileCount}</span></div>
+      <div class="row"><span class="k">Branch</span><span class="v" title="${lane.targetBranch}">${lane.targetBranch}</span></div>
+      <div class="row"><span class="k">Worktree</span><span class="v" title="${lane.worktreePath || ''}">${shortPath(lane.worktreePath)}</span></div>
+      <div class="row"><span class="k">Updated</span><span class="v" title="${lane.updatedAt}">${fmtTime(lane.updatedAt)}</span></div>
+      ${lane.issueId ? `
+        <div class="issue-block">
+          <div class="issue-id">${lane.issueId.replace(/^issue:/, '')}</div>
+          <div class="issue-title">${lane.issueTitle || ''}</div>
+        </div>` : ''}
+    </article>`;
+}
+
+function renderGrid(lanesEl, lanes) {
+  if (!lanes.length) {
+    lanesEl.innerHTML = '<div class="empty">No lanes yet — open an Agent tab or run <code>trellis lane ensure --session …</code></div>';
+  } else {
+    lanesEl.innerHTML = lanes.map(l => laneCard(l, l.id)).join('');
+  }
+}
+
+function fmtAgentName(sessionId) {
+  if (!sessionId) return '';
+  if (sessionId.startsWith('opencode:')) return 'opencode';
+  return 'claude';
+}
+
+function issueCard(issue) {
+  const laneBadges = issue.laneIds.map(id => {
+    const lane = lastSnap?.lanes.find(l => l.id === id);
+    const agent = lane?.sessionId ? fmtAgentName(lane.sessionId) : '';
+    const msg = agent ? `<span class="agent-msg">${agent} is working on this</span>` : '';
+    return `<span class="lane-badge">${id}</span>${msg}`;
+  }).join('');
+  const priorityBadge = issue.priority ? `<span class="priority-badge ${issue.priority}">${issue.priority}</span>` : '';
+  return `
+    <div class="issue-card" data-id="${issue.id}" onclick="openIssueDialog('${issue.id}')">
+      <div class="issue-card-head">
+        <span class="issue-id">${issue.id}</span>
+        ${priorityBadge}
+      </div>
+      <div class="issue-title">${issue.title || ''}</div>
+      <div class="issue-meta">
+        ${laneBadges || '<span class="lane-badge none">no lane</span>'}
+      </div>
+    </div>`;
+}
+
+function renderKanban(lanesEl, issues) {
+  if (!issues.length) {
+    lanesEl.innerHTML = '<div class="empty">No issues yet — create one with <code>trellis issue create -t "title"</code></div>';
+    return;
+  }
+  const grouped = {};
+  for (const col of ISSUE_COLUMNS) grouped[col.key] = [];
+  for (const issue of issues) {
+    const col = ISSUE_COLUMNS.find(c => c.statuses.includes(issue.status));
+    if (col) grouped[col.key].push(issue);
+    else grouped.backlog.push(issue);
+  }
+  lanesEl.className = 'kanban';
+  lanesEl.innerHTML = ISSUE_COLUMNS.map(col => {
+    const items = grouped[col.key] || [];
+    return `
+      <div class="kanban-col">
+        <div class="kanban-col-head">
+          <span class="col-title">${col.label}</span>
+          <span class="col-count">${items.length}</span>
+        </div>
+        <div class="kanban-col-body">
+          ${items.length ? items.map(issueCard).join('') : '<div class="kanban-empty">No issues</div>'}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function openIssueDialog(issueId) {
+  const issue = lastSnap?.issues.find(i => i.id === issueId);
+  if (!issue) return;
+  $('dialog-title').textContent = issue.id;
+  const lanes = (issue.laneIds || []).map(id => lastSnap?.lanes.find(l => l.id === id)).filter(Boolean);
+  let html = `<div style="font-size:13px;color:var(--text);margin-bottom:4px">${issue.title || ''}</div>`;
+  if (issue.priority) html += `<span class="priority-badge ${issue.priority}" style="display:inline-block;margin-bottom:12px">${issue.priority}</span>`;
+  if (lanes.length) {
+    html += '<div class="dialog-section"><h3>Lanes</h3>';
+    for (const l of lanes) {
+      html += `
+        <div class="dialog-lane-card">
+          <div class="lane-head">
+            <span class="lane-id">${l.id}</span>
+            <span class="badge ${l.status}">${l.status}${l.isActive ? ' · current' : ''}</span>
+          </div>
+          <div class="lane-detail">
+            <span><span class="k">Agent</span><span class="v">${l.agentId}</span></span>
+            <span><span class="k">Ops / files</span><span class="v">${l.opCount} / ${l.fileCount}</span></span>
+            <span><span class="k">Branch</span><span class="v">${l.targetBranch}</span></span>
+            <span><span class="k">Updated</span><span class="v">${fmtTime(l.updatedAt)}</span></span>
+          </div>
+        </div>`;
+    }
+    html += '</div>';
+  } else {
+    html += '<div class="dialog-empty">No lanes attached</div>';
+  }
+  $('dialog-body').innerHTML = html;
+  $('dialog-backdrop').classList.add('open');
+}
+
+function closeDialog() {
+  $('dialog-backdrop').classList.remove('open');
+}
+
+function renderLogs(snap) {
+  const sec = $('logs-section');
+  sec.hidden = false;
+  const list = $('log-list');
+  if (!opLog.length) {
+    list.innerHTML = '<div class="log-empty">No ops recorded yet</div>';
+    return;
+  }
+  list.innerHTML = opLog.slice(-100).reverse().map(op => `
+    <div class="log-row" data-op="${op.hash || ''}">
+      <span class="log-time">${fmtTime(op.at)}</span>
+      <span class="log-kind">${op.kind || op.type || 'op'}</span>
+      <span class="log-detail">${op.file || op.detail || op.laneId || ''}</span>
+    </div>
+  `).join('');
+}
+
+function detectChanges(snap) {
+  const newLaneIds = new Set(snap.lanes.map(l => l.id));
+  const newIssueIds = new Set((snap.inProgressIssues || []).map(i => i.id));
+
+  for (const id of newLaneIds) {
+    if (!prevLaneIds.has(id)) {
+      toast(`<span class="op-kind">lane created</span> <span class="op-file">${id}</span>`);
+      const el = document.querySelector(`[data-id="${id}"]`);
+      flashEl(el);
+    }
+  }
+  for (const id of newIssueIds) {
+    if (!prevIssueIds.has(id)) {
+      toast(`<span class="op-kind">issue added</span> <span class="op-file">${id}</span>`);
+    }
+  }
+
+  for (const l of snap.lanes) {
+    const prev = opLog.findLast(o => o.laneId === l.id && o.opCount === l.opCount);
+    if (!prev && l.opCount > 0) {
+      const lastLogged = opLog.findLast(o => o.laneId === l.id);
+      if (!lastLogged || l.opCount > (lastLogged.opCount || 0)) {
+        opLog.push({ at: snap.at, kind: 'op', detail: `${l.opCount} ops`, laneId: l.id, file: l.id, opCount: l.opCount, hash: snap.at + l.id });
+        toast(`<span class="op-kind">op logged</span> <span class="op-file">${l.id}</span>`);
+      }
+    }
+  }
+  if (opLog.length > MAX_LOG) opLog = opLog.slice(-MAX_LOG);
+
+  prevLaneIds = newLaneIds;
+  prevIssueIds = newIssueIds;
+}
+
 function render(snap) {
+  detectChanges(snap);
+  lastSnap = snap;
   $('repo').textContent = shortPath(snap.rootPath);
   $('updated').textContent = 'updated ' + fmtTime(snap.at);
 
   const active = snap.lanes.filter(l => l.status === 'active').length;
+  const totalIssues = (snap.issues || []).length;
   $('stats').innerHTML = `
     <div class="stat"><div class="stat-label">Active lanes</div><div class="stat-value">${active}</div></div>
     <div class="stat"><div class="stat-label">Total lanes</div><div class="stat-value">${snap.lanes.length}</div></div>
     <div class="stat"><div class="stat-label">Integration</div><div class="stat-value"><small>${snap.integrationBranch}</small></div></div>
-    <div class="stat"><div class="stat-label">In progress</div><div class="stat-value">${snap.inProgressIssues.length}</div></div>
+    <div class="stat"><div class="stat-label">Issues</div><div class="stat-value">${totalIssues}</div></div>
   `;
 
   const lock = snap.promoteLock;
@@ -240,45 +737,24 @@ function render(snap) {
   }
 
   const lanesEl = $('lanes');
-  if (!snap.lanes.length) {
-    lanesEl.innerHTML = '<div class="empty">No lanes yet — open an Agent tab or run <code>trellis lane ensure --session …</code></div>';
+  const logsSec = $('logs-section');
+  if (currentView === 'kanban') {
+    logsSec.hidden = true;
+    renderKanban(lanesEl, snap.issues || []);
+  } else if (currentView === 'logs') {
+    lanesEl.innerHTML = '';
+    lanesEl.className = 'grid';
+    renderLogs(snap);
   } else {
-    lanesEl.innerHTML = snap.lanes.map(lane => `
-      <article class="card${lane.isActive ? ' active' : ''}">
-        <div class="card-head">
-          <div class="lane-id">${lane.id}</div>
-          <span class="badge ${lane.status}">${lane.status}${lane.isActive ? ' · current' : ''}</span>
-        </div>
-        <div class="row"><span class="k">Agent</span><span class="v" title="${lane.agentId}">${lane.agentId}</span></div>
-        <div class="row"><span class="k">Session</span><span class="v" title="${lane.sessionId || ''}">${lane.sessionId || '—'}</span></div>
-        <div class="row"><span class="k">Ops / files</span><span class="v">${lane.opCount} / ${lane.fileCount}</span></div>
-        <div class="row"><span class="k">Branch</span><span class="v" title="${lane.targetBranch}">${lane.targetBranch}</span></div>
-        <div class="row"><span class="k">Worktree</span><span class="v" title="${lane.worktreePath || ''}">${shortPath(lane.worktreePath)}</span></div>
-        <div class="row"><span class="k">Updated</span><span class="v">${fmtTime(lane.updatedAt)}</span></div>
-        ${lane.issueId ? `
-          <div class="issue-block">
-            <div class="issue-id">${lane.issueId.replace(/^issue:/, '')}</div>
-            <div class="issue-title">${lane.issueTitle || ''}</div>
-          </div>` : ''}
-      </article>
-    `).join('');
-  }
-
-  const issues = snap.inProgressIssues || [];
-  const sec = $('issues-section');
-  if (issues.length) {
-    sec.hidden = false;
-    $('issues').innerHTML = issues.map(i => `
-      <div class="issue-row">
-        <span class="id">${i.id}</span>
-        <span class="title">${i.title || ''}</span>
-        <span class="claim">${i.claimedLaneId ? i.claimedLaneId : 'unclaimed'}</span>
-      </div>
-    `).join('');
-  } else {
-    sec.hidden = true;
+    logsSec.hidden = true;
+    lanesEl.className = 'grid';
+    renderGrid(lanesEl, snap.lanes);
   }
 }
+
+$('btn-grid').classList.toggle('active', currentView === 'grid');
+$('btn-kanban').classList.toggle('active', currentView === 'kanban');
+$('btn-logs').classList.toggle('active', currentView === 'logs');
 
 function connect() {
   const es = new EventSource('/api/lanes/stream');

@@ -7,8 +7,14 @@ dist/
 trellis-*.tgz
 
 # TrellisVCS local data
-.trellis/
-!.trellis/tests.json
+# Exclude the *contents* of the repo's own .trellis, not the directory itself:
+# git cannot re-include a file whose parent directory is excluded, so the old
+# `.trellis/` + `!.trellis/tests.json` silently ignored the manifest too.
+/.trellis/*
+!/.trellis/tests.json
+# Stray repos from running the CLI in a subdirectory. Anchoring the rule above
+# to the root un-ignored these, so match them explicitly at any depth.
+*/**/.trellis/
 
 # Local Trellis DB (trellis db init / serve / deploy)
 .trellis-db/

@@ -3,6 +3,7 @@ import { mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { TrellisVcsEngine } from '../../src/engine.js';
 import { loadLaneMeta } from '../../src/vcs/lane.js';
+import { verifyVcsOpHash } from '../../src/vcs/ops.js';
 
 const TEST_ROOT = '/tmp/trellis-p4-lane-routing';
 
@@ -95,13 +96,23 @@ describe('Lane journal routing', () => {
     expect(loadLaneMeta(join(TEST_ROOT, '.trellis'), meta.id)?.status).toBe('dropped');
   });
 
-  test('lane ops stamp laneId on payload', async () => {
+  test('lane ops stamp laneId on the envelope, not the payload (TRL-102)', async () => {
     const meta = await engine.createLane();
     await engine.enterLane(meta.id);
     const op = await engine.recordDecision({
       toolName: 'test.lane',
       context: 'stamped',
     });
-    expect(op.vcs?.laneId).toBe(meta.id);
+
+    // Previously this asserted `op.vcs?.laneId` — i.e. the stamp landed in the
+    // hashed payload. But `createVcsOp` hashes `vcs` before the stamp is
+    // applied, so that mutation silently invalidated the hash: every lane op
+    // failed verification and would be rejected as `hash-mismatch` on ingest.
+    // The stamp is ambient context, so it belongs on the envelope, outside the
+    // preimage — which also keeps the same semantic op hash-identical across
+    // lanes (dedup, cherry-pick).
+    expect(op.laneId).toBe(meta.id);
+    expect(op.vcs?.laneId).toBeUndefined();
+    expect(await verifyVcsOpHash(op)).toBe(true);
   });
 });

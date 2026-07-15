@@ -445,11 +445,16 @@ export async function rechainOpForIntegration(
   if (!isVcsOpKindSafe(op.kind)) {
     throw new Error(`Cannot rechain op kind '${op.kind}' for integration replay`);
   }
-  return createVcsOp(op.kind as VcsOpKind, {
+  const rechained = await createVcsOp(op.kind as VcsOpKind, {
     agentId: op.agentId,
     previousHash,
     vcs: { ...op.vcs },
   });
+  // Carry the source lane as envelope provenance (TRL-102). It records where
+  // the op came from without entering the preimage — the promoted op must hash
+  // on its content, not on which lane happened to author it.
+  if (op.laneId) rechained.laneId = op.laneId;
+  return rechained;
 }
 
 function isVcsOpKindSafe(kind: string): kind is VcsOpKind {

@@ -45,6 +45,7 @@ export type VcsOpKind =
   | 'vcs:issueClaimRelease'
   | 'vcs:criterionAdd'
   | 'vcs:criterionUpdate'
+  | 'vcs:criterionRemove'
   | 'vcs:testRun'
   // Issue blocking
   | 'vcs:issueBlock'
@@ -173,15 +174,50 @@ export interface VcsPayload {
  * We don't extend KernelOp directly because the kernel types `kind` as a
  * narrow union; our VCS kinds are a superset.
  */
+/**
+ * A VCS operation.
+ *
+ * ENVELOPE vs PAYLOAD (TRL-102). `hashVcsOp` hashes exactly
+ * `{kind, timestamp, agentId, previousHash, vcs}` — so `vcs` is the payload
+ * (identity-bearing) and any other top-level field is envelope (not hashed).
+ * That split was previously accidental; it is now deliberate. Do not add a
+ * top-level field expecting it to be covered by the hash — put it in `vcs`.
+ */
 export interface VcsOp {
   hash: string;
   kind: VcsOpKind | string;
   timestamp: string;
   agentId: string;
   previousHash?: string;
+  vcs?: VcsPayload;
+
+  /**
+   * Envelope: local annotations attached to an op we did not mint. NOT hashed.
+   *
+   * `RemoteManager.prefixOp` tags pulled ops with `{e:'op', a:'remote', v:<name>}`
+   * so `trellis log --remote/--all` can filter them. Being outside the preimage
+   * is the point: we annotate another peer's op without invalidating its hash.
+   *
+   * Not to be confused with `vcs.facts`, which IS payload — that is where
+   * `vcs:storeAssert` puts graph facts, and it is hashed.
+   */
   facts?: import('../core/store/eav-store.js').Fact[];
   links?: import('../core/store/eav-store.js').Link[];
-  vcs?: VcsPayload;
+
+  /**
+   * Envelope: the lane this op was minted in. NOT hashed (TRL-102).
+   *
+   * Ambient context, not identity — the same semantic op minted in two lanes
+   * must produce the same hash, or peers lose dedup and cherry-picking across
+   * lanes rewrites op identity, which breaks set-reconciliation. Lane
+   * membership is also already implied by the journal the op lives in.
+   *
+   * Distinct from `vcs.laneId`, which is *subject* data for `vcs:laneCreate` /
+   * `vcs:laneDrop` / `vcs:testRun` — those ops are ABOUT a lane, pass laneId at
+   * mint, and must keep it inside the preimage or `laneCreate lane-A` would
+   * hash identically to `laneCreate lane-B`.
+   */
+  laneId?: string;
 }
 
 // ---------------------------------------------------------------------------
