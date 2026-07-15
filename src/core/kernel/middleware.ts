@@ -8,9 +8,17 @@
  */
 
 import type { KernelOp } from '../persist/backend.js';
+import type { OpProvenance } from '../persist/canonical-op.js';
 
 export type MiddlewareContext = {
   agentId?: string;
+  /**
+   * Op provenance for this call (ADR 0021 §2). Per-call rather than per-kernel
+   * because one kernel serves multiple surfaces — a TenantPool kernel is
+   * reached from both the HTTP server and the MCP room, so `origin` cannot be
+   * a property of the kernel instance.
+   */
+  provenance?: OpProvenance;
   [key: string]: unknown;
 };
 

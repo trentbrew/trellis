@@ -4,6 +4,7 @@
  */
 
 import type { PluginDef, PluginContext } from '../../core/plugins/types.js';
+import { PROVENANCE } from '../../core/persist/canonical-op.js';
 import type { TrellisKernel } from '../../core/kernel/trellis-kernel.js';
 import type { TenantPool } from '../../server/tenancy.js';
 import { DEFAULT_TENANT } from '../../server/tenancy.js';
@@ -11,6 +12,9 @@ import { cronOntology } from './ontology.js';
 import { CronScheduler } from './scheduler.js';
 import type { CronJobRecord, CronRunRecord, CronStore } from './types.js';
 import { nextRunAtFromInterval } from './cron-expr.js';
+
+/** ADR 0021: everything the scheduler writes is machine-originated cron work. */
+const CRON_CTX = { provenance: PROVENANCE.cron };
 
 function factsToAttrs(
   entity: { id: string; type: string; facts: Array<{ a: string; v: unknown }> },
@@ -55,11 +59,11 @@ export function createKernelCronStore(kernel: TrellisKernel): CronStore {
         }
       }
       delete (patch as { id?: string }).id;
-      await kernel.updateEntity(id, patch as any);
+      await kernel.updateEntity(id, patch as any, CRON_CTX);
     },
     async createRun(attrs: CronRunRecord) {
       const id = `cronrun:${crypto.randomUUID()}`;
-      await kernel.createEntity(id, 'CronRun', attrs as any);
+      await kernel.createEntity(id, 'CronRun', attrs as any, undefined, CRON_CTX);
       return id;
     },
     async getEntity(id) {
@@ -67,7 +71,7 @@ export function createKernelCronStore(kernel: TrellisKernel): CronStore {
       return e ? factsToAttrs(e) : null;
     },
     async updateEntity(id, attrs) {
-      await kernel.updateEntity(id, attrs as any);
+      await kernel.updateEntity(id, attrs as any, CRON_CTX);
     },
   };
 }
@@ -153,12 +157,18 @@ export async function seedDemoPingJob(kernel: TrellisKernel): Promise<string> {
   const existing = kernel.getEntity('cron:demo-ping');
   if (existing) return 'cron:demo-ping';
   const now = Date.now();
-  await kernel.createEntity('cron:demo-ping', 'CronJob', {
-    name: 'demo-ping',
-    enabled: true,
-    intervalMs: 5000,
-    handler: 'builtin:ping',
-    nextRunAt: nextRunAtFromInterval(5000, now),
-  } as any);
+  await kernel.createEntity(
+    'cron:demo-ping',
+    'CronJob',
+    {
+      name: 'demo-ping',
+      enabled: true,
+      intervalMs: 5000,
+      handler: 'builtin:ping',
+      nextRunAt: nextRunAtFromInterval(5000, now),
+    } as any,
+    undefined,
+    CRON_CTX,
+  );
   return 'cron:demo-ping';
 }

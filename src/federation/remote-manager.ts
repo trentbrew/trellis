@@ -9,6 +9,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, resolve } from 'path';
 import type { VcsOp } from '../vcs/types.js';
 import { TrellisVcsEngine } from '../engine.js';
+import { PROVENANCE } from '../core/persist/canonical-op.js';
 import type {
   RemoteConfig,
   RemotesConfig,
@@ -111,7 +112,7 @@ export class RemoteManager {
 
     try {
       // Open remote engine
-      const remoteEngine = new TrellisVcsEngine({ rootPath: remote.path });
+      const remoteEngine = new TrellisVcsEngine({ rootPath: remote.path, provenance: PROVENANCE.sync });
       remoteEngine.open();
       const remoteOps = remoteEngine.getOps();
 

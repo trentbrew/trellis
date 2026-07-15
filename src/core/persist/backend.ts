@@ -6,6 +6,8 @@
  */
 
 import type { Fact, Link } from '../store/eav-store.js';
+// Type-only: erased at compile, so the canonical-op ↔ backend cycle is not real.
+import type { OpProvenance } from './canonical-op.js';
 
 export type KernelOpKind =
   | 'addFacts'
@@ -55,6 +57,18 @@ export interface KernelOp {
    * Links to delete (for update/delete operations).
    */
   deleteLinks?: Link[];
+
+  /**
+   * Preimage version (ADR 0021). Absent ⇒ v1 legacy op, whose hash is not
+   * recomputable and is never reverified.
+   */
+  v?: number;
+
+  /**
+   * Op-level provenance (ADR 0021 §2). Reserved in Phase A — normalized into
+   * the hash preimage as `null` until Phase B populates it.
+   */
+  provenance?: OpProvenance;
 }
 
 export interface KernelBackend {

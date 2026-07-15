@@ -9,6 +9,14 @@ import type { TrellisKernel } from '../../core/kernel/trellis-kernel.js';
 import type { AgentHarness } from '../../core/agents/harness.js';
 import type { KernelOp } from '../../core/persist/backend.js';
 import type { PluginContext } from '../../core/plugins/types.js';
+import { PROVENANCE } from '../../core/persist/canonical-op.js';
+
+/**
+ * ADR 0021: the watcher is a rule engine, not an agent — it did not reason,
+ * it matched. `machine` rather than `ai`, stated explicitly rather than
+ * inherited from the kernel default.
+ */
+const WATCHER_CTX = { provenance: PROVENANCE.sdk };
 
 export interface WatcherRule {
   id: string;
@@ -125,12 +133,12 @@ If no suggestion is needed, simply respond that no action is necessary.`,
             type,
             status: 'pending',
             ...(confidence !== undefined ? { confidence } : {}),
-          });
+          }, undefined, WATCHER_CTX);
 
           if (relatedEntityId) {
-            await this.kernel.addLink(suggestionId, 'suggestsFor', relatedEntityId);
+            await this.kernel.addLink(suggestionId, 'suggestsFor', relatedEntityId, WATCHER_CTX);
           }
-          await this.kernel.addLink(suggestionId, 'generatedByRule', rule.id);
+          await this.kernel.addLink(suggestionId, 'generatedByRule', rule.id, WATCHER_CTX);
 
           return { success: true, output: { suggestionId } };
         }

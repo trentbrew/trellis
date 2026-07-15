@@ -10,10 +10,46 @@
 export type Atom = string | number | boolean | Date | EntityRef;
 export type EntityRef = string;
 
+/**
+ * Where an asserted value came from (ADR 0021 §2).
+ *
+ * A deliberate subset of SemType's source shape — `authors`, `location.uri`,
+ * and the three timestamps. Every field is optional: a source that only knows
+ * its URI is still worth recording.
+ */
+export interface Source {
+  authors?: string[];
+  location?: { uri: string };
+  loadedAt?: string;
+  firstPublished?: string;
+  lastUpdated?: string;
+}
+
+/**
+ * Value-level provenance (ADR 0021 §2).
+ *
+ * Carries only what cannot be derived from the op. Actor provenance
+ * (`actorType`/`origin`/`createdById`) is *not* denormalized here — a fact
+ * belongs to exactly one op, so its actor is the op's. `confidence` and
+ * `sources` genuinely vary per-fact within a single op, so they live here.
+ */
+export interface FactMeta {
+  /** [0,1], SemType-aligned. */
+  confidence?: number;
+  /** SemType value-node requirement. */
+  dataTypeId?: string;
+  sources?: Source[];
+}
+
 export interface Fact {
   e: string; // entity
   a: string; // attribute (JSONPath)
   v: Atom; // value
+  /**
+   * Optional value-level provenance. Rides inside `facts[]`, which is inside
+   * the hash preimage — so it is tamper-evident for free.
+   */
+  meta?: FactMeta;
 }
 
 export interface Link {

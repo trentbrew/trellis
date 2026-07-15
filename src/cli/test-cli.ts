@@ -17,9 +17,10 @@ import {
   executeTestCommand,
 } from '../vcs/test-runner.js';
 import { resolveRepoRoot } from './repo-path.js';
+import { PROVENANCE } from '../core/persist/canonical-op.js';
 
 async function openEngine(rootPath: string): Promise<TrellisVcsEngine> {
-  const engine = new TrellisVcsEngine({ rootPath });
+  const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
   engine.open();
   await engine.syncEnvLaneFromEnv();
   return engine;

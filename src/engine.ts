@@ -25,6 +25,8 @@ import { FileWatcher, type ScanProgress } from './watcher/fs-watcher.js';
 import { Ingestion } from './watcher/ingestion.js';
 import { decompose } from './vcs/decompose.js';
 import { createVcsOp, isVcsOpKind, verifyVcsOpHash } from './vcs/ops.js';
+import { PROVENANCE } from './core/persist/canonical-op.js';
+import type { OpProvenance } from './core/persist/canonical-op.js';
 import type { VcsOp, TrellisVcsConfig } from './vcs/types.js';
 import { DEFAULT_CONFIG } from './vcs/types.js';
 import { BlobStore } from './vcs/blob-store.js';
@@ -234,6 +236,8 @@ export class TrellisVcsEngine {
   private watcher: FileWatcher | null = null;
   private ingestion: Ingestion | null = null;
   private agentId: string;
+  /** ADR 0021 §2 — stamped onto every op this engine mints. */
+  private provenance: OpProvenance;
   private currentBranch: string = 'main';
   private checkpointOpCount: number = 0;
   private checkpointThreshold: number = 100;
@@ -260,6 +264,13 @@ export class TrellisVcsEngine {
        * load is asynchronous.
        */
       opLog?: OpLog;
+      /**
+       * Provenance stamped onto every op this engine mints (ADR 0021 §2).
+       * Set per construction site — the engine is built by the CLI, the MCP
+       * server and the UI server, each of which knows its own surface.
+       * Defaults to the honest `{ actorType: 'machine', origin: 'sdk' }`.
+       */
+      provenance?: OpProvenance;
     } & Partial<TrellisVcsConfig>,
   ) {
     // Merge default ignore patterns with .gitignore if present
@@ -281,6 +292,7 @@ export class TrellisVcsEngine {
       lanes: opts.lanes,
     };
     this.agentId = opts.agentId ?? `agent:${process.env.USER ?? 'unknown'}`;
+    this.provenance = opts.provenance ?? PROVENANCE.sdk;
     this.store = new EAVStore();
     this.opLog =
       opts.opLog ??
@@ -2372,6 +2384,7 @@ export class TrellisVcsEngine {
     return {
       store: this.store,
       agentId: this.agentId,
+      provenance: this.provenance,
       readAllOps: () => this.getActiveJournal().readAll(),
       getLastOp: () => this.getActiveJournal().getLastOp(),
       applyOp: (op, opts) => this.applyOp(op, opts),

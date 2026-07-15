@@ -68,6 +68,16 @@ export type VcsOpKind =
 // ---------------------------------------------------------------------------
 
 export interface VcsPayload {
+  /**
+   * Who asserted this op and over what surface (ADR 0021 §2).
+   *
+   * Lives inside `vcs` deliberately: `hashVcsOp` hashes the `vcs` payload
+   * wholesale, so provenance is covered by the op hash with no preimage change
+   * and no migration — ops minted before this field still verify, since their
+   * payload simply lacks the key.
+   */
+  provenance?: import('../core/persist/canonical-op.js').OpProvenance;
+
   // File operations
   filePath?: string;
   oldFilePath?: string;

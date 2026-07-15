@@ -18,6 +18,7 @@ import { TrellisVcsEngine } from '../engine.js';
 import { HookRegistry } from '../decisions/index.js';
 import { wrapToolHandler } from '../decisions/auto-capture.js';
 import type { DecisionRecorder } from '../decisions/auto-capture.js';
+import { PROVENANCE } from '../core/persist/canonical-op.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -28,7 +29,7 @@ function getEngine(rootPath: string): TrellisVcsEngine {
   if (!TrellisVcsEngine.isRepo(absPath)) {
     throw new Error(`Not a TrellisVCS repository: ${absPath}`);
   }
-  const engine = new TrellisVcsEngine({ rootPath: absPath });
+  const engine = new TrellisVcsEngine({ rootPath: absPath, provenance: PROVENANCE.mcp });
   engine.open();
   return engine;
 }
@@ -451,7 +452,7 @@ export function createTrellisMcpServer(): McpServer {
       if (TrellisVcsEngine.isRepo(absPath)) {
         return text(`Already a Trellis workspace: ${absPath}`);
       }
-      const engine = new TrellisVcsEngine({ rootPath: absPath });
+      const engine = new TrellisVcsEngine({ rootPath: absPath, provenance: PROVENANCE.mcp });
       const result = await engine.initRepo({ indexWorkspace });
       return text(
         `Initialized Trellis workspace at ${absPath}\nOps created: ${result.opsCreated}\nFiles indexed: ${result.filesIndexed}`,

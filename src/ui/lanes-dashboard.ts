@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { TrellisVcsEngine } from '../engine.js';
 import { startNodeServer } from '../server/node-adapter.js';
 import { buildLanesSnapshot } from './lanes-snapshot.js';
+import { PROVENANCE } from '../core/persist/canonical-op.js';
 
 export interface LanesDashboardOptions {
   rootPath: string;
@@ -52,7 +53,7 @@ function findLanesHtml(): string {
 export async function startLanesDashboard(
   opts: LanesDashboardOptions,
 ): Promise<LanesDashboardHandle> {
-  const engine = new TrellisVcsEngine({ rootPath: opts.rootPath });
+  const engine = new TrellisVcsEngine({ rootPath: opts.rootPath, provenance: PROVENANCE.http });
   engine.open();
 
   const lanesHtml = readFileSync(findLanesHtml(), 'utf-8');

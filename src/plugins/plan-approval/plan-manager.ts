@@ -11,6 +11,14 @@
 
 import type { TrellisKernel, MutateResult } from '../../core/kernel/trellis-kernel.js';
 import type { Atom } from '../../core/store/eav-store.js';
+import { PROVENANCE } from '../../core/persist/canonical-op.js';
+
+/**
+ * ADR 0021: plans and their executed operations are authored by an agent.
+ * Human approval gates execution but does not author the assertion, so the
+ * actor stays `ai`.
+ */
+const AGENT_CTX = { provenance: PROVENANCE.agent };
 
 // ---------------------------------------------------------------------------
 // Types
@@ -102,7 +110,7 @@ export class PlanManager {
     };
     if (description) attrs.description = description;
     attrs.operationCount = 0;
-    await this.kernel.createEntity(id, 'PendingPlan', attrs);
+    await this.kernel.createEntity(id, 'PendingPlan', attrs, undefined, AGENT_CTX);
 
     this.activePlan = plan;
     return id;
@@ -159,13 +167,13 @@ export class PlanManager {
     if (op.linkAttribute) attrs.linkAttribute = op.linkAttribute;
     if (op.description) attrs.description = op.description;
 
-    await this.kernel.createEntity(opId, 'PlannedOperation', attrs);
-    await this.kernel.addLink(this.activePlan.id, 'hasOperation', opId);
+    await this.kernel.createEntity(opId, 'PlannedOperation', attrs, undefined, AGENT_CTX);
+    await this.kernel.addLink(this.activePlan.id, 'hasOperation', opId, AGENT_CTX);
 
     // Update operation count on the plan
     await this.kernel.updateEntity(this.activePlan.id, {
       operationCount: this.activePlan.operations.length,
-    });
+    }, AGENT_CTX);
 
     return opId;
   }
@@ -264,7 +272,7 @@ export class PlanManager {
     await this.kernel.updateEntity(this.activePlan.id, {
       status: 'submitted',
       submittedAt: now,
-    });
+    }, AGENT_CTX);
 
     return { ...this.activePlan };
   }
@@ -298,7 +306,7 @@ export class PlanManager {
       status: 'approved',
       resolvedAt: now,
       ...(resolvedBy ? { resolvedBy } : {}),
-    });
+    }, AGENT_CTX);
 
     this.activePlan = null;
 
@@ -331,7 +339,7 @@ export class PlanManager {
     if (reason) updates.rejectionReason = reason;
     if (resolvedBy) updates.resolvedBy = resolvedBy;
 
-    await this.kernel.updateEntity(this.activePlan.id, updates);
+    await this.kernel.updateEntity(this.activePlan.id, updates, AGENT_CTX);
     this.activePlan = null;
   }
 
@@ -348,7 +356,7 @@ export class PlanManager {
       status: 'rejected',
       resolvedAt: new Date().toISOString(),
       rejectionReason: 'Cancelled before submission',
-    });
+    }, AGENT_CTX);
 
     this.activePlan = null;
   }
@@ -433,31 +441,31 @@ export class PlanManager {
         if (!op.entityId || !op.entityType) {
           throw new Error(`PlannedOperation ${op.id}: createEntity requires entityId and entityType`);
         }
-        return this.kernel.createEntity(op.entityId, op.entityType, op.attributes ?? {});
+        return this.kernel.createEntity(op.entityId, op.entityType, op.attributes ?? {}, undefined, AGENT_CTX);
 
       case 'updateEntity':
         if (!op.entityId || !op.attributes) {
           throw new Error(`PlannedOperation ${op.id}: updateEntity requires entityId and attributes`);
         }
-        return this.kernel.updateEntity(op.entityId, op.attributes);
+        return this.kernel.updateEntity(op.entityId, op.attributes, AGENT_CTX);
 
       case 'deleteEntity':
         if (!op.entityId) {
           throw new Error(`PlannedOperation ${op.id}: deleteEntity requires entityId`);
         }
-        return this.kernel.deleteEntity(op.entityId);
+        return this.kernel.deleteEntity(op.entityId, AGENT_CTX);
 
       case 'addLink':
         if (!op.sourceId || !op.linkAttribute || !op.targetId) {
           throw new Error(`PlannedOperation ${op.id}: addLink requires sourceId, linkAttribute, and targetId`);
         }
-        return this.kernel.addLink(op.sourceId, op.linkAttribute, op.targetId);
+        return this.kernel.addLink(op.sourceId, op.linkAttribute, op.targetId, AGENT_CTX);
 
       case 'removeLink':
         if (!op.sourceId || !op.linkAttribute || !op.targetId) {
           throw new Error(`PlannedOperation ${op.id}: removeLink requires sourceId, linkAttribute, and targetId`);
         }
-        return this.kernel.removeLink(op.sourceId, op.linkAttribute, op.targetId);
+        return this.kernel.removeLink(op.sourceId, op.linkAttribute, op.targetId, AGENT_CTX);
 
       default:
         throw new Error(`PlannedOperation ${op.id}: Unknown operation kind "${op.kind}"`);

@@ -10,6 +10,7 @@
 
 import type { TrellisKernel } from '../core/kernel/trellis-kernel.js';
 import type { Fact, Link } from '../core/store/eav-store.js';
+import { PROVENANCE } from '../core/persist/canonical-op.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,6 +40,9 @@ export interface CrossRepoRef {
 // Multi-Repo Manager
 // ---------------------------------------------------------------------------
 
+/** ADR 0021: cross-repo writes originate from the sync layer, not a user. */
+const SYNC_CTX = { provenance: PROVENANCE.sync };
+
 export class MultiRepoManager {
   private kernel: TrellisKernel;
 
@@ -61,7 +65,7 @@ export class MultiRepoManager {
       location,
       ...(description ? { description } : {}),
       linkedAt: new Date().toISOString(),
-    });
+    }, undefined, SYNC_CTX);
   }
 
   /**
@@ -69,7 +73,7 @@ export class MultiRepoManager {
    */
   async unlinkRepo(alias: string): Promise<void> {
     const id = `repo:${alias}`;
-    await this.kernel.deleteEntity(id);
+    await this.kernel.deleteEntity(id, SYNC_CTX);
   }
 
   /**
@@ -120,7 +124,7 @@ export class MultiRepoManager {
     }
 
     const crossRef = `@${targetRepoAlias}:${targetEntityId}`;
-    await this.kernel.addLink(sourceEntityId, attribute, crossRef);
+    await this.kernel.addLink(sourceEntityId, attribute, crossRef, SYNC_CTX);
   }
 
   /**
@@ -133,7 +137,7 @@ export class MultiRepoManager {
     targetEntityId: string,
   ): Promise<void> {
     const crossRef = `@${targetRepoAlias}:${targetEntityId}`;
-    await this.kernel.removeLink(sourceEntityId, attribute, crossRef);
+    await this.kernel.removeLink(sourceEntityId, attribute, crossRef, SYNC_CTX);
   }
 
   /**
@@ -170,7 +174,7 @@ export class MultiRepoManager {
   async markSynced(alias: string): Promise<void> {
     await this.kernel.updateEntity(`repo:${alias}`, {
       lastSyncedAt: new Date().toISOString(),
-    });
+    }, SYNC_CTX);
   }
 }
 

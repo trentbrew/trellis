@@ -7,6 +7,10 @@
 
 import type { TrellisKernel } from '../../core/kernel/trellis-kernel.js';
 import type { RecoverableIdea } from './types.js';
+import { PROVENANCE } from '../../core/persist/canonical-op.js';
+
+/** ADR 0021: garden plans are agent-authored artifacts. */
+const AGENT_CTX = { provenance: PROVENANCE.agent };
 
 export class IdeaGarden {
   constructor(private kernel: TrellisKernel) {}
@@ -121,7 +125,7 @@ export class IdeaGarden {
       status: 'pending',
       operations: ops || '[]',
       createdAt: new Date().toISOString(),
-    });
+    }, undefined, AGENT_CTX);
     
     return newId;
   }

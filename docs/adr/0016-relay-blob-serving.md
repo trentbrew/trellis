@@ -105,6 +105,13 @@ the content-addressing guarantee end-to-end.
   layer; its resolver's network step calls this blob client. The engine repo
   owns the `asset:` scheme and the OPFS/IDB cache; `trellis` owns the byte
   source.
+- **Sprite deploy path (trellis ≥ 3.2.6):** `generateServerEntrypoint` mounts
+  `presenceRelay: { path: '/rt', blobStore: () => new BlobStore('/home/sprite/trellis-db') }`.
+  `startServer` accepts `boolean | RealtimeRelayOptions` so `blobStore` reaches
+  `attachRealtimeRelay`. Existing sprites need a **redeploy**
+  (`trellis deploy --name <sprite>`) after this kernel lands; until then they
+  only expose `/rt`. Clients use `wss://<sprite>.sprites.app/rt` and
+  `https://<sprite>.sprites.app/blob/:sha256` on the same origin.
 
 ## Open question
 

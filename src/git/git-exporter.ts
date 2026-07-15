@@ -17,6 +17,7 @@ import { join, dirname } from 'path';
 import { TrellisVcsEngine } from '../engine.js';
 import { BlobStore } from '../vcs/blob-store.js';
 import type { VcsOp } from '../vcs/types.js';
+import { PROVENANCE } from '../core/persist/canonical-op.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -60,7 +61,7 @@ export async function exportToGit(opts: ExportOptions): Promise<ExportResult> {
   const startTime = Date.now();
 
   // Open the TrellisVCS repo
-  const engine = new TrellisVcsEngine({ rootPath: opts.from });
+  const engine = new TrellisVcsEngine({ rootPath: opts.from, provenance: PROVENANCE.migration });
   engine.open();
 
   const blobStore = engine.getBlobStore();

@@ -11,6 +11,7 @@ import { readFileSync } from 'fs';
 import { extname } from 'path';
 import type { TrellisKernel } from '../core/kernel/trellis-kernel.js';
 import { jsonEntityFacts } from '../core/store/eav-store.js';
+import { PROVENANCE } from '../core/persist/canonical-op.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -257,7 +258,11 @@ async function _ingestRows(
 
       const facts = jsonEntityFacts(entityId, row, opts.type);
 
-      await kernel.mutate('addFacts', { facts });
+      // ADR 0021: bulk import is a migration, not an assertion by whoever
+      // happens to be running the server.
+      await kernel.mutate('addFacts', { facts }, {
+        provenance: PROVENANCE.migration,
+      });
 
       result.imported++;
       result.entityIds.push(entityId);

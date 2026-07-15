@@ -20,6 +20,7 @@ import { createVcsOp } from '../vcs/ops.js';
 import type { VcsOp, VcsOpKind } from '../vcs/types.js';
 import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
+import { PROVENANCE } from '../core/persist/canonical-op.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -92,6 +93,7 @@ export async function importFromGit(
     rootPath: opts.to,
     agentId: opts.agentId ?? `git-import:${opts.from}`,
     defaultBranch,
+    provenance: PROVENANCE.migration,
   });
 
   // Initialize the target repo (creates .trellis/ but skip file scan)

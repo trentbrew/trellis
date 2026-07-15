@@ -13,6 +13,7 @@
  */
 
 import type { KernelOp, KernelBackend } from './backend.js';
+import { canonicalOpBodyFromOp } from './canonical-op.js';
 
 type SqlJsStatic = any;
 type SqlJsDatabase = any;
@@ -184,18 +185,20 @@ export class SqlJsKernelBackend implements KernelBackend {
       loadSnapshot: this.db.prepare(
         `SELECT last_op_hash, data FROM snapshots ORDER BY id DESC LIMIT 1`,
       ),
+      putBlob: this.db.prepare(
+        `INSERT OR IGNORE INTO blobs (hash, content) VALUES ($hash, $content)`,
+      ),
+      getBlob: this.db.prepare(
+        `SELECT content FROM blobs WHERE hash = $hash`,
+      ),
+      hasBlob: this.db.prepare(
+        `SELECT 1 AS present FROM blobs WHERE hash = $hash`,
+      ),
     };
   }
 
   append(op: KernelOp): void {
-    const payload = JSON.stringify({
-      facts: op.facts,
-      links: op.links,
-      ...(op.deleteFacts?.length ? { deleteFacts: op.deleteFacts } : {}),
-      ...(op.deleteLinks?.length ? { deleteLinks: op.deleteLinks } : {}),
-      ...((op as any).vcs ? { vcs: (op as any).vcs } : {}),
-      ...((op as any).signature ? { signature: (op as any).signature } : {}),
-    });
+    const payload = canonicalOpBodyFromOp(op);
     this.stmts.insert.run({
       $hash: op.hash,
       $kind: op.kind,
@@ -261,6 +264,37 @@ export class SqlJsKernelBackend implements KernelBackend {
     return { lastOpHash: row.last_op_hash, data: row.data };
   }
 
+  putBlob(hash: string, content: Uint8Array): void {
+    this.stmts.putBlob.run({
+      $hash: hash,
+      $content: content,
+    });
+    this.stmts.putBlob.reset();
+    this.tickFlush();
+  }
+
+  getBlob(hash: string): Uint8Array | undefined {
+    this.stmts.getBlob.bind({ $hash: hash });
+    const has = this.stmts.getBlob.step();
+    if (!has) {
+      this.stmts.getBlob.reset();
+      return undefined;
+    }
+    const row = this.stmts.getBlob.getAsObject() as { content?: Uint8Array };
+    this.stmts.getBlob.reset();
+    if (!row.content) return undefined;
+    return row.content instanceof Uint8Array
+      ? row.content
+      : new Uint8Array(row.content as ArrayLike<number>);
+  }
+
+  hasBlob(hash: string): boolean {
+    this.stmts.hasBlob.bind({ $hash: hash });
+    const has = this.stmts.hasBlob.step();
+    this.stmts.hasBlob.reset();
+    return !!has;
+  }
+
   close(): void {
     try {
       this.flushToDisk();
@@ -315,5 +349,8 @@ function rowToOp(row: any): KernelOp {
     links: payload.links,
     deleteFacts: payload.deleteFacts,
     deleteLinks: payload.deleteLinks,
+    // ADR 0021: `v` absent ⇒ legacy v1 op, never reverified.
+    v: payload.v,
+    provenance: payload.provenance ?? undefined,
   };
 }

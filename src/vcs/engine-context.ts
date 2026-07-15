@@ -23,6 +23,13 @@ export interface EngineContext {
   /** Agent ID for op attribution. */
   agentId: string;
 
+  /**
+   * Provenance stamped into each minted op's `vcs` payload (ADR 0021 §2).
+   * Optional so existing context builders keep compiling; absent means the op
+   * carries no provenance claim, which is honest rather than a guess.
+   */
+  provenance?: import('../core/persist/canonical-op.js').OpProvenance;
+
   /** Get all ops from the log. */
   readAllOps(): VcsOp[];
 

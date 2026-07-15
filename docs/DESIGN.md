@@ -343,10 +343,10 @@ The bridge between the filesystem and the causal stream is a **watcher pipeline*
      │                          │                       │  detect op kind    │
      │                          │                       │  create VcsOp      │
      │                          │                       │ ─────────────────> │
-     │                          │                       │                    │  kernel.mutate(op)
-     │                          │                       │                    │  → VcsMiddleware
-     │                          │                       │                    │  → decompose to facts
-     │                          │                       │                    │  → store + persist
+     │                          │                       │                    │  decompose(op)
+     │                          │                       │                    │  → store.add/deleteFacts
+     │                          │                       │                    │  → store.add/deleteLinks
+     │                          │                       │                    │  → opLog.append(op)
 ```
 
 ```typescript
@@ -1006,7 +1006,6 @@ TrellisVCS/
 │   │   ├── types.ts             # VcsOp, VcsOpKind, entity types
 │   │   ├── ops.ts               # VcsOp creation helpers
 │   │   ├── decompose.ts         # VcsOp → primitive store ops
-│   │   ├── vcs-middleware.ts    # Op decomposition middleware
 │   │   ├── branch.ts            # Branch model and operations
 │   │   ├── milestone.ts         # Milestone and checkpoint logic
 │   │   ├── diff.ts              # Graph-native diff engine

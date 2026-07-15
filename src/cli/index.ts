@@ -18,6 +18,7 @@ import chalk from 'chalk';
 import { resolve, join, dirname } from 'path';
 // @inquirer/prompts is lazy-imported only in init command (saves ~116ms on every other command)
 import { TrellisVcsEngine } from '../engine.js';
+import { PROVENANCE } from '../core/persist/canonical-op.js';
 import { TrellisKernel } from '../core/kernel/trellis-kernel.js';
 import { SqliteKernelBackend } from '../core/persist/sqlite-backend.js';
 import { QueryEngine, parseQuery, parseSimple } from '../core/query/index.js';
@@ -47,6 +48,7 @@ import {
   revokeDevice,
   deviceFingerprint,
   decodePayload,
+  renderPairingQr,
   JOIN_PREFIX,
 } from '../identity/index.js';
 import {
@@ -344,7 +346,7 @@ async function runInit(
     }
   }
 
-  const engine = new TrellisVcsEngine({ rootPath, indexWorkspace });
+  const engine = new TrellisVcsEngine({ rootPath, indexWorkspace, provenance: PROVENANCE.cli });
   let renderedProgress = false;
   const result = await engine.initRepo({
     indexWorkspace,
@@ -444,7 +446,7 @@ program
 
     if (TrellisVcsEngine.isRepo(rootPath)) {
       if (opts.indexWorkspace === true && indexWorkspace !== false) {
-        const engine = new TrellisVcsEngine({ rootPath });
+        const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
         engine.open();
         let renderedProgress = false;
         const result = await engine.indexWorkspace({
@@ -649,7 +651,7 @@ program
   .action(async (opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
     const st = engine.status();
 
@@ -703,7 +705,7 @@ program
   .action(async (opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
     let ops = engine.log({
       limit: parseInt(opts.limit, 10),
@@ -810,7 +812,7 @@ program
   .action(async (opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
     const files = engine.trackedFiles();
 
@@ -841,7 +843,7 @@ program
   .action(async (opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
     await engine.syncEnvLaneFromEnv();
 
@@ -991,7 +993,7 @@ gitCmd
   .option('-m, --message <msg>', 'Commit message override')
   .action(async (opts) => {
     const rootPath = resolveRepoRoot(opts.path);
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const result = engine.syncGitIntegration({
@@ -1031,7 +1033,7 @@ program
   .action(async (name, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     // Delete
@@ -1107,7 +1109,7 @@ program
   .action(async (action, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     if (action === 'create') {
@@ -1169,7 +1171,7 @@ program
   .action(async (action, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     if (action === 'create') {
@@ -1215,7 +1217,7 @@ program
   .action((from, to, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     let result;
@@ -1293,7 +1295,7 @@ program
   .action((branch, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const result = engine.mergeBranch(branch);
@@ -1336,7 +1338,7 @@ program
   .option('-p, --path <path>', 'Repository path', '.')
   .action((file, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const { readFileSync } = require('fs');
@@ -1395,7 +1397,7 @@ program
   .option('-p, --path <path>', 'Repository path', '.')
   .action((fileA, fileB, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const { readFileSync } = require('fs');
@@ -1479,7 +1481,7 @@ program
   .action((action, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
     const ops = engine.getOps();
 
@@ -1500,7 +1502,7 @@ program
         process.exit(1);
       }
 
-      const remoteEngine = new TrellisVcsEngine({ rootPath: remotePath });
+      const remoteEngine = new TrellisVcsEngine({ rootPath: remotePath, provenance: PROVENANCE.cli });
       remoteEngine.open();
       const remoteOps = remoteEngine.getOps();
 
@@ -1558,7 +1560,7 @@ program
   .action((action, id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
     const garden = engine.garden();
 
@@ -1783,7 +1785,7 @@ issueCmd
   .action(async (opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const labels = opts.labels
@@ -1842,7 +1844,7 @@ issueCmd
   .action(async (opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     let issues = engine.listIssues({
@@ -1940,7 +1942,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const issue = engine.getIssue(id);
@@ -2025,7 +2027,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.startIssue(id, {
@@ -2059,7 +2061,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.pauseIssue(id, opts.note);
@@ -2077,7 +2079,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.resumeIssue(id, { lane: !opts.noLane });
@@ -2100,7 +2102,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.triageIssue(id);
@@ -2127,7 +2129,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const updates: Record<string, any> = {};
@@ -2165,7 +2167,7 @@ issueCmd
   .action(async (id, description, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.updateIssue(id, { description });
@@ -2181,7 +2183,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.assignIssue(id, opts.to);
@@ -2199,7 +2201,7 @@ issueCmd
   .action(async (id, description, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.addCriterion(id, description, {
@@ -2227,7 +2229,7 @@ issueCmd
   .action(async (id, index, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.setCriterionStatus(id, parseInt(index, 10), 'passed');
@@ -2247,7 +2249,7 @@ issueCmd
   .action(async (id, index, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.setCriterionStatus(id, parseInt(index, 10), 'failed');
@@ -2264,7 +2266,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     console.log(chalk.bold(`Running criteria for ${id}...\n`));
@@ -2321,7 +2323,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const lane = engine.findLaneForIssue(id);
@@ -2396,7 +2398,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.reopenIssue(id);
@@ -2412,7 +2414,7 @@ issueCmd
   .action(async (id, blockedBy, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.blockIssue(id, blockedBy);
@@ -2432,7 +2434,7 @@ issueCmd
   .action(async (id, blockedBy, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.unblockIssue(id, blockedBy);
@@ -2450,7 +2452,7 @@ issueCmd
   .action((opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const active = engine.getActiveIssues();
@@ -2480,7 +2482,7 @@ issueCmd
   .action((opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const result = engine.checkCompletionReadiness();
@@ -2512,7 +2514,7 @@ decisionCmd
   .action((opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const decisions = engine.queryDecisions({
@@ -2543,7 +2545,7 @@ decisionCmd
   .action((id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const d = engine.getDecision(id);
@@ -2584,7 +2586,7 @@ decisionCmd
   .action((entityId, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const chain = engine.getDecisionChain(entityId);
@@ -2686,9 +2688,30 @@ program
   .option('-p, --path <path>', 'Repository path', '.')
   .option('--label <label>', 'Device label (join)')
   .option('--yes', 'Confirm approve after reviewing fingerprint')
+  .option('--qr', 'Force terminal QR for OOB payloads (even when not a TTY)')
+  .option('--no-qr', 'Skip terminal QR')
   .action((action, payload, opts) => {
     const rootPath = resolve(opts.path);
     const trellisDir = join(rootPath, '.trellis');
+    const showQr =
+      opts.noQr === true || opts.qr === false
+        ? false
+        : opts.qr === true || Boolean(process.stdout.isTTY);
+
+    const printQr = (label: string, out: string) => {
+      if (!showQr) return;
+      console.log(`  ${chalk.dim(label)}`);
+      const qr = renderPairingQr(out);
+      console.log(qr);
+      const width = qr.split('\n')[0]?.length ?? 0;
+      if (width > 72) {
+        console.log(
+          chalk.dim(
+            '  (QR is wide — zoom terminal out, or paste the payload below)',
+          ),
+        );
+      }
+    };
 
     try {
       if (action === 'start') {
@@ -2700,6 +2723,7 @@ program
         console.log(
           `  ${chalk.dim('Short code:')} ${shortCode} ${chalk.dim('(display only — peer needs full payload)')}`,
         );
+        printQr('Scan on joining device:', out);
         console.log(`  ${chalk.dim('Payload:')}`);
         console.log(out);
         return;
@@ -2718,6 +2742,7 @@ program
         console.log(
           `  ${chalk.dim('Fingerprint:')} ${deviceFingerprint(local.publicKey)}`,
         );
+        printQr('Scan on approving device:', out);
         console.log(`  ${chalk.dim('Payload:')}`);
         console.log(out);
         return;
@@ -2759,6 +2784,7 @@ program
           `  ${chalk.dim('Device ID:')} ${signed.authorization.deviceId}`,
         );
         console.log(`  ${chalk.dim('Fingerprint:')} ${fingerprint}`);
+        printQr('Scan on joining device:', out);
         console.log(
           `  ${chalk.dim('Auth payload (send to joining device):')}`,
         );
@@ -2837,7 +2863,7 @@ program
   .action((file, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const { readFileSync } = require('fs');
@@ -3047,7 +3073,7 @@ program
   .action(async (query, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const { EmbeddingManager } = require('../embeddings/index.js');
@@ -3108,7 +3134,7 @@ program
   .action(async (opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const { EmbeddingManager } = require('../embeddings/index.js');
@@ -3227,9 +3253,13 @@ async function bootKernel(rootPath: string): Promise<TrellisKernel> {
   const { attachStandardMiddleware } =
     await import('../core/kernel/boot-middleware.js');
   const backend = await createKernelBackend(dbPath);
+  const { PROVENANCE } = await import('../core/persist/canonical-op.js');
   const kernel = new TrellisKernel({
     backend,
     agentId: `agent:${process.env.USER ?? 'unknown'}`,
+    // ADR 0021: this kernel only ever serves the CLI, so provenance is set once
+    // at construction rather than threaded through every command.
+    provenance: PROVENANCE.cli,
   });
   kernel.boot();
   attachStandardMiddleware(kernel);
@@ -3262,7 +3292,7 @@ async function withGraphStore(
   }) => Promise<void>,
 ): Promise<void> {
   if (TrellisVcsEngine.isRepo(rootPath)) {
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
     await fn({ mode: 'vcs', engine });
     return;
@@ -3686,7 +3716,7 @@ program
   .action(async (opts: any) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const examples = buildRepoExamples({
@@ -5698,7 +5728,7 @@ program
     const { RemoteManager } = await import('../federation/remote-manager.js');
     const remoteManager = new RemoteManager(join(rootPath, '.trellis'));
 
-    const engine = new TrellisVcsEngine({ rootPath });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     try {

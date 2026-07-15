@@ -4,6 +4,79 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [3.3.0] — 2026-07-14
+
+**Canonical op hashing + op provenance (ADR 0021).** Op hashes are now
+verifiable content addresses, and every op records who asserted it.
+
+- **Op hashes were not recomputable — fixed.** The kernel hashed the *caller's*
+  payload object while each backend independently reconstructed a
+  differently-shaped one to store (`links: []` injected, key order drifting). No
+  op in any existing log could be re-derived from storage. `hash` was a
+  unique-ish identifier, not a content address. Undetected because nothing ever
+  re-verified a kernel op.
+- **One serializer:** `core/persist/canonical-op.ts`. Mint (`hashKernelOp`) and
+  persist (every backend's `append()`) now go through the same canonicalization;
+  the bytes in the `payload` column *are* the hashed bytes.
+- **`verifyOpHash(op)`** — new, and did not exist before. Returns
+  `{ valid, legacy }`.
+- **Preimage is JSON, not `|`-joined.** Closes an injection where
+  `agentId="a|b", previousHash="c"` and `agentId="a", previousHash="b|c"`
+  produced identical preimages.
+- **Op provenance (`actorType` + `origin`, SemType-aligned)** on every op,
+  inside the hash — provenance that can be altered without invalidating the hash
+  is decoration, not provenance. Resolved per-call
+  (`payload ?? ctx ?? kernel default`), because one `TenantPool` kernel serves
+  both HTTP and MCP. Wired at every mint site: HTTP, MCP, cron, sync, import,
+  agent harness, and the agent plugins.
+- **Value-level provenance:** `Fact.meta` (`confidence`, `dataTypeId`,
+  `sources`). Rides inside `facts[]`, so it is hash-covered for free.
+- **CLI graph writes are `VcsOp`s, not `KernelOp`s** — so kernel provenance
+  never covered them. Provenance now rides `VcsPayload` instead, hash-covered
+  via `hashVcsOp` with **no preimage change and no migration**. Set per engine
+  construction (CLI/MCP/UI/sync/migration/SDK). Covers `vcs:store*` ops; branch,
+  file and milestone ops are not yet covered.
+- **`VcsMiddleware` deleted.** Never constructed, and written against a contract
+  that never existed — `handleOp` is documented as *"can throw to block the
+  operation"*, an observe-or-throw chain, so its decomposed ops were silently
+  discarded. `engine.ts` already does the same decomposition inline, which is
+  the path that actually runs. `DESIGN.md`'s
+  `kernel.mutate → VcsMiddleware → decompose` sequence documented a flow that
+  was never built and has been corrected.
+
+**Breaking**
+
+- `kernel.mutate(kind, payload)`: `payload.meta` removed (no caller used it),
+  `payload.provenance` added.
+- `VcsMiddleware` no longer exported from `trellis/vcs`.
+- Newly minted kernel ops use preimage v2 and hash differently from v1. **v1 ops
+  are grandfathered** — reported `{ valid: true, legacy: true }`, never
+  reverified, because their preimages are unrecoverable by construction. Every
+  log keeps a permanent unverifiable v1 prefix; this is the bug, not the fix.
+- `KernelOp` gains `v` and `provenance`; `Fact` gains optional `meta`.
+
+**Migration:** none required. Existing kernel logs boot and replay unchanged;
+existing `ops.json` journals verify unchanged.
+
+## trellis [3.2.6] — 2026-07-11
+
+- **QR pairing (ADR 0020 Phase 1 start):** `trellis pair start|join|approve`
+  renders a compact Unicode QR in the terminal (TTY default; `--no-qr` /
+  `--qr`). Same OOB payloads as Phase 0 — `renderPairingQr` / `encodePairingQr`
+  via `uqr`.
+- **Sprite relay blobs (ADR 0016):** `startServer({ presenceRelay })` accepts
+  full `RealtimeRelayOptions` (including `blobStore`). Sprite deploy entrypoints
+  mount
+  `presenceRelay: { path: '/rt', blobStore: () => new BlobStore('/home/sprite/trellis-db') }`
+  so `/blob` is available on `*.sprites.app` alongside `/rt`.
+- **`BlobStore` export:** re-exported from `trellis/server` for deploy
+  entrypoints and embedders.
+- **Redeploy required:** existing sprites still running a pre-3.2.6 bundle only
+  have `/rt`. Re-run `trellis deploy --name <sprite>` (or the app's
+  `smoke:deploy`) after publishing this kernel, then point clients at
+  `VITE_RELAY_URL=wss://<sprite>.sprites.app/rt` (HTTP `/blob` shares that
+  origin).
+
 ## trellis [3.2.5] — 2026-07-11
 
 - **Agent coordination (Phase 2):** session-scoped lanes via

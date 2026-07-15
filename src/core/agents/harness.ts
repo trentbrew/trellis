@@ -8,6 +8,7 @@
  */
 
 import type { TrellisKernel } from '../kernel/trellis-kernel.js';
+import { PROVENANCE } from '../persist/canonical-op.js';
 import type {
   AgentDef,
   ToolDef,
@@ -23,6 +24,9 @@ import type {
 // ---------------------------------------------------------------------------
 // Agent Harness
 // ---------------------------------------------------------------------------
+
+/** ADR 0021: the harness *is* the AI actor — every op it mints is an agent assertion. */
+const AGENT_CTX = { provenance: PROVENANCE.agent };
 
 export class AgentHarness {
   private kernel: TrellisKernel;
@@ -71,7 +75,7 @@ export class AgentHarness {
           model: agent.model,
         });
         // Link conversation to run
-        await this.kernel.addLink(runId, 'hasConversation', convId);
+        await this.kernel.addLink(runId, 'hasConversation', convId, AGENT_CTX);
       }
     }
 
@@ -127,7 +131,7 @@ export class AgentHarness {
 
           // If a plan was submitted, pause the loop and yield to the caller
           if (planPending) {
-            await this.kernel.updateEntity(runId, { status: 'plan_pending' });
+            await this.kernel.updateEntity(runId, { status: 'plan_pending' }, AGENT_CTX);
             return runId;
           }
 
@@ -178,19 +182,19 @@ export class AgentHarness {
       ...(def.provider ? { provider: def.provider } : {}),
       ...(def.systemPrompt ? { systemPrompt: def.systemPrompt } : {}),
       status: def.status ?? 'active',
-    });
+    }, undefined, AGENT_CTX);
 
     // Add capability links
     if (def.capabilities) {
       for (const cap of def.capabilities) {
-        await this.kernel.addLink(id, 'hasCapability', cap);
+        await this.kernel.addLink(id, 'hasCapability', cap, AGENT_CTX);
       }
     }
 
     // Add tool links
     if (def.tools) {
       for (const tool of def.tools) {
-        await this.kernel.addLink(id, 'hasTool', tool);
+        await this.kernel.addLink(id, 'hasTool', tool, AGENT_CTX);
       }
     }
 
@@ -253,7 +257,7 @@ export class AgentHarness {
         ...(def.description ? { description: def.description } : {}),
         ...(def.schema ? { schema: def.schema } : {}),
         ...(def.endpoint ? { endpoint: def.endpoint } : {}),
-      });
+      }, undefined, AGENT_CTX);
     }
 
     this.toolHandlers.set(id, handler);
@@ -292,8 +296,8 @@ export class AgentHarness {
       startedAt: new Date().toISOString(),
       status: 'running',
       ...(input ? { input } : {}),
-    });
-    await this.kernel.addLink(runId, 'executedBy', agentId);
+    }, undefined, AGENT_CTX);
+    await this.kernel.addLink(runId, 'executedBy', agentId, AGENT_CTX);
 
     return runId;
   }
@@ -309,7 +313,7 @@ export class AgentHarness {
     };
     if (output) updates.output = output;
     if (tokenCount !== undefined) updates.totalTokens = tokenCount;
-    await this.kernel.updateEntity(runId, updates);
+    await this.kernel.updateEntity(runId, updates, AGENT_CTX);
   }
 
   async failRun(runId: string, error: string): Promise<void> {
@@ -317,7 +321,7 @@ export class AgentHarness {
       status: 'failed',
       completedAt: new Date().toISOString(),
       output: `Error: ${error}`,
-    });
+    }, AGENT_CTX);
   }
 
   getRun(runId: string): AgentRun | null {
@@ -394,16 +398,16 @@ export class AgentHarness {
       ...(opts?.alternatives
         ? { alternatives: JSON.stringify(opts.alternatives) }
         : {}),
-    });
+    }, undefined, AGENT_CTX);
 
     // Link decision to run and agent
-    await this.kernel.addLink(decId, 'belongsToRun', runId);
-    await this.kernel.addLink(decId, 'madeBy', run.agentId);
+    await this.kernel.addLink(decId, 'belongsToRun', runId, AGENT_CTX);
+    await this.kernel.addLink(decId, 'madeBy', run.agentId, AGENT_CTX);
 
     // Link to related entities
     if (opts?.relatedEntities) {
       for (const eid of opts.relatedEntities) {
-        await this.kernel.addLink(decId, 'relatedTo', eid);
+        await this.kernel.addLink(decId, 'relatedTo', eid, AGENT_CTX);
       }
     }
 

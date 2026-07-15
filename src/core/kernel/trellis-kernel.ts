@@ -11,7 +11,9 @@
  */
 
 import { EAVStore } from '../store/eav-store.js';
-import type { Fact, Link, Atom } from '../store/eav-store.js';
+import type { Fact, FactMeta, Link, Atom } from '../store/eav-store.js';
+import { hashKernelOp, OP_PREIMAGE_VERSION } from '../persist/canonical-op.js';
+import type { OpProvenance } from '../persist/canonical-op.js';
 import type {
   KernelOp,
   KernelOpKind,
@@ -51,6 +53,17 @@ export interface KernelConfig {
   snapshotThreshold?: number;
   /** Auto-replay ops from backend on boot (default: true). */
   autoReplay?: boolean;
+  /**
+   * Fallback provenance for ops minted without a per-call `ctx.provenance`
+   * (ADR 0021 §2). Defaults to `{ actorType: 'machine', origin: 'sdk' }` —
+   * the honest description of "something called the kernel API directly and
+   * did not say who it was".
+   *
+   * Surfaces that know better (CLI, HTTP, MCP, sync, import) must pass
+   * `ctx.provenance` per call rather than relying on this, since one kernel
+   * can serve several surfaces at once.
+   */
+  provenance?: OpProvenance;
 }
 
 export interface MutateResult {
@@ -64,26 +77,6 @@ export interface EntityRecord {
   type: string;
   facts: Fact[];
   links: Link[];
-}
-
-// ---------------------------------------------------------------------------
-// Content-addressed hash
-// ---------------------------------------------------------------------------
-
-async function hashOp(
-  kind: string,
-  timestamp: string,
-  agentId: string,
-  previousHash: string | undefined,
-  payload: string,
-): Promise<string> {
-  const data = `${kind}|${timestamp}|${agentId}|${previousHash ?? ''}|${payload}`;
-  const buf = new TextEncoder().encode(data);
-  const hashBuf = await crypto.subtle.digest('SHA-256', buf);
-  const hex = Array.from(new Uint8Array(hashBuf))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-  return `trellis:op:${hex}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -101,6 +94,7 @@ export class TrellisKernel {
   private ontologies: Map<string, SchemaDefinition> = new Map();
   private workspaceConfig: WorkspaceConfig | null = null;
   private autoReplay: boolean = true;
+  private defaultProvenance: OpProvenance;
 
   constructor(config: KernelConfig) {
     this.store = new EAVStore();
@@ -109,6 +103,10 @@ export class TrellisKernel {
     this.middleware = config.middleware ?? [];
     this.snapshotThreshold = config.snapshotThreshold ?? 0;
     this.autoReplay = config.autoReplay ?? true;
+    this.defaultProvenance = config.provenance ?? {
+      actorType: 'machine',
+      origin: 'sdk',
+    };
 
     // Load core ontologies
     for (const schema of CORE_ONTOLOGY) {
@@ -187,7 +185,7 @@ export class TrellisKernel {
       links?: Link[];
       deleteFacts?: Fact[];
       deleteLinks?: Link[];
-      meta?: Record<string, unknown>;
+      provenance?: OpProvenance;
     },
     ctx?: Partial<MiddlewareContext>,
   ): Promise<MutateResult> {
@@ -195,13 +193,18 @@ export class TrellisKernel {
     const lastOp = this.backend.getLastOp();
     const agentId = ctx?.agentId ?? this.agentId;
 
-    const payloadStr = JSON.stringify(payload);
-    const hash = await hashOp(
-      kind,
-      timestamp,
-      agentId,
-      lastOp?.hash,
-      payloadStr,
+    // Most specific wins: an explicit payload provenance beats the call's
+    // surface, which beats the kernel's default.
+    const provenance =
+      payload.provenance ?? ctx?.provenance ?? this.defaultProvenance;
+    const resolved = { ...payload, provenance };
+
+    // ADR 0021: hash the normalized op, never the caller's payload object.
+    // The op below and the backend's payload column both derive from the same
+    // canonicalization, which is what makes `hash` recomputable from storage.
+    const hash = await hashKernelOp(
+      { kind, timestamp, agentId, previousHash: lastOp?.hash },
+      resolved,
     );
 
     const op: KernelOp = {
@@ -210,6 +213,7 @@ export class TrellisKernel {
       timestamp,
       agentId,
       previousHash: lastOp?.hash,
+      v: OP_PREIMAGE_VERSION,
       facts: [...(payload.facts ?? [])],
       links: [...(payload.links ?? [])],
       deleteFacts: payload.deleteFacts?.length
@@ -218,15 +222,8 @@ export class TrellisKernel {
       deleteLinks: payload.deleteLinks?.length
         ? [...payload.deleteLinks]
         : undefined,
+      provenance,
     };
-
-    // Attach meta as extra properties for middleware consumption
-    const extOp = op as any;
-    if (payload.meta) {
-      for (const [k, v] of Object.entries(payload.meta)) {
-        extOp[k] = v;
-      }
-    }
 
     // Run through middleware chain
     const mwCtx: MiddlewareContext = { agentId, ...ctx };
@@ -594,10 +591,14 @@ export class TrellisKernel {
     entityId: string,
     attribute: string,
     value: Atom,
+    ctx?: Partial<MiddlewareContext>,
+    meta?: FactMeta,
   ): Promise<MutateResult> {
-    return this.mutate('addFacts', {
-      facts: [{ e: entityId, a: attribute, v: value }],
-    });
+    return this.mutate(
+      'addFacts',
+      { facts: [{ e: entityId, a: attribute, v: value, ...(meta ? { meta } : {}) }] },
+      ctx,
+    );
   }
 
   /**
@@ -607,10 +608,13 @@ export class TrellisKernel {
     entityId: string,
     attribute: string,
     value: Atom,
+    ctx?: Partial<MiddlewareContext>,
   ): Promise<MutateResult> {
-    return this.mutate('deleteFacts', {
-      deleteFacts: [{ e: entityId, a: attribute, v: value }],
-    });
+    return this.mutate(
+      'deleteFacts',
+      { deleteFacts: [{ e: entityId, a: attribute, v: value }] },
+      ctx,
+    );
   }
 
   // -------------------------------------------------------------------------

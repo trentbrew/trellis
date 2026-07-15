@@ -10,6 +10,7 @@ import { TrellisVcsEngine } from '../engine.js';
 import type { LaneMeta } from '../vcs/lane.js';
 import * as lanePromoteMod from '../vcs/lane-promote.js';
 import { resolveRepoRoot } from './repo-path.js';
+import { PROVENANCE } from '../core/persist/canonical-op.js';
 
 function formatRelativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -35,7 +36,7 @@ function formatLaneStatus(status: LaneMeta['status']): string {
 }
 
 async function openEngine(rootPath: string): Promise<TrellisVcsEngine> {
-  const engine = new TrellisVcsEngine({ rootPath });
+  const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
   engine.open();
   await engine.syncEnvLaneFromEnv();
   return engine;

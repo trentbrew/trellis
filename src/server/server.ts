@@ -39,6 +39,8 @@ import { fileURLToPath } from 'url';
 const __moduleDir =
   (import.meta as any).dir ?? dirname(fileURLToPath(import.meta.url));
 import { parseSimple } from '../core/query/index.js';
+import { PROVENANCE } from '../core/persist/canonical-op.js';
+import type { MiddlewareContext } from '../core/kernel/middleware.js';
 import { RealtimeFieldError } from '../core/ontology/sync-policy.js';
 import {
   entityRecordToPlain,
@@ -530,6 +532,7 @@ async function handleCreate(
       body.type,
       attrs,
       body.links,
+      httpWriteContext(auth),
     );
     recordGraphIo(ctx, tenantId);
     await ctx.subs.notify(tenantId);
@@ -546,6 +549,25 @@ async function handleCreate(
 // ---------------------------------------------------------------------------
 // Handler: Read entity
 // ---------------------------------------------------------------------------
+
+/**
+ * Provenance for HTTP-originated ops (ADR 0021 §2).
+ *
+ * `origin: 'http'` is certain — it is the transport. The `actorType` claim is
+ * only upgraded to `user` when an authenticated user session is present;
+ * otherwise it stays at the honest `machine`, since an unauthenticated or
+ * token-driven request could be anything. Still self-asserted until request
+ * signing lands (ADR 0020).
+ */
+function httpWriteContext(
+  auth: import('./auth.js').AuthContext,
+): Partial<MiddlewareContext> {
+  return {
+    provenance: auth.userId
+      ? { actorType: 'user', origin: 'http' }
+      : PROVENANCE.http,
+  };
+}
 
 async function handleRead(
   id: string,
@@ -581,7 +603,7 @@ async function handleUpdate(
 
   const updates = (await req.json()) as Record<string, unknown>;
   try {
-    await kernel.updateEntity(id, updates as any);
+    await kernel.updateEntity(id, updates as any, httpWriteContext(auth));
   } catch (err) {
     if (err instanceof RealtimeFieldError) {
       return json({ error: err.message, field: err.field }, 400);
@@ -610,7 +632,7 @@ async function handleDelete(
 
   ctx.permissions?.assert(auth, entity.type, 'delete', entity);
 
-  await kernel.deleteEntity(id);
+  await kernel.deleteEntity(id, httpWriteContext(auth));
   recordGraphIo(ctx, tenantId);
   await ctx.subs.notify(tenantId);
 
@@ -984,13 +1006,21 @@ async function handleRegister(
 
   const userId = `user:${crypto.randomUUID()}`;
   const pwHash = await hashPassword(body.password);
-  await kernel.createEntity(userId, 'User', {
-    email: body.email,
-    name: body.name ?? '',
-    passwordHash: pwHash,
-    role: 'user',
-    ...(tenantId ? { tenantId } : {}),
-  });
+  await kernel.createEntity(
+    userId,
+    'User',
+    {
+      email: body.email,
+      name: body.name ?? '',
+      passwordHash: pwHash,
+      role: 'user',
+      ...(tenantId ? { tenantId } : {}),
+    },
+    undefined,
+    // Registration is unauthenticated by definition, so `machine` is the
+    // honest claim here — signup endpoints are also what bots hit.
+    { provenance: PROVENANCE.http },
+  );
 
   const token = await signJwt(
     { sub: userId, email: body.email, roles: ['user'], tenantId },
@@ -1103,15 +1133,21 @@ async function handleOAuthCallback(
 
   if (users.length === 0) {
     userId = `user:${crypto.randomUUID()}`;
-    await kernel.createEntity(userId, 'User', {
-      email: profile.email,
-      name: profile.name,
-      avatarUrl: profile.avatarUrl ?? '',
-      oauthId,
-      oauthProvider: providerName,
-      role: 'user',
-      ...(tenantId ? { tenantId } : {}),
-    });
+    await kernel.createEntity(
+      userId,
+      'User',
+      {
+        email: profile.email,
+        name: profile.name,
+        avatarUrl: profile.avatarUrl ?? '',
+        oauthId,
+        oauthProvider: providerName,
+        role: 'user',
+        ...(tenantId ? { tenantId } : {}),
+      },
+      undefined,
+      { provenance: PROVENANCE.http },
+    );
   } else {
     userId = users[0]!.id;
   }
