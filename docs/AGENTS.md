@@ -1,4 +1,4 @@
-# Trellis ù The Agentic Framework Guide
+# Trellis ÔøΩ The Agentic Framework Guide
 
 > **Trellis is more than version control.** It is a structured runtime for building agents that understand code, remember everything, and explain themselves. While it uses VCS-like primitives (branches, milestones, causal logs), these are the building blocks of an **Agentic State Engine**.
 
@@ -112,19 +112,19 @@ src/
 
 ### The Five Pillars of the Trellis Runtime
 
-1. **Causal Stream** ù Immutable audit log of every state change.
-2. **Semantic Patching** ù AST-level operations instead of text edits.
-3. **Decision Intelligence** ù Structured rationale and precedent search.
-4. **Governance Subgraph** ù Cryptographic identities and policy enforcement.
-5. **Exploration Memory** ù The Idea Garden for reviving abandoned work.
-ù every file change creates ops in real time               |
-| `git log`          | `trellis log` ù causal op stream with content-addressed hashes       |
-| Tag / release      | `trellis milestone create -m "ù"` ù narrative checkpoint             |
-| Branch             | `trellis branch <name>` ù same concept, with CRDT support            |
+1. **Causal Stream** ÔøΩ Immutable audit log of every state change.
+2. **Semantic Patching** ÔøΩ AST-level operations instead of text edits.
+3. **Decision Intelligence** ÔøΩ Structured rationale and precedent search.
+4. **Governance Subgraph** ÔøΩ Cryptographic identities and policy enforcement.
+5. **Exploration Memory** ÔøΩ The Idea Garden for reviving abandoned work.
+ÔøΩ every file change creates ops in real time               |
+| `git log`          | `trellis log` ÔøΩ causal op stream with content-addressed hashes       |
+| Tag / release      | `trellis milestone create -m "ÔøΩ"` ÔøΩ narrative checkpoint             |
+| Branch             | `trellis branch <name>` ÔøΩ same concept, with CRDT support            |
 | `git diff`         | `trellis diff` (file-level) or `trellis sdiff` (AST-level)           |
-| `git merge`        | `trellis merge <branch>` ù three-way with conflict markers           |
-| Stash / abandoned  | `trellis garden` ù discovers and revives abandoned work              |
-| Issue / ticket     | `trellis issue` ù first-class task tracking with acceptance criteria |
+| `git merge`        | `trellis merge <branch>` ÔøΩ three-way with conflict markers           |
+| Stash / abandoned  | `trellis garden` ÔøΩ discovers and revives abandoned work              |
+| Issue / ticket     | `trellis issue` ÔøΩ first-class task tracking with acceptance criteria |
 
 ### Key Differences from Git
 
@@ -137,6 +137,21 @@ src/
 ---
 
 ## Workflows
+
+### Repository root resolution
+
+Every `trellis` command resolves its repo root from the current directory (or
+`-p/--path`) by walking **up** the tree to the nearest `.trellis/config.json`.
+Running from a subdirectory of a repo just works ‚Äî you do not have to `cd` to the
+root first.
+
+- **`-p/--path <path>`** is the per-command override. There is no global pin or
+  environment variable to force a root today.
+- A **`$HOME`-rooted repo is intentionally skipped** when invoked from a subdir, to
+  avoid a 30‚Äì90s op-replay on every command. Stand inside `$HOME` to opt in.
+- If no `.trellis` is found up to the filesystem root, the command fails with
+  `Not a TrellisVCS repository.` ‚Äî run from the repo root, pass `-p`, or run
+  `trellis init`.
 
 ### Starting Work
 
@@ -174,11 +189,11 @@ Each agent gets an isolated op journal (`lane-{uuid}`). `issue start` creates an
 ```bash
 trellis issue start TRL-1            # Branch + lane
 trellis lane enter <lane-id>         # Route writes; materialize to worktree when bound
-trellis lane promote <lane-id>       # Replay onto integration ù before issue close
-export TRELLIS_LANE_ID=lane-ù        # Subprocess agents auto-enter
+trellis lane promote <lane-id>       # Replay onto integration ÔøΩ before issue close
+export TRELLIS_LANE_ID=lane-ÔøΩ        # Subprocess agents auto-enter
 ```
 
-**Worktree bind (3.2.3+):** `"lanes": { "worktreeBind": true }` in `.trellis/config.json` provisions `.trellis/worktrees/<shortId>/` per lane. Edit there ù not the shared repo root. See ADR 0014.
+**Worktree bind (3.2.3+):** `"lanes": { "worktreeBind": true }` in `.trellis/config.json` provisions `.trellis/worktrees/<shortId>/` per lane. Edit there ÔøΩ not the shared repo root. See ADR 0014.
 
 Graph MCP `agent:<id>` lanes attribute graph writes only; desk trail markers are coordination metadata, not VCS.
 
@@ -190,7 +205,7 @@ Record trellis-handoffs YAML envelopes as graph-backed child issues. Re-orient a
 # Record a handoff (creates label:message or label:decision child)
 trellis protocol send --parent TRL-41 \
   --from strategist --to human --re TRL-41 --status DECISION \
-  --body "Path A ù ship after review PASS"
+  --body "Path A ÔøΩ ship after review PASS"
 
 # Re-entry dump: WAITING ON YOU / ACTIVE / MOVED SINCE LAST
 trellis whereami
@@ -261,7 +276,7 @@ trellis sdiff src/old.ts src/new.ts  # Semantic diff (symbolAdd, symbolRename, e
 ### Decision Traces
 
 Decision traces are automatically captured from MCP tool invocations. They record
-what tool was called, with what inputs, and what it produced ù forming an audit trail.
+what tool was called, with what inputs, and what it produced ÔøΩ forming an audit trail.
 
 ```bash
 trellis decision list                           # Recent decisions
@@ -310,9 +325,9 @@ If connected via MCP, these tools are available:
 
 1. **Always check `trellis status` first** to understand the current repo state.
 2. **Use milestones, not commits.** Create a milestone when you complete a coherent unit of work.
-3. **Check the garden** before starting new features ù someone may have abandoned relevant work.
+3. **Check the garden** before starting new features ÔøΩ someone may have abandoned relevant work.
 4. **Prefer `trellis sdiff`** over line-level diffs when reviewing TypeScript/JavaScript changes.
-5. **NEVER read, write, edit, or delete files inside `.trellis/`** ù this directory contains the immutable op log and is managed exclusively by the engine. Direct edits WILL corrupt the causal chain. If `ops.json` appears corrupted, run `trellis repair` instead of editing the file. Always use the CLI or MCP tools for all VCS operations.
+5. **NEVER read, write, edit, or delete files inside `.trellis/`** ÔøΩ this directory contains the immutable op log and is managed exclusively by the engine. Direct edits WILL corrupt the causal chain. If `ops.json` appears corrupted, run `trellis repair` instead of editing the file. Always use the CLI or MCP tools for all VCS operations.
 6. **Ops are automatic.** File changes during `trellis watch` generate ops without manual intervention.
 7. **Branch names** follow the same conventions as Git: `feature/`, `fix/`, `experiment/`, etc.
 8. **Use issues for task tracking.** Create issues before starting work, add acceptance criteria, and close only when criteria pass.
@@ -349,8 +364,8 @@ src/
 
 ### Five Pillars
 
-1. **Causal Stream** ù Immutable, content-addressed ops with causal chaining
-2. **Semantic Patching** ù AST-level diffs (symbolAdd, symbolRename, symbolMove)
-3. **Narrative Milestones** ù Human-readable checkpoints spanning op ranges
-4. **Governance Subgraph** ù Ed25519 identities, signed ops, policy rules
-5. **Idea Garden** ù Automated detection and revival of abandoned work
+1. **Causal Stream** ÔøΩ Immutable, content-addressed ops with causal chaining
+2. **Semantic Patching** ÔøΩ AST-level diffs (symbolAdd, symbolRename, symbolMove)
+3. **Narrative Milestones** ÔøΩ Human-readable checkpoints spanning op ranges
+4. **Governance Subgraph** ÔøΩ Ed25519 identities, signed ops, policy rules
+5. **Idea Garden** ÔøΩ Automated detection and revival of abandoned work

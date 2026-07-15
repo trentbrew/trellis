@@ -7,6 +7,7 @@
 
 import type { Fact, Link } from '../core/store/eav-store.js';
 import type { VcsOp } from './types.js';
+import { writerPrincipal, branchHeadEntity } from './branch.js';
 import {
   fileEntityId,
   dirEntityId,
@@ -228,8 +229,13 @@ export function decompose(op: VcsOp): DecomposedOp {
 
     case 'vcs:branchAdvance': {
       if (!vcs.branchName || !vcs.targetOpHash) break;
-      const bid = `branch:${vcs.branchName}`;
-      // Update head pointer
+      // ADR 0022 §4: the head pointer lives on a per-writer ref entity so two
+      // writers advancing the same personal branch never share a mutable
+      // pointer. `integration` and the default branch collapse to the shared
+      // `branch:NAME` entity, where `vcs:branchAdvance` is retained as the
+      // single-owner audit trail.
+      const wid = writerPrincipal(op);
+      const bid = branchHeadEntity(vcs.branchName, wid);
       result.addFacts.push({ e: bid, a: 'headOpHash', v: vcs.targetOpHash });
       break;
     }

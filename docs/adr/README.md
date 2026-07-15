@@ -29,7 +29,9 @@ Desk issue: **TRL-35** (W0), **TRL-36** (W1). Plan:
 | [0010](./0010-kernel-rollups-and-relations.md)      | Kernel rollups and relations           | `evaluateRollup` + relation projection in logic middleware                                                |
 | [0018](./0018-explicit-ids-and-field-sync-tiers.md) | Explicit entity ids + field sync tiers | Optional `id` on create; `durable`/`realtime`/`derived` on properties (**accepted**, TRL-63)              |
 | [0019](./0019-graph-native-cron.md)                 | Graph-native cron                      | Durable CronJob/CronRun + in-process CronScheduler on `db serve` (**accepted**, TRL-77)                   |
-| [0020](./0020-qr-device-pairing.md)                 | QR device pairing                      | Delegated device keys under Ed25519 identity; OOB QR/code; magic email non-root (**accepted**, TRL-87/88/92) |
+| [0020](./0020-qr-device-pairing.md)                | QR device pairing                      | Delegated device keys under Ed25519 identity; OOB QR/code; magic email non-root (**accepted**, TRL-87/88/92) |
+| [0022](./0022-zone-capability-model.md)            | Zone-scoped capability model           | `CapabilityLevel{None,Reader,Member,Owner}`; zones = immutable `zoneId` + mutable `alias`; per-writer refs; single-owner `integration` (accepted, TRL-102) |
+| [0023](./0023-zone-encryption-at-rest.md)         | Encryption-at-rest for zone keys       | Per-zone AES-256-GCM; key wrapped under argon2id KEK (Ed25519 root); revoke = rotate; relay stores ciphertext only (proposed, TRL-97/102) |
 
 ### Product / explorer shell
 

@@ -62,6 +62,7 @@ vscode-extension/node_modules/
 .references
 .notes
 notes/
+rug/
 
 # Playwright MCP snapshots
 .playwright-mcp/
