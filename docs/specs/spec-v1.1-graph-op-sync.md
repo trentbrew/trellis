@@ -144,7 +144,24 @@ Grandfather them exactly as ADR 0021 grandfathers v1 kernel ops: v1 ops are
 opaque history, never reverified, and newly minted ops are v2. Every log keeps a
 permanent v1 prefix. That is the cost of having hashed intent for a year.
 
-## §2a — Not all state is in the graph: refs. NEEDS A DECISION.
+## §2a — Refs. **DECIDED by ADR 0022 §4** (per-writer ref zones).
+
+> **Resolved.** ADR 0022 (Accepted) takes the recommendation below: each writer's
+> branch head is their own per-principal zone, so no shared-mutable pointer
+> exists and the order-dependence dissolves rather than needing a convergence
+> rule. `integration` remains a single-owner zone where `vcs:branchAdvance` is
+> retained as the audit trail — the one ref whose position-order is meaningful
+> because one principal produces it. Writer identity is the Ed25519 principal
+> (`vcs.signedBy`), not the self-asserted `agentId`.
+>
+> **Implemented:** `branchHeadEntity()` / `writerPrincipal()` in `src/vcs/branch.ts`,
+> wired through `decompose`'s `vcs:branchAdvance` case. `getBranchHeadOpHash`
+> now resolves from the causally-ordered op log (with a hash tiebreak for
+> same-millisecond advances) rather than store insertion order.
+>
+> The analysis below is retained because it is why the decision went that way.
+
+### The original problem (retained for the record)
 
 Found while checking §2's own claims. **An earlier revision of this section said
 branch heads are side files. That was wrong** — see
@@ -261,7 +278,32 @@ Note the asymmetry this closes: the VCS log has always had real ingest
 kernel never did. That is why `SyncProvider` — the `KernelOp`-shaped seam the
 docs promise Iroh will use — has exactly one implementation, a stub.
 
-## §5 — Read authorization. NEEDS YOUR CALL.
+## §5 — Read authorization. **DECIDED by ADR 0022** (zone = boundary).
+
+> **Resolved.** ADR 0022 (Accepted) names what a "room" is: a **zone** — an
+> immutable, authority-bearing `zoneId` (`turtle://<ownerDid>/zone/<uuid>`) with
+> a mutable `alias`, four capability levels, deny-by-default, and a `parentZone`
+> closure. The replication unit is the authorization unit; the seven telos zone
+> names are presets, not kernel vocabulary.
+>
+> **Revocation is honestly "rotate"** — ADR 0022 states it outright, matching the
+> exposure named below. ADR 0023 (Proposed) specifies the crypto that turns the
+> boundary from a filter into a boundary: per-zone AES-256-GCM key, wrapped under
+> an argon2id KEK.
+>
+> **Implemented:** `src/identity/capability.ts` (Phases 0–2). Grants are ops
+> (`vcs:zoneDefine` / `zoneRename` / `grantSet` / `grantRetract`), so they
+> survive a reboot and replicate.
+>
+> **Still open — and it is the gap that matters:** enforcement. Authority is
+> checked at *mint*, not at *ingest*. A peer that mints a `vcs:grantSet`
+> directly is stopped by nothing. Until the kernel deny-by-default boundary
+> (ADR 0022 consequence, "Phase 3") lands, **this section is a model, not an
+> enforcement mechanism** — and §4's ingest is where it has to attach.
+>
+> The analysis below is retained because it is why the decision went that way.
+
+### The original problem (retained for the record)
 
 **§1 forces this.** A peer that materializes holds **every fact you shipped it**.
 Per-fact read filtering is therefore client-side theatre — the same argument that
@@ -311,21 +353,24 @@ creates — materialization makes it *visible* rather than pretend.
 
 ## Acceptance
 
-- **§1 (materialize)** — decided; the falsifier was measured at 4 KB and failed.
-- **§2 (wire = `kind` + decomposed payload)** — ratifiable. Follows from §1 plus
-  `decompose`'s purity. Carries a real migration cost: existing `VcsOp` hashes do
-  not survive, because identity moves from intent to result.
-- **§2a (refs)** — **open, and the most consequential gap here.** Ops alone
-  cannot convey ref state; a peer replaying every op still does not know what
-  `main` points at. Recommend option 1 (refs as a second mutable channel, Git's
-  answer). **Needs your call.**
-- **§3 (envelope/payload)** — decided by TRL-102.
-- **§4 (ingest)** — ratifiable; generalizes `integrateOps`, which already works.
-  Closes ADR 0021 §1's outstanding `verifyOpHash`-at-the-boundary criterion.
-- **§5 (read authorization)** — recommendation stands (room is the boundary);
-  mechanism deferred with the exposure named. **Needs your call**, and an ADR
-  before `rule Read` is real.
+| § | Question | Status |
+|---|---|---|
+| §1 | Peers materialize? | **Decided.** Falsifier measured at 4 KB and failed. |
+| §2 | Wire = `kind` + decomposed payload? | **Ratifiable.** Follows from §1 + `decompose`'s purity. Real migration cost: existing `VcsOp` hashes do not survive, because identity moves from intent to result. |
+| §2a | Refs | **Decided — ADR 0022 §4.** Per-writer ref zones; implemented. |
+| §3 | Envelope vs payload | **Decided — TRL-102.** |
+| §4 | Ingest | **Ratifiable.** Generalizes `integrateOps`. Closes ADR 0021 §1's outstanding `verifyOpHash`-at-the-boundary criterion. |
+| §5 | Read authorization | **Decided — ADR 0022** (zone = boundary); crypto in ADR 0023 (Proposed). **Not enforced.** |
 
-Two of six need you. The rest follow from §1 or from code that already exists.
+**What is left is one thing, and it is the same thing twice.** §2 and §4 both
+terminate at an ingest boundary that does not exist on the kernel path:
+
+- `verifyOpHash` is exported and **never called** — there is nowhere to call it.
+- Zone capability is checked at **mint, not ingest** — so a peer that mints a
+  `vcs:grantSet` directly is unopposed.
+
+Hash verification and capability enforcement are **the same boundary**. Building
+either separately builds it twice. That boundary is the ADR 0022 "Phase 3" work,
+and it is the last thing between this spec and TRL-111.
 
 Nothing here mentions Iroh. That is the test of whether it is a protocol.

@@ -255,13 +255,18 @@ function assertOwner(store: EAVStore, zoneId: ZoneId, actor: string): void {
 /**
  * Resolve the effective capability level of `principal` over `zone`.
  *
+ * `effective = max(defaultVisibility, direct grant, inherited grants…)`
+ *
+ * - The target zone's `defaultVisibility` is a **floor**, always included.
  * - Direct grant on the zone (if any).
  * - Inherited grants up the `parentZone` chain (closure, `allOf`-style).
- * - `defaultVisibility` if the principal has no direct/inherited grant.
  * - `None` if the zone does not exist (deny-by-default).
  *
- * Inheritance is positive-only (union/max) — no explicit-deny override, which
- * keeps resolution precedence-free.
+ * Positive-only (union/max) — no explicit-deny override, which keeps resolution
+ * precedence-free. A consequence worth stating: **you cannot grant someone less
+ * than the zone's default.** If a principal must have less than the public
+ * floor, that is a different zone, not a smaller grant. (Partition, don't
+ * filter — the same rule the zone model is built on.)
  */
 export function resolveCapability(
   store: EAVStore,
@@ -280,8 +285,18 @@ export function resolveCapability(
     const direct = readGrant(store, current, principal);
     if (direct !== undefined) best = Math.max(best, direct);
 
-    // First zone in the chain supplies defaultVisibility for anon-equivalent.
-    if (current === zoneId && direct === undefined) {
+    // The target zone's defaultVisibility is a floor, not a fallback: it applies
+    // whether or not a direct grant exists. Suppressing it when a grant is
+    // present would let `Reader` on a `Member`-default zone resolve BELOW what a
+    // stranger gets — a grant that demotes you, i.e. an explicit-deny, which
+    // this model does not have. Resolution stays positive-only:
+    //   effective = max(defaultVisibility, direct, inherited…)
+    //
+    // Only the target zone contributes a default. A parent's default does not
+    // inherit, so a private zone nested in a public one stays private — the
+    // child's own `defaultVisibility` governs its floor. Grants inherit; floors
+    // do not.
+    if (current === zoneId) {
       best = Math.max(best, zone.defaultVisibility);
     }
     current = zone.parentZone;
