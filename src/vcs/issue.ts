@@ -17,7 +17,7 @@ import {
 } from 'fs';
 import { join, dirname } from 'path';
 import { createVcsOp } from './ops.js';
-import type { VcsOp } from './types.js';
+import type { VcsOp, IssueType } from './types.js';
 import { issueEntityId, criterionEntityId } from './types.js';
 import type { EngineContext } from './engine-context.js';
 import {
@@ -45,6 +45,12 @@ export interface IssueInfo {
   displayId?: string;
   title?: string;
   description?: string;
+  /**
+   * What kind of issue this is (ADR 0026) — `epic` containers hold intent and
+   * leaves roll up to them via `parentId`. Absent on ops minted before the field
+   * existed; treat as `issue`.
+   */
+  issueType?: string;
   status?: string;
   priority?: string;
   labels: string[];
@@ -93,9 +99,13 @@ export interface IssueFilters {
   label?: string;
   parentId?: string;
   blocked?: boolean;
+  /** ADR 0026 — `--type epic` is the query a title prefix could never support. */
+  issueType?: string;
 }
 
 export interface IssueCreateOptions {
+  /** What kind of issue (ADR 0026). Default `issue`; `epic` holds intent. */
+  issueType?: IssueType;
   priority?: 'critical' | 'high' | 'medium' | 'low';
   labels?: string[];
   assignee?: string;
@@ -344,6 +354,7 @@ function buildIssueInfo(
     displayId: defaultDisplayId(issueId),
     title: get('title'),
     description: get('description'),
+    issueType: get('issueType') ?? 'issue',
     status: get('status'),
     priority: get('priority'),
     labels,
@@ -407,6 +418,7 @@ export async function createIssue(
     vcs: {
       issueId: id,
       issueTitle: title,
+      issueType: opts?.issueType ?? 'issue',
       issueDescription: opts?.description,
       issueStatus: opts?.status ?? 'backlog',
       issuePriority: opts?.priority ?? 'medium',
@@ -440,6 +452,8 @@ export async function updateIssue(
   updates: {
     title?: string;
     description?: string;
+    /** Re-kind an issue (ADR 0026) — e.g. promoting a task to an epic. */
+    issueType?: IssueType;
     priority?: 'critical' | 'high' | 'medium' | 'low';
     labels?: string[];
     assignee?: string;
@@ -457,6 +471,7 @@ export async function updateIssue(
 
   if (updates.title !== undefined) vcs.issueTitle = updates.title;
   if (updates.description !== undefined) vcs.issueDescription = updates.description;
+  if (updates.issueType !== undefined) vcs.issueType = updates.issueType;
   if (updates.status !== undefined) {
     vcs.oldIssueStatus = getIssueFact(ctx, issueEntityId(id), 'status') as any;
     vcs.issueStatus = updates.status;
@@ -990,6 +1005,9 @@ export function listIssues(
   const indexes = buildIssueLinkIndexes(ctx);
   let issues = issueFacts.map((f) => buildIssueInfo(ctx, f.e, indexes));
 
+  if (filters?.issueType) {
+    issues = issues.filter((i) => i.issueType === filters.issueType);
+  }
   if (filters?.status) {
     issues = issues.filter((i) => i.status === filters.status);
   }

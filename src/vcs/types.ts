@@ -75,6 +75,23 @@ export type VcsOpKind =
 // VCS Operation Payload
 // ---------------------------------------------------------------------------
 
+/**
+ * What kind of thing an issue is (ADR 0026).
+ *
+ * Bounded and enumerable on purpose: that is what lets `decompose` delete every
+ * prior value exhaustively (ADR 0022 §2's safe-register test) instead of relying
+ * on insertion order.
+ */
+export type IssueType = 'epic' | 'issue' | 'spike' | 'msg';
+
+/** Every `IssueType`, for exhaustive delete-then-add in `decompose`. */
+export const ISSUE_TYPES: readonly IssueType[] = [
+  'epic',
+  'issue',
+  'spike',
+  'msg',
+] as const;
+
 export interface VcsPayload {
   /**
    * Who asserted this op and over what surface (ADR 0021 §2).
@@ -119,6 +136,18 @@ export interface VcsPayload {
   // Issue tracking
   issueId?: string;
   issueTitle?: string;
+  /**
+   * What KIND of thing this issue is (ADR 0026). `epic` is a container of
+   * intent; leaves roll up to one via `parentIssueId`, which is how an agent
+   * walks from a task to the reason it exists.
+   *
+   * A real field rather than an `Epic:` title prefix — the same lesson ADR 0022
+   * applied to zones: a name must not do the work of a type, or you cannot query
+   * it and a rename breaks it. Absent ⇒ `issue`.
+   */
+  issueType?: IssueType;
+  /** Prior type, so a change is delete-then-add over a bounded domain. */
+  oldIssueType?: IssueType;
   issueStatus?: 'backlog' | 'queue' | 'in_progress' | 'paused' | 'closed';
   oldIssueStatus?: 'backlog' | 'queue' | 'in_progress' | 'paused' | 'closed';
   issuePriority?: 'critical' | 'high' | 'medium' | 'low';

@@ -7,6 +7,7 @@
 
 import type { Fact, Link } from '../core/store/eav-store.js';
 import type { VcsOp } from './types.js';
+import { ISSUE_TYPES } from './types.js';
 import { writerPrincipal, branchHeadEntity } from './branch.js';
 
 /**
@@ -289,6 +290,9 @@ export function decompose(op: VcsOp): DecomposedOp {
       const eid = issueEntityId(vcs.issueId);
       result.addFacts.push(
         { e: eid, a: 'type', v: 'Issue' },
+        // ADR 0026: `type` is the ENTITY type (Issue); `issueType` is what kind
+        // of issue it is (epic/issue/spike/msg). Absent ⇒ 'issue'.
+        { e: eid, a: 'issueType', v: vcs.issueType ?? 'issue' },
         { e: eid, a: 'status', v: vcs.issueStatus ?? 'backlog' },
         { e: eid, a: 'createdAt', v: op.timestamp },
         { e: eid, a: 'createdBy', v: op.agentId },
@@ -329,6 +333,16 @@ export function decompose(op: VcsOp): DecomposedOp {
     case 'vcs:issueUpdate': {
       if (!vcs.issueId) break;
       const eid = issueEntityId(vcs.issueId);
+      if (vcs.issueType) {
+        // ADR 0026 + ADR 0022 §2: the type domain is bounded, so enumerate and
+        // delete every prior value. That keeps it a real register instead of an
+        // append log read by array position — which is what the neighbouring
+        // add-only fields still are.
+        for (const prior of ISSUE_TYPES) {
+          result.deleteFacts.push({ e: eid, a: 'issueType', v: prior });
+        }
+        result.addFacts.push({ e: eid, a: 'issueType', v: vcs.issueType });
+      }
       if (vcs.issueStatus) {
         result.addFacts.push({ e: eid, a: 'status', v: vcs.issueStatus });
       }

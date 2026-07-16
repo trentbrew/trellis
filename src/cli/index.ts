@@ -1877,6 +1877,11 @@ issueCmd
   .description('Create a new issue')
   .requiredOption('-t, --title <title>', 'Issue title')
   .option(
+    '--type <type>',
+    'Kind of issue: issue (default), epic, spike, msg',
+    'issue',
+  )
+  .option(
     '-P, --priority <priority>',
     'Priority: critical, high, medium, low',
     'medium',
@@ -1916,6 +1921,7 @@ issueCmd
       : undefined;
 
     const op = await engine.createIssue(opts.title, {
+      issueType: opts.type,
       priority: opts.priority,
       labels,
       assignee: opts.assignee,
@@ -1945,6 +1951,7 @@ issueCmd
 issueCmd
   .command('list')
   .description('List issues')
+  .option('--type <type>', 'Filter by kind: epic, issue, spike, msg')
   .option(
     '--status <status>',
     'Filter by status: backlog, queue, in_progress, paused, closed',
@@ -1976,6 +1983,7 @@ async function listIssuesAction(opts: any): Promise<void> {
   engine.open();
 
   let issues = engine.listIssues({
+    issueType: opts.type,
     status: opts.status,
     label: opts.label,
     assignee: opts.assignee,
@@ -2344,6 +2352,7 @@ issueCmd
   .description('Update issue metadata')
   .argument('<id>', 'Issue ID')
   .option('--title <title>', 'New title')
+  .option('--type <type>', 'Re-kind: epic, issue, spike, msg')
   .option('-d, --desc <description>', 'Short description')
   .option('--description <description>', 'Alias for --desc')
   .option(
@@ -2364,6 +2373,7 @@ issueCmd
 
     const updates: Record<string, any> = {};
     if (opts.title !== undefined) updates.title = opts.title;
+    if (opts.type !== undefined) updates.issueType = opts.type;
     const desc = opts.desc ?? opts.description;
     if (desc !== undefined) updates.description = desc;
     if (opts.status !== undefined) updates.status = opts.status;
@@ -2380,7 +2390,7 @@ issueCmd
 
     if (Object.keys(updates).length === 0) {
       throw new Error(
-        'No updates specified. Pass at least one of --title, --desc, --status, -P, -l, --assignee, --parent, --clear-parent.',
+        'No updates specified. Pass at least one of --title, --type, --desc, --status, -P, -l, --assignee, --parent, --clear-parent.',
       );
     }
 
