@@ -113,6 +113,15 @@ export async function startLanesDashboard(
         req.headers.get('last-event-id') ??
         undefined;
 
+      // `?events=snapshot` — send projections only, skip the op frames.
+      //
+      // A consumer that renders from snapshots (the TML page) still opened the
+      // op stream, so a cold connect serialized ~9.6k ops into ~9.6k SSE frames
+      // that the client parsed and threw away, because it only listens for
+      // `snapshot`. That was the TML page's "slowness": work on both ends for
+      // data nobody read. Op consumers are unaffected and still get everything.
+      const wantOps = url.searchParams.get('events') !== 'snapshot';
+
       const stream = new ReadableStream({
         start(controller) {
           const enc = new TextEncoder();
@@ -151,7 +160,7 @@ export async function startLanesDashboard(
               // TRL-108 writeup: a read-only peer either gets projections or
               // materializes the store itself, and that is SPEC-v1.1's call.
               send('snapshot', buildLanesSnapshot(engine, opts.rootPath));
-              for (const op of fresh) send('op', op, op.hash);
+              if (wantOps) for (const op of fresh) send('op', op, op.hash);
 
               if (all.length) lastOpHash = all[all.length - 1]!.hash;
               sentInitial = true;

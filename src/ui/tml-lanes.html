@@ -40,6 +40,7 @@
   .empty { grid-column: 1 / -1; text-align: center; padding: 48px; color: var(--text3); font-size: 14px; }
 </style>
 </head>
+
 <body>
 <header>
   <h1>Trellis <span>TML v0 · Lanes</span></h1>
@@ -74,7 +75,10 @@
 
   const driver = new WebDriver({ baseUrl: '' });
   driver
-    .connect({ snapshotUrl: '/api/lanes', streamUrl: '/api/lanes/stream' })
+    // `events=snapshot`: this page renders from snapshots and ignores `op`
+    // frames, so asking for them meant ~9.6k SSE frames per load, parsed and
+    // discarded. Ask for what we actually consume.
+    .connect({ snapshotUrl: '/api/lanes', streamUrl: '/api/lanes/stream?events=snapshot' })
     .then(() => mount(document.getElementById('lanes'), driver))
     .catch((e) => console.error('[tml] mount failed', e));
 </script>

@@ -6,6 +6,7 @@ import {
   Store,
   WebDriver,
   applyBindings,
+  mount,
 } from '../../src/ui/tml-runtime.js';
 
 async function withFetchStub(
@@ -92,6 +93,24 @@ class FakeEl {
     for (const c of this._children) if (pred(c)) return c;
     return null;
   }
+  /** `setupContainer` clears the container by assigning innerHTML = ''. */
+  set innerHTML(v: string) {
+    if (v === '') this._children = [];
+  }
+  get innerHTML(): string {
+    return this._text;
+  }
+  /** `mount` selects subtrees by attribute; only `[tml-query]` is used. */
+  querySelectorAll(sel: string): FakeEl[] {
+    const attr = sel.replace(/^\[|\]$/g, '');
+    const out: FakeEl[] = [];
+    const walk = (el: FakeEl) => {
+      if (el._attrs.has(attr)) out.push(el);
+      el._children.forEach(walk);
+    };
+    walk(this);
+    return out;
+  }
 }
 
 const snapshot = {
@@ -122,6 +141,9 @@ const snapshot = {
   ],
   issues: [],
 };
+
+/** Deep copy of the shared fixture, for tests that mutate or re-seed. */
+const cloneSnapshot = () => JSON.parse(JSON.stringify(snapshot));
 
 describe('evaluateQuery', () => {
   it('returns lanes by type', () => {
@@ -186,7 +208,10 @@ describe('Store', () => {
     const s = new Store();
     const cb = vi.fn();
     s.subscribe(cb);
-    s.seed(snapshot);
+    // Seed a COPY: `mutate` below pushes a lane, and `snapshot` is a shared
+    // module-level fixture — mutating it leaked `lane-3` into every test that
+    // ran afterwards, which silently changed their row counts.
+    s.seed(cloneSnapshot());
     expect(cb).toHaveBeenCalledTimes(1);
     s.mutate((snap: any) => {
       snap.lanes.push({ id: 'lane-3' });
@@ -206,7 +231,7 @@ describe('Store', () => {
 describe('WebDriver', () => {
   it('query evaluates client-side over the store', async () => {
     const d = new WebDriver();
-    d.seed(snapshot);
+    d.seed(cloneSnapshot());
     const rows = await d.query("find ?e where type = 'Lane' and status = 'active'");
     expect(rows).toHaveLength(1);
   });
@@ -273,5 +298,97 @@ describe('applyBindings (projection)', () => {
       const body = JSON.parse(fetchMock.mock.calls[0][1].body);
       expect(body).toEqual({ action: 'promote', args: { id: 'lane-1' } });
     });
+  });
+});
+
+/**
+ * `mount` + `tml-live` — the projection lifecycle.
+ *
+ * Previously only `parseTmlAttrs` touched `tml-live`, asserting it parses to
+ * `live: true`. That is a parser test: it proves the attribute is read, not that
+ * anything re-renders. Nothing exercised `setupContainer`, so the live behaviour
+ * itself was unverified.
+ */
+describe('mount + tml-live', () => {
+  function laneList(opts: { live: boolean }) {
+    const root = new FakeEl('div');
+    const list = new FakeEl('div');
+    list.setAttribute('tml-query', "find ?e where type = 'Lane'");
+    list.setAttribute('tml-each', 'lane of lanes');
+    if (opts.live) list.setAttribute('tml-live', '');
+    const card = new FakeEl('article');
+    card.setAttribute('tml-text', 'lane.id');
+    list.appendChild(card);
+    root.appendChild(list);
+    return { root, list };
+  }
+
+  /** `render()` resolves a promise chain; flush it. */
+  const flush = () => new Promise((r) => setTimeout(r, 0));
+
+  it('renders one node per row and projects the row scope', async () => {
+    const { root, list } = laneList({ live: false });
+    const d = new WebDriver();
+    d.seed(cloneSnapshot());
+
+    mount(root, d);
+    await flush();
+
+    // v0 clones the CONTAINER per row, so each row is a wrapper copy of the
+    // container holding the projected children — not the inner card directly.
+    expect(list.children).toHaveLength(2);
+    expect(list.children.map((c) => c.children[0].textContent)).toEqual([
+      'lane-1',
+      'lane-2',
+    ]);
+  });
+
+  it('re-renders when the store is re-seeded', async () => {
+    const { root, list } = laneList({ live: true });
+    const d = new WebDriver();
+    d.seed(cloneSnapshot());
+
+    mount(root, d);
+    await flush();
+    expect(list.children).toHaveLength(2);
+
+    // A new snapshot arrives — the SSE `snapshot` event calls driver.seed().
+    d.seed({ ...snapshot, lanes: [snapshot.lanes[0]] });
+    await flush();
+
+    expect(list.children).toHaveLength(1);
+    expect(list.children[0].children[0].textContent).toBe('lane-1');
+  });
+
+  it('does NOT re-render without tml-live', async () => {
+    const { root, list } = laneList({ live: false });
+    const d = new WebDriver();
+    d.seed(cloneSnapshot());
+
+    mount(root, d);
+    await flush();
+    expect(list.children).toHaveLength(2);
+
+    d.seed({ ...snapshot, lanes: [snapshot.lanes[0]] });
+    await flush();
+
+    // Still the first render — `tml-live` is what opts in.
+    expect(list.children).toHaveLength(2);
+  });
+
+  it('re-render does not accumulate nodes across seeds', async () => {
+    const { root, list } = laneList({ live: true });
+    const d = new WebDriver();
+    d.seed(cloneSnapshot());
+
+    mount(root, d);
+    await flush();
+    for (let i = 0; i < 3; i++) {
+      d.seed({ ...snapshot });
+      await flush();
+    }
+
+    // The container is cleared each render; a stale append shows up here.
+    expect(list.children).toHaveLength(2);
   });
 });
