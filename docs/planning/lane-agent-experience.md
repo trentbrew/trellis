@@ -1,6 +1,6 @@
 # Spec: Lane coherence for agent experience
 
-**Status:** Implementing (AC1 `lane split` shipping)
+**Status:** Implementing (AC1 `lane split` + AC2 issue⇄promote boundary shipped)
 **Date:** 2026-07-15
 **Issue:** TRL-117
 **Relates to:** ADR 0014 (lane worktree bind), ADR 0015 (agent handoff protocol),
@@ -21,7 +21,7 @@ But the **unit of isolation** (the session) is not the **unit of coherence**
 (the task / domain you milestone and promote). A session that hops domains —
 e.g. "rename docs to TQL" → "CLI display strings" → "design TML" → "edit a
 separate repo's docs site" — collapses into one catch-all lane with no clean
-promote boundary. That is why it feels unclear *when to milestone or promote*:
+promote boundary. That is why it feels unclear _when to milestone or promote_:
 there is no coherent unit to promote.
 
 The fix is mostly **convention**, plus a few small signals. No lane-tooling
@@ -32,7 +32,7 @@ rewrite is proposed.
 1. **Lane ≈ domain, not session.** Open a new lane when the topic changes.
 2. **Lane ⇄ issue by default.** `issue start` already creates+enters a lane, so
    the promote boundary is the issue boundary.
-3. **Promote == milestone.** Promoting a coherent unit *is* the milestone; the
+3. **Promote == milestone.** Promoting a coherent unit _is_ the milestone; the
    "when to milestone?" question should not exist as a separate decision.
 4. **Cross-agent boundaries are structural, not manual.** An agent should not be
    able to silently write into another agent's lane-owned files; it requires a
@@ -43,32 +43,43 @@ rewrite is proposed.
 ## Proposed changes
 
 ### 1. Lane per domain (`trellis lane split`)
+
 - **Shipped:** `trellis lane split [--name <slug>]` leaves the current lane (if
   any), forks a fresh isolated journal from the integration head, and enters it.
-  No issue required. Optional `--name` stores a domain slug on lane meta.
-  Parent lineage is recorded as sibling when splitting from an active lane.
-- Convention: when the topic jumps, split — don't continue in the catch-all lane.
+  No issue required. Optional `--name` stores a domain slug on lane meta. Parent
+  lineage is recorded as sibling when splitting from an active lane.
+- Convention: when the topic jumps, split — don't continue in the catch-all
+  lane.
 - Fully independent promote unit (not auto-bound as a child of the parent).
 
 ### 2. Lane ⇄ issue binding (verify + document)
-- Confirm `issue start` creates+enters a lane by default; `issue close`
-  requires `lane promote` replay first.
-- This makes the promote boundary explicit: one issue = one promot-able unit.
+
+- **Verified:** `issue start` creates+enters a lane by default (`--no-lane` to
+  opt out). Covered by `test/vcs/issue-start-lane-branch.test.ts` and
+  `test/vcs/issue-close-promote-boundary.test.ts`.
+- **Verified:** `issue close --confirm` enforces promote replay — auto-promotes
+  the linked lane when it has journal ops; `--no-promote` refuses close until
+  an explicit `trellis lane promote` (promote boundary == issue boundary).
+- Documented in AGENTS.md "Agent Lanes" and CLI help for `issue start` /
+  `issue close`.
 
 ### 3. Promote == milestone
-- `trellis lane promote <lane> -m "<narrative>"` replays onto integration **and**
-  creates the milestone in one step.
+
+- `trellis lane promote <lane> -m "<narrative>"` replays onto integration
+  **and** creates the milestone in one step.
 - Optionally auto-draft the narrative from the lane's op summaries when `-m` is
   omitted, so promotion never blocks on writing prose.
 
 ### 4. Structural cross-agent file protection
-- A write targeting a file currently owned by another agent's *active* lane is
+
+- A write targeting a file currently owned by another agent's _active_ lane is
   rejected with a prompt to emit an ADR 0015 handoff envelope
   (`trellis protocol send`) instead of proceeding.
 - Turns the manual "that's the presence agent's file, I'll defer" pattern into
   an enforced boundary.
 
 ### 5. Coherence signal (`trellis lane status`)
+
 - Report the current lane's spread: # of distinct domains (by issue/intent
   label) and # of repos touched.
 - When spread > 1 domain, suggest `trellis lane split`.
@@ -90,9 +101,9 @@ signal.
 
 ## Open questions
 
-- ~~Should `lane split` auto-bind a sub-lane to the parent, or be fully independent?~~
-  **Resolved:** fully independent journal + promote unit; parent recorded as
-  sibling lineage only.
+- ~~Should `lane split` auto-bind a sub-lane to the parent, or be fully
+  independent?~~ **Resolved:** fully independent journal + promote unit; parent
+  recorded as sibling lineage only.
 - Is auto-drafted milestone narrative good enough, or is a mandatory human
   summary preferred at promote time?
 - Does the coherence signal belong in `lane status` or `whereami` (already the

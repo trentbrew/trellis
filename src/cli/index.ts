@@ -2247,7 +2247,9 @@ issueCmd
 
 issueCmd
   .command('start')
-  .description('Start working on an issue (creates lane + branch, auto-assigns)')
+  .description(
+    'Start working on an issue (creates+enters lane by default; optional branch)',
+  )
   .argument('<id>', 'Issue ID')
   .option('--no-lane', 'Skip auto-create/enter agent lane')
   .option(
@@ -2572,11 +2574,16 @@ issueCmd
 
 issueCmd
   .command('close')
-  .description('Close an issue (requires all criteria pass + --confirm)')
+  .description(
+    'Close an issue (criteria + --confirm; auto-promotes linked lane ops — promote boundary == issue boundary)',
+  )
   .argument('<id>', 'Issue ID')
   .option('--confirm', 'Confirm closure after criteria pass')
   .option('--push', 'Push git main after close (requires git.sync or prior promote sync)')
-  .option('--no-promote', 'Fail instead of auto-promoting unpromoted lane ops on close')
+  .option(
+    '--no-promote',
+    'Refuse close if the issue lane still has unpromoted ops (require explicit trellis lane promote first)',
+  )
   .option('--require-test', 'Run promote.require test suites during auto-promote')
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (id, opts) => {
