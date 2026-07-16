@@ -224,10 +224,18 @@ open a new lane — do not keep writing into a catch-all lane.
 **Promote == milestone.** A successful `lane promote` also creates a milestone
 (narrative auto-drafted from lane name / issue / ops, or set with `-m`).
 
+**Cross-agent file ownership.** A file touched by another agent's live active
+lane is owned by that lane — writes from a different `agentId` are rejected with
+a `trellis protocol send` handoff prompt (ADR 0015).
+
+**Coherence signal.** `lane status` reports domain/repo spread; when spread > 1
+it suggests `lane split`.
+
 ```bash
 trellis issue start TRL-1            # Branch + lane
 trellis lane split --name tql-docs   # Fresh domain lane (no issue required); enters it
 trellis lane enter <lane-id>         # Route writes; materialize to worktree when bound
+trellis lane status                  # Domains / repos / split hint when spread > 1
 trellis lane promote <lane-id> -m "TQL docs rename"  # Replay + milestone
 trellis issue close TRL-1 --confirm  # Auto-promotes linked lane (+ milestone), then closes
 export TRELLIS_LANE_ID=lane-…        # Subprocess agents auto-enter

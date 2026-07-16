@@ -14,6 +14,11 @@ export interface ApplyOpOptions {
   skipBranchAdvance?: boolean;
   /** Write to integration journal while a lane is active (lane create/drop, promote). */
   allowIntegrationWrite?: boolean;
+  /**
+   * Skip TRL-117 cross-agent file ownership checks (promote replay, sync
+   * ingest, workspace index). Live agent writes must not set this.
+   */
+  skipOwnershipCheck?: boolean;
 }
 
 export interface EngineContext {
