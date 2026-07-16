@@ -25,6 +25,8 @@ import { FileWatcher, type ScanProgress } from './watcher/fs-watcher.js';
 import { Ingestion } from './watcher/ingestion.js';
 import { decompose } from './vcs/decompose.js';
 import { createVcsOp, isVcsOpKind, verifyVcsOpHash } from './vcs/ops.js';
+import { enforceIngestAuthorization } from './identity/capability.js';
+import type { IdentityResolver } from './identity/signing-middleware.js';
 import { PROVENANCE } from './core/persist/canonical-op.js';
 import type { OpProvenance } from './core/persist/canonical-op.js';
 import type { VcsOp, TrellisVcsConfig } from './vcs/types.js';
@@ -221,6 +223,7 @@ const ISSUE_INTEGRATION_KINDS = new Set<string>([
 export type IntegrateOpRejectReason =
   | 'invalid-kind'
   | 'hash-mismatch'
+  | 'unauthorized'
   | 'missing-dependency'
   | 'apply-failed';
 
@@ -238,6 +241,8 @@ export interface IntegrateOpsResult {
 
 export class TrellisVcsEngine {
   private config: TrellisVcsConfig;
+  /** Optional identity resolver for ingest-time signature verification (ADR 0022 Phase 3). */
+  private identityResolver?: IdentityResolver;
   private store: EAVStore;
   private opLog: OpLog;
   private watcher: FileWatcher | null = null;
@@ -278,6 +283,14 @@ export class TrellisVcsEngine {
        * Defaults to the honest `{ actorType: 'machine', origin: 'sdk' }`.
        */
       provenance?: OpProvenance;
+      /**
+       * Optional identity resolver used to cryptographically verify op
+       * signatures at the ingest boundary (ADR 0022 Phase 3). When present,
+       * authorization-bearing ops (grant/zone) must carry a valid signature;
+       * when absent, the kernel still requires a signature envelope to exist
+       * (deny-by-default for unattributable auth ops).
+       */
+      identityResolver?: IdentityResolver;
     } & Partial<TrellisVcsConfig>,
   ) {
     // Merge default ignore patterns with .gitignore if present
@@ -300,6 +313,7 @@ export class TrellisVcsEngine {
     };
     this.agentId = opts.agentId ?? `agent:${process.env.USER ?? 'unknown'}`;
     this.provenance = opts.provenance ?? PROVENANCE.sdk;
+    this.identityResolver = opts.identityResolver;
     this.store = new EAVStore();
     this.opLog =
       opts.opLog ??
@@ -801,6 +815,23 @@ export class TrellisVcsEngine {
         continue;
       }
 
+      // ADR 0022 Phase 3: enforce zone authority at the same boundary that
+      // verifies integrity. A peer that mints grant/zone ops directly is
+      // opposed here, not just at the trusted local mint path.
+      const auth = enforceIngestAuthorization(
+        this.store,
+        op,
+        this.identityResolver,
+      );
+      if (!auth.ok) {
+        rejected.push({
+          op,
+          reason: 'unauthorized',
+          message: auth.message ?? `Unauthorized ingest of '${op.kind}'.`,
+        });
+        continue;
+      }
+
       if (pendingByHash.has(op.hash)) {
         skipped++;
         continue;
@@ -1028,6 +1059,11 @@ export class TrellisVcsEngine {
 
   getActiveLaneId(): string | undefined {
     return this.activeLaneId;
+  }
+
+  /** Whether milestones should auto-commit to git on create (config opt-in). */
+  get milestoneAutoCommit(): boolean {
+    return this.config.milestones?.autoCommit === true;
   }
 
   /** Last enter/leave/open materialization counters (W4). */

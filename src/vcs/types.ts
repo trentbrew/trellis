@@ -344,6 +344,12 @@ export interface TrellisVcsConfig {
     /** Branch to commit on (default defaultBranch). */
     branch?: string;
   };
+
+  /** Milestone → git commit automation. */
+  milestones?: {
+    /** Auto-commit integration to git (with the milestone message) on create. */
+    autoCommit?: boolean;
+  };
 }
 
 export const DEFAULT_CONFIG: Omit<TrellisVcsConfig, 'rootPath'> = {

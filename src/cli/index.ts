@@ -1136,6 +1136,7 @@ program
   .option('-m, --message <message>', 'Milestone message')
   .option('--from <hash>', 'Start op hash for the milestone range')
   .option('--to <hash>', 'End op hash for the milestone range')
+  .option('--commit', 'Auto-commit to git using the milestone message (integration only)')
   .option('--json', 'Emit machine-readable JSON (no color)')
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (action, opts) => {
@@ -1152,8 +1153,9 @@ program
         process.exit(1);
       }
 
+      let op: Awaited<ReturnType<typeof engine.createMilestone>>;
       try {
-        const op = await engine.createMilestone(opts.message, {
+        op = await engine.createMilestone(opts.message, {
           fromOpHash: opts.from,
           toOpHash: opts.to,
         });
@@ -1164,6 +1166,37 @@ program
       } catch (err: any) {
         console.error(chalk.red(`Failed: ${err.message}`));
         process.exit(1);
+      }
+
+      // Auto-commit: a milestone IS the unit of shipping. Reuses the
+      // existing incremental git sync so history is not rebuilt/duplicated.
+      // Integration-only: never commit lane-local work prematurely.
+      const autoCommit = opts.commit || engine.milestoneAutoCommit;
+      if (autoCommit) {
+        const laneId = engine.getActiveLaneId() ?? process.env.TRELLIS_LANE_ID;
+        if (laneId) {
+          console.log(
+            chalk.yellow(
+              `⚠ Skipped auto-commit: lane '${laneId}' active. Promote the lane, then commit.`,
+            ),
+          );
+        } else {
+          const sync = engine.syncGitIntegration({
+            message: opts.message,
+            force: true,
+          });
+          if (sync.committed) {
+            console.log(
+              chalk.green(
+                `✓ Committed to git: ${sync.commitHash?.slice(0, 12) ?? ''}`,
+              ),
+            );
+          } else {
+            console.log(
+              chalk.dim('Git working tree already matches integration.'),
+            );
+          }
+        }
       }
       return;
     }
