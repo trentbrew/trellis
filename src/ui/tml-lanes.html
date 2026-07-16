@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trellis — TML v0 (Lanes)</title>
+<style>
+  :root {
+    --bg: #09090b; --surface: #15161b; --border: #25262e;
+    --text: #e4e4e7; --text2: #a1a1aa; --text3: #63637a;
+    --accent: #6d5bfa; --green: #34d399; --yellow: #fbbf24;
+    --blue: #60a5fa; --mono: 'JetBrains Mono', ui-monospace, monospace;
+    --font: 'Inter', -apple-system, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); padding: 24px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  h1 { font-size: 16px; font-weight: 700; }
+  h1 span { color: var(--text3); font-weight: 400; font-size: 12px; margin-left: 8px; }
+  .tag { font: 600 10px var(--mono); text-transform: uppercase; letter-spacing: .3px;
+    color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 3px 9px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  .lane-id { font: 600 13px var(--mono); word-break: break-all; }
+  .badge { font: 600 10px var(--mono); text-transform: uppercase; letter-spacing: .3px;
+    padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+  .badge.active { background: rgba(52,211,153,.15); color: var(--green); }
+  .badge.promoting { background: rgba(251,191,36,.15); color: var(--yellow); }
+  .badge.promoted { background: rgba(96,165,250,.15); color: var(--blue); }
+  .badge.dropped { background: rgba(99,99,122,.15); color: var(--text3); }
+  .row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px;
+    padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,.03); }
+  .row:last-child { border-bottom: none; }
+  .row .k { color: var(--text3); }
+  .row .v { color: var(--text2); font-family: var(--mono); font-size: 11px; text-align: right; }
+  .promote-btn { margin-top: 12px; width: 100%; font: 500 11px var(--mono); padding: 8px;
+    background: var(--accent); color: #fff; border: none; border-radius: 8px; cursor: pointer; }
+  .promote-btn:hover { filter: brightness(1.1); }
+  .empty { grid-column: 1 / -1; text-align: center; padding: 48px; color: var(--text3); font-size: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Trellis <span>TML v0 · Lanes</span></h1>
+  <span class="tag">tml-*</span>
+</header>
+
+<!--
+  The grid below is declared entirely in TML. The card is a tml-query container;
+  its child elements bind fields via tml-text / tml-attr-* / tml-if / tml-op.
+  tml-live re-renders on every SSE snapshot push. See docs/specs/tml-v0.md.
+-->
+<div id="lanes" class="grid">
+  <article class="card"
+      tml-query="find ?e where type = 'Lane'"
+      tml-each="lane of lanes"
+      tml-live
+      tml-ref="active-lanes">
+    <div class="card-head">
+      <div class="lane-id" tml-text="lane.id"></div>
+      <span class="badge" tml-text="lane.status" tml-attr-class="lane.status"></span>
+    </div>
+    <div class="row"><span class="k">Agent</span><span class="v" tml-text="lane.agentId"></span></div>
+    <div class="row"><span class="k">Ops / files</span><span class="v" tml-text="lane.opCount + ' / ' + lane.fileCount"></span></div>
+    <div class="row"><span class="k">Branch</span><span class="v" tml-text="lane.targetBranch"></span></div>
+    <div class="row" tml-if="lane.issueId"><span class="k">Issue</span><span class="v" tml-text="lane.issueId"></span></div>
+    <button class="promote-btn" tml-op="promote(lane.id)">Promote</button>
+  </article>
+</div>
+
+<script type="module">
+  import { WebDriver, mount } from '/tml-runtime.js';
+
+  const driver = new WebDriver({ baseUrl: '' });
+  driver
+    .connect({ snapshotUrl: '/api/lanes', streamUrl: '/api/lanes/stream' })
+    .then(() => mount(document.getElementById('lanes'), driver))
+    .catch((e) => console.error('[tml] mount failed', e));
+</script>
+</body>
+</html>

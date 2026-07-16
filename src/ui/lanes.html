@@ -215,12 +215,64 @@ section h2 {
 .orphan-row .orphan-agent { color: var(--text2); flex: 1; }
 .orphan-row .orphan-ops { font: 400 11px var(--mono); color: var(--text3); }
 .orphan-row .orphan-updated { font: 400 11px var(--mono); color: var(--text3); }
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+.search .search-icon {
+  position: absolute;
+  left: 12px;
+  width: 14px;
+  height: 14px;
+  color: var(--text3);
+  pointer-events: none;
+}
+.search input {
+  font: 400 12px var(--mono);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 9px 30px 9px 34px;
+  width: 100%;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.search input::placeholder { color: var(--text3); }
+.search input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-glow);
+}
+.search .search-clear {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-size: 15px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 2px;
+  display: none;
+}
+.search .search-clear:hover { color: var(--text); }
+.search.has-value .search-clear { display: block; }
 .view-toggle {
   display: flex;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
+  flex: none;
 }
 .view-toggle button {
   font: 500 11px var(--mono);
@@ -295,6 +347,61 @@ section h2 {
   font-size: 12px;
   text-align: center;
   padding: 24px 8px;
+}
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+table.lanes-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+table.lanes-table th {
+  text-align: left;
+  font: 600 10px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  color: var(--text3);
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+}
+table.lanes-table th:hover { color: var(--text2); }
+table.lanes-table th .sort-ind {
+  margin-left: 5px;
+  color: var(--accent);
+}
+table.lanes-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.03);
+  color: var(--text2);
+  vertical-align: middle;
+}
+table.lanes-table tbody tr:hover td { background: var(--surface2); }
+table.lanes-table tbody tr:last-child td { border-bottom: none; }
+table.lanes-table td.l-id { font-family: var(--mono); color: var(--text); }
+table.lanes-table td.l-issue { font-family: var(--mono); color: var(--accent); }
+table.lanes-table .badge {
+  font: 600 9px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.table-empty {
+  padding: 48px;
+  text-align: center;
+  color: var(--text3);
+  font-size: 14px;
 }
 .issue-card {
   background: var(--surface);
@@ -438,6 +545,40 @@ section h2 {
 .dialog-empty { color: var(--text3); font-size: 12px; text-align: center; padding: 16px; }
 
 /* Op log — real ops off the stream (TRL-108) */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  align-items: start;
+}
+.main { min-width: 0; }
+.sidebar {
+  position: sticky;
+  top: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 48px);
+}
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border);
+  font: 600 11px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--text3);
+}
+.sidebar-head .sidebar-count { color: var(--text2); }
+.sidebar .log-list {
+  overflow-y: auto;
+  padding: 6px;
+}
 .log-list { display: flex; flex-direction: column; gap: 2px; }
 .log-row {
   display: grid;
@@ -491,17 +632,21 @@ section h2 {
   0% { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-glow); }
   100% { border-color: var(--border); box-shadow: none; }
 }
+
+@media (max-width: 900px) {
+  body { padding: 16px; }
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; max-height: 420px; }
+  .toolbar { flex-wrap: wrap; }
+  .search { order: 2; flex-basis: 100%; }
+  .view-toggle { flex: 1; }
+}
 </style>
 </head>
 <body>
 <header>
   <h1>Trellis <span>Agent Lanes</span></h1>
   <div class="live" id="live"><span class="live-dot"></span><span id="live-label">connecting…</span></div>
-  <div class="view-toggle">
-    <button id="btn-grid" class="active" onclick="setView('grid')">Grid</button>
-    <button id="btn-kanban" onclick="setView('kanban')">Kanban</button>
-    <button id="btn-logs" onclick="setView('logs')">Logs</button>
-  </div>
   <div class="meta">
     <div id="repo">—</div>
     <div id="updated">—</div>
@@ -512,18 +657,37 @@ section h2 {
 
 <div class="stats" id="stats"></div>
 
+<div class="toolbar">
+  <div class="view-toggle">
+    <button id="btn-grid" class="active" onclick="setView('grid')">Grid</button>
+    <button id="btn-kanban" onclick="setView('kanban')">Kanban</button>
+    <button id="btn-table" onclick="setView('table')">Table</button>
+  </div>
+  <div class="search" id="search">
+    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    <input id="search-input" type="text" placeholder="Search lanes, issues, ops…" oninput="onSearch(this.value)" />
+    <button class="search-clear" id="search-clear" onclick="clearSearch()">&times;</button>
+  </div>
+</div>
+
 <section id="orphan-section" class="orphan-section" hidden>
   <h2>Unassigned lanes</h2>
   <div class="orphan-list" id="orphan-list"></div>
   <button class="orphan-toggle" id="orphan-toggle" onclick="toggleOrphans()">show more</button>
 </section>
 
-<div class="grid" id="lanes"></div>
-
-<section id="logs-section" hidden>
-  <h2>Op log</h2>
-  <div class="log-list" id="log-list"></div>
-</section>
+<div class="layout">
+  <div class="main">
+    <div class="grid" id="lanes"></div>
+  </div>
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <span>Op log</span>
+      <span class="sidebar-count" id="log-count">0</span>
+    </div>
+    <div class="log-list" id="log-list"></div>
+  </aside>
+</div>
 
 <div class="toast-wrap" id="toasts"></div>
 
@@ -545,10 +709,56 @@ const ISSUE_COLUMNS = [
   { key: 'done', label: 'Done', statuses: ['closed'] },
 ];
 let currentView = localStorage.getItem('trellis-lanes-view') || 'grid';
+if (currentView === 'logs') currentView = 'grid';
 let lastSnap = null;
 let opLog = [];
 let lastOpHash = null; // resume point for the op stream
+let searchQuery = '';
 const MAX_LOG = 200;
+
+function onSearch(q) {
+  searchQuery = q.trim().toLowerCase();
+  $('search').classList.toggle('has-value', searchQuery.length > 0);
+  if (lastSnap) render(lastSnap);
+}
+
+function clearSearch() {
+  $('search-input').value = '';
+  onSearch('');
+}
+
+function laneMatches(lane, q) {
+  return (
+    lane.id.toLowerCase().includes(q) ||
+    (lane.agentId || '').toLowerCase().includes(q) ||
+    (lane.sessionId || '').toLowerCase().includes(q) ||
+    (lane.targetBranch || '').toLowerCase().includes(q) ||
+    (lane.worktreePath || '').toLowerCase().includes(q) ||
+    (lane.issueId || '').toLowerCase().includes(q) ||
+    (lane.issueTitle || '').toLowerCase().includes(q) ||
+    (lane.status || '').toLowerCase().includes(q)
+  );
+}
+
+function issueMatches(issue, q) {
+  return (
+    issue.id.toLowerCase().includes(q) ||
+    (issue.title || '').toLowerCase().includes(q) ||
+    (issue.priority || '').toLowerCase().includes(q) ||
+    (issue.status || '').toLowerCase().includes(q) ||
+    (issue.laneIds || []).join(' ').toLowerCase().includes(q)
+  );
+}
+
+function opMatches(op, q) {
+  const v = op.vcs || {};
+  return (
+    op.kind.toLowerCase().includes(q) ||
+    (op.hash || '').toLowerCase().includes(q) ||
+    (op.agentId || '').toLowerCase().includes(q) ||
+    (v.filePath || v.issueId || v.laneId || v.branchName || v.message || v.criterionId || v.decisionId || '').toLowerCase().includes(q)
+  );
+}
 
 function fmtTime(iso) {
   if (!iso) return '—';
@@ -589,7 +799,7 @@ function setView(view) {
   localStorage.setItem('trellis-lanes-view', view);
   $('btn-grid').classList.toggle('active', view === 'grid');
   $('btn-kanban').classList.toggle('active', view === 'kanban');
-  $('btn-logs').classList.toggle('active', view === 'logs');
+  $('btn-table').classList.toggle('active', view === 'table');
   if (lastSnap) render(lastSnap);
 }
 
@@ -615,10 +825,13 @@ function laneCard(lane, idAttr) {
 }
 
 function renderGrid(lanesEl, lanes) {
-  if (!lanes.length) {
-    lanesEl.innerHTML = '<div class="empty">No lanes yet — open an Agent tab or run <code>trellis lane ensure --session …</code></div>';
+  const filtered = searchQuery ? lanes.filter(l => laneMatches(l, searchQuery)) : lanes;
+  if (!filtered.length) {
+    lanesEl.innerHTML = searchQuery
+      ? `<div class="empty">No lanes match “${searchQuery}”</div>`
+      : '<div class="empty">No lanes yet — open an Agent tab or run <code>trellis lane ensure --session …</code></div>';
   } else {
-    lanesEl.innerHTML = lanes.map(l => laneCard(l, l.id)).join('');
+    lanesEl.innerHTML = filtered.map(l => laneCard(l, l.id)).join('');
   }
 }
 
@@ -650,13 +863,16 @@ function issueCard(issue) {
 }
 
 function renderKanban(lanesEl, issues) {
-  if (!issues.length) {
-    lanesEl.innerHTML = '<div class="empty">No issues yet — create one with <code>trellis issue create -t "title"</code></div>';
+  const filtered = searchQuery ? issues.filter(i => issueMatches(i, searchQuery)) : issues;
+  if (!filtered.length) {
+    lanesEl.innerHTML = searchQuery
+      ? `<div class="empty">No issues match “${searchQuery}”</div>`
+      : '<div class="empty">No issues yet — create one with <code>trellis issue create -t "title"</code></div>';
     return;
   }
   const grouped = {};
   for (const col of ISSUE_COLUMNS) grouped[col.key] = [];
-  for (const issue of issues) {
+  for (const issue of filtered) {
     const col = ISSUE_COLUMNS.find(c => c.statuses.includes(issue.status));
     if (col) grouped[col.key].push(issue);
     else grouped.backlog.push(issue);
@@ -714,15 +930,19 @@ function closeDialog() {
 }
 
 function renderLogs() {
-  const sec = $('logs-section');
-  sec.hidden = false;
   const list = $('log-list');
+  $('log-count').textContent = opLog.length;
   if (!opLog.length) {
     list.innerHTML = '<div class="log-empty">No ops yet — waiting on the stream</div>';
     return;
   }
   // Real ops now: real kinds, real content-addressed hashes.
-  list.innerHTML = opLog.slice(-100).reverse().map(op => `
+  const rows = searchQuery ? opLog.filter(o => opMatches(o, searchQuery)) : opLog;
+  if (!rows.length && searchQuery) {
+    list.innerHTML = `<div class="log-empty">No ops match “${searchQuery}”</div>`;
+    return;
+  }
+  list.innerHTML = rows.slice(-100).reverse().map(op => `
     <div class="log-row" data-op="${op.hash}" title="${op.hash}">
       <span class="log-time">${fmtTime(op.timestamp)}</span>
       <span class="log-kind">${op.kind}</span>
@@ -745,7 +965,7 @@ function onOp(op) {
   const target = op.laneId || op.vcs?.issueId;
   if (target) flashEl(document.querySelector(`[data-id="${target}"]`));
 
-  if (currentView === 'logs') renderLogs();
+  renderLogs();
 }
 
 /** Pull the one human-meaningful field out of an op's payload. */
@@ -755,6 +975,75 @@ function opDetail(op) {
     v.filePath || v.issueId || v.laneId || v.branchName || v.message ||
     v.criterionId || v.decisionId || op.agentId || ''
   );
+}
+
+const TABLE_COLS = [
+  { key: 'id', label: 'Lane', get: l => l.id },
+  { key: 'status', label: 'Status', get: l => l.status },
+  { key: 'agentId', label: 'Agent', get: l => l.agentId || '' },
+  { key: 'sessionId', label: 'Session', get: l => l.sessionId || '' },
+  { key: 'opCount', label: 'Ops', get: l => l.opCount, numeric: true },
+  { key: 'fileCount', label: 'Files', get: l => l.fileCount, numeric: true },
+  { key: 'targetBranch', label: 'Branch', get: l => l.targetBranch || '' },
+  { key: 'issueId', label: 'Issue', get: l => l.issueId || '' },
+  { key: 'updatedAt', label: 'Updated', get: l => l.updatedAt || '' },
+];
+let tableSort = { key: 'id', dir: 1 };
+
+function sortLanes(lanes) {
+  const col = TABLE_COLS.find(c => c.key === tableSort.key) || TABLE_COLS[0];
+  return [...lanes].sort((a, b) => {
+    let av = col.get(a);
+    let bv = col.get(b);
+    if (col.numeric) {
+      return ((av || 0) - (bv || 0)) * tableSort.dir;
+    }
+    av = String(av).toLowerCase();
+    bv = String(bv).toLowerCase();
+    return av.localeCompare(bv) * tableSort.dir;
+  });
+}
+
+function renderTable(lanesEl, lanes) {
+  const filtered = searchQuery ? lanes.filter(l => laneMatches(l, searchQuery)) : lanes;
+  if (!filtered.length) {
+    lanesEl.className = 'grid';
+    lanesEl.innerHTML = searchQuery
+      ? `<div class="empty">No lanes match “${searchQuery}”</div>`
+      : '<div class="empty">No lanes yet — open an Agent tab or run <code>trellis lane ensure --session …</code></div>';
+    return;
+  }
+  const sorted = sortLanes(filtered);
+  lanesEl.className = 'grid';
+  lanesEl.innerHTML = `
+    <div class="table-wrap" style="grid-column:1/-1">
+      <table class="lanes-table">
+        <thead><tr>${TABLE_COLS.map(c => {
+          const ind = tableSort.key === c.key ? `<span class="sort-ind">${tableSort.dir > 0 ? '▲' : '▼'}</span>` : '';
+          return `<th onclick="setSort('${c.key}')">${c.label}${ind}</th>`;
+        }).join('')}</tr></thead>
+        <tbody>
+          ${sorted.map(l => `
+            <tr data-id="${l.id}">
+              <td class="l-id">${l.id}</td>
+              <td><span class="badge ${l.status}">${l.status}${l.isActive ? ' · current' : ''}</span></td>
+              <td>${l.agentId || '—'}</td>
+              <td>${l.sessionId || '—'}</td>
+              <td>${l.opCount}</td>
+              <td>${l.fileCount}</td>
+              <td title="${l.targetBranch}">${shortPath(l.targetBranch)}</td>
+              <td class="l-issue">${(l.issueId || '').replace(/^issue:/, '') || '—'}</td>
+              <td title="${l.updatedAt}">${fmtTime(l.updatedAt)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function setSort(key) {
+  if (tableSort.key === key) tableSort.dir *= -1;
+  else tableSort = { key, dir: 1 };
+  if (lastSnap) render(lastSnap);
 }
 
 function render(snap) {
@@ -784,24 +1073,21 @@ function render(snap) {
   }
 
   const lanesEl = $('lanes');
-  const logsSec = $('logs-section');
   if (currentView === 'kanban') {
-    logsSec.hidden = true;
     renderKanban(lanesEl, snap.issues || []);
-  } else if (currentView === 'logs') {
-    lanesEl.innerHTML = '';
-    lanesEl.className = 'grid';
-    renderLogs();
+  } else if (currentView === 'table') {
+    renderTable(lanesEl, snap.lanes);
   } else {
-    logsSec.hidden = true;
     lanesEl.className = 'grid';
     renderGrid(lanesEl, snap.lanes);
   }
+
+  renderLogs();
 }
 
 $('btn-grid').classList.toggle('active', currentView === 'grid');
 $('btn-kanban').classList.toggle('active', currentView === 'kanban');
-$('btn-logs').classList.toggle('active', currentView === 'logs');
+$('btn-table').classList.toggle('active', currentView === 'table');
 
 function connect() {
   // Resume from the last op we saw, so a reconnect replays only what we missed

@@ -51,6 +51,30 @@ function findLanesHtml(): string {
   throw new Error('Could not find lanes.html — run from trellis-node or build dist.');
 }
 
+/** Locate a sibling TML UI asset (tml-lanes.html, tml-runtime.js) next to lanes.html. */
+function findUiAsset(name: string): string | null {
+  const candidates: string[] = [];
+  try {
+    const moduleDir = dirname(fileURLToPath(import.meta.url));
+    candidates.push(join(moduleDir, name));
+    candidates.push(join(moduleDir, '..', 'ui', name));
+  } catch {
+    // ignore
+  }
+  let cwd = process.cwd();
+  for (let i = 0; i < 8; i++) {
+    candidates.push(join(cwd, 'src', 'ui', name));
+    candidates.push(join(cwd, 'dist', 'ui', name));
+    const parent = dirname(cwd);
+    if (parent === cwd) break;
+    cwd = parent;
+  }
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  return null;
+}
+
 export async function startLanesDashboard(
   opts: LanesDashboardOptions,
 ): Promise<LanesDashboardHandle> {
@@ -168,6 +192,81 @@ export async function startLanesDashboard(
       return new Response(readHtml(), {
         headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' },
       });
+    }
+
+    // TML v0 test bed (sterile route) — see docs/specs/tml-v0.md
+    if (path === '/tml-lanes') {
+      const htmlPath = findUiAsset('tml-lanes.html');
+      if (!htmlPath) {
+        return new Response('TML test page not found — build or run from trellis-node.', {
+          status: 404,
+          headers,
+        });
+      }
+      return new Response(readFileSync(htmlPath, 'utf-8'), {
+        headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' },
+      });
+    }
+
+    if (path === '/tml-runtime.js') {
+      // Serve the TML v0 runtime. It is authored as typed TS; transpile to JS on
+      // the fly so it works in dev without a build step (esbuild is a dep).
+      const tsPath = findUiAsset('tml-runtime.ts');
+      if (!tsPath) {
+        return new Response('tml-runtime.ts not found — run from trellis-node.', {
+          status: 404,
+          headers,
+        });
+      }
+      try {
+        const { transform } = await import('esbuild');
+        const js = await transform(readFileSync(tsPath, 'utf-8'), {
+          loader: 'ts',
+          format: 'esm',
+          target: 'es2020',
+        });
+        return new Response(js.code, {
+          headers: {
+            ...headers,
+            'Content-Type': 'text/javascript; charset=utf-8',
+            'Cache-Control': 'no-cache',
+          },
+        });
+      } catch (err) {
+        return new Response('tml-runtime transform failed: ' + String(err), {
+          status: 500,
+          headers,
+        });
+      }
+    }
+
+    if (path === '/api/tml-mutations' && req.method === 'POST') {
+      let body: { action?: string; args?: Record<string, unknown> };
+      try {
+        body = await req.json();
+      } catch {
+        return new Response(JSON.stringify({ error: 'invalid json' }), {
+          status: 400,
+          headers,
+        });
+      }
+      const { action, args } = body;
+      try {
+        if (action === 'promote') {
+          await engine.promoteLane(String(args?.id), { dryRun: false });
+        } else {
+          return new Response(JSON.stringify({ error: `unknown action: ${action}` }), {
+            status: 400,
+            headers,
+          });
+        }
+        return new Response(JSON.stringify({ ok: true }), { headers });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: String(err) }), {
+          status: 400,
+          headers,
+        });
+      }
     }
 
     return new Response('Not Found', { status: 404, headers });
