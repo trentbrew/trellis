@@ -1657,6 +1657,10 @@ export class TrellisVcsEngine {
       requireTest?: boolean;
       /** Break a stale or abandoned promote lock (dangerous if another promote is live). */
       forceLock?: boolean;
+      /** Milestone narrative (TRL-117). Auto-drafted when omitted unless milestone:false. */
+      message?: string;
+      /** Set false to promote without creating a milestone. Default true. */
+      milestone?: boolean;
     },
   ): Promise<LanePromoteResult> {
     const meta = this.getLaneMeta(laneId);
@@ -1832,12 +1836,34 @@ export class TrellisVcsEngine {
       });
     }
 
+    let milestoneId: string | undefined;
+    let milestoneMessage: string | undefined;
+    if (opts?.milestone !== false) {
+      const issuePlain = meta.issueId?.replace(/^issue:/, '');
+      const issueTitle = issuePlain
+        ? issueMod.getIssue(this._ctx(), issuePlain)?.title
+        : undefined;
+      milestoneMessage = lanePromoteMod.draftLanePromoteMilestoneMessage({
+        message: opts?.message,
+        meta,
+        opsToReplay: plan.opsToReplay,
+        issueTitle,
+      });
+      const milestoneOp = await this.createMilestone(milestoneMessage, {
+        fromOpHash: snapshotHead,
+        toOpHash: completeOp.hash,
+      });
+      milestoneId = milestoneOp.vcs?.milestoneId;
+    }
+
     return {
       ...plan,
       promoted: true,
       integrationOpsAppended: opsAppended + 2,
       completeOpHash: completeOp.hash,
       gitSync,
+      milestoneId,
+      milestoneMessage,
     };
     } finally {
       promoteLockMod.releasePromoteLock(this.trellisDir(), laneId);
@@ -1883,8 +1909,15 @@ export class TrellisVcsEngine {
       );
     }
 
+    const issue = issueMod.getIssue(this._ctx(), id);
+    const plain = id.replace(/^issue:/, '');
+    const message = issue?.title
+      ? `${plain}: ${issue.title}`
+      : `Close ${plain}`;
+
     const result = await this.promoteLane(lane.id, {
       requireTest: opts?.requireTest,
+      message,
     });
     if (result.promoted) {
       return result;

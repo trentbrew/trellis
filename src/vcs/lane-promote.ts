@@ -51,6 +51,9 @@ export interface LanePromoteResult extends LanePromotePlan {
   integrationOpsAppended?: number;
   completeOpHash?: string;
   gitSync?: GitSyncResult;
+  /** Milestone created as part of promote (TRL-117: promote == milestone). */
+  milestoneId?: string;
+  milestoneMessage?: string;
 }
 
 export interface PlanLanePromoteParams {
@@ -455,6 +458,54 @@ export async function rechainOpForIntegration(
   // on its content, not on which lane happened to author it.
   if (op.laneId) rechained.laneId = op.laneId;
   return rechained;
+}
+
+/**
+ * Draft a milestone narrative for a successful lane promote (TRL-117).
+ * Prefer an explicit message; otherwise derive from lane name, issue, or ops.
+ */
+export function draftLanePromoteMilestoneMessage(input: {
+  message?: string;
+  meta: LaneMeta;
+  opsToReplay: PromoteOpAction[];
+  issueTitle?: string;
+}): string {
+  const explicit = input.message?.trim();
+  if (explicit) return explicit;
+
+  if (input.meta.name) {
+    return `Promote ${input.meta.name}`;
+  }
+
+  if (input.issueTitle) {
+    const issuePlain = (input.meta.issueId ?? '').replace(/^issue:/, '');
+    return issuePlain
+      ? `${issuePlain}: ${input.issueTitle}`
+      : input.issueTitle;
+  }
+
+  const paths = [
+    ...new Set(
+      input.opsToReplay
+        .map((a) => a.sourceOp.vcs?.filePath)
+        .filter((p): p is string => Boolean(p)),
+    ),
+  ];
+  if (paths.length === 1) {
+    return `Promote ${paths[0]}`;
+  }
+  if (paths.length > 1) {
+    return `Promote ${paths.length} files (${paths.slice(0, 3).join(', ')}${paths.length > 3 ? ', …' : ''})`;
+  }
+
+  const kinds = [
+    ...new Set(input.opsToReplay.map((a) => a.sourceOp.kind.replace(/^vcs:/, ''))),
+  ];
+  if (kinds.length > 0) {
+    return `Promote lane ${input.meta.id.slice(0, 13)}… (${kinds.slice(0, 4).join(', ')})`;
+  }
+
+  return `Promote lane ${input.meta.id.slice(0, 13)}…`;
 }
 
 function isVcsOpKindSafe(kind: string): kind is VcsOpKind {

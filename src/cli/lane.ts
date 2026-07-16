@@ -457,7 +457,11 @@ export function registerLaneCommands(program: Command): void {
 
   laneCmd
     .command('promote <id>')
-    .description('Promote lane ops onto the integration branch')
+    .description(
+      'Promote lane ops onto integration and create a milestone (promote == milestone)',
+    )
+    .option('-m, --message <message>', 'Milestone narrative (auto-drafted if omitted)')
+    .option('--no-milestone', 'Promote without creating a milestone')
     .option('--to <branch>', 'Target branch (default: lane target)')
     .option('--dry-run', 'Run conflict detection only; no writes')
     .option('--explain', 'Human-readable conflict report')
@@ -475,6 +479,8 @@ export function registerLaneCommands(program: Command): void {
           toBranch: opts.to,
           requireTest: opts.requireTest,
           forceLock: opts.forceLock,
+          message: opts.message,
+          milestone: opts.milestone !== false,
         });
 
         if (opts.explain || opts.dryRun || !result.canPromote) {
@@ -487,6 +493,11 @@ export function registerLaneCommands(program: Command): void {
               `✓ Promoted ${chalk.bold(id)} — ${result.integrationOpsAppended ?? 0} integration ops`,
             ),
           );
+          if (result.milestoneMessage) {
+            console.log(
+              `  ${chalk.dim('Milestone:')} ${result.milestoneMessage}${result.milestoneId ? chalk.dim(` (${result.milestoneId})`) : ''}`,
+            );
+          }
           if (result.gitSync?.committed) {
             console.log(
               `  ${chalk.dim('Git:')}      committed ${result.gitSync.commitHash?.slice(0, 12) ?? ''}`,
