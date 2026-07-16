@@ -8,7 +8,7 @@
 import type { Fact, Link } from '../core/store/eav-store.js';
 import type { VcsOp } from './types.js';
 import { ISSUE_TYPES } from './types.js';
-import { writerPrincipal, branchHeadEntity } from './branch.js';
+import { writerPrincipal, branchHeadEntity } from './types.js';
 
 /**
  * Owner principal encoded in a zoneId (`turtle://<ownerDid>/zone/<uuid>`).
@@ -26,7 +26,19 @@ import {
   decisionEntityId,
   laneEntityId,
 } from './types.js';
-import { dirname } from 'path';
+/**
+ * Parent directory of a repo-relative path.
+ *
+ * Local rather than Node's `path.dirname` on purpose: `decompose` must bundle
+ * for a browser peer, and importing `path` for one pure string operation made
+ * that impossible. Repo paths are always POSIX-style and relative, which is the
+ * only case this needs to handle — `path.dirname`'s Windows/UNC/absolute rules
+ * never applied here.
+ */
+function dirname(p: string): string {
+  const i = p.lastIndexOf('/');
+  return i <= 0 ? '.' : p.slice(0, i);
+}
 
 export interface DecomposedOp {
   addFacts: Fact[];

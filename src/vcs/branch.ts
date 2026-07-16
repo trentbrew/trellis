@@ -8,6 +8,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { createVcsOp } from './ops.js';
+import { writerPrincipal, branchHeadEntity } from './types.js';
 import type { VcsOp } from './types.js';
 import type { EngineContext } from './engine-context.js';
 
@@ -86,27 +87,12 @@ export function getBranchHeadOpHash(
   return sorted.at(-1)?.vcs?.targetOpHash as string | undefined;
 }
 
-/** Writer identity = signed Agent Ed25519 principal; unsigned ops fall back to `agentId`. */
-export function writerPrincipal(op: VcsOp): string {
-  return op.vcs?.signedBy ?? op.agentId;
-}
+// `writerPrincipal` / `branchHeadEntity` moved to `types.ts` — they are pure and
+// `decompose` needs them, but this module imports `fs`, so importing them from
+// here made `decompose` unbundleable for a browser peer. Re-exported so existing
+// callers keep working; also imported above for local use.
+export { writerPrincipal, branchHeadEntity };
 
-/**
- * Resolve the entity id of a per-writer branch head ("ref zone"). `integration`
- * and the default branch collapse to the shared `branch:NAME` entity; every
- * other branch gets a per-writer entity `branch:NAME@<principal>` so each writer
- * owns their own ref (ADR 0022 §4).
- */
-export function branchHeadEntity(
-  branchName: string,
-  principal?: string,
-  defaultBranch = 'main',
-): string {
-  if (!principal || branchName === defaultBranch || branchName === 'integration') {
-    return `branch:${branchName}`;
-  }
-  return `branch:${branchName}@${principal}`;
-}
 
 // ---------------------------------------------------------------------------
 // Operations

@@ -292,6 +292,35 @@ export interface FileChangeEvent {
 // Entity ID Helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Writer identity for an op: the signed Ed25519 principal, falling back to the
+ * self-asserted `agentId` for unsigned ops (ADR 0022 §4).
+ *
+ * Lives here, not in `branch.ts`, because it is a pure function of the op and
+ * `decompose` needs it. `branch.ts` imports `fs`, so importing this from there
+ * dragged Node's `fs`/`path` into every consumer of `decompose` — including a
+ * browser peer, which cannot bundle it at all.
+ */
+export function writerPrincipal(op: VcsOp): string {
+  return op.vcs?.signedBy ?? op.agentId;
+}
+
+/**
+ * Entity id of a per-writer branch head ("ref zone", ADR 0022 §4). `integration`
+ * and the default branch collapse to the shared `branch:NAME`; every other
+ * branch gets `branch:NAME@<principal>` so two writers never share a pointer.
+ */
+export function branchHeadEntity(
+  branchName: string,
+  principal?: string,
+  defaultBranch = 'main',
+): string {
+  if (!principal || branchName === defaultBranch || branchName === 'integration') {
+    return `branch:${branchName}`;
+  }
+  return `branch:${branchName}@${principal}`;
+}
+
 export function fileEntityId(path: string): string {
   return `file:${path}`;
 }
