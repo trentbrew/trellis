@@ -42,6 +42,26 @@ async function openEngine(rootPath: string): Promise<TrellisVcsEngine> {
   return engine;
 }
 
+/**
+ * Commander attaches duplicate `-p/--path` to the parent `lane` command, so
+ * subcommands often see the default `"."` even when the user passed `-p`.
+ * Prefer a non-default child path, else the parent's path.
+ */
+function resolveLaneRepoPath(
+  opts: { path?: string },
+  command?: { parent?: { opts: () => { path?: string } } },
+): string {
+  const own = opts.path;
+  const parent = command?.parent?.opts()?.path;
+  const pathOpt =
+    own && own !== '.'
+      ? own
+      : parent && parent !== '.'
+        ? parent
+        : (own ?? parent ?? '.');
+  return resolveRepoRoot(pathOpt);
+}
+
 function isStaleLane(lane: LaneMeta): boolean {
   if (lane.status !== 'active') return false;
   if (lane.leaseExpiresAt) {
@@ -78,8 +98,9 @@ async function listLanesAction(opts: {
       engine.getActiveLaneId() === lane.id ? chalk.green('* ') : '  ';
     const opCount = engine.getLaneOpCount(lane.id);
     const issue = lane.issueId ? chalk.dim(` · ${lane.issueId}`) : '';
+    const name = lane.name ? chalk.dim(` · ${lane.name}`) : '';
     console.log(
-      `${marker}${chalk.cyan(lane.id)}  ${formatLaneStatus(lane.status)}  ${chalk.dim(`${opCount} ops`)}${issue}`,
+      `${marker}${chalk.cyan(lane.id)}  ${formatLaneStatus(lane.status)}  ${chalk.dim(`${opCount} ops`)}${name}${issue}`,
     );
     console.log(
       `    ${chalk.dim('fork')} ${lane.baseBranch} · ${formatRelativeTime(lane.createdAt)}`,
@@ -108,8 +129,8 @@ export function registerLaneCommands(program: Command): void {
     .option('--child', 'Child fork from parent lane head (ADR 0007)')
     .option('--worktree <path>', 'Optional git worktree path (W5)')
     .option('-p, --path <path>', 'Repository path', '.')
-    .action(async (parentId, opts) => {
-      const rootPath = resolveRepoRoot(opts.path);
+    .action(async (parentId, opts, command) => {
+      const rootPath = resolveLaneRepoPath(opts, command);
       const engine = await openEngine(rootPath);
 
       try {
@@ -147,6 +168,51 @@ export function registerLaneCommands(program: Command): void {
     });
 
   laneCmd
+    .command('split')
+    .description(
+      'Open a fresh domain lane and enter it (leave current lane if any; no issue required)',
+    )
+    .option('--name <slug>', 'Domain label for the new lane (e.g. tql-docs)')
+    .option('--from <branch>', 'Base branch (default: current)')
+    .option('--session <id>', 'Bind to agent session')
+    .option('-p, --path <path>', 'Repository path', '.')
+    .action(async (opts, command) => {
+      const rootPath = resolveLaneRepoPath(opts, command);
+      const engine = await openEngine(rootPath);
+
+      try {
+        const { meta, splitFrom } = await engine.splitLane({
+          name: opts.name,
+          fromBranch: opts.from,
+          sessionId: opts.session,
+        });
+
+        console.log(chalk.green(`✓ Split into lane ${chalk.bold(meta.id)}`));
+        if (meta.name) {
+          console.log(`  ${chalk.dim('Name:')}     ${meta.name}`);
+        }
+        if (splitFrom) {
+          console.log(`  ${chalk.dim('From:')}     ${splitFrom}`);
+        }
+        console.log(`  ${chalk.dim('Base:')}     ${meta.baseBranch} @ ${meta.baseOpHash.slice(0, 20)}…`);
+        if (meta.worktreePath) {
+          console.log(`  ${chalk.dim('Worktree:')} ${meta.worktreePath}`);
+        }
+        console.log(
+          chalk.dim(`  export TRELLIS_LANE_ID=${meta.id}`),
+        );
+        console.log(
+          chalk.dim(
+            '  Convention: when the topic jumps, split — do not continue in a catch-all lane.',
+          ),
+        );
+      } catch (err: unknown) {
+        console.error(chalk.red((err as Error).message));
+        process.exit(1);
+      }
+    });
+
+  laneCmd
     .command('create')
     .description('Create a lane forked from the integration branch head')
     .option('--from <branch>', 'Base branch (default: current)')
@@ -156,8 +222,8 @@ export function registerLaneCommands(program: Command): void {
     .option('--agent <agentId>', 'Agent attribution override')
     .option('--worktree <path>', 'Optional git worktree path (W5)')
     .option('-p, --path <path>', 'Repository path', '.')
-    .action(async (opts) => {
-      const rootPath = resolveRepoRoot(opts.path);
+    .action(async (opts, command) => {
+      const rootPath = resolveLaneRepoPath(opts, command);
       const engine = await openEngine(rootPath);
 
       try {
@@ -204,8 +270,8 @@ export function registerLaneCommands(program: Command): void {
     .option('--issue <id>', 'Link to issue id')
     .option('--enter', 'Enter the lane after ensure')
     .option('-p, --path <path>', 'Repository path', '.')
-    .action(async (opts) => {
-      const rootPath = resolveRepoRoot(opts.path);
+    .action(async (opts, command) => {
+      const rootPath = resolveLaneRepoPath(opts, command);
       const engine = await openEngine(rootPath);
 
       try {
@@ -247,8 +313,8 @@ export function registerLaneCommands(program: Command): void {
     .command('enter <id>')
     .description('Enter a lane (route writes to lane journal)')
     .option('-p, --path <path>', 'Repository path', '.')
-    .action(async (id, opts) => {
-      const rootPath = resolveRepoRoot(opts.path);
+    .action(async (id, opts, command) => {
+      const rootPath = resolveLaneRepoPath(opts, command);
       const engine = await openEngine(rootPath);
 
       try {
@@ -267,8 +333,8 @@ export function registerLaneCommands(program: Command): void {
     .command('leave')
     .description('Leave the active lane')
     .option('-p, --path <path>', 'Repository path', '.')
-    .action(async (opts) => {
-      const rootPath = resolveRepoRoot(opts.path);
+    .action(async (opts, command) => {
+      const rootPath = resolveLaneRepoPath(opts, command);
       const engine = await openEngine(rootPath);
 
       const active = engine.getActiveLaneId();
@@ -286,8 +352,8 @@ export function registerLaneCommands(program: Command): void {
     .description('Show active lane or a specific lane')
     .argument('[id]', 'Lane id (default: active session)')
     .option('-p, --path <path>', 'Repository path', '.')
-    .action(async (id, opts) => {
-      const rootPath = resolveRepoRoot(opts.path);
+    .action(async (id, opts, command) => {
+      const rootPath = resolveLaneRepoPath(opts, command);
       const engine = await openEngine(rootPath);
 
       const laneId = id ?? engine.getActiveLaneId();
@@ -302,6 +368,9 @@ export function registerLaneCommands(program: Command): void {
 
       console.log(chalk.bold(`Lane ${meta.id}${active ? chalk.green(' (active)') : ''}\n`));
       console.log(`  ${chalk.dim('Status:')}      ${formatLaneStatus(meta.status)}`);
+      if (meta.name) {
+        console.log(`  ${chalk.dim('Name:')}        ${meta.name}`);
+      }
       console.log(`  ${chalk.dim('Base:')}        ${meta.baseBranch} @ ${meta.baseOpHash}`);
       console.log(`  ${chalk.dim('Target:')}      ${meta.targetBranch}`);
       console.log(`  ${chalk.dim('Head:')}        ${meta.headOpHash ?? '—'}`);
@@ -315,14 +384,14 @@ export function registerLaneCommands(program: Command): void {
       if (meta.parentLaneId) {
         console.log(`  ${chalk.dim('Parent:')}      ${meta.parentLaneId}`);
       }
-        if (meta.forkKind) {
-          console.log(`  ${chalk.dim('Fork kind:')}  ${meta.forkKind}`);
-        }
-        if (meta.virtualBaseOpHash) {
-          console.log(
-            `  ${chalk.dim('Virtual base:')} ${meta.virtualBaseOpHash.slice(0, 20)}…`,
-          );
-        }
+      if (meta.forkKind) {
+        console.log(`  ${chalk.dim('Fork kind:')}  ${meta.forkKind}`);
+      }
+      if (meta.virtualBaseOpHash) {
+        console.log(
+          `  ${chalk.dim('Virtual base:')} ${meta.virtualBaseOpHash.slice(0, 20)}…`,
+        );
+      }
       if (meta.sessionId) {
         console.log(`  ${chalk.dim('Session:')}     ${meta.sessionId}`);
       }
@@ -351,8 +420,8 @@ export function registerLaneCommands(program: Command): void {
     .description('Summarize lane journal vs integration head')
     .option('--to <branch>', 'Integration branch (default: lane target)')
     .option('-p, --path <path>', 'Repository path', '.')
-    .action(async (id, opts) => {
-      const rootPath = resolveRepoRoot(opts.path);
+    .action(async (id, opts, command) => {
+      const rootPath = resolveLaneRepoPath(opts, command);
       const engine = await openEngine(rootPath);
 
       try {
@@ -395,8 +464,8 @@ export function registerLaneCommands(program: Command): void {
     .option('--require-test', 'Run promote.require suites before promoting')
     .option('--force-lock', 'Clear promote lock and proceed (use when lock is stale)')
     .option('-p, --path <path>', 'Repository path', '.')
-    .action(async (id, opts) => {
-      const rootPath = resolveRepoRoot(opts.path);
+    .action(async (id, opts, command) => {
+      const rootPath = resolveLaneRepoPath(opts, command);
       const engine = await openEngine(rootPath);
 
       try {
@@ -445,8 +514,8 @@ export function registerLaneCommands(program: Command): void {
     .option('--port <port>', 'HTTP port', '3939')
     .option('--poll <ms>', 'Snapshot poll interval (ms)', '1000')
     .option('--no-open', 'Do not auto-open browser')
-    .action(async (opts) => {
-      const rootPath = resolveRepoRoot(opts.path);
+    .action(async (opts, command) => {
+      const rootPath = resolveLaneRepoPath(opts, command);
       const port = parseInt(opts.port, 10) || 3939;
       const pollMs = parseInt(opts.poll, 10) || 1000;
 
@@ -486,8 +555,8 @@ export function registerLaneCommands(program: Command): void {
     .command('lock-status')
     .description('Show promote lock status for this repo')
     .option('-p, --path <path>', 'Repository path', '.')
-    .action(async (opts) => {
-      const rootPath = resolveRepoRoot(opts.path);
+    .action(async (opts, command) => {
+      const rootPath = resolveLaneRepoPath(opts, command);
       const trellisDir = join(rootPath, '.trellis');
       if (!existsSync(trellisDir)) {
         console.log(chalk.dim('Not a Trellis workspace'));
@@ -520,8 +589,8 @@ export function registerLaneCommands(program: Command): void {
     .command('drop <id>')
     .description('Drop a lane (archive journal on disk)')
     .option('-p, --path <path>', 'Repository path', '.')
-    .action(async (id, opts) => {
-      const rootPath = resolveRepoRoot(opts.path);
+    .action(async (id, opts, command) => {
+      const rootPath = resolveLaneRepoPath(opts, command);
       const engine = await openEngine(rootPath);
 
       try {

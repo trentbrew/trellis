@@ -31,7 +31,15 @@ function runCli(
   try {
     const stdout = execSync(cmd, {
       cwd: join(__dirname, '../..'),
-      env: { ...process.env, HOME: testDir, NO_COLOR: '1', ...opts?.env },
+      env: {
+        ...process.env,
+        HOME: testDir,
+        NO_COLOR: '1',
+        // Isolate from the caller's active Trellis lane / session.
+        TRELLIS_LANE_ID: '',
+        TRELLIS_SESSION: '',
+        ...opts?.env,
+      },
       stdio: 'pipe',
       encoding: 'utf-8',
     });
@@ -174,4 +182,44 @@ bunTest('lane leave clears active session', () => {
 
   const status = runCli(['lane', 'status']);
   expect(status.stdout).toContain('No active lane');
+});
+
+bunTest('lane split leaves current lane, creates named lane, and enters it', () => {
+  const created = runCli(['lane', 'create']);
+  const parentId = created.stdout.match(/lane-[0-9a-f-]+/)?.[0]!;
+  runCli(['lane', 'enter', parentId]);
+
+  const split = runCli(['lane', 'split', '--name', 'tql-docs']);
+  expect(split.code).toBe(0);
+  expect(split.stdout).toContain('Split into lane');
+  expect(split.stdout).toContain('Name:     tql-docs');
+  expect(split.stdout).toContain(`From:     ${parentId}`);
+
+  const newId = split.stdout.match(/lane-[0-9a-f-]+/)?.[0]!;
+  expect(newId).toBeTruthy();
+  expect(newId).not.toBe(parentId);
+
+  const status = runCli(['lane', 'status']);
+  expect(status.code).toBe(0);
+  expect(status.stdout).toContain(newId);
+  expect(status.stdout).toContain('(active)');
+  expect(status.stdout).toContain('Name:        tql-docs');
+  expect(status.stdout).toContain(`Parent:      ${parentId}`);
+});
+
+bunTest('lane split works with no active lane', () => {
+  const split = runCli(['lane', 'split', '--name', 'solo-domain']);
+  expect(split.code).toBe(0);
+  expect(split.stdout).toContain('Split into lane');
+  expect(split.stdout).not.toContain('From:');
+
+  const status = runCli(['lane', 'status']);
+  expect(status.stdout).toContain('(active)');
+  expect(status.stdout).toContain('Name:        solo-domain');
+});
+
+bunTest('lane split rejects invalid names', () => {
+  const split = runCli(['lane', 'split', '--name', 'Bad Name!']);
+  expect(split.code).not.toBe(0);
+  expect(split.stderr + split.stdout).toMatch(/Invalid lane name/i);
 });

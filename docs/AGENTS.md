@@ -186,14 +186,18 @@ trellis branch -d old-experiment     # Delete
 
 Each agent gets an isolated op journal (`lane-{uuid}`). `issue start` creates and enters a lane by default (`--no-lane` to opt out).
 
+**Lane ≈ domain, not session.** When the topic jumps (docs rename → CLI → TML),
+open a new lane — do not keep writing into a catch-all lane.
+
 ```bash
 trellis issue start TRL-1            # Branch + lane
+trellis lane split --name tql-docs   # Fresh domain lane (no issue required); enters it
 trellis lane enter <lane-id>         # Route writes; materialize to worktree when bound
-trellis lane promote <lane-id>       # Replay onto integration � before issue close
-export TRELLIS_LANE_ID=lane-�        # Subprocess agents auto-enter
+trellis lane promote <lane-id>       # Replay onto integration — before issue close
+export TRELLIS_LANE_ID=lane-…        # Subprocess agents auto-enter
 ```
 
-**Worktree bind (3.2.3+):** `"lanes": { "worktreeBind": true }` in `.trellis/config.json` provisions `.trellis/worktrees/<shortId>/` per lane. Edit there � not the shared repo root. See ADR 0014.
+**Worktree bind (3.2.3+):** `"lanes": { "worktreeBind": true }` in `.trellis/config.json` provisions `.trellis/worktrees/<shortId>/` per lane. Edit there — not the shared repo root. See ADR 0014.
 
 Graph MCP `agent:<id>` lanes attribute graph writes only; desk trail markers are coordination metadata, not VCS.
 
