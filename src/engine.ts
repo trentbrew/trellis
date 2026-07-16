@@ -2063,9 +2063,21 @@ export class TrellisVcsEngine {
     return op;
   }
 
+  /**
+   * Start an issue: optionally create+enter a lane, optionally create+switch to
+   * a branch, emit `vcs:issueStart`, apply start criteria.
+   *
+   * `branch` is separable from `lane` on purpose. Branch creation used to be
+   * unconditional while the lane was opt-out — so a repo that treats branches as
+   * an antipattern (staying on `main`) had to avoid `issue start` entirely, and
+   * avoiding it silently opted every agent out of LANES too, since this is the
+   * only thing that creates one. Agents then shared the main tree and swept each
+   * other's in-flight edits. The lane is the isolation that matters; the branch
+   * is a naming convenience.
+   */
   async startIssue(
     id: string,
-    opts?: { lane?: boolean; sessionId?: string },
+    opts?: { lane?: boolean; branch?: boolean; sessionId?: string },
   ): Promise<VcsOp> {
     if (this.activeLaneId) {
       await this.leaveLane();
@@ -2085,12 +2097,19 @@ export class TrellisVcsEngine {
       .replace(/^-|-$/g, '')
       .slice(0, 60);
     const branchName = `issue/${issueIdSlug}-${slug}`;
+    const wantBranch = opts?.branch !== false;
 
-    // Create the branch
-    await this.createBranch(branchName);
+    if (wantBranch) {
+      await this.createBranch(branchName);
+    }
 
-    // Emit the issueStart op
-    const op = await issueMod.startIssue(this._ctx(), id, branchName);
+    // Emit the issueStart op. The branch name is still recorded when one was
+    // made, so `issue show` and the dashboard are unchanged.
+    const op = await issueMod.startIssue(
+      this._ctx(),
+      id,
+      wantBranch ? branchName : undefined,
+    );
 
     await issueMod.applyIssueStartCriteria(
       this._ctx(),
@@ -2099,8 +2118,9 @@ export class TrellisVcsEngine {
       issue.labels,
     );
 
-    // Switch to the branch
-    this.switchBranch(branchName);
+    if (wantBranch) {
+      this.switchBranch(branchName);
+    }
 
     if (opts?.lane !== false) {
       const issueKey = id.startsWith('issue:') ? id : `issue:${id}`;
