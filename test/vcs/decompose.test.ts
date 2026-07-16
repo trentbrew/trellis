@@ -1,4 +1,5 @@
 import { describe, test, expect } from 'vitest';
+import { dirname as nodeDirname } from 'path';
 import { decompose } from '../../src/vcs/decompose.js';
 import type { VcsOp } from '../../src/vcs/types.js';
 
@@ -226,5 +227,37 @@ describe('decompose', () => {
       a: 'leads',
       e2: 'organization:openai',
     });
+  });
+});
+
+/**
+ * `decompose` used to import `dirname` from Node's `path` for one pure string
+ * operation, which made the whole module — and therefore any browser peer that
+ * wants to materialize ops locally — unbundleable. It now uses a local
+ * `dirname`. These pin the equivalence that swap relies on.
+ *
+ * Scope of the claim: repo-relative POSIX paths, which is the only thing
+ * `vcs.filePath` ever holds. Node's Windows/UNC/absolute rules are out of scope
+ * by construction, not by oversight.
+ */
+describe('dir facts use a browser-safe dirname', () => {
+  const repoPaths = [
+    'src/vcs/decompose.ts',
+    'README.md',
+    'a/b/c/d.ts',
+    'docs/adr/0022-zone-capability-model.md',
+    '.gitignore',
+    'deep/nested/path/to/file.tsx',
+  ];
+
+  test.each(repoPaths)('matches node path.dirname for %s', (p) => {
+    const op = makeOp('vcs:fileAdd', { filePath: p, contentHash: 'abc' });
+    const facts = decompose(op).addFacts;
+    const dirNode = facts.find((f) => f.a === 'type' && f.v === 'DirectoryNode');
+    const dirPath = facts.find((f) => f.e === dirNode?.e && f.a === 'path');
+
+    // `decompose` normalizes a root-level file's '.' to '' before projecting.
+    const expected = nodeDirname(p) === '.' ? '' : nodeDirname(p);
+    expect(dirPath?.v).toBe(expected);
   });
 });
