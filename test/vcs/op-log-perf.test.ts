@@ -39,7 +39,10 @@ describe('JsonOpLog incremental append', () => {
     }
 
     expect(log.count()).toBe(25);
-    JSON.parse(readFileSync(logPath, 'utf-8'));
+    // On-disk format is JSONL (one op per line), not a single JSON array.
+    const lines = readFileSync(logPath, 'utf-8').trim().split('\n');
+    expect(lines).toHaveLength(25);
+    lines.forEach((l) => JSON.parse(l));
 
     const reloaded = new JsonOpLog(logPath);
     reloaded.load();
