@@ -66,6 +66,13 @@ import {
 } from '../scaffold/index.js';
 import { cliVersion, findRepoRoot, resolveRepoRoot } from './repo-path.js';
 import { handleCliError } from './errors.js';
+import {
+  clearHeartbeat,
+  readPresence,
+  resolveSessionId,
+  writeHeartbeat,
+  type PresenceInfo,
+} from './presence.js';
 import { registerLaneCommands } from './lane.js';
 import { registerTestCommands } from './test-cli.js';
 import { registerBrowserCommands } from './browser-cli.js';
@@ -2224,6 +2231,13 @@ issueCmd
     if (laneId) {
       console.log(`  ${chalk.dim('Lane:')}     ${laneId}`);
       console.log(chalk.dim(`  export TRELLIS_LANE_ID=${laneId}`));
+    }
+
+    // Ambient presence: starting work makes this session visible to others.
+    try {
+      writeHeartbeat(rootPath, gatherPresence(rootPath));
+    } catch {
+      /* presence is best-effort; never block the start */
     }
   });
 
@@ -4592,10 +4606,18 @@ db.command('serve')
     );
     await pool.preload(DEFAULT_TENANT);
     const { startServerCrossRuntime } = await import('../server/server.js');
-    const server = await startServerCrossRuntime({ port, config, pool });
+    // ADR 0013 — mount /rt so joinPresence({ relayUrl }) works in local dev
+    // (cross-browser). Cross-tab still works via BroadcastChannel without this.
+    const server = await startServerCrossRuntime({
+      port,
+      config,
+      pool,
+      presenceRelay: true,
+    });
 
     console.log(chalk.green(`✓ Trellis DB running`));
     console.log(chalk.dim(`  URL:  http://localhost:${port}`));
+    console.log(chalk.dim(`  RT:   ws://localhost:${port}/rt`));
     console.log(chalk.dim(`  MCP:  http://localhost:${port}/mcp`));
     console.log(chalk.dim(`  Gateway:  http://localhost:${port}/gateway/mcp`));
     console.log(chalk.dim(`  Docs: GET http://localhost:${port}/health`));
@@ -6175,6 +6197,127 @@ registerLaneCommands(program);
 registerTestCommands(program);
 registerBrowserCommands(program);
 registerProtocolCommands(program);
+
+// ---------------------------------------------------------------------------
+// trellis who / trellis presence — ambient agent awareness (TRL stigmergy)
+// ---------------------------------------------------------------------------
+
+/** Build this session's presence record from identity, lane env, and claim. */
+function gatherPresence(rootPath: string): PresenceInfo {
+  const identity = loadIdentity(join(rootPath, '.trellis'));
+  const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
+  engine.open();
+
+  const sessionId = resolveSessionId();
+  const laneId = process.env.TRELLIS_LANE_ID;
+  const now = new Date().toISOString();
+
+  let branch: string | undefined;
+  let claimedIssueId: string | undefined;
+  let claimedIssueTitle: string | undefined;
+
+  if (laneId) {
+    const current = engine.listBranches().find((b) => b.isCurrent);
+    branch = current?.name;
+    const claimed = engine
+      .listIssues({})
+      .find((i) => i.claimedLaneId === laneId);
+    if (claimed) {
+      claimedIssueId = claimed.id;
+      claimedIssueTitle = claimed.title ?? undefined;
+    }
+  }
+
+  return {
+    sessionId,
+    agentId: identity?.entityId ?? 'unknown',
+    displayName: identity?.displayName ?? 'Unknown',
+    client: process.env.TRELLIS_CLIENT ?? 'unknown',
+    laneId,
+    branch,
+    claimedIssueId,
+    claimedIssueTitle,
+    status: 'active',
+    startedAt: now,
+    lastHeartbeat: now,
+  };
+}
+
+program
+  .command('who')
+  .description('Show agents currently working in this repo (ambient presence)')
+  .option('--stale <ms>', 'Staleness window in ms', (v) => parseInt(v, 10))
+  .option('--json', 'Emit machine-readable JSON (no color)')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action((opts) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    // Refresh our own heartbeat first so `who` always includes the caller.
+    let selfId: string | undefined;
+    if (process.env.TRELLIS_LANE_ID || process.env.TRELLIS_SESSION_ID) {
+      const self = gatherPresence(rootPath);
+      writeHeartbeat(rootPath, self);
+      selfId = self.sessionId;
+    }
+
+    const peers = readPresence(rootPath, {
+      staleMs: opts.stale,
+      selfSessionId: selfId,
+    });
+
+    if (peers.length === 0) {
+      if (opts.json) {
+        console.log(JSON.stringify({ agents: [] }, null, 2));
+      } else {
+        console.log(chalk.dim('No other agents active in this repo.'));
+      }
+      return;
+    }
+
+    if (opts.json) {
+      console.log(JSON.stringify({ agents: peers }, null, 2));
+      return;
+    }
+
+    console.log(chalk.bold(`Agents working here (${peers.length})\n`));
+    for (const p of peers) {
+      const at = formatRelativeTime(p.lastHeartbeat);
+      const work = p.claimedIssueId
+        ? ` → ${p.claimedIssueId}${p.claimedIssueTitle ? ` ${chalk.dim(p.claimedIssueTitle)}` : ''}`
+        : p.branch
+          ? ` → ${chalk.dim(p.branch)}`
+          : '';
+      const lane = p.laneId ? chalk.dim(` ⤷ ${p.laneId}`) : '';
+      console.log(
+        `  ${chalk.cyan(p.client)} ${chalk.bold(p.displayName)} ${chalk.dim(`(${p.agentId})`)} ${chalk.dim(`· ${at}`)}${lane}${work}`,
+      );
+    }
+  });
+
+program
+  .command('presence')
+  .description('Manage this session\'s ambient presence heartbeat')
+  .argument('[action]', '"announce" or "clear" (default: announce)')
+  .option('--client <client>', 'Client/provider tag (opencode|claude|gemini|codex)')
+  .option('--status <status>', 'active | idle | away', 'active')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action((action, opts) => {
+    const rootPath = resolveRepoRoot(opts.path);
+
+    if (action === 'clear') {
+      const sessionId = resolveSessionId();
+      clearHeartbeat(rootPath, sessionId);
+      console.log(chalk.green('✓ Presence cleared'));
+      return;
+    }
+
+    const info = gatherPresence(rootPath);
+    if (opts.client) info.client = opts.client;
+    info.status = opts.status as PresenceInfo['status'];
+    writeHeartbeat(rootPath, info);
+    console.log(
+      chalk.green(`✓ Presence announced as ${info.displayName} (${info.client})`),
+    );
+  });
 
 // ---------------------------------------------------------------------------
 // Run
