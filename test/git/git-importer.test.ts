@@ -11,6 +11,24 @@ function git(args: string) {
   execSync(`git -C "${GIT_REPO}" ${args}`, { encoding: 'utf-8' });
 }
 
+/**
+ * Read ops from `.trellis/ops.json`, tolerant of either on-disk format: the
+ * legacy single JSON array or the current JSONL (one op per line). The importer
+ * writes via `JsonOpLog`, which now stores JSONL.
+ */
+function readOps(): any[] {
+  const raw = readFileSync(join(TRELLIS_REPO, '.trellis', 'ops.json'), 'utf-8');
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('[')) {
+    return JSON.parse(trimmed);
+  }
+  return trimmed
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((l) => JSON.parse(l));
+}
+
 describe('importFromGit', () => {
   beforeAll(() => {
     rmSync(GIT_REPO, { recursive: true, force: true });
@@ -66,27 +84,24 @@ describe('importFromGit', () => {
     expect(existsSync(join(TRELLIS_REPO, '.trellis', 'ops.json'))).toBe(true);
   });
 
-  test('ops.json contains valid JSON array', async () => {
-    const raw = readFileSync(
-      join(TRELLIS_REPO, '.trellis', 'ops.json'),
-      'utf-8',
-    );
-    const ops = JSON.parse(raw);
+  test('ops.json is valid JSONL reloadable by the op log', async () => {
+    const ops = readOps();
     expect(Array.isArray(ops)).toBe(true);
     expect(ops.length).toBeGreaterThan(0);
+    // Every op is well-formed and content-addressed.
+    for (const op of ops) {
+      expect(typeof op.hash).toBe('string');
+      expect(op.hash.startsWith('trellis:op:')).toBe(true);
+    }
   });
 
   test('first op is a branch creation', async () => {
-    const ops = JSON.parse(
-      readFileSync(join(TRELLIS_REPO, '.trellis', 'ops.json'), 'utf-8'),
-    );
+    const ops = readOps();
     expect(ops[0].kind).toBe('vcs:branchCreate');
   });
 
   test('milestones are created for each Git commit', async () => {
-    const ops = JSON.parse(
-      readFileSync(join(TRELLIS_REPO, '.trellis', 'ops.json'), 'utf-8'),
-    );
+    const ops = readOps();
     const milestones = ops.filter((o: any) => o.kind === 'vcs:milestoneCreate');
     expect(milestones).toHaveLength(3);
 
@@ -96,9 +111,7 @@ describe('importFromGit', () => {
   });
 
   test('file ops match Git changes', async () => {
-    const ops = JSON.parse(
-      readFileSync(join(TRELLIS_REPO, '.trellis', 'ops.json'), 'utf-8'),
-    );
+    const ops = readOps();
 
     const fileAdds = ops.filter((o: any) => o.kind === 'vcs:fileAdd');
     const fileMods = ops.filter((o: any) => o.kind === 'vcs:fileModify');
@@ -115,9 +128,7 @@ describe('importFromGit', () => {
   });
 
   test('ops have causal chain via previousHash', async () => {
-    const ops = JSON.parse(
-      readFileSync(join(TRELLIS_REPO, '.trellis', 'ops.json'), 'utf-8'),
-    );
+    const ops = readOps();
 
     // First op has no previousHash
     expect(ops[0].previousHash).toBeUndefined();
@@ -129,9 +140,7 @@ describe('importFromGit', () => {
   });
 
   test('milestone IDs reference Git commit hashes', async () => {
-    const ops = JSON.parse(
-      readFileSync(join(TRELLIS_REPO, '.trellis', 'ops.json'), 'utf-8'),
-    );
+    const ops = readOps();
     const milestones = ops.filter((o: any) => o.kind === 'vcs:milestoneCreate');
 
     for (const m of milestones) {
@@ -140,9 +149,7 @@ describe('importFromGit', () => {
   });
 
   test('agent IDs reference Git author emails', async () => {
-    const ops = JSON.parse(
-      readFileSync(join(TRELLIS_REPO, '.trellis', 'ops.json'), 'utf-8'),
-    );
+    const ops = readOps();
 
     // Skip branch op (uses import agent), check file ops
     const fileOps = ops.filter((o: any) => o.kind.startsWith('vcs:file'));

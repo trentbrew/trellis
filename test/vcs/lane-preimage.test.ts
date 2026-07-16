@@ -30,8 +30,17 @@ const TEST_ROOT = join(tmpdir(), 'trellis-lane-preimage');
 /** Read a lane's own journal off disk — the ops that carry the stamp. */
 function readLaneJournal(laneId: string): VcsOp[] {
   const p = join(TEST_ROOT, '.trellis', 'lanes', laneId, 'ops.json');
-  const raw = JSON.parse(readFileSync(p, 'utf8'));
-  return Array.isArray(raw) ? raw : (raw.ops ?? []);
+  const raw = readFileSync(p, 'utf8');
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('[')) {
+    const parsed = JSON.parse(trimmed);
+    return Array.isArray(parsed) ? parsed : [];
+  }
+  return trimmed
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((l) => JSON.parse(l));
 }
 
 describe('lane is envelope, not identity (TRL-102)', () => {

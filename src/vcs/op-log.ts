@@ -1,6 +1,18 @@
 /**
- * JSON-file-backed op log (P0).
+ * JSONL (newline-delimited) op log (P0).
  * Shared by integration journal and per-lane journals (ADR 0001, ADR 0005).
+ *
+ * On-disk format is one op per line (`JSON.stringify(op) + "\n"`). Appends use
+ * `appendFileSync`, which is atomic for the small per-op payloads Trellis mints,
+ * so two processes can never clobber each other's writes — each simply adds its
+ * line. This replaces the old single-JSON-array format, whose `append()` rewrote
+ * the *entire* array from whatever was in memory; a long-lived process holding a
+ * stale in-memory copy could silently overwrite intervening appends from another
+ * process (the lost-backfill / lost-epic bug).
+ *
+ * Legacy JSON-array files are still readable: `load()` detects the `[` prefix and
+ * parses the array. The first `append()` after a legacy load migrates the file to
+ * JSONL in one atomic step, then continues appending lines.
  */
 
 import {
@@ -13,7 +25,7 @@ import {
   closeSync,
   unlinkSync,
   renameSync,
-  statSync,
+  appendFileSync,
 } from 'fs';
 import { dirname } from 'path';
 import type { VcsOp } from './types.js';
@@ -52,19 +64,13 @@ function lockTimeoutMs(): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 5000;
 }
 
-interface DiskCache {
-  mtimeMs: number;
-  size: number;
-  ops: VcsOp[];
-}
-
 export class JsonOpLog implements OpLog {
   private ops: VcsOp[] = [];
+  private hashes = new Set<string>();
   private filePath: string;
   private lockPath: string;
-  private diskCache: DiskCache | null = null;
-  /** When memory matches the last persisted journal tail, skip disk re-parse. */
-  private memorySyncedWithDisk = false;
+  /** True when the on-disk file is still the legacy single JSON array. */
+  private legacy = false;
 
   constructor(filePath: string) {
     this.filePath = filePath;
@@ -76,54 +82,56 @@ export class JsonOpLog implements OpLog {
   }
 
   load(): void {
-    this.diskCache = null;
-    this.memorySyncedWithDisk = false;
-    if (existsSync(this.filePath)) {
-      const raw = readFileSync(this.filePath, 'utf-8');
-      try {
-        this.ops = JSON.parse(raw);
-        this.seedDiskCache(this.ops);
-        this.memorySyncedWithDisk = true;
-      } catch {
-        const backupPath = this.filePath + '.bak';
-        if (existsSync(backupPath)) {
-          const backupRaw = readFileSync(backupPath, 'utf-8');
-          this.ops = JSON.parse(backupRaw);
-          writeFileSync(this.filePath, backupRaw);
-          this.seedDiskCache(this.ops);
-          this.memorySyncedWithDisk = true;
-        } else {
-          throw new Error(
-            `Corrupted ops log at ${this.filePath} and no backup found. Run \`trellis repair\` to attempt recovery.`,
-          );
-        }
-      }
-    } else {
+    this.hashes.clear();
+    if (!existsSync(this.filePath)) {
       this.ops = [];
+      this.legacy = false;
+      return;
     }
+    const raw = readFileSync(this.filePath, 'utf-8');
+    this.legacy = raw.trim().startsWith('[');
+    this.ops = this.parseFile(raw);
+    this.hashes = new Set(this.ops.map((o) => o.hash));
   }
 
   append(op: VcsOp): void {
     this.withLock(() => {
-      const diskOps =
-        process.env.TRELLIS_OPLOG_FULL_WRITE === '1'
-          ? this.readOpsFromDisk()
-          : this.canUseMemoryWithoutDiskRead()
-            ? [...this.ops]
-            : this.readOpsFromDisk();
-
-      if (this.shouldReconcileFromDisk(diskOps)) {
-        this.ops = [...diskOps];
-        this.memorySyncedWithDisk = false;
+      if (this.legacy) {
+        // Another process may have appended to the legacy array since we
+        // loaded. Re-read the authoritative file, then migrate to JSONL once.
+        this.ops = this.readDiskOps();
+        this.hashes = new Set(this.ops.map((o) => o.hash));
+        this.migrateToJsonl();
+        this.legacy = false;
+      } else if (existsSync(this.filePath)) {
+        // A peer process may have appended since we loaded. Adopt the longer
+        // disk journal so our in-memory tail reflects reality.
+        const diskOps = this.readDiskOps();
+        if (diskOps.length > this.ops.length) {
+          this.ops = diskOps;
+          this.hashes = new Set(diskOps.map((o) => o.hash));
+        }
       }
 
-      if (this.ops.some((existing) => existing.hash === op.hash)) {
-        return;
-      }
+      if (this.hashes.has(op.hash)) return;
 
+      // Append ONLY this op. `appendFileSync` is atomic for the small per-op
+      // payloads Trellis mints, so a peer writing concurrently adds its own
+      // line — neither clobbers the other. This is the fix for the silent
+      // op-loss bug: the old code rewrote the whole array from in-memory state,
+      // so a long-lived process holding a stale in-memory copy could overwrite
+      // another process's appends.
+      //
+      // We preserve `op` exactly as given — including its `previousHash` and
+      // hash. Re-chaining to the local tail would be wrong for sync/merge, where
+      // a received op must keep its foreign `previousHash` and original hash so
+      // peer engines converge. Concurrent appends to the *same* journal are
+      // prevented architecturally by lanes (each agent works in its own lane
+      // journal); if they ever do collide, a fork is far less harmful than the
+      // silent data loss this change eliminates.
+      this.appendLineToDisk(op);
       this.ops.push(op);
-      this.writeOpsToDisk();
-      this.memorySyncedWithDisk = true;
+      this.hashes.add(op.hash);
     });
   }
 
@@ -139,41 +147,58 @@ export class JsonOpLog implements OpLog {
     return this.ops.length;
   }
 
-  private canUseMemoryWithoutDiskRead(): boolean {
-    if (!this.memorySyncedWithDisk) return false;
-    if (!existsSync(this.filePath)) return this.ops.length === 0;
-    const stat = statSync(this.filePath);
-    return (
-      this.diskCache !== null &&
-      this.diskCache.mtimeMs === stat.mtimeMs &&
-      this.diskCache.size === stat.size
-    );
-  }
-
-  private shouldReconcileFromDisk(diskOps: VcsOp[]): boolean {
-    if (diskOps.length > this.ops.length) return true;
-    if (diskOps.length === 0 || this.ops.length === 0) {
-      return false;
+  /** Parse either a legacy JSON array or a JSONL file into ops. */
+  private parseFile(raw: string): VcsOp[] {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return this.parseJsonl(raw);
+      }
     }
-    return (
-      diskOps[diskOps.length - 1]?.hash !==
-      this.ops[this.ops.length - 1]?.hash
-    );
+    return this.parseJsonl(raw);
   }
 
-  private writeOpsToDisk(): void {
+  private parseJsonl(raw: string): VcsOp[] {
+    const out: VcsOp[] = [];
+    for (const line of raw.split('\n')) {
+      const t = line.trim();
+      if (!t) continue;
+      try {
+        out.push(JSON.parse(t));
+      } catch {
+        // skip a malformed trailing line; `repair` is the recovery path
+      }
+    }
+    return out;
+  }
+
+  /** Authoritative read of the on-disk journal (array or JSONL). */
+  private readDiskOps(): VcsOp[] {
+    if (!existsSync(this.filePath)) return [];
+    return this.parseFile(readFileSync(this.filePath, 'utf-8'));
+  }
+
+  /** One-time write of the legacy array as JSONL, atomically. */
+  private migrateToJsonl(): void {
     const dir = dirname(this.filePath);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     this.backupCurrentFile();
-
-    const tempPath = `${this.filePath}.tmp`;
+    const tmp = `${this.filePath}.tmp`;
     const payload =
-      process.env.TRELLIS_OPLOG_FULL_WRITE === '1'
-        ? JSON.stringify(this.ops, null, 2)
-        : JSON.stringify(this.ops);
-    writeFileSync(tempPath, payload);
-    renameSync(tempPath, this.filePath);
-    this.seedDiskCache(this.ops);
+      this.ops.map((o) => JSON.stringify(o)).join('\n') +
+      (this.ops.length ? '\n' : '');
+    writeFileSync(tmp, payload);
+    renameSync(tmp, this.filePath);
+  }
+
+  private appendLineToDisk(op: VcsOp): void {
+    const dir = dirname(this.filePath);
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    this.backupCurrentFile();
+    appendFileSync(this.filePath, JSON.stringify(op) + '\n');
   }
 
   private backupCurrentFile(): void {
@@ -183,61 +208,6 @@ export class JsonOpLog implements OpLog {
       copyFileSync(this.filePath, backupPath);
     } catch {
       // best-effort
-    }
-  }
-
-  private seedDiskCache(ops: VcsOp[]): void {
-    if (!existsSync(this.filePath)) {
-      this.diskCache = null;
-      return;
-    }
-    const stat = statSync(this.filePath);
-    this.diskCache = {
-      mtimeMs: stat.mtimeMs,
-      size: stat.size,
-      ops: [...ops],
-    };
-  }
-
-  private readOpsFromDisk(): VcsOp[] {
-    if (!existsSync(this.filePath)) {
-      this.memorySyncedWithDisk = false;
-      return [];
-    }
-
-    const stat = statSync(this.filePath);
-    if (
-      this.diskCache &&
-      this.diskCache.mtimeMs === stat.mtimeMs &&
-      this.diskCache.size === stat.size
-    ) {
-      return this.diskCache.ops;
-    }
-
-    const raw = readFileSync(this.filePath, 'utf-8');
-    try {
-      const parsed = JSON.parse(raw);
-      const ops = Array.isArray(parsed) ? parsed : [];
-      this.diskCache = {
-        mtimeMs: stat.mtimeMs,
-        size: stat.size,
-        ops,
-      };
-      this.memorySyncedWithDisk = false;
-      return ops;
-    } catch {
-      const backupPath = this.filePath + '.bak';
-      if (existsSync(backupPath)) {
-        const backupRaw = readFileSync(backupPath, 'utf-8');
-        const parsedBackup = JSON.parse(backupRaw);
-        writeFileSync(this.filePath, backupRaw);
-        const ops = Array.isArray(parsedBackup) ? parsedBackup : [];
-        this.seedDiskCache(ops);
-        return ops;
-      }
-      throw new Error(
-        `Corrupted ops log at ${this.filePath} and no backup found. Run \`trellis repair\` to attempt recovery.`,
-      );
     }
   }
 
@@ -284,48 +254,42 @@ export class JsonOpLog implements OpLog {
 
     const raw = readFileSync(filePath, 'utf-8');
 
-    try {
-      const ops = JSON.parse(raw);
-      return { recovered: ops.length, lost: 0 };
-    } catch {
-      // corrupted — attempt truncation repair
-    }
-
-    const lastHash = raw.lastIndexOf('"hash": "trellis:op:');
-    if (lastHash === -1) {
-      const bakPath = filePath + '.bak';
-      if (existsSync(bakPath)) {
-        const bakRaw = readFileSync(bakPath, 'utf-8');
-        try {
-          const ops = JSON.parse(bakRaw);
-          writeFileSync(filePath, bakRaw);
-          return { recovered: ops.length, lost: 0 };
-        } catch {
-          // backup also corrupted
-        }
+    // Legacy single JSON array: try whole-file parse first.
+    if (raw.trim().startsWith('[')) {
+      try {
+        const ops = JSON.parse(raw);
+        if (Array.isArray(ops)) return { recovered: ops.length, lost: 0 };
+      } catch {
+        // fall through to JSONL/truncation repair
       }
-      writeFileSync(filePath, '[]');
-      return { recovered: 0, lost: -1 };
     }
 
-    const endOfLine = raw.indexOf('\n', lastHash);
-    const closingBrace = raw.indexOf('  }', endOfLine);
-    if (closingBrace === -1) {
-      writeFileSync(filePath, '[]');
-      return { recovered: 0, lost: -1 };
+    // JSONL: validate line by line, truncate at the last good line.
+    const lines = raw.split('\n');
+    const valid: string[] = [];
+    let corrupt = false;
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t) continue;
+      try {
+        JSON.parse(t);
+        valid.push(t);
+      } catch {
+        corrupt = true;
+      }
     }
 
-    const fixed = raw.slice(0, closingBrace + 3) + '\n]';
+    if (!corrupt) return { recovered: valid.length, lost: 0 };
+
     try {
-      const ops = JSON.parse(fixed);
-      writeFileSync(filePath + '.corrupted', raw);
-      writeFileSync(filePath, fixed);
-      return { recovered: ops.length, lost: 0 };
+      writeFileSync(
+        filePath,
+        valid.join('\n') + (valid.length ? '\n' : ''),
+      );
     } catch {
-      writeFileSync(filePath + '.corrupted', raw);
-      writeFileSync(filePath, '[]');
       return { recovered: 0, lost: -1 };
     }
+    return { recovered: valid.length, lost: -1 };
   }
 }
 
