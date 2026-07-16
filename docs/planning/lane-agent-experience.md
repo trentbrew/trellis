@@ -1,6 +1,7 @@
 # Spec: Lane coherence for agent experience
 
-**Status:** Implementing (AC1–AC3 shipped: split, issue⇄promote, promote==milestone)
+**Status:** Done (AC1–AC5 shipped: split, issue⇄promote, promote==milestone,
+cross-agent ownership, coherence signal)
 **Date:** 2026-07-15 **Issue:** TRL-117 **Relates to:** ADR 0014 (lane worktree
 bind), ADR 0015 (agent handoff protocol), AGENTS.md "Agent Lanes" section.
 
@@ -71,19 +72,20 @@ rewrite is proposed.
 
 ### 4. Structural cross-agent file protection
 
-- A write targeting a file currently owned by another agent's _active_ lane is
-  rejected with a prompt to emit an ADR 0015 handoff envelope
-  (`trellis protocol send`) instead of proceeding.
+- **Shipped:** A write targeting a file currently owned by another agent's
+  _live_ active lane is rejected (`CrossAgentFileOwnershipError`) with a prompt
+  to emit an ADR 0015 handoff envelope (`trellis protocol send`) instead of
+  proceeding. Ownership is the set of file paths in that lane's journal; expired
+  leases do not count as live. Promote replay / sync ingest / workspace index
+  skip the check.
 - Turns the manual "that's the presence agent's file, I'll defer" pattern into
   an enforced boundary.
 
 ### 5. Coherence signal (`trellis lane status`)
 
-- Report the current lane's spread: # of distinct domains (by issue/intent
-  label) and # of repos touched.
-- When spread > 1 domain, suggest `trellis lane split`.
-- Reuses the Idea Garden's cluster-detection (already finds abandoned work) but
-  applied live to a single lane.
+- **Shipped:** `trellis lane status` reports domain spread (Idea Garden
+  directory-affinity groups + multi-issue intents) and repos touched. When
+  spread > 1, it suggests `trellis lane split --name <domain>`.
 
 ## Acceptance criteria
 
@@ -106,8 +108,9 @@ signal.
 - ~~Is auto-drafted milestone narrative good enough, or is a mandatory human
   summary preferred at promote time?~~ **Resolved:** auto-draft by default;
   `-m` for an explicit narrative; `--no-milestone` to skip.
-- Does the coherence signal belong in `lane status` or `whereami` (already the
-  re-entry dump)? Avoid duplicating ADR 0015's `whereami`.
+- ~~Does the coherence signal belong in `lane status` or `whereami` (already the
+  re-entry dump)?~~ **Resolved:** `lane status` owns live domain/repo spread;
+  `whereami` stays ADR 0015 re-entry (waiting / active / moved).
 
 ## Note to implementers
 

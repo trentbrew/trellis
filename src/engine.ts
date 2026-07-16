@@ -83,6 +83,8 @@ import {
   savePersistedSnapshot,
 } from './vcs/integration-snapshot.js';
 import * as laneWorktreeMod from './vcs/lane-worktree.js';
+import * as laneOwnershipMod from './vcs/lane-ownership.js';
+import * as laneCoherenceMod from './vcs/lane-coherence.js';
 import * as issueClaimMod from './vcs/issue-claim.js';
 import * as promoteLockMod from './vcs/promote-lock.js';
 import {
@@ -455,7 +457,7 @@ export class TrellisVcsEngine {
           size: event.size,
         },
       });
-      await this.applyOp(op);
+      await this.applyOp(op, { skipOwnershipCheck: true });
       opsCreated++;
       if (opsCreated % 25 === 0 || opsCreated === events.length) {
         opts?.onProgress?.({
@@ -909,7 +911,10 @@ export class TrellisVcsEngine {
         }
 
         try {
-          await this.applyOp(op, { skipBranchAdvance: true });
+          await this.applyOp(op, {
+            skipBranchAdvance: true,
+            skipOwnershipCheck: true,
+          });
           known.add(op.hash);
           applied++;
           progressed = true;
@@ -1336,6 +1341,7 @@ export class TrellisVcsEngine {
     ops: VcsOp[];
     filePaths: string[];
     integrationHead?: string;
+    coherence: laneCoherenceMod.LaneCoherence;
   } {
     const meta = this.getLaneMeta(laneId);
     if (!meta) {
@@ -1356,6 +1362,7 @@ export class TrellisVcsEngine {
       ops,
       filePaths,
       integrationHead: this.getBranchHeadOpHash(meta.targetBranch),
+      coherence: laneCoherenceMod.analyzeLaneCoherence(meta, ops, filePaths),
     };
   }
 
@@ -1797,7 +1804,10 @@ export class TrellisVcsEngine {
         );
       }
 
-      await this.applyOp(opToApply, { skipBranchAdvance: true });
+      await this.applyOp(opToApply, {
+        skipBranchAdvance: true,
+        skipOwnershipCheck: true,
+      });
       previousHash = opToApply.hash;
       lastReplayedHash = opToApply.hash;
       opsAppended++;
@@ -2782,6 +2792,14 @@ export class TrellisVcsEngine {
 
     if (inLane && !forceIntegration) {
       this.stampLaneId(opToApply);
+    }
+
+    // TRL-117 AC4: reject silent writes into another agent's live lane files.
+    if (!opts?.skipOwnershipCheck) {
+      laneOwnershipMod.assertCrossAgentFileWriteAllowed(
+        this.trellisDir(),
+        opToApply,
+      );
     }
 
     const decomposed = decompose(opToApply);

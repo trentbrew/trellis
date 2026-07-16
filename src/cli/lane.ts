@@ -363,7 +363,7 @@ export function registerLaneCommands(program: Command): void {
       }
 
       const summary = engine.summarizeLane(laneId);
-      const { meta, ops, filePaths, integrationHead } = summary;
+      const { meta, ops, filePaths, integrationHead, coherence } = summary;
       const active = engine.getActiveLaneId() === laneId;
 
       console.log(chalk.bold(`Lane ${meta.id}${active ? chalk.green(' (active)') : ''}\n`));
@@ -404,6 +404,26 @@ export function registerLaneCommands(program: Command): void {
       if (filePaths.length > 0) {
         console.log(`  ${chalk.dim('Files:')}       ${filePaths.length} touched`);
       }
+
+      const domainLabels =
+        coherence.domains.length > 0
+          ? coherence.domains.map((d) => d.label).join(', ')
+          : '—';
+      console.log(
+        `  ${chalk.dim('Domains:')}     ${coherence.domainCount} (${domainLabels})`,
+      );
+      console.log(
+        `  ${chalk.dim('Repos:')}       ${coherence.repoCount} (${coherence.repos.join(', ') || '—'})`,
+      );
+      if (coherence.suggestSplit) {
+        console.log(
+          `  ${chalk.yellow('Coherence:')}   spread > 1 — ${coherence.reason ?? 'split recommended'}`,
+        );
+        console.log(
+          `  ${chalk.dim('Next:')}        trellis lane split --name <domain>`,
+        );
+      }
+
       if (active) {
         const mat = engine.getMaterializationStats();
         const cacheLabel = mat.integrationCacheHit
