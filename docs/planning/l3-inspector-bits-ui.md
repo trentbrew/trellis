@@ -43,15 +43,15 @@ Do not rewrite both at once. TRL-38 covers the explorer inset only.
 | FAB trigger | `Button` (icon) fixed bottom-right | L3-gated when ACL exists; dev always-on |
 | Panel | `Sheet` (side=right) or draggable `Dialog` | Prefer sheet for keyboard trap + mobile |
 | Tabs | `Tabs` | entities / query / stats |
-| Entity list | `ScrollArea` + typed rows | reuse EQL from `$lib/trellis` |
-| Query | `Textarea` + `Button` | EQL-S examples |
+| Entity list | `ScrollArea` + typed rows | reuse TQL from `$lib/trellis` |
+| Query | `Textarea` + `Button` | TQL examples |
 
 Mount inside `AppShell` L3 slot (not global body injection).
 
 ## Acceptance criteria
 
 - [ ] L3 inset opens from FAB without leaving current route (`/chat`, `/collab`, collections)
-- [ ] Entity list reads same data as CE (EQL / HTTP via sidecar proxy)
+- [ ] Entity list reads same data as CE (TQL / HTTP via sidecar proxy)
 - [ ] Query tab runs `POST /query` and renders JSON
 - [ ] Stats tab shows `/health` + entity type counts
 - [ ] Drop-in script still works independently (no regression in `build:inspector`)

@@ -10,7 +10,7 @@ Trellis has two formula surfaces today:
 | Surface | Syntax | Example | Where evaluated |
 | ------- | ------ | ------- | --------------- |
 | CMS collections | `{field}` numeric DSL | `{price} * {quantity}` | `trellis/cms` client on read |
-| Kernel ontology | `$fn($field, …)` DSL | `$mul($price, $quantity)` | `logic-middleware` post-EQL via `ExprEvaluator` |
+| Kernel ontology | `$fn($field, …)` DSL | `$mul($price, $quantity)` | `logic-middleware` post-TQL via `ExprEvaluator` |
 
 ## Decision
 
@@ -20,5 +20,5 @@ Trellis has two formula surfaces today:
 
 ## Consequences
 
-- `trellis db serve` / `kernel.query()` enrich EQL bindings when ontology fields declare `formula`.
+- `trellis db serve` / `kernel.query()` enrich TQL bindings when ontology fields declare `formula`.
 - CMS virtual fields remain client-side until collections share kernel ontology definitions.

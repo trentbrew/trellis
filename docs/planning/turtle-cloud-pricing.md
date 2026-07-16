@@ -50,7 +50,7 @@ Counts **server-side** work at the kernel / room-node boundary:
 | Operation | Weight |
 | --------- | ------ |
 | `assert` / `retract` / `link` applied on room mirror | 1 op |
-| EQL query execution (including subscription re-runs) | 1 op per execution |
+| TQL query execution (including subscription re-runs) | 1 op per execution |
 | Op-log read during sync catch-up (per 1KB read, rounded up) | 1 op per 1KB |
 | Snapshot materialization / compaction | 1 op per 1KB written |
 

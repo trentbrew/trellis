@@ -58,7 +58,7 @@ Classification is a property of **tool binding**, not tool type.
 
 | Tool (abstract) | Ambient (heteromorphic) | Anchored (homomorphic) |
 | --------------- | ----------------------- | ---------------------- |
-| Query editor | Global EQL | Query scoped to selection / lens |
+| Query editor | Global TQL | Query scoped to selection / lens |
 | ACL | Full matrix | “Who can see **this** card” |
 | Lane | Lane list | Promote/diff **this** draft |
 | Inspector entities | All types | Attributes of **this** entity |
@@ -176,7 +176,7 @@ All config via scrubbing and in-place inspection.
 ### L3 inset (TRL-38)
 
 - [ ] Entities tab: ambient list; anchored when selection set.
-- [ ] Query tab: ambient EQL; anchored template when selection set.
+- [ ] Query tab: ambient TQL; anchored template when selection set.
 - [ ] Drop-in `/__trellis/inspector.js` remains for non-Svelte scaffolds (no regression).
 
 ## Implementation follow-on

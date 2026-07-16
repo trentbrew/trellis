@@ -27,7 +27,7 @@ Map the four `ENTITY_CLASSES` archetypes to **anchored L3 inset templates** per 
 | Mount | When | Header | Tab scope | Dismiss |
 | ----- | ---- | ------ | --------- | ------- |
 | **Anchored** | `selection` set (entity class + id) | Selection identity chip | Filtered to selection subgraph | Return to L2; preserve main vantage |
-| **Ambient** | `selection === null` | “Graph” / workspace | Full topological tools (EQL, entities, stats) | Explicit “left artifact” state |
+| **Ambient** | `selection === null` | “Graph” / workspace | Full topological tools (TQL, entities, stats) | Explicit “left artifact” state |
 
 Heteromorphic tools **leak** into homomorphic binding when selection exists — same inset component, two mount semantics.
 

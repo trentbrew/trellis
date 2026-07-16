@@ -57,7 +57,7 @@ I know because I can't work without it. I use Trellis every day to coordinate a 
 
 - Production deployment: Raster.tv is built on the Trellis graph and live with a real public-access partner, SPEAK MPLS. Not a toy; real semantic queries are running in production on multi-tenant infrastructure.
 - Open source: trellis npm package, with the acquired canonical unscoped name, plus CLI, MCP server, and typed SDKs for React, Vue, and Svelte.
-- 100+ passing tests: EAV kernel, EQL-S query engine, graph-native VCS, semantic diff, decision traces, and peer sync engine.
+- 100+ passing tests: EAV kernel, TQL query engine, graph-native VCS, semantic diff, decision traces, and peer sync engine.
 - Trellis Studio: Cloud sandboxes at studio.trellis.computer, backed by e2b.
 - Daily dogfooding: Multi-agent development pipeline from strategist to architect to executor to reviewer runs entirely on Trellis graph-native issue tracking.
 - MCP integration: Agent tools for graph queries, issue management, and decision audit trails.

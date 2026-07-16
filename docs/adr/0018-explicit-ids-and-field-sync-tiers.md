@@ -110,7 +110,7 @@ export interface PropertyValueSpecification {
 
 | Tier       | Mutate path                                                                 | Subscribe / wire       |
 | ---------- | --------------------------------------------------------------------------- | ---------------------- |
-| `durable`  | `KernelOp` as today                                                         | Live EQL / entity subs |
+| `durable`  | `KernelOp` as today                                                         | Live TQL / entity subs |
 | `realtime` | Reject or no-op on durable mutate; client uses `trellis/realtime`           | Ephemeral room only    |
 | `derived`  | Strip / reject on durable write; evaluate on read (existing formula/rollup) | Never replicate        |
 

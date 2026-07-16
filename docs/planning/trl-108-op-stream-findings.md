@@ -67,7 +67,7 @@ So a read-only peer has exactly two options:
 
 The spike deliberately took (1) to isolate the op-transport question. **(2) is
 what SPEC-v1.1 actually has to specify**, and it is a bigger question than the
-wire format: it means shipping the store + decompose + EQL-S to every peer.
+wire format: it means shipping the store + decompose + TQL to every peer.
 
 **This is the finding that matters.** "Do peers exchange VcsOps or KernelOps"
 looked like the hard question. It isn't. The hard question is *what does a peer
@@ -102,7 +102,7 @@ point. Everything above is evidence *toward* SPEC-v1.1, not a substitute for it.
 ## Open, for TRL-110
 
 - **Client-side materialization** — the real fork (Finding 2). Ship store +
-  decompose + EQL-S to peers, or keep projections server-side and accept that
+  decompose + TQL to peers, or keep projections server-side and accept that
   peers cannot ask novel questions?
 - **Lane journals are not in the stream.** Only the integration journal is.
   A peer that wants lane ops needs them enumerated — and until TRL-102 they
