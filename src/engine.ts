@@ -1846,6 +1846,8 @@ export class TrellisVcsEngine {
 
   /**
    * Promote active issue lane before close when it has unpromoted journal ops.
+   * No-ops when the lane has nothing replayable onto integration (e.g. only
+   * testRun / claim metadata) — that still satisfies the promote boundary.
    */
   private async autoPromoteIssueLaneBeforeClose(
     id: string,
@@ -1861,21 +1863,35 @@ export class TrellisVcsEngine {
       return undefined;
     }
 
+    // Peek the plan so --no-promote only blocks when there is real work to
+    // replay (not claim/test metadata that promote would skip anyway).
+    const plan = await this.promoteLane(lane.id, { dryRun: true });
+    if (plan.opsToReplay.length === 0 && plan.blockingConflicts.length === 0) {
+      return undefined;
+    }
+
     if (opts?.noPromote) {
       throw new Error(
-        `Lane ${lane.id} has ${opCount} unpromoted ops — promote first or omit --no-promote to auto-promote on close.`,
+        `Lane ${lane.id} has ${plan.opsToReplay.length} unpromoted ops — promote boundary not met. ` +
+          `Run \`trellis lane promote ${lane.id}\` first, or omit --no-promote to auto-promote on close.`,
+      );
+    }
+
+    if (plan.blockingConflicts.length > 0) {
+      throw new Error(
+        `Auto-promote blocked for lane ${lane.id} — resolve conflicts and retry.`,
       );
     }
 
     const result = await this.promoteLane(lane.id, {
       requireTest: opts?.requireTest,
     });
-    if (!result.promoted) {
-      throw new Error(
-        `Auto-promote blocked for lane ${lane.id} — resolve conflicts and retry.`,
-      );
+    if (result.promoted) {
+      return result;
     }
-    return result;
+    throw new Error(
+      `Auto-promote blocked for lane ${lane.id} — resolve conflicts and retry.`,
+    );
   }
 
   // -------------------------------------------------------------------------
