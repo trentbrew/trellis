@@ -223,7 +223,7 @@
     "build:state-demo-bundle": "esbuild demo/state-demo/entry.ts --bundle --format=esm --platform=browser --outfile=dist/state-demo.bundle.js",
     "build:inspector": "vite build --config vite.inspector.config.ts",
     "check": "tsc -p tsconfig.build.json --noEmit --pretty false",
-    "test": "vitest run test/core test/cms test/vcs test/git test/p2 test/p3 test/p4 test/p5 test/p6 test/p7 test/client test/realtime test/schema test/server test/cloud test/engine.test.ts test/cli",
+    "test": "vitest run test/core test/cms test/vcs test/git test/p2 test/p3 test/p4 test/p5 test/p6 test/p7 test/client test/realtime test/schema test/server test/cloud test/engine.test.ts test/cli test/ui",
     "test:ship": "vitest run test/vcs/init-config-defaults.test.ts test/vcs/phase2-coordination.test.ts test/git/git-sync.test.ts test/ui/lanes-snapshot.test.ts test/engine.test.ts",
     "test:all": "vitest run",
     "test:wc": "node test/webcontainer/server.mjs",
