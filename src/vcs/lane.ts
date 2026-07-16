@@ -27,6 +27,8 @@ export interface LaneMeta {
   agentId: string;
   issueId?: string;
   sessionId?: string;
+  /** Human domain slug from `lane split --name` (TRL-117). */
+  name?: string;
   parentLaneId?: string;
   forkKind?: LaneForkKind;
   forkedAt?: string;
@@ -36,6 +38,17 @@ export interface LaneMeta {
   leaseExpiresAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Domain slug: lowercase letters, digits, hyphen, underscore. */
+export function normalizeLaneName(raw: string): string {
+  const name = raw.trim().toLowerCase();
+  if (!/^[a-z0-9][a-z0-9_-]{0,62}$/.test(name)) {
+    throw new Error(
+      `Invalid lane name '${raw}' — use lowercase letters, digits, hyphen, underscore (max 63)`,
+    );
+  }
+  return name;
 }
 
 export function lanesRoot(trellisDir: string): string {
@@ -90,6 +103,7 @@ export interface CreateLaneParams {
   targetBranch?: string;
   issueId?: string;
   sessionId?: string;
+  name?: string;
   parentLaneId?: string;
   forkKind?: LaneForkKind;
   forkedAt?: string;
@@ -121,6 +135,7 @@ export function createLaneMeta(
     agentId: params.agentId,
     issueId: params.issueId,
     sessionId: params.sessionId,
+    name: params.name,
     parentLaneId: params.parentLaneId,
     forkKind: params.forkKind,
     forkedAt: params.forkedAt,

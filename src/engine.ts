@@ -1369,6 +1369,9 @@ export class TrellisVcsEngine {
     issueId?: string;
     sessionId?: string;
     worktreePath?: string;
+    name?: string;
+    parentLaneId?: string;
+    forkKind?: laneMod.LaneForkKind;
   }): Promise<LaneMeta> {
     if (this.activeLaneId) {
       throw new Error(
@@ -1396,6 +1399,9 @@ export class TrellisVcsEngine {
       }
     }
 
+    const name = opts?.name ? laneMod.normalizeLaneName(opts.name) : undefined;
+    const forkedAt = opts?.parentLaneId ? new Date().toISOString() : undefined;
+
     const meta = laneMod.createLaneMeta(this.trellisDir(), {
       baseBranch,
       baseOpHash,
@@ -1403,6 +1409,10 @@ export class TrellisVcsEngine {
       agentId: this.agentId,
       issueId: opts?.issueId,
       sessionId: opts?.sessionId,
+      name,
+      parentLaneId: opts?.parentLaneId,
+      forkKind: opts?.forkKind,
+      forkedAt,
       worktreePath: opts?.worktreePath,
     });
 
@@ -1415,10 +1425,39 @@ export class TrellisVcsEngine {
         baseOpHash: meta.baseOpHash,
         targetBranch: meta.targetBranch,
         issueId: meta.issueId,
+        sessionId: meta.sessionId,
+        parentLaneId: meta.parentLaneId,
+        forkKind: meta.forkKind,
       },
     });
     await this.applyOp(op);
     return this.provisionLaneWorktree(meta, opts?.worktreePath);
+  }
+
+  /**
+   * Open a fresh domain-scoped lane and enter it (TRL-117).
+   * Leaves the current lane if any. Does not require an issue — promote
+   * boundary is the new lane itself. Parent lineage is recorded as sibling.
+   */
+  async splitLane(opts?: {
+    name?: string;
+    fromBranch?: string;
+    sessionId?: string;
+  }): Promise<{ meta: LaneMeta; splitFrom?: string }> {
+    const splitFrom = this.activeLaneId;
+    if (splitFrom) {
+      await this.leaveLane();
+    }
+
+    const meta = await this.createLane({
+      fromBranch: opts?.fromBranch,
+      sessionId: opts?.sessionId,
+      name: opts?.name,
+      parentLaneId: splitFrom,
+      forkKind: splitFrom ? 'sibling' : undefined,
+    });
+    await this.enterLane(meta.id);
+    return { meta, splitFrom };
   }
   async forkLane(
     parentLaneId: string,

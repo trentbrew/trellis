@@ -1,6 +1,6 @@
 # Spec: Lane coherence for agent experience
 
-**Status:** Draft (specced, backlog)
+**Status:** Implementing (AC1 `lane split` shipping)
 **Date:** 2026-07-15
 **Issue:** TRL-117
 **Relates to:** ADR 0014 (lane worktree bind), ADR 0015 (agent handoff protocol),
@@ -43,12 +43,12 @@ rewrite is proposed.
 ## Proposed changes
 
 ### 1. Lane per domain (`trellis lane split`)
-- Add `trellis lane split --name <slug>` to open a fresh isolated lane without
-  requiring an issue. Subsequent writes route to it.
-- Document the convention: when the topic jumps, split — don't continue in the
-  catch-all lane.
-- (Convention-only alternative if no new command: `trellis lane enter` a new
-  lane at domain switch; the missing piece is the *norm*, not the capability.)
+- **Shipped:** `trellis lane split [--name <slug>]` leaves the current lane (if
+  any), forks a fresh isolated journal from the integration head, and enters it.
+  No issue required. Optional `--name` stores a domain slug on lane meta.
+  Parent lineage is recorded as sibling when splitting from an active lane.
+- Convention: when the topic jumps, split — don't continue in the catch-all lane.
+- Fully independent promote unit (not auto-bound as a child of the parent).
 
 ### 2. Lane ⇄ issue binding (verify + document)
 - Confirm `issue start` creates+enters a lane by default; `issue close`
@@ -90,7 +90,9 @@ signal.
 
 ## Open questions
 
-- Should `lane split` auto-bind a sub-lane to the parent, or be fully independent?
+- ~~Should `lane split` auto-bind a sub-lane to the parent, or be fully independent?~~
+  **Resolved:** fully independent journal + promote unit; parent recorded as
+  sibling lineage only.
 - Is auto-drafted milestone narrative good enough, or is a mandatory human
   summary preferred at promote time?
 - Does the coherence signal belong in `lane status` or `whereami` (already the
