@@ -77,6 +77,7 @@ import { registerLaneCommands } from './lane.js';
 import { registerTestCommands } from './test-cli.js';
 import { registerBrowserCommands } from './browser-cli.js';
 import { registerProtocolCommands } from './protocol.js';
+import { registerDoctorCommand } from './doctor.js';
 
 export type IdeType =
   | 'cursor'
@@ -6245,6 +6246,7 @@ registerLaneCommands(program);
 registerTestCommands(program);
 registerBrowserCommands(program);
 registerProtocolCommands(program);
+registerDoctorCommand(program);
 
 // ---------------------------------------------------------------------------
 // trellis who / trellis presence — ambient agent awareness (TRL stigmergy)
