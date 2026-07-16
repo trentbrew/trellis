@@ -6,8 +6,14 @@ import { tmpdir } from 'os';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
-const isBun = !!(process as any).isBun;
-const bunTest = isBun ? test : test.skip;
+/**
+ * Was gated on `isBun` — but `runCli` shells out via `npx tsx`, not `bun run`,
+ * so the gate only meant this never ran under `npm test`. Spawning tsx compiles
+ * TypeScript first, hence the explicit timeout rather than vitest's 5s default.
+ */
+const CLI_TIMEOUT_MS = 120_000;
+const cliTest = (name: string, fn: () => void | Promise<void>) =>
+  test(name, fn, CLI_TIMEOUT_MS);
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const cliPath = join(__dirname, '../../src/cli/index.ts');
 
@@ -39,7 +45,6 @@ describe('trellis doctor cli', () => {
   let testDir = '';
 
   beforeEach(() => {
-    if (!isBun) return;
     testDir = join(
       tmpdir(),
       `trellis-doctor-cli-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -51,13 +56,13 @@ describe('trellis doctor cli', () => {
       stdio: 'pipe',
       encoding: 'utf-8',
     });
-  });
+  }, CLI_TIMEOUT_MS);
 
   afterEach(() => {
     if (testDir) rmSync(testDir, { recursive: true, force: true });
   });
 
-  bunTest('prints mutation-safety summary', () => {
+  cliTest('prints mutation-safety summary', () => {
     const out = execSync(`npx tsx ${cliPath} doctor -p ${shellQuote(testDir)}`, {
       cwd: join(__dirname, '../..'),
       env: { ...process.env, HOME: testDir, NO_COLOR: '1' },
