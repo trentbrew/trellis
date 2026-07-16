@@ -24,7 +24,8 @@
     }
   },
   "promote": {
-    "require": ["smoke", "check"]
+    "//": "`unit` is the whole suite (~11s). It was defined and never gated anything: promote required `smoke`, a SINGLE test file, which cannot see a type break, a signature regression, or red tests elsewhere. A handoff reporting '175 tests, all passing' was true of its subset while the suite had 21 red. Gate on the whole thing; `smoke` is redundant under `unit`.",
+    "require": ["check", "unit"]
   },
   "issueStart": {
     "default": [

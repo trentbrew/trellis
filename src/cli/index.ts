@@ -562,7 +562,7 @@ program
       `  ${chalk.cyan('trellis web')}        Launch local web client / graph visualizer`,
     );
     console.log(
-      `  ${chalk.cyan('trellis query')}      Run EQL-S semantic queries against your code graph`,
+      `  ${chalk.cyan('trellis query')}      Run TQL semantic queries against your code graph`,
     );
     if (configResult.selectedIdes.length > 0) {
       console.log(
@@ -2238,9 +2238,13 @@ issueCmd
 
 issueCmd
   .command('start')
-  .description('Start working on an issue (creates branch, lane, auto-assigns)')
+  .description('Start working on an issue (creates lane + branch, auto-assigns)')
   .argument('<id>', 'Issue ID')
   .option('--no-lane', 'Skip auto-create/enter agent lane')
+  .option(
+    '--no-branch',
+    'Skip branch creation — take the lane only (for repos that stay on one branch)',
+  )
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
@@ -2250,6 +2254,7 @@ issueCmd
 
     await engine.startIssue(id, {
       lane: !opts.noLane,
+      branch: !opts.noBranch,
       sessionId: process.env.TRELLIS_SESSION_ID?.trim() || undefined,
     });
     const issue = engine.getIssue(id);
@@ -3988,7 +3993,7 @@ linkCmd
 
 program
   .command('examples')
-  .description('Print example CLI commands and EQL-S queries for this repo')
+  .description('Print example CLI commands and TQL queries for this repo')
   .option('-p, --path <path>', 'Repository path', '.')
   .option('--json', 'Output as JSON')
   .action(async (opts: any) => {
@@ -4018,7 +4023,7 @@ program
       console.log();
     }
 
-    console.log(chalk.cyan('EQL-S queries'));
+    console.log(chalk.cyan('TQL queries'));
     console.log(
       chalk.dim(
         '  (quote the whole query; double-quote string literals: trellis query \'find ?e where type = "Issue"\')\n',
@@ -4035,10 +4040,10 @@ program
 
 program
   .command('query')
-  .description('Execute an EQL-S query against the graph')
+  .description('Execute a TQL query against the graph')
   .argument(
     '<query...>',
-    'EQL-S query string (or "find ?e where attr = value" shorthand). Quote the whole thing: trellis query \'find ?e where type = "Issue"\'',
+    'TQL query string (or "find ?e where attr = value" shorthand). Quote the whole thing: trellis query \'find ?e where type = "Issue"\'',
   )
   .option('-p, --path <path>', 'Repository path', '.')
   .option('--json', 'Output as JSON')
@@ -4101,7 +4106,7 @@ program
 
 program
   .command('repl')
-  .description('Interactive EQL-S query shell')
+  .description('Interactive TQL query shell')
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (opts: any) => {
     const rootPath = resolveRepoRoot(opts.path);
@@ -4124,10 +4129,10 @@ program
     }
     engine = new QueryEngine(store);
 
-    console.log(chalk.cyan.bold('Trellis EQL-S REPL'));
+    console.log(chalk.cyan.bold('Trellis TQL REPL'));
     console.log(
       chalk.dim(
-        'Type EQL-S queries or "find ?e where attr = value" shorthand.',
+        'Type TQL queries or "find ?e where attr = value" shorthand.',
       ),
     );
     console.log(chalk.dim('Type .exit to quit, .help for help.\n'));
@@ -4136,7 +4141,7 @@ program
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
-      prompt: chalk.green('eql> '),
+      prompt: chalk.green('tql> '),
     });
 
     rl.prompt();
@@ -4156,7 +4161,7 @@ program
 
       if (trimmed === '.help') {
         console.log(`
-${chalk.bold('EQL-S Query Syntax:')}
+${chalk.bold('TQL Query Syntax:')}
   ${chalk.cyan('SELECT')} ?var1 ?var2 ${chalk.cyan('WHERE')} { patterns } [${chalk.cyan('FILTER')} ...] [${chalk.cyan('ORDER BY')} ...] [${chalk.cyan('LIMIT')} n]
 
 ${chalk.bold('Pattern types:')}
@@ -4746,7 +4751,7 @@ db.command('list')
 
 // trellis db query
 db.command('query <eql...>')
-  .description('Run an EQL-S query (quote the whole query)')
+  .description('Run a TQL query (quote the whole query)')
   .option('--config-dir <dir>', 'Config directory', '.')
   .action(async (eql: string[], opts) => {
     const { TrellisDb } = await import('../client/sdk.js');

@@ -500,7 +500,8 @@ export async function updateIssue(
 export async function startIssue(
   ctx: EngineContext,
   id: string,
-  branchName: string,
+  /** Omitted when starting without a branch — the lane is the isolation. */
+  branchName?: string,
 ): Promise<VcsOp> {
   const eid = issueEntityId(id);
   const status = getIssueFact(ctx, eid, 'status');
@@ -519,7 +520,7 @@ export async function startIssue(
       issueId: id,
       oldIssueStatus: status as any,
       issueAssignee: ctx.agentId,
-      branchName,
+      ...(branchName ? { branchName } : {}),
     },
   });
   await ctx.applyOp(op);
