@@ -9,6 +9,7 @@
 
 import type { VcsOp } from '../vcs/types.js';
 import type { IdentityResolver } from './signing-middleware.js';
+import { opBodyHash } from './signing-middleware.js';
 import { verifySignature } from './identity.js';
 
 // ---------------------------------------------------------------------------
@@ -102,11 +103,11 @@ function matchesTarget(op: VcsOp, policy: PolicyRule): boolean {
 /**
  * Evaluate an op against a set of policies.
  */
-export function evaluatePolicy(
+export async function evaluatePolicy(
   op: VcsOp,
   policies: PolicyRule[],
   resolver: IdentityResolver,
-): GovernanceResult {
+): Promise<GovernanceResult> {
   const violations: PolicyViolation[] = [];
   const action = opToAction(op);
 
@@ -121,7 +122,7 @@ export function evaluatePolicy(
   for (const policy of applicable) {
     // Check signature requirements
     if (policy.minSignatures > 0) {
-      const validSigners = countValidSigners(op, policy, resolver);
+      const validSigners = await countValidSigners(op, policy, resolver);
 
       if (validSigners < policy.minSignatures) {
         violations.push({
@@ -144,11 +145,11 @@ export function evaluatePolicy(
 /**
  * Count how many valid required signers signed the op.
  */
-function countValidSigners(
+async function countValidSigners(
   op: VcsOp,
   policy: PolicyRule,
   resolver: IdentityResolver,
-): number {
+): Promise<number> {
   if (!op.vcs?.signature || !op.vcs?.signedBy) return 0;
 
   // Check if the signer is in the required signers list
@@ -158,7 +159,14 @@ function countValidSigners(
   const publicKey = resolver.resolvePublicKey(op.vcs.signedBy);
   if (!publicKey) return 0;
 
-  const valid = verifySignature(op.hash, op.vcs.signature, publicKey);
+  // Verify against the BODY hash, not `op.hash`. A signature cannot cover
+  // itself, so `signOp` signs the payload with the signature fields stripped
+  // and then re-hashes the op to include the signature. Verifying against
+  // `op.hash` (as this did) checks a preimage that was never signed, so every
+  // signed op failed and any policy with `requiredSigners` denied legitimate
+  // work. Same rule as ADR 0021: verify the preimage that was actually signed.
+  const bodyHash = await opBodyHash(op);
+  const valid = verifySignature(bodyHash, op.vcs.signature, publicKey);
   return valid ? 1 : 0;
 }
 

@@ -185,7 +185,7 @@ describe('pairing sign', () => {
       agentId: material.identityEntityId,
       vcs: { filePath: 'x.ts', contentHash: 'abc' },
     });
-    signOp(op, material.privateKey, material.identityEntityId, material.signedWith);
+    await signOp(op, material.privateKey, material.identityEntityId, material.signedWith);
     expect(op.vcs!.signedWith).toBe(material.signedWith);
 
     const deviceKey = resolveDevicePublicKey(
@@ -193,7 +193,7 @@ describe('pairing sign', () => {
       material.identityEntityId,
       material.signedWith,
     )!;
-    expect(verifyOp(op, deviceKey)).toBe(true);
+    expect(await verifyOp(op, deviceKey)).toBe(true);
 
     const resolver: IdentityResolver = {
       resolvePublicKey: (id) =>
@@ -202,7 +202,7 @@ describe('pairing sign', () => {
         resolveDevicePublicKey(a.trellisDir, id, deviceId),
       resolvePublicKeys: (id) => resolvePublicKeys(a.trellisDir, id),
     };
-    const batch = verifyOpBatch([op], resolver);
+    const batch = await verifyOpBatch([op], resolver);
     expect(batch[0].valid).toBe(true);
   });
 });
@@ -237,7 +237,7 @@ describe('pairing revoke', () => {
       agentId: material.identityEntityId,
       vcs: { filePath: 'y.ts', contentHash: 'def' },
     });
-    signOp(op, material.privateKey, material.identityEntityId, material.signedWith);
+    await signOp(op, material.privateKey, material.identityEntityId, material.signedWith);
 
     expect(revokeDevice(a.trellisDir, signed.authorization.deviceId)).toBe(true);
     expect(listDevices(a.trellisDir)).toHaveLength(0);
@@ -249,7 +249,7 @@ describe('pairing revoke', () => {
         resolveDevicePublicKey(a.trellisDir, id, deviceId),
       resolvePublicKeys: (id) => resolvePublicKeys(a.trellisDir, id),
     };
-    const batch = verifyOpBatch([op], resolver);
+    const batch = await verifyOpBatch([op], resolver);
     expect(batch[0].valid).toBe(false);
   });
 });

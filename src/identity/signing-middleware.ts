@@ -12,27 +12,49 @@
 
 import type { VcsOp } from '../vcs/types.js';
 import { signMessage, verifySignature } from './identity.js';
+import { hashVcsOp } from '../vcs/ops.js';
 
 // ---------------------------------------------------------------------------
 // Op signing
 // ---------------------------------------------------------------------------
 
 /**
+ * Hash the op body with the signature fields excluded. This is the canonical
+ * preimage that signatures cover: the integrity hash (`op.hash`) includes the
+ * signature (signature lives inside `vcs`, which is the hashed payload — see
+ * types.ts), but a signature cannot cover itself, so it is computed over the
+ * body with the signature fields stripped.
+ */
+function hashVcsOpBody(op: VcsOp): Promise<string> {
+  if (!op.vcs) return hashVcsOp(op);
+  const { signature: _s, signedBy: _b, signedWith: _w, ...rest } = op.vcs;
+  return hashVcsOp({ ...op, vcs: rest as VcsOp['vcs'] });
+}
+
+/**
  * Sign a VcsOp in-place using the given private key.
  * Sets `vcs.signature`, `vcs.signedBy`, and optionally `vcs.signedWith` (ADR 0020).
+ *
+ * The signature is computed over the body with the signature fields excluded
+ * (`hashVcsOpBody`), then stamped, and `op.hash` is recomputed to *include* the
+ * signature so a signed op still passes `verifyVcsOpHash` (signing is not an
+ * out-of-band annotation). `verifyOp`/`verifyOpBatch` reconstruct the same
+ * body hash to check the signature.
  */
-export function signOp(
+export async function signOp(
   op: VcsOp,
   privateKeyBase64: string,
   identityEntityId: string,
   signedWith: string = 'root',
-): VcsOp {
+): Promise<VcsOp> {
   if (!op.vcs) {
     op.vcs = {};
   }
-  op.vcs.signature = signMessage(op.hash, privateKeyBase64);
+  const bodyHash = await hashVcsOpBody(op);
   op.vcs.signedBy = identityEntityId;
   op.vcs.signedWith = signedWith;
+  op.vcs.signature = signMessage(bodyHash, privateKeyBase64);
+  op.hash = await hashVcsOp(op);
   return op;
 }
 
@@ -41,12 +63,21 @@ export function signOp(
  * Returns true if the op has a valid signature, false if invalid.
  * Returns null if the op has no signature (unsigned).
  */
-export function verifyOp(
+export async function verifyOp(
   op: VcsOp,
   publicKeyBase64: string,
-): boolean | null {
+): Promise<boolean | null> {
   if (!op.vcs?.signature) return null;
-  return verifySignature(op.hash, op.vcs.signature, publicKeyBase64);
+  const bodyHash = await hashVcsOpBody(op);
+  return verifySignature(bodyHash, op.vcs.signature, publicKeyBase64);
+}
+
+/**
+ * Reconstruct the canonical body hash a signature was computed over: the op
+ * with its signature fields stripped (see `hashVcsOpBody`).
+ */
+export function opBodyHash(op: VcsOp): Promise<string> {
+  return hashVcsOpBody(op);
 }
 
 // ---------------------------------------------------------------------------
@@ -97,10 +128,10 @@ function resolveKeysForOp(
  * Returns results for ops that have signatures.
  * Supports ADR 0020 device keys via signedWith + resolveDevicePublicKey.
  */
-export function verifyOpBatch(
+export async function verifyOpBatch(
   ops: VcsOp[],
   resolver: IdentityResolver,
-): SignatureVerificationResult[] {
+): Promise<SignatureVerificationResult[]> {
   const results: SignatureVerificationResult[] = [];
 
   for (const op of ops) {
@@ -118,8 +149,9 @@ export function verifyOpBatch(
       continue;
     }
 
+    const bodyHash = await hashVcsOpBody(op);
     const valid = keys.some((publicKey) =>
-      verifySignature(op.hash, op.vcs!.signature!, publicKey),
+      verifySignature(bodyHash, op.vcs!.signature!, publicKey),
     );
     results.push({
       valid,

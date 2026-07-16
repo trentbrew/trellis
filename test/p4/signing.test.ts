@@ -21,7 +21,7 @@ describe('signOp', () => {
       vcs: { filePath: 'test.ts', contentHash: 'abc' },
     });
 
-    signOp(op, id.privateKey, id.entityId);
+    await signOp(op, id.privateKey, id.entityId);
 
     expect(op.vcs!.signature).toBeDefined();
     expect(op.vcs!.signature!.length).toBeGreaterThan(0);
@@ -35,9 +35,9 @@ describe('signOp', () => {
       vcs: { filePath: 'test.ts', contentHash: 'abc' },
     });
 
-    signOp(op, id.privateKey, id.entityId);
+    await signOp(op, id.privateKey, id.entityId);
 
-    const result = verifyOp(op, id.publicKey);
+    const result = await verifyOp(op, id.publicKey);
     expect(result).toBe(true);
   });
 
@@ -50,9 +50,9 @@ describe('signOp', () => {
       vcs: { filePath: 'test.ts', contentHash: 'abc' },
     });
 
-    signOp(op, alice.privateKey, alice.entityId);
+    await signOp(op, alice.privateKey, alice.entityId);
 
-    const result = verifyOp(op, bob.publicKey);
+    const result = await verifyOp(op, bob.publicKey);
     expect(result).toBe(false);
   });
 
@@ -62,7 +62,7 @@ describe('signOp', () => {
       vcs: { filePath: 'test.ts', contentHash: 'abc' },
     });
 
-    const result = verifyOp(op, 'irrelevant');
+    const result = await verifyOp(op, 'irrelevant');
     expect(result).toBeNull();
   });
 });
@@ -89,11 +89,11 @@ describe('verifyOpBatch', () => {
         previousHash: ops[i - 1]?.hash,
         vcs: { filePath: `file${i}.ts`, contentHash: `hash${i}` },
       });
-      signOp(op, alice.privateKey, alice.entityId);
+      await signOp(op, alice.privateKey, alice.entityId);
       ops.push(op);
     }
 
-    const results = verifyOpBatch(ops, resolver);
+    const results = await verifyOpBatch(ops, resolver);
     expect(results.length).toBe(3);
     expect(results.every((r) => r.valid)).toBe(true);
   });
@@ -111,9 +111,9 @@ describe('verifyOpBatch', () => {
       agentId: alice.entityId,
       vcs: { filePath: 'test.ts', contentHash: 'abc' },
     });
-    signOp(op, alice.privateKey, alice.entityId);
+    await signOp(op, alice.privateKey, alice.entityId);
 
-    const results = verifyOpBatch([op], resolver);
+    const results = await verifyOpBatch([op], resolver);
     expect(results.length).toBe(1);
     expect(results[0].valid).toBe(false);
     expect(results[0].reason).toContain('Unknown identity');
@@ -129,7 +129,7 @@ describe('verifyOpBatch', () => {
       vcs: { filePath: 'test.ts', contentHash: 'abc' },
     });
 
-    const results = verifyOpBatch([op], resolver);
+    const results = await verifyOpBatch([op], resolver);
     expect(results.length).toBe(0);
   });
 });

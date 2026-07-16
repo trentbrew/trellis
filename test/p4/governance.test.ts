@@ -66,7 +66,7 @@ describe('evaluatePolicy', () => {
       vcs: { filePath: 'src/test.ts', contentHash: 'abc' },
     });
 
-    const result = evaluatePolicy(op, [], resolver);
+    const result = await evaluatePolicy(op, [], resolver);
     expect(result.allowed).toBe(true);
     expect(result.violations.length).toBe(0);
   });
@@ -84,9 +84,9 @@ describe('evaluatePolicy', () => {
       agentId: alice.entityId,
       vcs: { branchName: 'main' },
     });
-    signOp(op, alice.privateKey, alice.entityId);
+    await signOp(op, alice.privateKey, alice.entityId);
 
-    const result = evaluatePolicy(op, [policy], resolver);
+    const result = await evaluatePolicy(op, [policy], resolver);
     expect(result.allowed).toBe(true);
   });
 
@@ -105,7 +105,7 @@ describe('evaluatePolicy', () => {
     });
     // Not signed
 
-    const result = evaluatePolicy(op, [policy], resolver);
+    const result = await evaluatePolicy(op, [policy], resolver);
     expect(result.allowed).toBe(false);
     expect(result.violations.length).toBe(1);
     expect(result.violations[0].reason).toContain('requires');
@@ -124,9 +124,9 @@ describe('evaluatePolicy', () => {
       agentId: bob.entityId,
       vcs: { branchName: 'main' },
     });
-    signOp(op, bob.privateKey, bob.entityId); // Bob signs but isn't authorized
+    await signOp(op, bob.privateKey, bob.entityId); // Bob signs but isn't authorized
 
-    const result = evaluatePolicy(op, [policy], resolver);
+    const result = await evaluatePolicy(op, [policy], resolver);
     expect(result.allowed).toBe(false);
   });
 
@@ -143,9 +143,9 @@ describe('evaluatePolicy', () => {
       agentId: alice.entityId,
       vcs: { filePath: 'src/auth/provider.ts', contentHash: 'abc' },
     });
-    signOp(op, alice.privateKey, alice.entityId);
+    await signOp(op, alice.privateKey, alice.entityId);
 
-    const result = evaluatePolicy(op, [policy], resolver);
+    const result = await evaluatePolicy(op, [policy], resolver);
     expect(result.allowed).toBe(true);
   });
 
@@ -164,7 +164,7 @@ describe('evaluatePolicy', () => {
     });
 
     // This op targets a different path, so the policy shouldn't apply
-    const result = evaluatePolicy(op, [policy], resolver);
+    const result = await evaluatePolicy(op, [policy], resolver);
     expect(result.allowed).toBe(true); // Policy doesn't match this path
   });
 
@@ -183,7 +183,7 @@ describe('evaluatePolicy', () => {
       vcs: { branchName: 'main' },
     });
 
-    const result = evaluatePolicy(op, [policy], resolver);
+    const result = await evaluatePolicy(op, [policy], resolver);
     expect(result.allowed).toBe(true);
   });
 
@@ -204,7 +204,7 @@ describe('evaluatePolicy', () => {
       vcs: { milestoneId: 'ms:1', message: 'test' },
     });
 
-    const result = evaluatePolicy(op, [policy], resolver);
+    const result = await evaluatePolicy(op, [policy], resolver);
     // Policy targets 'branch' but milestoneCreate has no branchName → doesn't match
     expect(result.allowed).toBe(true);
   });
@@ -224,7 +224,7 @@ describe('evaluatePolicy', () => {
     });
 
     // branchCreate is not mapped to any governance action
-    const result = evaluatePolicy(op, [policy], resolver);
+    const result = await evaluatePolicy(op, [policy], resolver);
     expect(result.allowed).toBe(true);
   });
 });

@@ -22,6 +22,7 @@ import {
   verifySignature,
   type IdentityConfig,
 } from './identity.js';
+import type { IdentityResolver } from './signing-middleware.js';
 
 export const ROOT_DEVICE_ID = 'root';
 export const PAIR_TTL_SECONDS = 5 * 60;
@@ -604,5 +605,27 @@ export function getSigningMaterial(trellisDir: string): {
     privateKey: identity.privateKey,
     identityEntityId: identity.entityId,
     signedWith: ROOT_DEVICE_ID,
+  };
+}
+
+/**
+ * Build an `IdentityResolver` bound to a trellis directory (ADR 0022 Phase 3).
+ *
+ * The `IdentityResolver` interface takes only an `entityId` (it is injected
+ * into the engine, which has no filesystem concept), whereas the registry
+ * lookups in this module need the `trellisDir`. This adapter closes that gap:
+ * it captures the dir and forwards to the registry/local-device resolution
+ * that backs ADR 0020 device keys.
+ *
+ * Returns `null` when the directory has no identity at all, so callers can
+ * keep the resolver opt-in (an identity-less repo gets no PKI enforcement).
+ */
+export function pairingResolver(trellisDir: string): IdentityResolver | null {
+  if (!loadIdentity(trellisDir)) return null;
+  return {
+    resolvePublicKey: (entityId) => resolveDevicePublicKey(trellisDir, entityId, ROOT_DEVICE_ID),
+    resolveDevicePublicKey: (entityId, deviceId) =>
+      resolveDevicePublicKey(trellisDir, entityId, deviceId),
+    resolvePublicKeys: (entityId) => resolvePublicKeys(trellisDir, entityId),
   };
 }
