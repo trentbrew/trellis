@@ -19,16 +19,20 @@
  * boundary, so every mutation here goes through the journal as a first-class,
  * nameable op (`vcs:zoneDefine` / `zoneRename` / `grantSet` / `grantRetract`).
  *
- * **Authority is checked at mint, not enforced at ingest.** `assertOwner` stops
- * an honest caller from over-reaching, but a peer can mint a grant op directly.
- * Enforcing that is the kernel deny-by-default boundary (ADR 0022 consequence,
- * Phase 3) and is deliberately not attempted here.
+ * **Authority is checked at mint AND enforced at ingest.** `assertOwner` stops
+ * an honest caller from over-reaching on the trusted local path;
+ * `enforceIngestAuthorization` stops a peer from minting a grant op directly and
+ * integrating it past the boundary (ADR 0022 Phase 3). The two are the same
+ * check at two ends of one pipe: hash integrity (already at ingest) plus
+ * attribution (this module) converge on the single ingest gate.
  */
 
-import type { EAVStore } from '../core/store/eav-store.js';
+import type { EAVStore, Fact } from '../core/store/eav-store.js';
 import type { EngineContext } from '../vcs/engine-context.js';
 import type { VcsOp } from '../vcs/types.js';
 import { createVcsOp } from '../vcs/ops.js';
+import type { IdentityResolver } from './signing-middleware.js';
+import { verifyOpBatch, signOp } from './signing-middleware.js';
 
 // ---------------------------------------------------------------------------
 // Capability levels
@@ -114,7 +118,9 @@ export async function defineZone(
   zone: Zone,
 ): Promise<VcsOp> {
   zoneOwner(zone.zoneId); // throws on a malformed id before anything is minted
-  const op = await createVcsOp('vcs:zoneDefine', {
+  const op = await signIfNeeded(
+    ctx,
+    await createVcsOp('vcs:zoneDefine', {
     agentId: ctx.agentId,
     previousHash: ctx.getLastOp()?.hash,
     vcs: {
@@ -124,7 +130,8 @@ export async function defineZone(
       ...(zone.parentZone ? { zoneParent: zone.parentZone } : {}),
       provenance: ctx.provenance,
     },
-  });
+  }),
+  );
   await ctx.applyOp(op);
   return op;
 }
@@ -150,7 +157,9 @@ export async function renameZone(
   // sequential renames; concurrent renames by co-owners can leave two alias
   // facts (ADR 0022 §2's "totally ordered writes" half failing).
   const prior = readAlias(ctx.store, zoneId) ?? '';
-  const op = await createVcsOp('vcs:zoneRename', {
+  const op = await signIfNeeded(
+    ctx,
+    await createVcsOp('vcs:zoneRename', {
     agentId: ctx.agentId,
     previousHash: ctx.getLastOp()?.hash,
     vcs: {
@@ -159,7 +168,8 @@ export async function renameZone(
       oldZoneAlias: prior,
       provenance: ctx.provenance,
     },
-  });
+  }),
+  );
   await ctx.applyOp(op);
   return op;
 }
@@ -204,16 +214,19 @@ export async function setGrant(
   assertOwner(ctx.store, grant.zoneId, actor);
   // No prior level is carried: the grant domain is bounded, so `decompose`
   // enumerates and deletes every possible prior exhaustively.
-  const op = await createVcsOp('vcs:grantSet', {
-    agentId: ctx.agentId,
-    previousHash: ctx.getLastOp()?.hash,
-    vcs: {
-      zoneId: grant.zoneId,
-      grantPrincipal: grant.principal,
-      grantLevel: grant.level,
-      provenance: ctx.provenance,
-    },
-  });
+  const op = await signIfNeeded(
+    ctx,
+    await createVcsOp('vcs:grantSet', {
+      agentId: ctx.agentId,
+      previousHash: ctx.getLastOp()?.hash,
+      vcs: {
+        zoneId: grant.zoneId,
+        grantPrincipal: grant.principal,
+        grantLevel: grant.level,
+        provenance: ctx.provenance,
+      },
+    }),
+  );
   await ctx.applyOp(op);
   return op;
 }
@@ -229,15 +242,18 @@ export async function retractGrant(
   actor: string,
 ): Promise<VcsOp> {
   assertOwner(ctx.store, zoneId, actor);
-  const op = await createVcsOp('vcs:grantRetract', {
-    agentId: ctx.agentId,
-    previousHash: ctx.getLastOp()?.hash,
-    vcs: {
-      zoneId,
-      grantPrincipal: principal,
-      provenance: ctx.provenance,
-    },
-  });
+  const op = await signIfNeeded(
+    ctx,
+    await createVcsOp('vcs:grantRetract', {
+      agentId: ctx.agentId,
+      previousHash: ctx.getLastOp()?.hash,
+      vcs: {
+        zoneId,
+        grantPrincipal: principal,
+        provenance: ctx.provenance,
+      },
+    }),
+  );
   await ctx.applyOp(op);
   return op;
 }
@@ -246,6 +262,22 @@ function assertOwner(store: EAVStore, zoneId: ZoneId, actor: string): void {
   if (resolveCapability(store, actor, zoneId) < CapabilityLevel.Owner) {
     throw new Error(`principal ${actor} is not Owner of zone ${zoneId}`);
   }
+}
+
+/**
+ * Sign an authorization op at mint when the context carries signing material
+ * (ADR 0022 Phase 3). Ops minted with a verified key let the ingest boundary's
+ * `IdentityResolver` cryptographically attribute them; without material the op
+ * stays unsigned, which is correct for identity-less repos (most tests) where
+ * no resolver is wired and the gate only requires a signature envelope.
+ */
+async function signIfNeeded(
+  ctx: EngineContext,
+  op: VcsOp,
+): Promise<VcsOp> {
+  const sm = ctx.signingMaterial;
+  if (!sm) return op;
+  return signOp(op, sm.privateKey, sm.identityEntityId, sm.signedWith);
 }
 
 // ---------------------------------------------------------------------------
@@ -315,4 +347,113 @@ function readGrant(
     .getFactsByEntity(e)
     .find((f) => f.a === grantAttr(principal));
   return fact ? (fact.v as CapabilityLevel) : undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Ingest authorization gate (Phase 3) — the kernel deny-by-default boundary
+// ---------------------------------------------------------------------------
+
+/** Op kinds that mutate zone authority and therefore require attribution. */
+export const AUTH_OP_KINDS = new Set([
+  'vcs:zoneDefine',
+  'vcs:zoneRename',
+  'vcs:grantSet',
+  'vcs:grantRetract',
+]);
+
+export interface IngestAuthResult {
+  ok: boolean;
+  reason?: 'unauthorized';
+  message?: string;
+}
+
+/**
+ * Ingest-time authorization gate (ADR 0022 Phase 3).
+ *
+ * `integrateOps` already verifies op *integrity* (the hash) but, until now,
+ * verified no *attribution* — so a peer could mint a `vcs:grantSet` /
+ * `vcs:zoneDefine` op directly and the store would apply it, bypassing the
+ * `assertOwner` check that only guards the trusted local mint path
+ * (`setGrant` / `defineZone` → `applyOp`). This gate closes that: every
+ * authorization-bearing op must be attributable to a principal the zone already
+ * trusts at `Owner` (or, for `zoneDefine`, to the identity named in the
+ * zoneId — authority is self-describing in the id).
+ *
+ * Attribution: the op must be signed. When an `IdentityResolver` is wired, the
+ * signature is cryptographically verified and `signedBy` is trusted only if it
+ * verifies; without a resolver the kernel can at best require a signature
+ * envelope to exist (deny-by-default for unattributable auth ops). Full PKI
+ * validation is the resolver-wiring follow-on (ADR 0020).
+ */
+export async function enforceIngestAuthorization(
+  store: EAVStore,
+  op: VcsOp,
+  resolver?: IdentityResolver,
+): Promise<IngestAuthResult> {
+  if (!AUTH_OP_KINDS.has(op.kind)) return { ok: true };
+
+  const vcs = op.vcs;
+  if (!vcs?.zoneId) {
+    return {
+      ok: false,
+      reason: 'unauthorized',
+      message: `Auth op '${op.kind}' is missing zoneId`,
+    };
+  }
+  const zoneId = vcs.zoneId;
+
+  // Establish the attested author.
+  let author: string | undefined;
+  if (resolver) {
+    const results = await verifyOpBatch([op], resolver);
+    if (results.length === 0 || !results[0].valid) {
+      return {
+        ok: false,
+        reason: 'unauthorized',
+        message: `Auth op '${op.kind}' has no valid signature`,
+      };
+    }
+    author = op.vcs?.signedBy;
+  } else {
+    // No resolver: require at least a signature envelope so an anonymous peer
+    // cannot mint auth ops. We cannot verify the key, so `signedBy` is
+    // trusted only as a claimed identity for the capability lookup.
+    if (!op.vcs?.signature) {
+      return {
+        ok: false,
+        reason: 'unauthorized',
+        message: `Auth op '${op.kind}' is unsigned (no identity resolver configured)`,
+      };
+    }
+    author = op.vcs?.signedBy ?? op.agentId;
+  }
+  if (!author) {
+    return {
+      ok: false,
+      reason: 'unauthorized',
+      message: `Auth op '${op.kind}' has no attributable author`,
+    };
+  }
+
+  if (op.kind === 'vcs:zoneDefine') {
+    const owner = zoneOwnerDid(zoneId);
+    if (!owner || author !== `identity:${owner}`) {
+      return {
+        ok: false,
+        reason: 'unauthorized',
+        message: `zoneDefine not authorized by zone owner for ${zoneId}`,
+      };
+    }
+    return { ok: true };
+  }
+
+  // grantSet / grantRetract / zoneRename require Owner.
+  if (resolveCapability(store, author, zoneId) < CapabilityLevel.Owner) {
+    return {
+      ok: false,
+      reason: 'unauthorized',
+      message: `principal ${author} is not Owner of zone ${zoneId}`,
+    };
+  }
+  return { ok: true };
 }

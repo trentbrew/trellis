@@ -30,6 +30,18 @@ export interface EngineContext {
    */
   provenance?: import('../core/persist/canonical-op.js').OpProvenance;
 
+  /**
+   * Local signing material (ADR 0022 Phase 3). When present, authorization
+   * ops minted through this context are signed so an `IdentityResolver` at the
+   * ingest boundary can cryptographically verify them. Absent = ops mint
+   * unsigned (identity-less repos, most tests).
+   */
+  signingMaterial?: {
+    privateKey: string;
+    identityEntityId: string;
+    signedWith: string;
+  };
+
   /** Get all ops from the log. */
   readAllOps(): VcsOp[];
 

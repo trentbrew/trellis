@@ -26,6 +26,8 @@ import { Ingestion } from './watcher/ingestion.js';
 import { decompose } from './vcs/decompose.js';
 import { createVcsOp, isVcsOpKind, verifyVcsOpHash } from './vcs/ops.js';
 import { enforceIngestAuthorization } from './identity/capability.js';
+import { pairingResolver, ROOT_DEVICE_ID } from './identity/pairing.js';
+import { loadIdentity } from './identity/identity.js';
 import type { IdentityResolver } from './identity/signing-middleware.js';
 import { PROVENANCE } from './core/persist/canonical-op.js';
 import type { OpProvenance } from './core/persist/canonical-op.js';
@@ -243,6 +245,12 @@ export class TrellisVcsEngine {
   private config: TrellisVcsConfig;
   /** Optional identity resolver for ingest-time signature verification (ADR 0022 Phase 3). */
   private identityResolver?: IdentityResolver;
+  /** Local signing material; when present, the engine mints signed auth ops. */
+  private signingMaterial?: {
+    privateKey: string;
+    identityEntityId: string;
+    signedWith: string;
+  };
   private store: EAVStore;
   private opLog: OpLog;
   private watcher: FileWatcher | null = null;
@@ -291,6 +299,17 @@ export class TrellisVcsEngine {
        * (deny-by-default for unattributable auth ops).
        */
       identityResolver?: IdentityResolver;
+      /**
+       * Local signing material (ADR 0022 Phase 3). When present, the engine
+       * mints signed authorization ops so a peer's ingest boundary can verify
+       * them. Constructed by hosts that have an identity; absent for
+       * identity-less repos, where no resolver is wired either.
+       */
+      signingMaterial?: {
+        privateKey: string;
+        identityEntityId: string;
+        signedWith: string;
+      };
     } & Partial<TrellisVcsConfig>,
   ) {
     // Merge default ignore patterns with .gitignore if present
@@ -314,6 +333,36 @@ export class TrellisVcsEngine {
     this.agentId = opts.agentId ?? `agent:${process.env.USER ?? 'unknown'}`;
     this.provenance = opts.provenance ?? PROVENANCE.sdk;
     this.identityResolver = opts.identityResolver;
+    this.signingMaterial = opts.signingMaterial;
+
+    // ADR 0022 Phase 3.2 — default BOTH halves from the local identity.
+    //
+    // These were opt-in, and nothing in src/ passed either, so in every real
+    // repo the gate ran resolver-less: it required only that *some* signature
+    // field exist and then trusted `signedBy` as a claimed identity. A forger
+    // set two strings and was authorized as the zone owner. The mirror failure
+    // was just as bad — local auth ops minted unsigned, so a peer's gate
+    // rejected them and legitimate grants could never replicate.
+    //
+    // `identity.json` already holds the private key and entity id, and
+    // `pairingResolver` already reads the same directory. Wiring them here
+    // turns the envelope check into a key check, and makes locally-granted
+    // capability replicable. A repo with no identity keeps both undefined and
+    // is unchanged.
+    if (!this.signingMaterial) {
+      const identity = loadIdentity(this.trellisDir());
+      if (identity) {
+        this.signingMaterial = {
+          privateKey: identity.privateKey,
+          identityEntityId: identity.entityId,
+          signedWith: ROOT_DEVICE_ID,
+        };
+      }
+    }
+    if (!this.identityResolver) {
+      const resolver = pairingResolver(this.trellisDir());
+      if (resolver) this.identityResolver = resolver;
+    }
     this.store = new EAVStore();
     this.opLog =
       opts.opLog ??
@@ -815,23 +864,6 @@ export class TrellisVcsEngine {
         continue;
       }
 
-      // ADR 0022 Phase 3: enforce zone authority at the same boundary that
-      // verifies integrity. A peer that mints grant/zone ops directly is
-      // opposed here, not just at the trusted local mint path.
-      const auth = enforceIngestAuthorization(
-        this.store,
-        op,
-        this.identityResolver,
-      );
-      if (!auth.ok) {
-        rejected.push({
-          op,
-          reason: 'unauthorized',
-          message: auth.message ?? `Unauthorized ingest of '${op.kind}'.`,
-        });
-        continue;
-      }
-
       if (pendingByHash.has(op.hash)) {
         skipped++;
         continue;
@@ -848,6 +880,31 @@ export class TrellisVcsEngine {
       for (const op of pending) {
         if (op.previousHash && !known.has(op.previousHash)) {
           nextPending.push(op);
+          continue;
+        }
+
+        // ADR 0022 Phase 3: enforce zone authority at the same boundary that
+        // verifies integrity — a peer minting grant/zone ops directly is
+        // opposed here, not only on the trusted local mint path.
+        //
+        // This runs at APPLY time, not during validation, because authority is
+        // resolved against the materialized store and a batch carries its own
+        // dependencies: `[zoneDefine, grantSet]` is the ordinary shape, and
+        // checking the grant before its zone had landed rejected the zone's own
+        // owner as "not Owner". Validating a batch against pre-batch state can
+        // only ever accept ops whose authority predates the batch.
+        const auth = await enforceIngestAuthorization(
+          this.store,
+          op,
+          this.identityResolver,
+        );
+        if (!auth.ok) {
+          rejected.push({
+            op,
+            reason: 'unauthorized',
+            message: auth.message ?? `Unauthorized ingest of '${op.kind}'.`,
+          });
+          progressed = true; // resolved (as a rejection); don't re-defer
           continue;
         }
 
@@ -2461,6 +2518,7 @@ export class TrellisVcsEngine {
       store: this.store,
       agentId: this.agentId,
       provenance: this.provenance,
+      signingMaterial: this.signingMaterial,
       readAllOps: () => this.getActiveJournal().readAll(),
       getLastOp: () => this.getActiveJournal().getLastOp(),
       applyOp: (op, opts) => this.applyOp(op, opts),

@@ -10,8 +10,31 @@
 **Date:** 2026-07-15
 
 **Impl:** Phases 0–2 in `src/identity/capability.ts`; Phase 4 (per-writer refs) in
-`src/vcs/branch.ts` + `src/vcs/decompose.ts`. **Phase 3 (kernel deny-by-default)
-is NOT started.**
+`src/vcs/branch.ts` + `src/vcs/decompose.ts`. **Phase 3 write boundary is in**
+(`enforceIngestAuthorization`, called from `integrateOps`); **Phase 3.2 resolver
+wiring is in** (engine defaults signing material + resolver from the local
+identity). **The read boundary — deny-by-default on the EQL-S query path — is
+NOT started.**
+
+> **Phase 3.2: the gate only became a gate once the resolver was wired.**
+> `signingMaterial` and `identityResolver` were both opt-in, and nothing in
+> `src/` passed either — so every real repo ran the resolver-less path, which
+> required only that *some* signature field exist and then trusted `signedBy` as
+> a claimed identity. A forger set two strings and was authorized as the zone
+> owner. The mirror failure was equally bad: local auth ops minted unsigned, so a
+> peer's gate rejected them and legitimate grants could never replicate. The
+> engine now defaults both halves from `identity.json`; a repo with no identity
+> is unchanged. Covered by `test/p4/ingest-authorization.test.ts`.
+>
+> **The gate must run at apply time, not validation time.** It was in
+> `integrateOps`' validation loop, which runs before any op is applied — so a
+> batch of `[zoneDefine, grantSet]` (the ordinary shape) rejected the zone's own
+> owner as "not Owner", because the grant's authority was resolved against a
+> store where its zone had not yet landed. Authority is resolved against the
+> materialized store, and a batch carries its own dependencies; validating
+> against pre-batch state can only ever accept ops whose authority predates the
+> batch. Note the consequence: rejecting an op strands its causal descendants,
+> which then fail as `missing-dependency` rather than on their own merits.
 
 > **Grants are ops, not store writes.** The first implementation wrote grants
 > straight to `EAVStore`. That store is *derived* — rebuilt by op replay on boot
@@ -198,10 +221,17 @@ stays readable. Ship no zone to a peer you would not show the whole zone to, for
   `getZone`'s `find()` then resolves by insertion order. Grants avoid this
   because their domain *is* bounded — `decompose` enumerates and deletes every
   prior level. Same shape as `headOpHash`, one field over.
-- **Authority is checked at mint, not at ingest.** `assertOwner` stops an honest
-  caller; a peer that mints a `vcs:grantSet` directly is not stopped by anything
-  yet. That is Phase 3, and until it lands the model is advisory against a
-  hostile peer.
+- **Signature verification changed preimage, and one caller was missed.**
+  `signOp` now signs the op body with the signature fields stripped (a signature
+  cannot cover itself) and re-hashes to include the signature. But
+  `governance.ts` still verified against `op.hash` — a preimage that was never
+  signed — so **every signed op failed its policy check and any policy with
+  `requiredSigners` denied legitimate work.** Fixed to verify `opBodyHash(op)`;
+  `evaluatePolicy` is now async. This is ADR 0021's rule again: verify the
+  preimage that was actually signed.
+- **Writes are gated; reads are not.** `enforceIngestAuthorization` opposes a
+  hostile peer's *writes*. The EQL-S read path has no capability check, so
+  deny-by-default is only half true until the read boundary lands.
 - `writerPrincipal` falls back to the self-asserted `agentId` for unsigned ops,
   which contradicts §4's "not `agentId`". Spoofable until ADR 0020 signing is
   enforced at ingest.

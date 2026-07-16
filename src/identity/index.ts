@@ -33,6 +33,7 @@ export {
   resolveDevicePublicKey,
   resolvePublicKeys,
   getSigningMaterial,
+  pairingResolver,
   deviceFingerprint,
   decodePayload,
   encodePayload,
@@ -74,6 +75,8 @@ export {
   setGrant,
   retractGrant,
   resolveCapability,
+  enforceIngestAuthorization,
+  AUTH_OP_KINDS,
 } from './capability.js';
 
 export type { ZoneId, Zone, Grant } from './capability.js';

@@ -1,8 +1,22 @@
 import { describe, test, expect, beforeEach, afterEach } from 'vitest';
-import { mkdirSync, rmSync } from 'fs';
+import { mkdirSync, rmSync, existsSync } from 'fs';
 import { join } from 'path';
 import { TrellisVcsEngine } from '../../src/engine.js';
 import { createVcsOp } from '../../src/vcs/ops.js';
+import {
+  makeZoneId,
+  defineZone,
+  resolveCapability,
+  CapabilityLevel,
+} from '../../src/identity/capability.js';
+import {
+  createIdentity,
+  saveIdentity,
+} from '../../src/identity/identity.js';
+import {
+  getSigningMaterial,
+  pairingResolver,
+} from '../../src/identity/pairing.js';
 import { TrellisVcsSyncPeer } from '../../src/sync/vcs-sync-peer.js';
 import { MemoryTransport } from '../../src/sync/memory-transport.js';
 import { MemorySyncRoom } from '../../src/sync/memory-room.js';
@@ -10,6 +24,53 @@ import { PROTOCOL_VERSION } from '../../src/sync/types.js';
 import type { Fact } from '../../src/core/store/eav-store.js';
 import type { SyncMessage } from '../../src/sync/types.js';
 import type { VcsOp } from '../../src/vcs/types.js';
+
+function trellisDirOf(rootPath: string): string {
+  return join(rootPath, '.trellis');
+}
+
+/** Build an engine backed by a real identity, so auth ops mint signed. */
+async function initSignedPeer(
+  name: string,
+): Promise<{ engine: TrellisVcsEngine; id: ReturnType<typeof createIdentity> }> {
+  const rootPath = join(TEST_ROOT, name);
+  mkdirSync(rootPath, { recursive: true });
+  const id = createIdentity({ displayName: name });
+  saveIdentity(trellisDirOf(rootPath), id);
+  const sm = getSigningMaterial(trellisDirOf(rootPath))!;
+  const engine = new TrellisVcsEngine({
+    rootPath,
+    agentId: id.entityId,
+    signingMaterial: sm,
+  });
+  await engine.initRepo();
+  engine.setCheckpointThreshold(0);
+  return { engine, id };
+}
+
+/**
+ * Seed a *foreign* signer's public key into a peer's device registry, simulating
+ * that the peer already knows the signer via ADR 0020 pairing/registry sync.
+ * `pairingResolver` only verifies ops whose signer appears in the local registry,
+ * so a peer must carry the signer's root key to accept their auth ops.
+ */
+function seedKnownSigner(peerRootPath: string, signer: {
+  entityId: string;
+  did: string;
+  publicKey: string;
+}): void {
+  const reg = {
+    identityEntityId: signer.entityId,
+    did: signer.did,
+    rootPublicKey: signer.publicKey,
+    devices: [],
+  };
+  mkdirSync(join(trellisDirOf(peerRootPath), 'devices'), { recursive: true });
+  require('fs').writeFileSync(
+    join(trellisDirOf(peerRootPath), 'devices', 'registry.json'),
+    JSON.stringify(reg, null, 2),
+  );
+}
 
 const TEST_ROOT = '/tmp/trellis-p7-vcs-op-sync-prototype';
 
@@ -446,5 +507,202 @@ describe('VCS op sync prototype', () => {
       expect(peerBHashes.has(valid2.hash)).toBe(true);
       expect(peerBHashes.has(invalid.hash)).toBe(false);
     });
+  });
+});
+
+describe('ingest authorization gate (ADR 0022 Phase 3)', () => {
+  const OWNER_DID = 'did:key:owner';
+  const STRANGER_DID = 'did:key:stranger';
+  const MEMBER_DID = 'did:key:member';
+  const ZONE = makeZoneId(OWNER_DID, 'z1');
+  const OWNER = `identity:${OWNER_DID}`;
+  const STRANGER = `identity:${STRANGER_DID}`;
+  const MEMBER = `identity:${MEMBER_DID}`;
+
+  /** A grantSet op attributed to `signedBy`, optionally signed/unsigned. */
+  async function grantOp(
+    agentId: string,
+    signedBy: string,
+    opts: { signed?: boolean; zoneId?: string } = {},
+  ): Promise<VcsOp> {
+    const op = await createVcsOp('vcs:grantSet', {
+      agentId,
+      previousHash: undefined,
+      vcs: {
+        zoneId: opts.zoneId ?? ZONE,
+        grantPrincipal: MEMBER,
+        grantLevel: CapabilityLevel.Member,
+        signedBy,
+        ...(opts.signed === false ? {} : { signature: 'envelope-present' }),
+      },
+    });
+    return op;
+  }
+
+  test('owner-signed grant integrates; store reflects the grant', async () => {
+    const engine = await initPeer('gate-a');
+    await defineZone(engine.capabilityContext(), {
+      zoneId: ZONE,
+      alias: 'Workshop',
+      defaultVisibility: CapabilityLevel.None,
+    });
+
+    const res = await engine.integrateOps([await grantOp('agent:gate-a', OWNER)]);
+    expect(res.rejected).toHaveLength(0);
+    expect(res.applied).toBe(1);
+    expect(resolveCapability(engine.getEavStore(), MEMBER, ZONE)).toBe(
+      CapabilityLevel.Member,
+    );
+  });
+
+  test('stranger-signed grant is rejected (unauthorized)', async () => {
+    const engine = await initPeer('gate-b');
+    await defineZone(engine.capabilityContext(), {
+      zoneId: ZONE,
+      alias: 'Workshop',
+      defaultVisibility: CapabilityLevel.None,
+    });
+
+    const res = await engine.integrateOps([await grantOp('agent:gate-b', STRANGER)]);
+    expect(res.rejected).toHaveLength(1);
+    expect(res.rejected[0].reason).toBe('unauthorized');
+    expect(resolveCapability(engine.getEavStore(), MEMBER, ZONE)).toBe(
+      CapabilityLevel.None,
+    );
+  });
+
+  test('unsigned grant is rejected (no identity resolver configured)', async () => {
+    const engine = await initPeer('gate-c');
+    await defineZone(engine.capabilityContext(), {
+      zoneId: ZONE,
+      alias: 'Workshop',
+      defaultVisibility: CapabilityLevel.None,
+    });
+
+    const res = await engine.integrateOps([
+      await grantOp('agent:gate-c', OWNER, { signed: false }),
+    ]);
+    expect(res.rejected).toHaveLength(1);
+    expect(res.rejected[0].reason).toBe('unauthorized');
+  });
+
+  test('non-auth ops integrate untouched (guard is a no-op off the boundary)', async () => {
+    const engine = await initPeer('gate-d');
+    const normal = await createVcsOp('vcs:checkpointCreate', {
+      agentId: 'agent:gate-d',
+      vcs: {},
+    });
+    const res = await engine.integrateOps([normal]);
+    expect(res.applied).toBe(1);
+    expect(res.rejected).toHaveLength(0);
+  });
+
+  test('auth ops mint signed when an identity is present', async () => {
+    const { engine } = await initSignedPeer('gate-signed-mint');
+    await defineZone(engine.capabilityContext(), {
+      zoneId: ZONE,
+      alias: 'Workshop',
+      defaultVisibility: CapabilityLevel.None,
+    });
+
+    // The locally minted zoneDefine op carries a real signature + signedBy.
+    const defineOp = engine.getOps().find((o) => o.kind === 'vcs:zoneDefine');
+    expect(defineOp).toBeDefined();
+    expect(defineOp!.vcs?.signature).toBeDefined();
+    expect(defineOp!.vcs?.signedBy).toBe(engine.capabilityContext().agentId);
+  });
+
+  test('signed auth op verifies through a peer resolver (PKI end-to-end)', async () => {
+    const { engine: owner, id: ownerId } = await initSignedPeer('gate-peer-owner');
+    const ownerDid = owner.capabilityContext().agentId.replace(/^identity:/, '');
+    const zone = makeZoneId(ownerDid, 'z1');
+    await defineZone(owner.capabilityContext(), {
+      zoneId: zone,
+      alias: 'Workshop',
+      defaultVisibility: CapabilityLevel.None,
+    });
+    const grant = await import('../../src/identity/capability.js').then((m) =>
+      m.setGrant(
+        owner.capabilityContext(),
+        { principal: MEMBER, zoneId: zone, level: CapabilityLevel.Member },
+        owner.capabilityContext().agentId,
+      ),
+    );
+
+    // Peer B is identity-backed (wires a resolver) and already knows the
+    // owner's public key, as it would after ADR 0020 pairing.
+    const { engine: peerB } = await initSignedPeer('gate-peer-b');
+    seedKnownSigner(join(TEST_ROOT, 'gate-peer-b'), {
+      entityId: owner.capabilityContext().agentId,
+      did: ownerDid,
+      publicKey: ownerId.publicKey,
+    });
+
+    // Send the owner's whole journal, not the lone grant. Two reasons, both
+    // real: the grant's `previousHash` chains to ops peerB lacks, and its
+    // authority is resolved against peerB's store — which cannot know the zone
+    // until the `zoneDefine` in the same batch has landed. `[zoneDefine, grant]`
+    // arriving together is the ordinary shape.
+    const res = await peerB.integrateOps(owner.getOps());
+
+    const authRejects = res.rejected.filter((r) =>
+      String(r.op.kind).startsWith('vcs:zone') || String(r.op.kind).startsWith('vcs:grant'),
+    );
+    expect(authRejects).toHaveLength(0);
+    expect(res.applied).toBeGreaterThan(0);
+    expect(grant.vcs?.signature).toBeDefined();
+    expect(resolveCapability(peerB.getEavStore(), MEMBER, zone)).toBe(
+      CapabilityLevel.Member,
+    );
+  });
+
+  test('signed auth op from an unknown signer is rejected (unauthorized)', async () => {
+    const { engine: owner } = await initSignedPeer('gate-peer-owner-3');
+    const ownerDid = owner.capabilityContext().agentId.replace(/^identity:/, '');
+    const zone = makeZoneId(ownerDid, 'z1');
+    await defineZone(owner.capabilityContext(), {
+      zoneId: zone,
+      alias: 'Workshop',
+      defaultVisibility: CapabilityLevel.None,
+    });
+    const grant = await import('../../src/identity/capability.js').then((m) =>
+      m.setGrant(
+        owner.capabilityContext(),
+        { principal: MEMBER, zoneId: zone, level: CapabilityLevel.Member },
+        owner.capabilityContext().agentId,
+      ),
+    );
+
+    // Peer B is identity-backed (wires a resolver) but does NOT know the
+    // owner's key — so the signature cannot be verified → unauthorized.
+    // The full journal is sent so the rejection is about the *signer* rather
+    // than a dangling `previousHash`.
+    const { engine: peerB } = await initSignedPeer('gate-peer-b-3');
+    const res = await peerB.integrateOps(owner.getOps());
+
+    const authRejects = res.rejected.filter((r) =>
+      String(r.op.kind).startsWith('vcs:zone') || String(r.op.kind).startsWith('vcs:grant'),
+    );
+
+    // The zoneDefine is rejected outright: its signer's key is unknown.
+    expect(
+      authRejects.some(
+        (r) => r.op.kind === 'vcs:zoneDefine' && r.reason === 'unauthorized',
+      ),
+    ).toBe(true);
+
+    // The grant then CASCADES — it chains to the rejected zoneDefine, so its
+    // `previousHash` never becomes known and it fails as a missing dependency
+    // rather than on its own merits. Rejecting an op necessarily strands its
+    // causal descendants; the batch converges on "nothing applied" either way.
+    expect(
+      authRejects.every(
+        (r) => r.reason === 'unauthorized' || r.reason === 'missing-dependency',
+      ),
+    ).toBe(true);
+    expect(
+      resolveCapability(peerB.getEavStore(), MEMBER, zone),
+    ).toBe(CapabilityLevel.None);
+    expect(grant.vcs?.signedBy).toBeDefined();
   });
 });
