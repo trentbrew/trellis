@@ -19,7 +19,7 @@ two things the essay assumes are wrong against the code as it exists today:
    scaffold/codegen layer. The gap is smaller and differently-shaped than the
    essay claims.
 
-2. **"Rules are EQL-S filters baked into the replication graph, so security is a
+2. **"Rules are TQL filters baked into the replication graph, so security is a
    type error" is not what the code does.** Access control today is
    `security-middleware.ts` — capability-based enforcement in the kernel op
    pipeline (`read/create/update/delete/link/unlink/admin`). That's *runtime*
@@ -35,7 +35,7 @@ Separately (§6): the **Block Protocol** (target **0.3** — 0.4 is paused) is a
 strong candidate for the block↔embedder contract, and is the *correct*
 resolution of the original multi-framework "Omni" idea — interop via an
 isolation boundary, not a universal compiler. Steal its message contract; keep
-ontology + EQL-S canonical.
+ontology + TQL canonical.
 
 And (§7) — **the most important section in this doc**: BP's *type* layer was
 rescued as **SemType** (working draft, © 2026, Apache-2.0/MIT, consumed by HASH
@@ -57,7 +57,7 @@ Mapping the essay's claims to code, honestly:
 |---|---|---|
 | `doc<T>` replication graph | EAV kernel (`core/store/eav-store.ts`) + content-addressed op-log | ✅ real |
 | "CRDT merge log" | Op-log with content-addressed ops; **graph/entity conflict semantics still on the TODO list** | ⚠️ overstated — it's an op-log, not a proven CRDT merge |
-| `rule Read/Write` scoping | EQL-S (Datalog) query engine with a string parser (`parseQuery/parseRule`) **for reads**, plus capability `security-middleware` **for writes** | ⚠️ two mechanisms, not one; not "baked into the graph" |
+| `rule Read/Write` scoping | TQL (Datalog) query engine with a string parser (`parseQuery/parseRule`) **for reads**, plus capability `security-middleware` **for writes** | ⚠️ two mechanisms, not one; not "baked into the graph" |
 | "security is a type error" | Runtime capability check in kernel middleware | ❌ aspirational marketing, not true today |
 | Offline-first optimistic updates | Local SQLite backends + sync layer | ✅ largely real |
 | Presence primitives | Asserted "proven in Playlab demo" | ❓ unverified in this repo; treat as claim |
@@ -83,7 +83,7 @@ codegen surface and (b) a unified enforcement story for reads+writes.
 │  runtime · BP entities = lossy EAV projection  │
 ├───────────────────────────────────────────────┤
 │  Schema + query layer           ← EXISTS
-│  src/schema/{define,eql,mutations} · EQL-S     │
+│  src/schema/{define,eql,mutations} · TQL     │
 │  ↕ SemType projection (§7)      ← PROPOSED     │
 │    conforming producer/validator, NOT internal │
 ├───────────────────────────────────────────────┤
@@ -141,7 +141,7 @@ Using the real APIs, not invented ones:
   reject. **Note the honest constraint:** the "using (Write)" clause maps to a
   *capability check*, not a proven type.
 
-- **`rule Read(u) = projects.where(p => p.owner == u ...)`** → EQL-S
+- **`rule Read(u) = projects.where(p => p.owner == u ...)`** → TQL
   (`parseRule`) attached to read paths. **This is a real second enforcement
   point**, separate from write-side capabilities. A DSL that unifies them has to
   target *both* the query scope (reads) and the capability middleware (writes).
@@ -200,7 +200,7 @@ The data-model alignment with Trellis is close to 1:1:
 | entity graph; link entities (`leftEntityId` / `rightEntityId`) | EAV kernel + `src/links` |
 | data types → property types → entity types (layered ontology) | `src/core/ontology` |
 | `createEntity` / `updateEntity` / `deleteEntity` / `queryEntities` | kernel ops already gated by `security-middleware` |
-| `blockEntitySubgraph` (roots + fixed-depth subgraph) | EQL-S query result |
+| `blockEntitySubgraph` (roots + fixed-depth subgraph) | TQL query result |
 | embedder owns data + persistence; block declares its schema | **Studio is already a BP embedder in disguise** |
 
 The message vocabulary maps onto the existing kernel op pipeline. That's not
@@ -220,8 +220,8 @@ A `view` **compiles to** a BP block; Studio consumes it as an embedder.
 
 1. **Steal the contract, not the type system.** BP entity types are closed-ish
    JSON-Schema shapes and its subgraph is *fixed-depth resolution*, not Datalog.
-   Trellis's power is open triples + recursive EQL-S. Adopting BP's type system
-   *as* our ontology would cap query expressiveness. Ontology + EQL-S stay
+   Trellis's power is open triples + recursive TQL. Adopting BP's type system
+   *as* our ontology would cap query expressiveness. Ontology + TQL stay
    canonical; **BP is the wire format at the block edge** — a deliberate, lossy
    projection. (BP's type system is in any case superseded — see **§7 SemType**,
    which is the live successor and a much better fit.)
@@ -249,7 +249,7 @@ the agent interface) rather than competing with it.
 ### Recommendation
 
 Adopt the BP **graph-module message contract** as Studio's block↔embedder
-boundary; compile `view` output to BP blocks; keep ontology + EQL-S canonical and
+boundary; compile `view` output to BP blocks; keep ontology + TQL canonical and
 project to BP entities at the edge. Target **0.3**. This beats "compile to
 Svelte" for the *interop* story specifically — and the two compose: Svelte 5 is
 the compile target *inside* the block.
@@ -365,7 +365,7 @@ it looked, and the type-layer twin of the §5 read-auth ADR.
 
 ### The call: conforming producer, not native kernel
 
-Keep **EAV + EQL-S canonical**. The conformance model explicitly permits this —
+Keep **EAV + TQL canonical**. The conformance model explicitly permits this —
 targets are *document / validator / producer / forwarder*, none of which require
 SemType to be the internal representation. So:
 
@@ -412,7 +412,7 @@ Fireproof all have some version of it. If the pitch is "we have a nice DSL," the
 comparison is unflattering and crowded.
 
 Trellis's actual novel surface is the **substrate the DSL sits on**:
-- a **semantic graph** (EAV + EQL-S/Datalog) rather than tables or documents,
+- a **semantic graph** (EAV + TQL/Datalog) rather than tables or documents,
 - **p2p Iroh** transport rather than a hosted sync server (cloud never owns
   state), and
 - **agent-native** operation (the DSL as an AX interface).
@@ -432,13 +432,13 @@ has already mostly agreed on":
 | Move bytes | **Iroh** | adopted |
 | Gate access | **Keyhive/UCAN-style capabilities** (§5) | adopted |
 | Name things | **SemType** (§7) | adopted |
-| **Query** | **EQL-S** | **novel** |
+| **Query** | **TQL** | **novel** |
 
 Three adopted layers, one novel one — and the novel one is precisely the gap
 reviewers have named out loud. That's a far better "why now" than any DSL pitch.
 
 **But state the claim precisely, because the loose version is puncturable.**
-"Nobody has built EQL-S" is false and someone in the room will know it: Datomic,
+"Nobody has built TQL" is false and someone in the room will know it: Datomic,
 XTDB, and Logica are all Datalog over EAV; HASH has its own structural query
 layer. What is genuinely unbuilt is the **conjunction**:
 
@@ -498,7 +498,7 @@ view App {
   <input on:submit={e => todos.push({ text: e.value })} />
 }
 ```
-Parse → EQL-S subscription for `todos` → Svelte component → syncs across two
+Parse → TQL subscription for `todos` → Svelte component → syncs across two
 clients via Iroh. Every layer under `view` already exists.
 
 ## 10. Implications
@@ -527,7 +527,7 @@ clients via Iroh. Every layer under `view` already exists.
    divergent paths for one job — which is how the VcsOp/KernelOp split happened.
    The infrastructure already exists and was never wired up: `SqlJsKernelBackend`
    ("pure-WASM SQLite … browser"), `IdbOpLog` ("browser-side companion to
-   JsonOpLog"), and EQL-S has no node-only imports. Nobody builds an IndexedDB op
+   JsonOpLog"), and TQL has no node-only imports. Nobody builds an IndexedDB op
    log for a thin client.
    - **Refinement:** ship *decomposed payloads + `kind`*. The peer then needs
      only apply-facts and query — not `decompose.ts`, not the 33-kind vocabulary.
@@ -541,48 +541,55 @@ clients via Iroh. Every layer under `view` already exists.
      it, so per-fact read filtering is client-side theatre. §5 stops being
      deferrable. That is a feature: server projections let you pretend you have
      per-fact auth while being a thin client.
-   - **Would change the answer:** an EQL-S + sql.js bundle too large for the
+   - **Would change the answer:** an TQL + sql.js bundle too large for the
      browser (unmeasured); a real per-fact authorization need rooms cannot
      express.
    - **This decision precedes 1 and 4 below** — a DSL binds to a substrate, and
      `tx-query`/`use:query` reads identically whether it runs locally or asks a
      server. Design it first and you may write syntax the client cannot execute.
 
-1. **Novel language vs. embedded DSL** (§3) — recommend embedded. **Needs your
-   call.**
-   - **Option C — htmx-style attribute DSL** (proposed 2026-07-15). Philosophy:
-     *"the graph is the engine of application state"* — decorate markup with
-     graph relationships instead of HTTP requests. Four primitives: `query`
-     (derive), `op` (mutate), `live` (subscribe), `ref` (bind to identity).
-     `live` is the real differentiator: it is exactly what htmx lacks and Trellis
-     has.
-   - **Take the philosophy; reject the string form.** `tx-query="todos.where(done
-     = false)"` *is* a novel language — §3's Option A wearing an attribute, and
-     worse on every axis §3 cared about: no type-check, no autocomplete, no LSP,
-     runtime errors instead of compile errors, and invisible to tooling
-     (including the `pnpm check` promote gate). §3's own argument — "agents
-     already speak TypeScript … strictly better for the AX thesis" — is decisive
-     against it: an agent that writes `don = false` gets a blank div and no
-     diagnostic.
-   - **Synthesis:** keep the four primitives, bind them to *typed expressions*,
-     which lands on §4's existing Svelte-runes recommendation:
-     `<ul use:query={todos.where(t => !t.done)} use:live>`. htmx needed attribute
-     strings because HTML had no other extension mechanism; we control the
-     compiler and do not inherit that constraint.
-   - **Two flagged before this becomes a spec:** (a) `tx-agent` is a capability
-     grant in markup — "who may invoke this, on whose behalf, reading what" is §5
-     + capability middleware, and must exist before the syntax; (b) optimistic
-     update/rollback does *not* "emerge from the four primitives" — it is a
-     protocol concern (SPEC-v1.1+) that depends on what the server does with a
-     rejected op.
+ 1. **Novel language vs. embedded DSL** (§3) — **RESOLVED (2026-07-16).**
+    See the implemented spec: `docs/specs/tml-v0.md`.
+    - **Option C — htmx-style attribute DSL** (proposed 2026-07-15). Philosophy:
+      *"the graph is the engine of application state"* — decorate markup with
+      graph relationships instead of HTTP requests. Four primitives: `query`
+      (derive), `op` (mutate), `live` (subscribe), `ref` (bind to identity).
+      `live` is the real differentiator: it is exactly what htmx lacks and Trellis
+      has.
+    - **Take the philosophy; reject the string form.** `tx-query="todos.where(done
+      = false)"` *is* a novel language — §3's Option A wearing an attribute, and
+      worse on every axis §3 cared about: no type-check, no autocomplete, no LSP,
+      runtime errors instead of compile errors, and invisible to tooling
+      (including the `pnpm check` promote gate). §3's own argument — "agents
+      already speak TypeScript … strictly better for the AX thesis" — is decisive
+      against it: an agent that writes `don = false` gets a blank div and no
+      diagnostic.
+    - **Synthesis — RESOLVED as `tml-*` attributes with scoped field expressions.**
+      The four primitives ship as **`tml-query`, `tml-op`, `tml-live`, `tml-ref`**
+      attributes (ADR 0025 naming) binding to *typed, scoped field-path
+      expressions* (e.g. `tml-text="lane.id"`, `tml-attr-class="lane.status"`,
+      `tml-op="promote(lane.id)"`) — not raw TQL strings, not inline JS. This is
+      one language with **two transport adapters**: the **Web driver** (client-side
+      `evaluateQuery` over a seeded snapshot + `fetch` mutation + SSE `live`)
+      ships in v0 on the sterile `/tml-lanes` route; the **Tauri driver** is a
+      deferred adapter (TRL-9) over the same attribute vocabulary. htmx needed
+      attribute strings because HTML had no other extension mechanism; we control
+      the runtime and do not inherit that constraint.
+    - **Two flagged before this becomes a spec:** (a) `tx-agent` is a capability
+      grant in markup — "who may invoke this, on whose behalf, reading what" is §5
+      + capability middleware, and must exist before the syntax; (b) optimistic
+      update/rollback does *not* "emerge from the four primitives" — it is a
+      protocol concern (SPEC-v1.1+) that depends on what the server does with a
+      rejected op. Both remain open; TML v0 scopes `tml-op` to a fire-and-reflect
+      model (server is authoritative; the live stream re-renders).
 2. **Read-authorization model** (§5) — needs a dedicated ADR before `rule Read`
    is real. Blocking for Campus "room = file."
 3. **Reads/writes enforcement unification** — one mechanism or two? Today it's
-   two (EQL-S scope + capability middleware).
+   two (TQL scope + capability middleware).
 4. **`view` target** — recommend Svelte 5 runes *inside* a **Block Protocol 0.3**
    block (§6), vs. own reactive runtime.
 5. **How much Block Protocol?** (§6) — message contract only (recommended), or
-   its type system too? The type system caps EQL-S expressiveness at the
+   its type system too? The type system caps TQL expressiveness at the
    boundary. Also requires accepting that 0.4 is paused and we'd be targeting a
    de-facto frozen spec.
 6. **Is "CRDT" claimed or earned?** — need the graph conflict-semantics work
