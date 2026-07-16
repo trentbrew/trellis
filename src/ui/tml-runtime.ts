@@ -20,6 +20,12 @@ declare const EventSource: {
   };
 };
 
+import { EAVStore } from '../core/store/eav-store.js';
+import { QueryEngine } from '../core/query/engine.js';
+import { parseSimple } from '../core/query/index.js';
+import { decompose } from '../vcs/decompose.js';
+import type { VcsOp } from '../vcs/types.js';
+
 export type ResultRow = Record<string, unknown>;
 
 export interface RefHandle {
@@ -280,6 +286,105 @@ export class WebDriver implements TmlDriver {
     this.seed(snap);
     const es = new EventSource(this.base + opts.streamUrl);
     es.addEventListener('snapshot', (ev) => this.seed(JSON.parse(ev.data)));
+    return es;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Peer driver — materializes ops locally and queries with the real TQL
+ * ------------------------------------------------------------------ */
+
+/**
+ * A TML driver that IS a peer.
+ *
+ * `WebDriver` renders from server-built snapshots, which means the server has to
+ * anticipate every projection the page wants — the page cannot ask a question
+ * nobody planned for. That is not local-first (TRL-108 Finding 2), and it forced
+ * `evaluateQuery`: a regex approximation of TQL over two hardcoded collections.
+ * Two implementations of one query language.
+ *
+ * This applies the op stream to a real `EAVStore` via `decompose` and answers
+ * with the real `QueryEngine`. So TML gets whatever TQL can express — traversal,
+ * links, arbitrary types — instead of `Lane` and `Issue`.
+ *
+ * Cost of the whole thing (store + decompose + QueryEngine + hash verify) is
+ * ~5.7 KB gzipped, measured. `decompose` only became bundleable once its
+ * accidental `fs`/`path` imports were removed.
+ *
+ * Not the default yet: SPEC-v1.1 (TRL-110) owns whether peers materialize, and
+ * `WebDriver` remains for consumers that genuinely want a thin client.
+ */
+export class PeerDriver implements TmlDriver {
+  base: string;
+  store: EAVStore;
+  private _engine: QueryEngine;
+  private _subs = new Set<() => void>();
+  private _seen = new Set<string>();
+  private _refs: Record<string, RefHandle> = {};
+
+  constructor(opts: { baseUrl?: string } = {}) {
+    this.base = opts.baseUrl || '';
+    this.store = new EAVStore();
+    this._engine = new QueryEngine(this.store);
+  }
+
+  /**
+   * Apply one op. Idempotent by hash: the stream replays on reconnect, and a
+   * peer that double-applied would double-project.
+   */
+  applyOp(op: VcsOp): void {
+    if (!op?.hash || this._seen.has(op.hash)) return;
+    this._seen.add(op.hash);
+    const d = decompose(op);
+    if (d.deleteFacts.length) this.store.deleteFacts(d.deleteFacts);
+    if (d.deleteLinks.length) this.store.deleteLinks(d.deleteLinks);
+    if (d.addFacts.length) this.store.addFacts(d.addFacts);
+    if (d.addLinks.length) this.store.addLinks(d.addLinks);
+  }
+
+  /** Apply a batch, then notify once — a per-op notify would re-render per op. */
+  applyOps(ops: VcsOp[]): void {
+    for (const op of ops) this.applyOp(op);
+    this._subs.forEach((cb) => cb());
+  }
+
+  async query(q: string): Promise<ResultRow[]> {
+    const parsed = parseSimple(q);
+    const res = await this._engine.execute(parsed);
+    return res.bindings as ResultRow[];
+  }
+
+  live(_q: string, cb: () => void): () => void {
+    this._subs.add(cb);
+    return () => this._subs.delete(cb);
+  }
+
+  async op(action: string, args: Record<string, unknown>): Promise<void> {
+    const res = await fetch(this.base + '/api/tml-mutations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, args }),
+    });
+    if (!res.ok) throw new Error('tml op failed: ' + (await res.text()));
+  }
+
+  ref(id: string): RefHandle {
+    if (!this._refs[id]) {
+      this._refs[id] = { id, read: () => this.store, write: () => {} };
+    }
+    return this._refs[id];
+  }
+
+  /** Subscribe to the op stream and materialize it. Returns the EventSource. */
+  connect(opts: { streamUrl: string }): unknown {
+    const es = new EventSource(this.base + opts.streamUrl);
+    es.addEventListener('op', (ev) => {
+      try {
+        this.applyOps([JSON.parse(ev.data) as VcsOp]);
+      } catch (e) {
+        console.error('[tml] bad op frame', e);
+      }
+    });
     return es;
   }
 }
