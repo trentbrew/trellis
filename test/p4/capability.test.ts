@@ -134,6 +134,25 @@ describe('resolveCapability — deny-by-default + closure', () => {
     expect(resolveCapability(c.store, STRANGER, zid)).toBe(CapabilityLevel.None);
   });
 
+  test('a direct grant never lowers a principal below defaultVisibility', async () => {
+    const c = ctx();
+    const zid = makeZoneId('did:key:zowner', 'classroom');
+    // Public-ish zone: anyone gets Member.
+    await defineZone(c, {
+      zoneId: zid,
+      alias: 'Classroom',
+      defaultVisibility: CapabilityLevel.Member,
+    });
+    // A stranger already has Member via the default.
+    expect(resolveCapability(c.store, STRANGER, zid)).toBe(CapabilityLevel.Member);
+
+    // Explicitly granting Reader must not DEMOTE below what anon already has.
+    // Resolution is positive-only (max over default + direct + inherited) — a
+    // grant that lowers you is an explicit-deny, which this model does not have.
+    await setGrant(c, { principal: MEMBER, zoneId: zid, level: CapabilityLevel.Reader }, OWNER);
+    expect(resolveCapability(c.store, MEMBER, zid)).toBe(CapabilityLevel.Member);
+  });
+
   test('parentZone closure inherits the max level', async () => {
     const c = ctx();
     const parent = makeZoneId('did:key:zowner', 'facility');
