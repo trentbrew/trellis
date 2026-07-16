@@ -18,7 +18,31 @@ import type { EAVStore } from '../core/store/eav-store.js';
 import type { VcsOp } from './types.js';
 
 export const INTEGRATION_SNAPSHOT_FILE = 'integration-snapshot.json';
-export const INTEGRATION_SNAPSHOT_VERSION = 1;
+
+/**
+ * Snapshot version — a **projection** version, not a file-format version.
+ *
+ * A snapshot is derived state: it is only valid for the `decompose` that built
+ * it. Bumping this on a format change alone is not enough, because changing what
+ * `decompose` PROJECTS leaves the container shape identical, so a stale snapshot
+ * is accepted and the new facts never appear. Worse, `materializeIntegration`
+ * re-saves the snapshot on every open, so a snapshot written by older projection
+ * logic can never self-heal — there is nothing left to replay, and each open
+ * rewrites the stale state. The op log says one thing and the store says another,
+ * permanently.
+ *
+ * Seen for real: ADR 0026 added an `issueType` fact to `vcs:issueCreate`; ops
+ * carried it, `decompose` projected it, and `trellis issue list --type epic`
+ * still returned nothing. Only `TRELLIS_NO_SNAPSHOT=1` showed the truth.
+ *
+ * **BUMP THIS WHENEVER `decompose` CHANGES WHAT IT EMITS.** A mismatch returns
+ * null from `loadPersistedSnapshot`, which falls through to a full replay and
+ * re-saves at the current version — the same v1/v2 grandfathering ADR 0021 uses
+ * for op preimages, applied to derived state.
+ *
+ * 2 — ADR 0026: `issueType` on issues.
+ */
+export const INTEGRATION_SNAPSHOT_VERSION = 2;
 
 export interface PersistedIntegrationSnapshot {
   version: typeof INTEGRATION_SNAPSHOT_VERSION;
