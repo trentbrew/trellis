@@ -50,7 +50,7 @@ Avoid overloading **Record** in prose when you mean “user-defined type” — 
 |------|----------|---------|
 | **Live read** | `entitiesStore`, `liveEntities` | WebSocket subscription + hydrated rows for a Type. |
 | **Mutations** | `mutations(client, Type)` | Typed create / update / remove. |
-| **Entity repository** (legacy) | `demo/.../collection.ts` → `createEntityCollection()` | Pre-SDK server helper (hand-written EQL + subscribe). **Not** `core:Collection`. Retire in favor of typed SDK. |
+| **Entity repository** (legacy) | `demo/.../collection.ts` → `createEntityCollection()` | Pre-SDK server helper (hand-written TQL + subscribe). **Not** `core:Collection`. Retire in favor of typed SDK. |
 
 ## Demo-only (`demo/realtime-app`)
 

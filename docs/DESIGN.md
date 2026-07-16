@@ -51,7 +51,7 @@ The trellis-core kernel already provides several primitives that map directly to
 | `SyncProvider`        | `src/kernel/sync.ts`                | **P2P replication.** `broadcast(op)` and `onRemoteOp(callback)` enable distributed op propagation.                                                          | **Reuse as-is** — the interface is sync-transport-agnostic. Iroh integration is already a declared dependency.                              |
 | `TrellisKernel`       | `src/kernel/trellis-kernel.ts`      | **Composition root.** Orchestrates store, backend, middleware, evaluator, and sync. Provides `boot()`, `mutate()`, `query()`, `checkpoint()`, time-travel.  | **Extend** — add VCS-specific high-level methods (`ingest`, `milestone`, `branch`, `merge`, `diff`).                                        |
 | `WorkspaceConfig`     | `src/kernel/workspace.ts`           | **Declarative config.** `.trellis` files define ontologies, projections, and graph data.                                                                    | **Extend** — add VCS-specific workspace fields (tracked paths, ignore patterns, branch policies).                                           |
-| `EQL-S` / `Datalog`   | `src/query/`                        | **Query layer.** Structured queries over the graph.                                                                                                         | **Reuse as-is** — VCS queries ("find all milestones that touched module X") compile to existing EQL-S/Datalog.                              |
+| `TQL` / `Datalog`   | `src/query/`                        | **Query layer.** Structured queries over the graph.                                                                                                         | **Reuse as-is** — VCS queries ("find all milestones that touched module X") compile to existing TQL/Datalog.                              |
 
 ### 1.2 Gaps: What's Missing
 
@@ -656,7 +656,7 @@ This decomposes into:
 
 ### 5.3 Milestone Querying
 
-Because milestones are graph entities, they're queryable via standard EQL-S:
+Because milestones are graph entities, they're queryable via standard TQL:
 
 ```sql
 -- Find all milestones by Alice on the main branch
@@ -995,7 +995,7 @@ TrellisVCS/
 ├── trellis-core/                # The semantic kernel (dependency)
 │   └── src/
 │       ├── store/               # EAV engine
-│       ├── query/               # EQL-S + Datalog
+│       ├── query/               # TQL + Datalog
 │       ├── persist/             # SQLite backend
 │       ├── kernel/              # Kernel API + middleware
 │       └── ...

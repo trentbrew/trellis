@@ -16,7 +16,7 @@ Three realtime layers must not be conflated:
 
 | Layer | Transport | What it syncs | Persisted? |
 | ----- | --------- | ------------- | ---------- |
-| **Graph subscriptions** | WS `/realtime` | EQL query results (collections, cards, document bodies after save) | Yes — op log |
+| **Graph subscriptions** | WS `/realtime` | TQL query results (collections, cards, document bodies after save) | Yes — op log |
 | **Presence relay** | WS `/rt` | Cursors, record focus, chat, `RealtimeText` | Ephemeral (+ in-memory replay) |
 | **VCS peer sync** | `trellis/sync` | Branch op reconciliation | Yes — different problem |
 

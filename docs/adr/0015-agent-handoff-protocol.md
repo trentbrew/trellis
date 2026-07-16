@@ -30,7 +30,7 @@ Record handoffs via `trellis protocol send`:
 - `label: message` (default) or `label: decision` when `status: DECISION`
 - `description` = turn banner + YAML envelope (parseable)
 
-**No new kernel entity types** until EQL-S filters on envelope fields creak.
+**No new kernel entity types** until TQL filters on envelope fields creak.
 
 ### `trellis whereami`
 
@@ -77,7 +77,7 @@ Cursor hooks                                ← execution runtime
 | ----- | ----- |
 | **1a** (TRL-41) | ✅ **3.2.3** — `src/protocol/*`, `trellis protocol send`, `trellis whereami`, tests, this ADR |
 | **1b** | Pipeline stop hook writes graph + session; `core:Workflow` data instance |
-| **2** | `ProtocolMessage` entity; EQL-S filters on `to`, `status`, stall thresholds |
+| **2** | `ProtocolMessage` entity; TQL filters on `to`, `status`, stall thresholds |
 
 ## Non-goals (1a)
 

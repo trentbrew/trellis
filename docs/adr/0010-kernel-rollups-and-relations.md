@@ -5,13 +5,13 @@
 
 ## Context
 
-Ontology fields can declare `rollup` and `relation` value types. After TRL-20, formulas enrich EQL bindings in `logic-middleware`, but rollups were stubbed (`''`) and relation fields were not projected from the graph.
+Ontology fields can declare `rollup` and `relation` value types. After TRL-20, formulas enrich TQL bindings in `logic-middleware`, but rollups were stubbed (`''`) and relation fields were not projected from the graph.
 
 The realtime-app sandbox computes `tagCount` via `frameworkTag` join-entities and a server-side `tags.length` helper. Kernel support should cover both graph links and join-entity rollups.
 
 ## Decision
 
-1. **`evaluateRollup`** (`src/core/computation/rollup.ts`) runs post-EQL with store access:
+1. **`evaluateRollup`** (`src/core/computation/rollup.ts`) runs post-TQL with store access:
    - **Graph links:** `relationProperty` is the link attribute; forward links from the binding entity are aggregated.
    - **Join-entities:** optional `rollup.joinEntity: { type, foreignKey }` counts/filters rows whose `foreignKey` fact points at the parent entity.
    - Aggregations: `count`, `sum`, `avg`, `min`, `max`, `median`, `mode`.
@@ -23,7 +23,7 @@ The realtime-app sandbox computes `tagCount` via `frameworkTag` join-entities an
 
 ## Consequences
 
-- EQL can `SELECT ?tagCount` when ontology declares the rollup field and middleware is attached.
+- TQL can `SELECT ?tagCount` when ontology declares the rollup field and middleware is attached.
 - Join-entity rollups require explicit `joinEntity` in ontology (sandbox `tagCount` schema is the reference shape).
 - CMS `{field}` rollups remain separate; kernel uses ontology `RollupConfig` only.
 - Future: unify join-entities with ontology `relation` defs; richer many-cardinality binding shape.
