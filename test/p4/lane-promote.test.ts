@@ -43,14 +43,71 @@ describe('Lane promote', () => {
     const resultA = await engine.promoteLane(laneA.id);
     expect(resultA.promoted).toBe(true);
     expect(resultA.blockingConflicts).toHaveLength(0);
+    expect(resultA.milestoneMessage).toBeTruthy();
+    expect(resultA.milestoneId).toBeTruthy();
 
-    const resultB = await engine.promoteLane(laneB.id);
+    const resultB = await engine.promoteLane(laneB.id, {
+      message: 'Lane B narrative',
+    });
     expect(resultB.promoted).toBe(true);
+    expect(resultB.milestoneMessage).toBe('Lane B narrative');
 
     expect(engine.getIssue(idA)?.description).toBe('lane A work');
     expect(engine.getIssue(idB)?.description).toBe('lane B work');
     expect(loadLaneMeta(join(TEST_ROOT, '.trellis'), laneA.id)?.status).toBe('promoted');
     expect(loadLaneMeta(join(TEST_ROOT, '.trellis'), laneB.id)?.status).toBe('promoted');
+
+    const milestones = engine.listMilestones();
+    expect(milestones.some((m) => m.message === 'Lane B narrative')).toBe(true);
+  });
+
+  test('promote --no-milestone skips milestone creation', async () => {
+    const lane = await engine.createLane({ name: 'skip-ms' });
+    await engine.enterLane(lane.id);
+    await engine.createStoreEntity('thing:1', 'Thing', { name: 'x' });
+    await engine.leaveLane();
+
+    const before = engine.listMilestones().length;
+    const result = await engine.promoteLane(lane.id, { milestone: false });
+    expect(result.promoted).toBe(true);
+    expect(result.milestoneId).toBeUndefined();
+    expect(engine.listMilestones()).toHaveLength(before);
+  });
+
+  test('draftLanePromoteMilestoneMessage prefers name then issue then files', async () => {
+    const { draftLanePromoteMilestoneMessage } = await import(
+      '../../src/vcs/lane-promote.js'
+    );
+    const meta = {
+      id: 'lane-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+      status: 'active' as const,
+      baseBranch: 'main',
+      baseOpHash: 'h',
+      targetBranch: 'main',
+      agentId: 'agent:t',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    expect(
+      draftLanePromoteMilestoneMessage({
+        message: '  Explicit  ',
+        meta,
+        opsToReplay: [],
+      }),
+    ).toBe('Explicit');
+    expect(
+      draftLanePromoteMilestoneMessage({
+        meta: { ...meta, name: 'tql-docs' },
+        opsToReplay: [],
+      }),
+    ).toBe('Promote tql-docs');
+    expect(
+      draftLanePromoteMilestoneMessage({
+        meta: { ...meta, issueId: 'issue:TRL-9' },
+        opsToReplay: [],
+        issueTitle: 'Do the thing',
+      }),
+    ).toBe('TRL-9: Do the thing');
   });
 
   test('same issue attribute diverged since fork is a hard conflict', async () => {

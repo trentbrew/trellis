@@ -1,10 +1,8 @@
 # Spec: Lane coherence for agent experience
 
-**Status:** Implementing (AC1 `lane split` + AC2 issue⇄promote boundary shipped)
-**Date:** 2026-07-15
-**Issue:** TRL-117
-**Relates to:** ADR 0014 (lane worktree bind), ADR 0015 (agent handoff protocol),
-AGENTS.md "Agent Lanes" section.
+**Status:** Implementing (AC1–AC3 shipped: split, issue⇄promote, promote==milestone)
+**Date:** 2026-07-15 **Issue:** TRL-117 **Relates to:** ADR 0014 (lane worktree
+bind), ADR 0015 (agent handoff protocol), AGENTS.md "Agent Lanes" section.
 
 ## Problem
 
@@ -58,17 +56,18 @@ rewrite is proposed.
   opt out). Covered by `test/vcs/issue-start-lane-branch.test.ts` and
   `test/vcs/issue-close-promote-boundary.test.ts`.
 - **Verified:** `issue close --confirm` enforces promote replay — auto-promotes
-  the linked lane when it has journal ops; `--no-promote` refuses close until
-  an explicit `trellis lane promote` (promote boundary == issue boundary).
+  the linked lane when it has journal ops; `--no-promote` refuses close until an
+  explicit `trellis lane promote` (promote boundary == issue boundary).
 - Documented in AGENTS.md "Agent Lanes" and CLI help for `issue start` /
   `issue close`.
 
 ### 3. Promote == milestone
 
-- `trellis lane promote <lane> -m "<narrative>"` replays onto integration
-  **and** creates the milestone in one step.
-- Optionally auto-draft the narrative from the lane's op summaries when `-m` is
-  omitted, so promotion never blocks on writing prose.
+- **Shipped:** `trellis lane promote <lane> [-m "<narrative>"]` replays onto
+  integration **and** creates a milestone in one step. Omit `-m` to auto-draft
+  from lane name / linked issue title / touched files. Use `--no-milestone` to
+  opt out.
+- Auto-promote on `issue close` also creates a milestone from the issue title.
 
 ### 4. Structural cross-agent file protection
 
@@ -104,8 +103,9 @@ signal.
 - ~~Should `lane split` auto-bind a sub-lane to the parent, or be fully
   independent?~~ **Resolved:** fully independent journal + promote unit; parent
   recorded as sibling lineage only.
-- Is auto-drafted milestone narrative good enough, or is a mandatory human
-  summary preferred at promote time?
+- ~~Is auto-drafted milestone narrative good enough, or is a mandatory human
+  summary preferred at promote time?~~ **Resolved:** auto-draft by default;
+  `-m` for an explicit narrative; `--no-milestone` to skip.
 - Does the coherence signal belong in `lane status` or `whereami` (already the
   re-entry dump)? Avoid duplicating ADR 0015's `whereami`.
 

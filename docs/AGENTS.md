@@ -221,12 +221,15 @@ open a new lane — do not keep writing into a catch-all lane.
 - `issue close --confirm` → auto-promotes that lane's journal onto integration
   before closing (or refuses under `--no-promote` until you `lane promote`)
 
+**Promote == milestone.** A successful `lane promote` also creates a milestone
+(narrative auto-drafted from lane name / issue / ops, or set with `-m`).
+
 ```bash
 trellis issue start TRL-1            # Branch + lane
 trellis lane split --name tql-docs   # Fresh domain lane (no issue required); enters it
 trellis lane enter <lane-id>         # Route writes; materialize to worktree when bound
-trellis lane promote <lane-id>       # Explicit promote (also happens on issue close)
-trellis issue close TRL-1 --confirm  # Auto-promotes linked lane, then closes
+trellis lane promote <lane-id> -m "TQL docs rename"  # Replay + milestone
+trellis issue close TRL-1 --confirm  # Auto-promotes linked lane (+ milestone), then closes
 export TRELLIS_LANE_ID=lane-…        # Subprocess agents auto-enter
 ```
 
