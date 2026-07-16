@@ -5,9 +5,11 @@ import {
   resolveExpr,
   Store,
   WebDriver,
+  PeerDriver,
   applyBindings,
   mount,
 } from '../../src/ui/tml-runtime.js';
+import { createVcsOp } from '../../src/vcs/ops.js';
 
 async function withFetchStub(
   run: (fetchMock: ReturnType<typeof vi.fn>) => Promise<void> | void,
@@ -390,5 +392,92 @@ describe('mount + tml-live', () => {
 
     // The container is cleared each render; a stale append shows up here.
     expect(list.children).toHaveLength(2);
+  });
+});
+
+/**
+ * `PeerDriver` — TML as a peer rather than a snapshot renderer.
+ *
+ * The point is not that it renders the same thing `WebDriver` does. It is that
+ * queries go to the real `QueryEngine` over a real `EAVStore`, so TML can ask
+ * things the server never anticipated — which `evaluateQuery` cannot, since it
+ * filters a denormalized array with `Lane` and `Issue` hardcoded.
+ */
+describe('PeerDriver (materializing)', () => {
+  const storeAssert = (facts: { e: string; a: string; v: unknown }[]) =>
+    createVcsOp('vcs:storeAssert', { agentId: 'agent:test', vcs: { facts } as never });
+
+  it('materializes ops into a queryable store', async () => {
+    const d = new PeerDriver();
+    d.applyOps([
+      await storeAssert([
+        { e: 'thing:1', a: 'type', v: 'Widget' },
+        { e: 'thing:1', a: 'name', v: 'first' },
+      ]),
+    ]);
+
+    const rows = await d.query('find ?e where type = "Widget"');
+    expect(rows).toHaveLength(1);
+  });
+
+  it('answers a type the server never projected — WebDriver cannot', async () => {
+    const gizmo = { id: 'gizmo:1', label: 'novel' };
+
+    // WebDriver, handed a snapshot that literally contains the data:
+    // `collectionFor` only knows Lane and Issue, so anything else hits its
+    // default branch and returns []. The server has to have anticipated it.
+    const web = new WebDriver();
+    web.seed({ ...cloneSnapshot(), gizmos: [gizmo] });
+    expect(await web.query("find ?e where type = 'Gizmo'")).toHaveLength(0);
+
+    // PeerDriver holds the graph, so it does not care what anyone anticipated.
+    const peer = new PeerDriver();
+    peer.applyOps([
+      await storeAssert([
+        { e: 'gizmo:1', a: 'type', v: 'Gizmo' },
+        { e: 'gizmo:1', a: 'label', v: 'novel' },
+      ]),
+    ]);
+    expect(await peer.query('find ?e where type = "Gizmo"')).toHaveLength(1);
+  });
+
+  it('is idempotent by op hash — replays do not double-project', async () => {
+    const d = new PeerDriver();
+    const op = await storeAssert([{ e: 'thing:1', a: 'type', v: 'Widget' }]);
+
+    d.applyOps([op]);
+    d.applyOps([op]); // the stream replays on reconnect
+
+    expect(await d.query('find ?e where type = "Widget"')).toHaveLength(1);
+  });
+
+  it('notifies live subscribers once per batch, not per op', async () => {
+    const d = new PeerDriver();
+    const cb = vi.fn();
+    d.live('', cb);
+
+    d.applyOps([
+      await storeAssert([{ e: 'a:1', a: 'type', v: 'Widget' }]),
+      await storeAssert([{ e: 'a:2', a: 'type', v: 'Widget' }]),
+    ]);
+
+    // Per-op notify would re-render the DOM once per op in a cold replay.
+    expect(cb).toHaveBeenCalledTimes(1);
+    expect(await d.query('find ?e where type = "Widget"')).toHaveLength(2);
+  });
+
+  it('reflects retractions, not just asserts', async () => {
+    const d = new PeerDriver();
+    d.applyOps([await storeAssert([{ e: 'thing:1', a: 'type', v: 'Widget' }])]);
+    expect(await d.query('find ?e where type = "Widget"')).toHaveLength(1);
+
+    d.applyOps([
+      await createVcsOp('vcs:storeRetract', {
+        agentId: 'agent:test',
+        vcs: { facts: [{ e: 'thing:1', a: 'type', v: 'Widget' }] } as never,
+      }),
+    ]);
+
+    expect(await d.query('find ?e where type = "Widget"')).toHaveLength(0);
   });
 });

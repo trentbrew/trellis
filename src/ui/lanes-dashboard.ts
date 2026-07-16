@@ -218,8 +218,15 @@ export async function startLanesDashboard(
     }
 
     if (path === '/tml-runtime.js') {
-      // Serve the TML v0 runtime. It is authored as typed TS; transpile to JS on
-      // the fly so it works in dev without a build step (esbuild is a dep).
+      // Serve the TML runtime. Authored as typed TS; built on the fly so it works
+      // in dev without a build step (esbuild is a dep).
+      //
+      // BUNDLE, not transform. `transform` only strips types — it leaves import
+      // specifiers untouched, so the browser received bare relative paths and any
+      // import outside this one file 404'd. That capped the runtime at whatever it
+      // could do with zero imports. Bundling lets it pull in the real kernel
+      // pieces (EAVStore / decompose / QueryEngine), which is what a materializing
+      // peer needs; those are browser-safe and measure ~5.7 KB gzipped together.
       const tsPath = findUiAsset('tml-runtime.ts');
       if (!tsPath) {
         return new Response('tml-runtime.ts not found — run from trellis-node.', {
@@ -228,13 +235,18 @@ export async function startLanesDashboard(
         });
       }
       try {
-        const { transform } = await import('esbuild');
-        const js = await transform(readFileSync(tsPath, 'utf-8'), {
-          loader: 'ts',
+        const { build } = await import('esbuild');
+        const out = await build({
+          entryPoints: [tsPath],
+          bundle: true,
+          write: false,
           format: 'esm',
           target: 'es2020',
+          platform: 'browser',
+          // Keep it debuggable in dev; this is a test bed, not a shipped asset.
+          minify: false,
         });
-        return new Response(js.code, {
+        return new Response(out.outputFiles[0]!.text, {
           headers: {
             ...headers,
             'Content-Type': 'text/javascript; charset=utf-8',
@@ -242,7 +254,7 @@ export async function startLanesDashboard(
           },
         });
       } catch (err) {
-        return new Response('tml-runtime transform failed: ' + String(err), {
+        return new Response('tml-runtime build failed: ' + String(err), {
           status: 500,
           headers,
         });
