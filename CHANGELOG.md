@@ -4,7 +4,7 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
-## trellis [3.4.0] — 2026-07-15
+## trellis [3.4.0] — 2026-07-24
 
 **Lane ops were unverifiable; criterion removal (TRL-1, TRL-102).**
 
@@ -61,6 +61,35 @@ site copy.
 **Migration:** lane journals in existing repos still carry `vcs.laneId` and will
 fail verification until relocated. No hashes change — the stored hash is already
 the lane-free one.
+
+**Also in 3.4.0 (kernel / VCS / TML)**
+
+- **Lane promote reliability:** snapshot-head invariant fixes perpetual
+  "Integration head moved during promote" on issue-branch closes; coordination
+  hard-conflict skip v0.1 for sibling lanes (TRL-301–302, TRL-297–298).
+- **Promote == milestone + git:** `trellis milestone --commit` auto-commits on
+  integration; promote boundary locked to issue close; cross-agent file ownership
+  and lane coherence signals (TRL-117).
+- **`trellis lane split`:** open a domain lane without requiring an issue.
+- **`trellis doctor`:** probes mutation safety before contested writes.
+- **Op log safety:** append-only JSONL mirror; destructive guards; remote sprite
+  backup specs (ADR follow-through).
+- **TML runtime:** attribute projection on `/tml-lanes`; PeerDriver materializes
+  ops and queries with real TQL; Phase 4 vantage shell resolution; slimmer live
+  bundles (decompose browser-safe ~5.7 KB).
+- **Theme contract Phase C:** fractal vantage + shell morph; unified
+  `runtime-theme.css` scrubber hardening (TRL-167/281).
+- **Promote gate:** whole-suite check includes query-stress harness; 12 formerly
+  skipped CLI tests un-gated and passing.
+- **ADR 0022 / 0026:** grants as ops; defaultVisibility floor; issueType as
+  field not title prefix.
+
+**In development (not in this release's npm story)**
+
+- **`trellis admin` operator console** — substantial work on `main` (TML
+  projections, lane datatable, chrome polish). UI modules are **not yet
+  prebundled for global `npm install`**; use a repo checkout for admin. Not
+  headline in 3.4.0 — kernel/VCS/TML CLI improvements are the ship focus.
 
 ## trellis [3.3.0] — 2026-07-14
 
