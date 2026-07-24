@@ -4,7 +4,7 @@ import { join } from 'path';
 import { TrellisVcsEngine } from '../../src/engine.js';
 import { createVcsOp } from '../../src/vcs/ops.js';
 import { loadLaneMeta } from '../../src/vcs/lane.js';
-import { planLanePromote } from '../../src/vcs/lane-promote.js';
+import { planLanePromote, resolveBranchHeadFromOps, PROMOTE_LIFECYCLE_KINDS } from '../../src/vcs/lane-promote.js';
 import { BlobStore } from '../../src/vcs/blob-store.js';
 
 const TEST_ROOT = '/tmp/trellis-p4-lane-promote';
@@ -412,5 +412,69 @@ describe('Lane promote', () => {
 
     expect(plan.canPromote).toBe(false);
     expect(plan.blockingConflicts.some((c) => c.class === 'file')).toBe(true);
+  });
+
+  test('resolveBranchHeadFromOps skips promote lifecycle at tail', async () => {
+    const content = await createVcsOp('vcs:issueCreate', {
+      agentId: 'agent:test',
+      vcs: { issueId: 'TRL-snapshot', title: 'Snapshot head test' },
+    });
+    const start = await createVcsOp('vcs:lanePromoteStart', {
+      agentId: 'agent:test',
+      previousHash: content.hash,
+      vcs: {
+        laneId: 'lane-snapshot',
+        targetBranch: 'issue/TRL-snapshot-spec',
+        baseOpHash: content.hash,
+      },
+    });
+
+    expect(PROMOTE_LIFECYCLE_KINDS.has('vcs:lanePromoteStart')).toBe(true);
+    expect(
+      resolveBranchHeadFromOps([content, start], 'issue/TRL-snapshot-spec'),
+    ).toBe(content.hash);
+  });
+
+  test('resolveBranchHeadFromOps returns foreign integration op after lifecycle skip', async () => {
+    const content = await createVcsOp('vcs:issueCreate', {
+      agentId: 'agent:test',
+      vcs: { issueId: 'TRL-foreign', title: 'Foreign op test' },
+    });
+    const foreign = await createVcsOp('vcs:issueUpdate', {
+      agentId: 'agent:other',
+      previousHash: content.hash,
+      vcs: { issueId: 'TRL-foreign', description: 'concurrent write' },
+    });
+    const start = await createVcsOp('vcs:lanePromoteStart', {
+      agentId: 'agent:test',
+      previousHash: foreign.hash,
+      vcs: {
+        laneId: 'lane-foreign',
+        targetBranch: 'issue/TRL-foreign-spec',
+        baseOpHash: content.hash,
+      },
+    });
+
+    expect(
+      resolveBranchHeadFromOps([content, foreign, start], 'issue/TRL-foreign-spec'),
+    ).toBe(foreign.hash);
+  });
+
+  test('issue-branch lane promote succeeds end-to-end', async () => {
+    const created = await engine.createIssue('Issue branch promote');
+    const issueId = created.vcs!.issueId!;
+
+    await engine.startIssue(issueId);
+    const laneId = engine.getActiveLaneId()!;
+    await engine.updateIssue(issueId, { description: 'lane work on issue branch' });
+    await engine.leaveLane();
+
+    const dry = await engine.promoteLane(laneId, { dryRun: true });
+    expect(dry.blockingConflicts).toHaveLength(0);
+    expect(dry.canPromote).toBe(true);
+
+    const result = await engine.promoteLane(laneId);
+    expect(result.promoted).toBe(true);
+    expect(engine.getIssue(issueId)?.description).toBe('lane work on issue branch');
   });
 });
