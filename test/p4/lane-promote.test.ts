@@ -110,6 +110,71 @@ describe('Lane promote', () => {
     ).toBe('TRL-9: Do the thing');
   });
 
+  test('stale lane status skipped when integration head is queue', async () => {
+    const issueId = 'TRL-STATUS';
+    const createOp = await createVcsOp('vcs:issueCreate', {
+      agentId: 'agent:test',
+      vcs: { issueId, issueTitle: 'Status wins', issueStatus: 'backlog' },
+    });
+    const startOp = await createVcsOp('vcs:issueStart', {
+      agentId: 'agent:test',
+      previousHash: createOp.hash,
+      vcs: { issueId, oldIssueStatus: 'backlog' },
+    });
+    const queueOp = await createVcsOp('vcs:issueUpdate', {
+      agentId: 'agent:test',
+      previousHash: startOp.hash,
+      vcs: { issueId, issueStatus: 'queue', oldIssueStatus: 'in_progress' },
+    });
+    const laneStatusOp = await createVcsOp('vcs:issueUpdate', {
+      agentId: 'agent:lane',
+      vcs: { issueId, issueStatus: 'in_progress', oldIssueStatus: 'in_progress' },
+    });
+
+    const integrationOps = [createOp, startOp, queueOp];
+    const plan = await planLanePromote({
+      laneId: 'lane-status',
+      meta: {
+        id: 'lane-status',
+        status: 'active',
+        baseBranch: 'main',
+        baseOpHash: startOp.hash,
+        targetBranch: 'main',
+        agentId: 'agent:lane',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      targetBranch: 'main',
+      snapshotHead: queueOp.hash,
+      integrationOps,
+      laneOps: [laneStatusOp],
+    });
+
+    expect(plan.blockingConflicts).toHaveLength(0);
+    expect(plan.opsToReplay).toHaveLength(0);
+    expect(plan.canPromote).toBe(false);
+  });
+
+  test('non-coordination title still hard-conflicts when integration diverged', async () => {
+    const created = await engine.createIssue('Title conflict issue', {
+      description: 'base',
+    });
+    const issueId = created.vcs!.issueId!;
+
+    const lane = await engine.createLane();
+    await engine.enterLane(lane.id);
+    await engine.updateIssue(issueId, { title: 'lane title' });
+    await engine.leaveLane();
+
+    await engine.updateIssue(issueId, { title: 'integration title' });
+
+    const plan = await engine.promoteLane(lane.id, { dryRun: true });
+    expect(plan.blockingConflicts.some((c) => c.class === 'hard' && c.attribute === 'title')).toBe(
+      true,
+    );
+    expect(plan.canPromote).toBe(false);
+  });
+
   test('integration description wins over stale lane describe', async () => {
     const created = await engine.createIssue('Conflict issue');
     const issueId = created.vcs!.issueId!;
