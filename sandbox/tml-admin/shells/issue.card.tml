@@ -1,0 +1,18 @@
+# North-star authoring form — issue card at board density.
+# Twin IR: ir/issue.card.html (matches admin.html template body)
+
+shell issue.card (kind: issue, density: card) {
+  button[entity=@issue.id, status=@issue.status] {
+    #id {
+      @issue.id
+    }
+    #title {
+      @issue.title
+    }
+    #meta {
+      let priorityClass = "priority-badge " + (@issue.priority || "low")
+      @issue.priority   # class ← priorityClass (formula → tml-attr-class in IR)
+      @issue.laneIds?
+    }
+  }
+}

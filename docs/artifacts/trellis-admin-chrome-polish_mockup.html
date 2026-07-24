@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trellis — Admin chrome polish (TRL-236 design mock)</title>
+  <style>
+    :root {
+      --bg: #101010;
+      --surface: #1c1c1c;
+      --surface-inset: #161616;
+      --border: rgba(255, 255, 255, 0.195);
+      --text: rgba(255, 255, 255, 0.936);
+      --text2: rgba(255, 255, 255, 0.618);
+      --text3: rgba(255, 255, 255, 0.422);
+      --accent: #9dbefe;
+      --green: #12c905;
+      --sidebar-bg: #0c0c0c;
+      --sidebar-w: 200px;
+      --secondary-w: 224px;
+      --inspector-w: 280px;
+      --chrome-h: 56px;
+      --toolbar-control-h: 34px;
+      --toolbar-track: #1e1e1e;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    /* v2 grid: header above secondary+main */
+    .shell {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) var(--secondary-w) minmax(0, 1fr) var(--inspector-w);
+      grid-template-rows: var(--chrome-h) minmax(0, 1fr);
+      height: 100%;
+    }
+
+    .sidebar {
+      grid-column: 1;
+      grid-row: 1 / -1;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      padding: 0 10px 10px;
+    }
+
+    .header {
+      grid-column: 2 / -1;
+      grid-row: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      background: rgba(22, 22, 22, 0.75);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .secondary {
+      grid-column: 2;
+      grid-row: 2;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      min-height: 0;
+    }
+
+    .main {
+      grid-column: 3;
+      grid-row: 2;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+    }
+
+    .oplog {
+      grid-column: 4;
+      grid-row: 2;
+      background: var(--surface-inset);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text2);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+    }
+
+    .icon-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+    }
+
+    .crumb {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font: 500 11px var(--mono);
+      color: var(--text3);
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .crumb-seg {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex: none;
+    }
+
+    .crumb-seg svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+      opacity: 0.85;
+    }
+
+    .crumb-seg.current {
+      color: var(--text);
+    }
+
+    .crumb-sep {
+      opacity: 0.45;
+    }
+
+    .header-stats {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font: 500 11px var(--mono);
+      color: var(--text2);
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      display: inline-block;
+    }
+
+    /* Stacked zones — NOT 50/50 */
+    .secondary-zone {
+      flex: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .secondary-zone-toggle {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 12px 6px;
+      border: none;
+      background: transparent;
+      color: var(--text3);
+      font: 600 10px var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .secondary-zone-toggle svg.chev {
+      width: 12px;
+      height: 12px;
+      stroke: currentColor;
+      fill: none;
+      transition: transform 0.15s ease;
+    }
+
+    .secondary-zone.collapsed .secondary-zone-toggle svg.chev {
+      transform: rotate(-90deg);
+    }
+
+    .secondary-zone.collapsed .secondary-nav {
+      display: none;
+    }
+
+    .secondary-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 0 8px 10px;
+    }
+
+    .route-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 32px;
+      padding: 0 8px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text2);
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .route-item[aria-current="page"] {
+      background: rgba(157, 190, 254, 0.12);
+      color: var(--accent);
+    }
+
+    .route-item svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+      flex: none;
+    }
+
+    .view-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 48px;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      flex: none;
+    }
+
+    .view-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .search-wrap {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: var(--toolbar-control-h);
+      padding: 0 10px;
+      background: var(--toolbar-track);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .search-wrap input {
+      flex: 1;
+      min-width: 0;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      outline: none;
+    }
+
+    .view-toggle {
+      display: flex;
+      height: var(--toolbar-control-h);
+      background: var(--toolbar-track);
+      border-radius: 6px;
+      padding: 2px;
+      flex: none;
+    }
+
+    .view-toggle button {
+      border: none;
+      background: transparent;
+      color: var(--text2);
+      padding: 0 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .view-toggle button.active {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .view-body {
+      flex: 1;
+      overflow: auto;
+      padding: 12px;
+      color: var(--text3);
+    }
+
+    .oplog-head {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      font: 600 12px var(--font);
+    }
+
+    .oplog-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .oplog-day {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .oplog-day-toggle {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border: none;
+      background: transparent;
+      color: var(--text3);
+      font: 600 10px var(--mono);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      text-align: left;
+      position: sticky;
+      top: 0;
+      background: var(--surface-inset);
+    }
+
+    .oplog-day.collapsed .op-list {
+      display: none;
+    }
+
+    .op {
+      display: grid;
+      grid-template-columns: 64px 1fr 72px;
+      gap: 8px;
+      padding: 6px 12px 6px 28px;
+      font: 500 11px var(--mono);
+      color: var(--text2);
+    }
+
+    .legend {
+      position: fixed;
+      bottom: 12px;
+      right: 12px;
+      max-width: 280px;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 11px;
+      color: var(--text2);
+      line-height: 1.4;
+    }
+
+    .legend strong {
+      color: var(--accent);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .secondary-zone-toggle svg.chev {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="shell" data-design-note="Header row spans above secondary — not beside it">
+    <aside class="sidebar" aria-label="Operate">
+      <div
+        style="height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 10px;font-weight:700">
+        Trellis</div>
+      <div style="padding:8px 10px;font:600 10px var(--mono);color:var(--text3);letter-spacing:.08em">OPERATE</div>
+      <button class="route-item" style="width:100%"><span>VCS</span></button>
+    </aside>
+
+    <header class="header">
+      <button type="button" class="icon-btn" aria-label="Collapse primary sidebar">
+        <svg viewBox="0 0 24 24">
+          <rect width="18" height="18" x="3" y="3" rx="2" />
+          <path d="M9 3v18" />
+        </svg>
+      </button>
+      <nav class="crumb" aria-label="Location" data-design-note="Route tab in crumb — no Work·Milestones title">
+        <span class="crumb-seg"><svg viewBox="0 0 24 24">
+            <path
+              d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+          </svg>trellis-node</span>
+        <span class="crumb-sep">/</span>
+        <span class="crumb-seg"><svg viewBox="0 0 24 24">
+            <rect width="7" height="7" x="3" y="3" rx="1" />
+            <rect width="7" height="7" x="14" y="3" rx="1" />
+            <rect width="7" height="7" x="14" y="14" rx="1" />
+          </svg>operate</span>
+        <span class="crumb-sep">/</span>
+        <span class="crumb-seg"><svg viewBox="0 0 24 24">
+            <line x1="6" x2="6" y1="3" y2="15" />
+            <circle cx="18" cy="6" r="3" />
+            <path d="M18 9a9 9 0 0 1-9 9" />
+          </svg>vcs</span>
+        <span class="crumb-sep">/</span>
+        <span class="crumb-seg current" aria-current="page"><svg viewBox="0 0 24 24">
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+            <path d="M3 9h18" />
+            <path d="M9 21V9" />
+          </svg>table</span>
+      </nav>
+      <div class="header-stats" role="status">
+        <span><span class="live-dot"></span> live on port 3939</span>
+        <span>137 lanes</span>
+        <span>76 issues</span>
+      </div>
+      <button type="button" class="icon-btn" aria-label="Notifications"><svg viewBox="0 0 24 24">
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+        </svg></button>
+    </header>
+
+    <aside class="secondary" data-design-note="Zones stack inline; each collapsible — no flex 50/50">
+      <section class="secondary-zone" id="zone-work">
+        <button type="button" class="secondary-zone-toggle" id="zone-work-toggle" aria-expanded="true"
+          aria-controls="nav-work" aria-label="Toggle Work section"
+          onclick="this.closest('.secondary-zone').classList.toggle('collapsed'); this.setAttribute('aria-expanded', this.closest('.secondary-zone').classList.contains('collapsed') ? 'false' : 'true')">
+          <svg class="chev" viewBox="0 0 24 24">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+          Work
+        </button>
+        <nav class="secondary-nav" id="nav-work">
+          <button type="button" class="route-item"><svg viewBox="0 0 24 24">
+              <rect width="7" height="7" x="3" y="3" rx="1" />
+              <rect width="7" height="7" x="14" y="3" rx="1" />
+            </svg><span>Board</span></button>
+          <button type="button" class="route-item"><svg viewBox="0 0 24 24">
+              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+            </svg><span>Milestones</span></button>
+          <button type="button" class="route-item"><svg viewBox="0 0 24 24">
+              <rect width="8" height="8" x="3" y="3" rx="2" />
+            </svg><span>Workflows</span></button>
+        </nav>
+      </section>
+      <section class="secondary-zone" id="zone-logs">
+        <button type="button" class="secondary-zone-toggle" id="zone-logs-toggle" aria-expanded="true"
+          aria-controls="nav-logs" aria-label="Toggle Logs section"
+          onclick="this.closest('.secondary-zone').classList.toggle('collapsed'); this.setAttribute('aria-expanded', this.closest('.secondary-zone').classList.contains('collapsed') ? 'false' : 'true')">
+          <svg class="chev" viewBox="0 0 24 24">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+          Logs
+        </button>
+        <nav class="secondary-nav" id="nav-logs">
+          <button type="button" class="route-item"><svg viewBox="0 0 24 24">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            </svg><span>Ops</span></button>
+          <button type="button" class="route-item"><svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" />
+            </svg><span>Decisions</span></button>
+          <button type="button" class="route-item"><svg viewBox="0 0 24 24">
+              <line x1="6" x2="6" y1="3" y2="15" />
+              <circle cx="18" cy="6" r="3" />
+            </svg><span>Branches</span></button>
+        </nav>
+      </section>
+    </aside>
+
+    <section class="main">
+      <div class="view-header" data-design-note="No secondary-toggle; no view-title; search flex-1">
+        <div class="view-header-actions">
+          <div class="view-toggle">
+            <button type="button">Grid</button>
+            <button type="button">Kanban</button>
+            <button type="button" class="active">Table</button>
+          </div>
+          <label class="search-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+            <input type="search" placeholder="Search lanes, issues, ops…" aria-label="Search" />
+          </label>
+          <button type="button" class="icon-btn" title="Filters">⌕</button>
+          <button type="button" class="icon-btn" title="Export">↓</button>
+        </div>
+      </div>
+      <div class="view-body">Table projection · no duplicate issue/lane meta here (header stats only)</div>
+    </section>
+
+    <aside class="oplog" aria-label="Live ops stream" data-design-note="Day-group collapsible headers">
+      <div class="oplog-head">Live ops</div>
+      <div class="oplog-scroll">
+        <section class="oplog-day">
+          <button type="button" class="oplog-day-toggle"
+            onclick="this.closest('.oplog-day').classList.toggle('collapsed')">
+            <svg width="12" height="12" viewBox="0 0 24 24" stroke="currentColor" fill="none">
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+            Today
+          </button>
+          <div class="op-list">
+            <div class="op"><time>16:02</time><span>op · lane promote</span><span>a1b2c3d4</span></div>
+            <div class="op"><time>15:41</time><span>op · issue update</span><span>e5f6g7h8</span></div>
+          </div>
+        </section>
+        <section class="oplog-day collapsed">
+          <button type="button" class="oplog-day-toggle"
+            onclick="this.closest('.oplog-day').classList.toggle('collapsed')">
+            <svg width="12" height="12" viewBox="0 0 24 24" stroke="currentColor" fill="none">
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+            Yesterday
+          </button>
+          <div class="op-list">
+            <div class="op"><time>22:10</time><span>op · snapshot</span><span>11223344</span></div>
+          </div>
+        </section>
+      </div>
+    </aside>
+  </div>
+
+  <div class="legend">
+    <strong>TRL-236 mock — chrome polish</strong>
+    Header above secondary · zone collapse · icon crumbs · full-width search · oplog day groups · no #secondary-toggle
+  </div>
+</body>
+
+</html>

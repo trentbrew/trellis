@@ -1,810 +1,1184 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-trellis-band="L3">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trellis — Agent Lanes</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-:root {
-  --bg: #09090b;
-  --surface: #15161b;
-  --surface2: #1a1b22;
-  --border: #25262e;
-  --text: #e4e4e7;
-  --text2: #a1a1aa;
-  --text3: #63637a;
-  --accent: #6d5bfa;
-  --accent-glow: rgba(109,91,250,0.12);
-  --green: #34d399;
-  --yellow: #fbbf24;
-  --blue: #60a5fa;
-  --red: #f87171;
-  --mono: 'JetBrains Mono', ui-monospace, monospace;
-  --font: 'Inter', -apple-system, sans-serif;
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  font-family: var(--font);
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  padding: 24px;
-}
-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-}
-h1 {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.3px;
-}
-h1 span { color: var(--text3); font-weight: 400; font-size: 13px; margin-left: 8px; }
-.live {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font: 500 11px var(--mono);
-  color: var(--text3);
-}
-.live-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 8px var(--green);
-  animation: pulse 2s infinite;
-}
-.live.off .live-dot { background: var(--red); box-shadow: 0 0 8px var(--red); animation: none; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
-.meta {
-  margin-left: auto;
-  font: 400 11px var(--mono);
-  color: var(--text3);
-  text-align: right;
-}
-.stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
-}
-.stat {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
-}
-.stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .4px; }
-.stat-value { font: 600 22px var(--font); margin-top: 4px; }
-.stat-value small { font-size: 12px; color: var(--text3); font-weight: 400; }
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 14px;
-}
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
-  transition: border-color .15s, box-shadow .15s;
-}
-.card.active {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent-glow), 0 8px 32px rgba(0,0,0,.35);
-}
-.card-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.lane-id {
-  font: 600 13px var(--mono);
-  word-break: break-all;
-}
-.badge {
-  font: 600 10px var(--mono);
-  text-transform: uppercase;
-  letter-spacing: .3px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-.badge.active { background: rgba(52,211,153,.15); color: var(--green); }
-.badge.promoting { background: rgba(251,191,36,.15); color: var(--yellow); }
-.badge.promoted { background: rgba(96,165,250,.15); color: var(--blue); }
-.badge.dropped { background: rgba(99,99,122,.15); color: var(--text3); }
-.row {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 12px;
-  padding: 4px 0;
-  border-bottom: 1px solid rgba(255,255,255,.03);
-}
-.row:last-child { border-bottom: none; }
-.row .k { color: var(--text3); }
-.row .v { color: var(--text2); font-family: var(--mono); font-size: 11px; text-align: right; max-width: 65%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.issue-block {
-  margin-top: 10px;
-  padding: 10px 12px;
-  background: var(--surface2);
-  border-radius: 8px;
-  font-size: 12px;
-}
-.issue-block .issue-id { font: 600 11px var(--mono); color: var(--accent); }
-.issue-block .issue-title { color: var(--text2); margin-top: 4px; line-height: 1.35; }
-.empty {
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 48px;
-  color: var(--text3);
-  font-size: 14px;
-}
-.lock-banner {
-  background: rgba(251,191,36,.08);
-  border: 1px solid rgba(251,191,36,.25);
-  color: var(--yellow);
-  border-radius: 10px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-  font: 500 12px var(--mono);
-}
-section h2 {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  color: var(--text3);
-  margin: 28px 0 12px;
-}
-#issues-section { margin-bottom: 24px; }
-.orphan-section { margin-bottom: 20px; }
-.orphan-section h2 {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  color: var(--text3);
-  margin-bottom: 10px;
-}
-.orphan-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 180px;
-  overflow: hidden;
-  position: relative;
-}
-.orphan-list.expanded { max-height: none; }
-.orphan-list:not(.expanded)::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 40px;
-  background: linear-gradient(transparent, var(--bg));
-  pointer-events: none;
-}
-.orphan-toggle {
-  font: 500 11px var(--mono);
-  color: var(--accent);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px 0;
-  margin-top: 4px;
-}
-.orphan-toggle:hover { text-decoration: underline; }
-.orphan-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 12px;
-}
-.orphan-row .orphan-id { font: 600 11px var(--mono); color: var(--green); min-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.orphan-row .orphan-agent { color: var(--text2); flex: 1; }
-.orphan-row .orphan-ops { font: 400 11px var(--mono); color: var(--text3); }
-.orphan-row .orphan-updated { font: 400 11px var(--mono); color: var(--text3); }
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-.search {
-  position: relative;
-  display: flex;
-  align-items: center;
-  flex: 1;
-  min-width: 0;
-}
-.search .search-icon {
-  position: absolute;
-  left: 12px;
-  width: 14px;
-  height: 14px;
-  color: var(--text3);
-  pointer-events: none;
-}
-.search input {
-  font: 400 12px var(--mono);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  padding: 9px 30px 9px 34px;
-  width: 100%;
-  outline: none;
-  transition: border-color .15s, box-shadow .15s;
-}
-.search input::placeholder { color: var(--text3); }
-.search input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent-glow);
-}
-.search .search-clear {
-  position: absolute;
-  right: 8px;
-  background: none;
-  border: none;
-  color: var(--text3);
-  font-size: 15px;
-  cursor: pointer;
-  line-height: 1;
-  padding: 0 2px;
-  display: none;
-}
-.search .search-clear:hover { color: var(--text); }
-.search.has-value .search-clear { display: block; }
-.view-toggle {
-  display: flex;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  flex: none;
-}
-.view-toggle button {
-  font: 500 11px var(--mono);
-  padding: 6px 12px;
-  border: none;
-  background: transparent;
-  color: var(--text3);
-  cursor: pointer;
-  transition: background .15s, color .15s;
-}
-.view-toggle button.active {
-  background: var(--accent);
-  color: #fff;
-}
-.view-toggle button:hover:not(.active) {
-  background: var(--surface2);
-  color: var(--text2);
-}
-.kanban {
-  display: flex;
-  gap: 16px;
-  overflow-x: auto;
-  padding-bottom: 16px;
-  min-height: 200px;
-}
-.kanban-col {
-  min-width: 300px;
-  max-width: 340px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-.kanban-col-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px 10px 0 0;
-  border-bottom: none;
-}
-.kanban-col-head .col-title {
-  font: 600 12px var(--font);
-  text-transform: uppercase;
-  letter-spacing: .4px;
-}
-.kanban-col-head .col-count {
-  font: 600 10px var(--mono);
-  background: var(--surface2);
-  padding: 2px 7px;
-  border-radius: 999px;
-  color: var(--text3);
-}
-.kanban-col-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  background: rgba(255,255,255,.02);
-  border: 1px solid var(--border);
-  border-top: none;
-  border-radius: 0 0 10px 10px;
-  min-height: 80px;
-}
-.kanban-col-body .card {
-  flex: none;
-}
-.kanban-empty {
-  color: var(--text3);
-  font-size: 12px;
-  text-align: center;
-  padding: 24px 8px;
-}
-.table-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-}
-table.lanes-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-table.lanes-table th {
-  text-align: left;
-  font: 600 10px var(--mono);
-  text-transform: uppercase;
-  letter-spacing: .4px;
-  color: var(--text3);
-  padding: 11px 14px;
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  user-select: none;
-  white-space: nowrap;
-  position: sticky;
-  top: 0;
-  background: var(--surface);
-}
-table.lanes-table th:hover { color: var(--text2); }
-table.lanes-table th .sort-ind {
-  margin-left: 5px;
-  color: var(--accent);
-}
-table.lanes-table td {
-  padding: 10px 14px;
-  border-bottom: 1px solid rgba(255,255,255,.03);
-  color: var(--text2);
-  vertical-align: middle;
-}
-table.lanes-table tbody tr:hover td { background: var(--surface2); }
-table.lanes-table tbody tr:last-child td { border-bottom: none; }
-table.lanes-table td.l-id { font-family: var(--mono); color: var(--text); }
-table.lanes-table td.l-issue { font-family: var(--mono); color: var(--accent); }
-table.lanes-table .badge {
-  font: 600 9px var(--mono);
-  text-transform: uppercase;
-  letter-spacing: .3px;
-  padding: 3px 7px;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-.table-empty {
-  padding: 48px;
-  text-align: center;
-  color: var(--text3);
-  font-size: 14px;
-}
-.issue-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px;
-  cursor: pointer;
-  transition: border-color .15s, box-shadow .15s;
-}
-.issue-card:hover {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent-glow);
-}
-.issue-card-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.issue-card .issue-id { font: 600 12px var(--mono); color: var(--accent); }
-.issue-card .issue-title { font-size: 13px; color: var(--text); margin-bottom: 8px; line-height: 1.4; }
-.issue-card .issue-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.issue-card .lane-badge {
-  font: 500 10px var(--mono);
-  background: rgba(52,211,153,.1);
-  border: 1px solid rgba(52,211,153,.3);
-  padding: 2px 8px;
-  border-radius: 999px;
-  color: var(--green);
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: inline-block;
-  vertical-align: middle;
-}
-.issue-card .lane-badge.none {
-  background: var(--surface2);
-  border-color: var(--border);
-  color: var(--text3);
-}
-.issue-card .agent-msg {
-  font: 400 10px var(--mono);
-  color: var(--text3);
-  margin-left: 4px;
-  vertical-align: middle;
-}
-.issue-card .priority-badge {
-  font: 600 9px var(--mono);
-  text-transform: uppercase;
-  letter-spacing: .3px;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-.priority-badge.critical { background: rgba(248,113,113,.15); color: var(--red); }
-.priority-badge.high { background: rgba(248,113,113,.15); color: var(--red); }
-.priority-badge.medium { background: rgba(251,191,36,.15); color: var(--yellow); }
-.priority-badge.low { background: rgba(99,99,122,.15); color: var(--text3); }
-.dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.6);
-  z-index: 900;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .2s;
-}
-.dialog-backdrop.open { opacity: 1; pointer-events: auto; }
-.dialog {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  width: 90%;
-  max-width: 560px;
-  max-height: 80vh;
-  overflow-y: auto;
-  padding: 24px;
-  transform: translateY(12px);
-  transition: transform .2s;
-}
-.dialog-backdrop.open .dialog { transform: translateY(0); }
-.dialog-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-.dialog-head .dialog-title { font: 600 15px var(--font); }
-.dialog-close {
-  background: none;
-  border: none;
-  color: var(--text3);
-  font-size: 18px;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 6px;
-}
-.dialog-close:hover { background: var(--surface); color: var(--text); }
-.dialog-section { margin-top: 16px; }
-.dialog-section h3 {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  color: var(--text3);
-  margin-bottom: 8px;
-}
-.dialog-lane-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 8px;
-}
-.dialog-lane-card .lane-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-.dialog-lane-card .lane-id { font: 600 12px var(--mono); }
-.dialog-lane-card .lane-detail {
-  font-size: 11px;
-  color: var(--text2);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.dialog-lane-card .lane-detail span { display: flex; justify-content: space-between; }
-.dialog-lane-card .lane-detail .k { color: var(--text3); }
-.dialog-lane-card .lane-detail .v { font-family: var(--mono); color: var(--text2); }
-.dialog-empty { color: var(--text3); font-size: 12px; text-align: center; padding: 16px; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trellis — Agent Lanes</title>
+  <link rel="stylesheet" href="/theme/runtime-theme.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-/* Op log — real ops off the stream (TRL-108) */
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 16px;
-  align-items: start;
-}
-.main { min-width: 0; }
-.sidebar {
-  position: sticky;
-  top: 24px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  max-height: calc(100vh - 48px);
-}
-.sidebar-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 13px 16px;
-  border-bottom: 1px solid var(--border);
-  font: 600 11px var(--mono);
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  color: var(--text3);
-}
-.sidebar-head .sidebar-count { color: var(--text2); }
-.sidebar .log-list {
-  overflow-y: auto;
-  padding: 6px;
-}
-.log-list { display: flex; flex-direction: column; gap: 2px; }
-.log-row {
-  display: grid;
-  grid-template-columns: 80px 190px 1fr 72px;
-  gap: 12px;
-  align-items: baseline;
-  padding: 7px 12px;
-  border-radius: 6px;
-  font: 400 11px var(--mono);
-  border: 1px solid transparent;
-}
-.log-row:nth-child(odd) { background: rgba(255,255,255,.02); }
-.log-row:hover { border-color: var(--border); background: var(--surface); }
-.log-time { color: var(--text3); }
-.log-kind { color: var(--accent); font-weight: 500; }
-.log-detail { color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.log-hash { color: var(--text3); text-align: right; opacity: .65; }
-.log-empty { color: var(--text3); font-size: 13px; text-align: center; padding: 40px; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+    }
 
-/* Toasts */
-.toast-wrap {
-  position: fixed;
-  bottom: 20px; right: 20px;
-  display: flex; flex-direction: column; gap: 8px;
-  z-index: 800;
-  pointer-events: none;
-}
-.toast {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 2px solid var(--accent);
-  border-radius: 8px;
-  padding: 9px 14px;
-  font: 400 11px var(--mono);
-  box-shadow: 0 8px 24px rgba(0,0,0,.4);
-  animation: toast-in .18s ease-out;
-  max-width: 380px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.toast.out { animation: toast-out .3s ease-in forwards; }
-.toast .op-kind { color: var(--accent); font-weight: 500; }
-.toast .op-file { color: var(--text2); margin-left: 6px; }
-@keyframes toast-in { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
-@keyframes toast-out { to { opacity: 0; transform: translateX(12px); } }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
 
-/* Flash the card an op touched */
-.flash { animation: flash .7s ease-out; }
-@keyframes flash {
-  0% { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-glow); }
-  100% { border-color: var(--border); box-shadow: none; }
-}
+    h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
 
-@media (max-width: 900px) {
-  body { padding: 16px; }
-  .layout { grid-template-columns: 1fr; }
-  .sidebar { position: static; max-height: 420px; }
-  .toolbar { flex-wrap: wrap; }
-  .search { order: 2; flex-basis: 100%; }
-  .view-toggle { flex: 1; }
-}
-</style>
+    h1 span {
+      color: var(--text3);
+      font-weight: 400;
+      font-size: 13px;
+      margin-left: 8px;
+    }
+
+    .live {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font: 500 11px var(--mono);
+      color: var(--text3);
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    .live.off .live-dot {
+      background: var(--red);
+      box-shadow: 0 0 8px var(--red);
+      animation: none;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .45
+      }
+    }
+
+    .meta {
+      margin-left: auto;
+      font: 400 11px var(--mono);
+      color: var(--text3);
+      text-align: right;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+
+    .stat-value {
+      font: 600 22px var(--font);
+      margin-top: 4px;
+    }
+
+    .stat-value small {
+      font-size: 12px;
+      color: var(--text3);
+      font-weight: 400;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    .card.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent-glow), 0 8px 32px rgba(0, 0, 0, .35);
+    }
+
+    .card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .lane-id {
+      font: 600 13px var(--mono);
+      word-break: break-all;
+    }
+
+    .badge {
+      font: 600 10px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .badge.active {
+      background: var(--tml-badge-success-bg-strong);
+      color: var(--green);
+    }
+
+    .badge.promoting {
+      background: var(--tml-badge-warning-bg);
+      color: var(--yellow);
+    }
+
+    .badge.promoted {
+      background: var(--tml-badge-info-bg);
+      color: var(--blue);
+    }
+
+    .badge.dropped {
+      background: var(--tml-badge-neutral-bg);
+      color: var(--text3);
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, .03);
+    }
+
+    .row:last-child {
+      border-bottom: none;
+    }
+
+    .row .k {
+      color: var(--text3);
+    }
+
+    .row .v {
+      color: var(--text2);
+      font-family: var(--mono);
+      font-size: 11px;
+      text-align: right;
+      max-width: 65%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .issue-block {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: var(--surface2);
+      border-radius: 8px;
+      font-size: 12px;
+    }
+
+    .issue-block .issue-id {
+      font: 600 11px var(--mono);
+      color: var(--accent);
+    }
+
+    .issue-block .issue-title {
+      color: var(--text2);
+      margin-top: 4px;
+      line-height: 1.35;
+    }
+
+    .empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 48px;
+      color: var(--text3);
+      font-size: 14px;
+    }
+
+    .lock-banner {
+      background: var(--tml-badge-warning-bg-subtle);
+      border: 1px solid var(--tml-badge-warning-border);
+      color: var(--yellow);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font: 500 12px var(--mono);
+    }
+
+    section h2 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--text3);
+      margin: 28px 0 12px;
+    }
+
+    #issues-section {
+      margin-bottom: 24px;
+    }
+
+    .orphan-section {
+      margin-bottom: 20px;
+    }
+
+    .orphan-section h2 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--text3);
+      margin-bottom: 10px;
+    }
+
+    .orphan-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 180px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .orphan-list.expanded {
+      max-height: none;
+    }
+
+    .orphan-list:not(.expanded)::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background: linear-gradient(transparent, var(--bg));
+      pointer-events: none;
+    }
+
+    .orphan-toggle {
+      font: 500 11px var(--mono);
+      color: var(--accent);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 0;
+      margin-top: 4px;
+    }
+
+    .orphan-toggle:hover {
+      text-decoration: underline;
+    }
+
+    .orphan-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+
+    .orphan-row .orphan-id {
+      font: 600 11px var(--mono);
+      color: var(--green);
+      min-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .orphan-row .orphan-agent {
+      color: var(--text2);
+      flex: 1;
+    }
+
+    .orphan-row .orphan-ops {
+      font: 400 11px var(--mono);
+      color: var(--text3);
+    }
+
+    .orphan-row .orphan-updated {
+      font: 400 11px var(--mono);
+      color: var(--text3);
+    }
+
+    .toolbar {
+      --toolbar-control-h: 34px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .search {
+      position: relative;
+      display: flex;
+      align-items: center;
+      flex: 1;
+      min-width: 0;
+      height: var(--toolbar-control-h);
+    }
+
+    .search .search-icon {
+      position: absolute;
+      left: 12px;
+      width: 14px;
+      height: 14px;
+      color: var(--text3);
+      pointer-events: none;
+    }
+
+    .search input {
+      box-sizing: border-box;
+      height: var(--toolbar-control-h);
+      font: 400 12px var(--mono);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0 30px 0 34px;
+      width: 100%;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    .search input::placeholder {
+      color: var(--text3);
+    }
+
+    .search input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent-glow);
+    }
+
+    .search .search-clear {
+      position: absolute;
+      right: 8px;
+      background: none;
+      border: none;
+      color: var(--text3);
+      font-size: 15px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 2px;
+      display: none;
+    }
+
+    .search .search-clear:hover {
+      color: var(--text);
+    }
+
+    .search.has-value .search-clear {
+      display: block;
+    }
+
+    .view-toggle {
+      box-sizing: border-box;
+      display: flex;
+      align-items: stretch;
+      height: var(--toolbar-control-h);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      flex: none;
+    }
+
+    .view-toggle button {
+      box-sizing: border-box;
+      height: 100%;
+      font: 500 12px var(--mono);
+      padding: 0 12px;
+      border: none;
+      background: transparent;
+      color: var(--text3);
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+
+    .view-toggle button.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .view-toggle button:hover:not(.active) {
+      background: var(--surface2);
+      color: var(--text2);
+    }
+
+    .kanban {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding-bottom: 16px;
+      min-height: 200px;
+    }
+
+    .kanban-col {
+      min-width: 300px;
+      max-width: 340px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .kanban-col-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px 10px 0 0;
+      border-bottom: none;
+    }
+
+    .kanban-col-head .col-title {
+      font: 600 12px var(--font);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+
+    .kanban-col-head .col-count {
+      font: 600 10px var(--mono);
+      background: var(--surface2);
+      padding: 2px 7px;
+      border-radius: 999px;
+      color: var(--text3);
+    }
+
+    .kanban-col-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+      background: var(--tml-kanban-body-inset);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 10px 10px;
+      min-height: 80px;
+    }
+
+    .kanban-col-body .card {
+      flex: none;
+    }
+
+    .kanban-empty {
+      color: var(--text3);
+      font-size: 12px;
+      text-align: center;
+      padding: 24px 8px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+    }
+
+    table.lanes-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    table.lanes-table th {
+      text-align: left;
+      font: 600 10px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      color: var(--text3);
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+    }
+
+    table.lanes-table th:hover {
+      color: var(--text2);
+    }
+
+    table.lanes-table th .sort-ind {
+      margin-left: 5px;
+      color: var(--accent);
+    }
+
+    table.lanes-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, .03);
+      color: var(--text2);
+      vertical-align: middle;
+    }
+
+    table.lanes-table tbody tr:hover td {
+      background: var(--surface2);
+    }
+
+    table.lanes-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.lanes-table td.l-id {
+      font-family: var(--mono);
+      color: var(--text);
+    }
+
+    table.lanes-table td.l-issue {
+      font-family: var(--mono);
+      color: var(--accent);
+    }
+
+    table.lanes-table .badge {
+      font: 600 9px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .table-empty {
+      padding: 48px;
+      text-align: center;
+      color: var(--text3);
+      font-size: 14px;
+    }
+
+    .issue-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      cursor: pointer;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    .issue-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent-glow);
+    }
+
+    .issue-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .issue-card .issue-id {
+      font: 600 12px var(--mono);
+      color: var(--accent);
+    }
+
+    .issue-card .issue-title {
+      font-size: 13px;
+      color: var(--text);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .issue-card .issue-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .issue-card .lane-badge {
+      font: 500 10px var(--mono);
+      background: var(--tml-badge-success-bg);
+      border: 1px solid var(--tml-badge-success-border);
+      padding: 2px 8px;
+      border-radius: 999px;
+      color: var(--green);
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .issue-card .lane-badge.none {
+      background: var(--surface2);
+      border-color: var(--border);
+      color: var(--text3);
+    }
+
+    .issue-card .agent-msg {
+      font: 400 10px var(--mono);
+      color: var(--text3);
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    .issue-card .priority-badge {
+      font: 600 9px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .priority-badge.critical {
+      background: var(--tml-badge-critical-bg);
+      color: var(--red);
+    }
+
+    .priority-badge.high {
+      background: var(--tml-badge-critical-bg);
+      color: var(--red);
+    }
+
+    .priority-badge.medium {
+      background: var(--tml-badge-warning-bg);
+      color: var(--yellow);
+    }
+
+    .priority-badge.low {
+      background: var(--tml-badge-neutral-bg);
+      color: var(--text3);
+    }
+
+    .dialog-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .6);
+      z-index: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s;
+    }
+
+    .dialog-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .dialog {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      width: 90%;
+      max-width: 560px;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 24px;
+      transform: translateY(12px);
+      transition: transform .2s;
+    }
+
+    .dialog-backdrop.open .dialog {
+      transform: translateY(0);
+    }
+
+    .dialog-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .dialog-head .dialog-title {
+      font: 600 15px var(--font);
+    }
+
+    .dialog-close {
+      background: none;
+      border: none;
+      color: var(--text3);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    .dialog-close:hover {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .dialog-section {
+      margin-top: 16px;
+    }
+
+    .dialog-section h3 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--text3);
+      margin-bottom: 8px;
+    }
+
+    .dialog-lane-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+
+    .dialog-lane-card .lane-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .dialog-lane-card .lane-id {
+      font: 600 12px var(--mono);
+    }
+
+    .dialog-lane-card .lane-detail {
+      font-size: 11px;
+      color: var(--text2);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .dialog-lane-card .lane-detail span {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .dialog-lane-card .lane-detail .k {
+      color: var(--text3);
+    }
+
+    .dialog-lane-card .lane-detail .v {
+      font-family: var(--mono);
+      color: var(--text2);
+    }
+
+    .dialog-empty {
+      color: var(--text3);
+      font-size: 12px;
+      text-align: center;
+      padding: 16px;
+    }
+
+    /* Op log — real ops off the stream (TRL-108) */
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .main {
+      min-width: 0;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 48px);
+    }
+
+    .sidebar-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--border);
+      font: 600 11px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--text3);
+    }
+
+    .sidebar-head .sidebar-count {
+      color: var(--text2);
+    }
+
+    .sidebar .log-list {
+      overflow-y: auto;
+      padding: 6px;
+    }
+
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .log-row {
+      display: grid;
+      grid-template-columns: 80px 190px 1fr 72px;
+      gap: 12px;
+      align-items: baseline;
+      padding: 7px 12px;
+      border-radius: 6px;
+      font: 400 11px var(--mono);
+      border: 1px solid transparent;
+    }
+
+    .log-row:nth-child(odd) {
+      background: rgba(255, 255, 255, .02);
+    }
+
+    .log-row:hover {
+      border-color: var(--border);
+      background: var(--surface);
+    }
+
+    .log-time {
+      color: var(--text3);
+    }
+
+    .log-kind {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .log-detail {
+      color: var(--text2);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .log-hash {
+      color: var(--text3);
+      text-align: right;
+      opacity: .65;
+    }
+
+    .log-empty {
+      color: var(--text3);
+      font-size: 13px;
+      text-align: center;
+      padding: 40px;
+    }
+
+    /* Toasts */
+    .toast-wrap {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 800;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--accent);
+      border-radius: 8px;
+      padding: 9px 14px;
+      font: 400 11px var(--mono);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+      animation: toast-in .18s ease-out;
+      max-width: 380px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .toast.out {
+      animation: toast-out .3s ease-in forwards;
+    }
+
+    .toast .op-kind {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .toast .op-file {
+      color: var(--text2);
+      margin-left: 6px;
+    }
+
+    @keyframes toast-in {
+      from {
+        opacity: 0;
+        transform: translateX(12px);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    @keyframes toast-out {
+      to {
+        opacity: 0;
+        transform: translateX(12px);
+      }
+    }
+
+    /* Flash the card an op touched */
+    .flash {
+      animation: flash .7s ease-out;
+    }
+
+    @keyframes flash {
+      0% {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px var(--accent-glow);
+      }
+
+      100% {
+        border-color: var(--border);
+        box-shadow: none;
+      }
+    }
+
+    @media (max-width: 900px) {
+      body {
+        padding: 16px;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+        max-height: 420px;
+      }
+
+      .toolbar {
+        flex-wrap: wrap;
+      }
+
+      .search {
+        order: 2;
+        flex-basis: 100%;
+      }
+
+      .view-toggle {
+        flex: 1;
+      }
+    }
+  </style>
 </head>
+
 <body>
-<header>
-  <h1>Trellis <span>Agent Lanes</span></h1>
-  <div class="live" id="live"><span class="live-dot"></span><span id="live-label">connecting…</span></div>
-  <div class="meta">
-    <div id="repo">—</div>
-    <div id="updated">—</div>
-  </div>
-</header>
-
-<div id="lock" hidden class="lock-banner"></div>
-
-<div class="stats" id="stats"></div>
-
-<div class="toolbar">
-  <div class="view-toggle">
-    <button id="btn-grid" class="active" onclick="setView('grid')">Grid</button>
-    <button id="btn-kanban" onclick="setView('kanban')">Kanban</button>
-    <button id="btn-table" onclick="setView('table')">Table</button>
-  </div>
-  <div class="search" id="search">
-    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-    <input id="search-input" type="text" placeholder="Search lanes, issues, ops…" oninput="onSearch(this.value)" />
-    <button class="search-clear" id="search-clear" onclick="clearSearch()">&times;</button>
-  </div>
-</div>
-
-<section id="orphan-section" class="orphan-section" hidden>
-  <h2>Unassigned lanes</h2>
-  <div class="orphan-list" id="orphan-list"></div>
-  <button class="orphan-toggle" id="orphan-toggle" onclick="toggleOrphans()">show more</button>
-</section>
-
-<div class="layout">
-  <div class="main">
-    <div class="grid" id="lanes"></div>
-  </div>
-  <aside class="sidebar">
-    <div class="sidebar-head">
-      <span>Op log</span>
-      <span class="sidebar-count" id="log-count">0</span>
+  <header>
+    <h1>Trellis <span>Agent Lanes</span></h1>
+    <div class="live" id="live"><span class="live-dot"></span><span id="live-label">connecting…</span></div>
+    <div class="meta">
+      <div id="repo">—</div>
+      <div id="updated">—</div>
     </div>
-    <div class="log-list" id="log-list"></div>
-  </aside>
-</div>
+  </header>
 
-<div class="toast-wrap" id="toasts"></div>
+  <div id="lock" hidden class="lock-banner"></div>
 
-<div class="dialog-backdrop" id="dialog-backdrop" onclick="if(event.target===this)closeDialog()">
-  <div class="dialog" id="dialog">
-    <div class="dialog-head">
-      <div class="dialog-title" id="dialog-title">—</div>
-      <button class="dialog-close" onclick="closeDialog()">&times;</button>
+  <div class="stats" id="stats"></div>
+
+  <div class="toolbar">
+    <div class="view-toggle">
+      <button id="btn-grid" class="active" onclick="setView('grid')">Grid</button>
+      <button id="btn-kanban" onclick="setView('kanban')">Kanban</button>
+      <button id="btn-table" onclick="setView('table')">Table</button>
     </div>
-    <div id="dialog-body"></div>
+    <div class="search" id="search">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input id="search-input" type="text" placeholder="Search lanes, issues, ops…" oninput="onSearch(this.value)" />
+      <button class="search-clear" id="search-clear" onclick="clearSearch()">&times;</button>
+    </div>
   </div>
-</div>
 
-<script>
-const $ = (id) => document.getElementById(id);
-const ISSUE_COLUMNS = [
-  { key: 'backlog', label: 'Backlog', statuses: ['backlog', 'queue'] },
-  { key: 'in_progress', label: 'In Progress', statuses: ['in_progress', 'paused'] },
-  { key: 'done', label: 'Done', statuses: ['closed'] },
-];
-let currentView = localStorage.getItem('trellis-lanes-view') || 'grid';
-if (currentView === 'logs') currentView = 'grid';
-let lastSnap = null;
-let opLog = [];
-let lastOpHash = null; // resume point for the op stream
-let searchQuery = '';
-const MAX_LOG = 200;
+  <section id="orphan-section" class="orphan-section" hidden>
+    <h2>Unassigned lanes</h2>
+    <div class="orphan-list" id="orphan-list"></div>
+    <button class="orphan-toggle" id="orphan-toggle" onclick="toggleOrphans()">show more</button>
+  </section>
 
-function onSearch(q) {
-  searchQuery = q.trim().toLowerCase();
-  $('search').classList.toggle('has-value', searchQuery.length > 0);
-  if (lastSnap) render(lastSnap);
-}
+  <div class="layout">
+    <div class="main">
+      <div class="grid" id="lanes"></div>
+    </div>
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <span>Op log</span>
+        <span class="sidebar-count" id="log-count">0</span>
+      </div>
+      <div class="log-list" id="log-list"></div>
+    </aside>
+  </div>
 
-function clearSearch() {
-  $('search-input').value = '';
-  onSearch('');
-}
+  <div class="toast-wrap" id="toasts"></div>
 
-function laneMatches(lane, q) {
-  return (
-    lane.id.toLowerCase().includes(q) ||
-    (lane.agentId || '').toLowerCase().includes(q) ||
-    (lane.sessionId || '').toLowerCase().includes(q) ||
-    (lane.targetBranch || '').toLowerCase().includes(q) ||
-    (lane.worktreePath || '').toLowerCase().includes(q) ||
-    (lane.issueId || '').toLowerCase().includes(q) ||
-    (lane.issueTitle || '').toLowerCase().includes(q) ||
-    (lane.status || '').toLowerCase().includes(q)
-  );
-}
+  <div class="dialog-backdrop" id="dialog-backdrop" onclick="if(event.target===this)closeDialog()">
+    <div class="dialog" id="dialog">
+      <div class="dialog-head">
+        <div class="dialog-title" id="dialog-title">—</div>
+        <button class="dialog-close" onclick="closeDialog()">&times;</button>
+      </div>
+      <div id="dialog-body"></div>
+    </div>
+  </div>
 
-function issueMatches(issue, q) {
-  return (
-    issue.id.toLowerCase().includes(q) ||
-    (issue.title || '').toLowerCase().includes(q) ||
-    (issue.priority || '').toLowerCase().includes(q) ||
-    (issue.status || '').toLowerCase().includes(q) ||
-    (issue.laneIds || []).join(' ').toLowerCase().includes(q)
-  );
-}
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const ISSUE_COLUMNS = [
+      { key: 'backlog', label: 'Backlog', statuses: ['backlog', 'queue'] },
+      { key: 'in_progress', label: 'In Progress', statuses: ['in_progress', 'paused'] },
+      { key: 'done', label: 'Done', statuses: ['closed'] },
+    ];
+    let currentView = localStorage.getItem('trellis-lanes-view') || 'grid';
+    if (currentView === 'logs') currentView = 'grid';
+    let lastSnap = null;
+    let opLog = [];
+    let lastOpHash = null; // resume point for the op stream
+    let searchQuery = '';
+    const MAX_LOG = 200;
 
-function opMatches(op, q) {
-  const v = op.vcs || {};
-  return (
-    op.kind.toLowerCase().includes(q) ||
-    (op.hash || '').toLowerCase().includes(q) ||
-    (op.agentId || '').toLowerCase().includes(q) ||
-    (v.filePath || v.issueId || v.laneId || v.branchName || v.message || v.criterionId || v.decisionId || '').toLowerCase().includes(q)
-  );
-}
+    function onSearch(q) {
+      searchQuery = q.trim().toLowerCase();
+      $('search').classList.toggle('has-value', searchQuery.length > 0);
+      if (lastSnap) render(lastSnap);
+    }
 
-function fmtTime(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  const now = new Date();
-  const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  if (d.toDateString() === now.toDateString()) return time;
-  const date = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  return date + ' ' + time;
-}
+    function clearSearch() {
+      $('search-input').value = '';
+      onSearch('');
+    }
 
-function shortPath(p) {
-  if (!p) return '—';
-  const parts = p.split('/');
-  return parts.length > 3 ? '…/' + parts.slice(-3).join('/') : p;
-}
+    function laneMatches(lane, q) {
+      return (
+        lane.id.toLowerCase().includes(q) ||
+        (lane.agentId || '').toLowerCase().includes(q) ||
+        (lane.sessionId || '').toLowerCase().includes(q) ||
+        (lane.targetBranch || '').toLowerCase().includes(q) ||
+        (lane.worktreePath || '').toLowerCase().includes(q) ||
+        (lane.issueId || '').toLowerCase().includes(q) ||
+        (lane.issueTitle || '').toLowerCase().includes(q) ||
+        (lane.status || '').toLowerCase().includes(q)
+      );
+    }
 
-function toast(html) {
-  const wrap = $('toasts');
-  const el = document.createElement('div');
-  el.className = 'toast';
-  el.innerHTML = html;
-  wrap.appendChild(el);
-  setTimeout(() => { el.classList.add('out'); }, 3500);
-  setTimeout(() => { el.remove(); }, 3800);
-  if (wrap.children.length > 5) wrap.firstChild.remove();
-}
+    function issueMatches(issue, q) {
+      return (
+        issue.id.toLowerCase().includes(q) ||
+        (issue.title || '').toLowerCase().includes(q) ||
+        (issue.priority || '').toLowerCase().includes(q) ||
+        (issue.status || '').toLowerCase().includes(q) ||
+        (issue.laneIds || []).join(' ').toLowerCase().includes(q)
+      );
+    }
 
-function flashEl(el) {
-  if (!el) return;
-  el.classList.remove('flash');
-  void el.offsetWidth;
-  el.classList.add('flash');
-}
+    function opMatches(op, q) {
+      const v = op.vcs || {};
+      return (
+        op.kind.toLowerCase().includes(q) ||
+        (op.hash || '').toLowerCase().includes(q) ||
+        (op.agentId || '').toLowerCase().includes(q) ||
+        (v.filePath || v.issueId || v.laneId || v.branchName || v.message || v.criterionId || v.decisionId || '').toLowerCase().includes(q)
+      );
+    }
 
-function setView(view) {
-  currentView = view;
-  localStorage.setItem('trellis-lanes-view', view);
-  $('btn-grid').classList.toggle('active', view === 'grid');
-  $('btn-kanban').classList.toggle('active', view === 'kanban');
-  $('btn-table').classList.toggle('active', view === 'table');
-  if (lastSnap) render(lastSnap);
-}
+    function fmtTime(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      const now = new Date();
+      const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      if (d.toDateString() === now.toDateString()) return time;
+      const date = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      return date + ' ' + time;
+    }
 
-function laneCard(lane, idAttr) {
-  return `
+    function shortPath(p) {
+      if (!p) return '—';
+      const parts = p.split('/');
+      return parts.length > 3 ? '…/' + parts.slice(-3).join('/') : p;
+    }
+
+    function toast(html) {
+      const wrap = $('toasts');
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.innerHTML = html;
+      wrap.appendChild(el);
+      setTimeout(() => { el.classList.add('out'); }, 3500);
+      setTimeout(() => { el.remove(); }, 3800);
+      if (wrap.children.length > 5) wrap.firstChild.remove();
+    }
+
+    function flashEl(el) {
+      if (!el) return;
+      el.classList.remove('flash');
+      void el.offsetWidth;
+      el.classList.add('flash');
+    }
+
+    function setView(view) {
+      currentView = view;
+      localStorage.setItem('trellis-lanes-view', view);
+      $('btn-grid').classList.toggle('active', view === 'grid');
+      $('btn-kanban').classList.toggle('active', view === 'kanban');
+      $('btn-table').classList.toggle('active', view === 'table');
+      if (lastSnap) render(lastSnap);
+    }
+
+    function laneCard(lane, idAttr) {
+      return `
     <article class="card${lane.isActive ? ' active' : ''}" ${idAttr ? `data-id="${idAttr}"` : ''}>
       <div class="card-head">
         <div class="lane-id">${lane.id}</div>
@@ -822,34 +1196,34 @@ function laneCard(lane, idAttr) {
           <div class="issue-title">${lane.issueTitle || ''}</div>
         </div>` : ''}
     </article>`;
-}
+    }
 
-function renderGrid(lanesEl, lanes) {
-  const filtered = searchQuery ? lanes.filter(l => laneMatches(l, searchQuery)) : lanes;
-  if (!filtered.length) {
-    lanesEl.innerHTML = searchQuery
-      ? `<div class="empty">No lanes match “${searchQuery}”</div>`
-      : '<div class="empty">No lanes yet — open an Agent tab or run <code>trellis lane ensure --session …</code></div>';
-  } else {
-    lanesEl.innerHTML = filtered.map(l => laneCard(l, l.id)).join('');
-  }
-}
+    function renderGrid(lanesEl, lanes) {
+      const filtered = searchQuery ? lanes.filter(l => laneMatches(l, searchQuery)) : lanes;
+      if (!filtered.length) {
+        lanesEl.innerHTML = searchQuery
+          ? `<div class="empty">No lanes match “${searchQuery}”</div>`
+          : '<div class="empty">No lanes yet — open an Agent tab or run <code>trellis lane ensure --session …</code></div>';
+      } else {
+        lanesEl.innerHTML = filtered.map(l => laneCard(l, l.id)).join('');
+      }
+    }
 
-function fmtAgentName(sessionId) {
-  if (!sessionId) return '';
-  if (sessionId.startsWith('opencode:')) return 'opencode';
-  return 'claude';
-}
+    function fmtAgentName(sessionId) {
+      if (!sessionId) return '';
+      if (sessionId.startsWith('opencode:')) return 'opencode';
+      return 'claude';
+    }
 
-function issueCard(issue) {
-  const laneBadges = issue.laneIds.map(id => {
-    const lane = lastSnap?.lanes.find(l => l.id === id);
-    const agent = lane?.sessionId ? fmtAgentName(lane.sessionId) : '';
-    const msg = agent ? `<span class="agent-msg">${agent} is working on this</span>` : '';
-    return `<span class="lane-badge">${id}</span>${msg}`;
-  }).join('');
-  const priorityBadge = issue.priority ? `<span class="priority-badge ${issue.priority}">${issue.priority}</span>` : '';
-  return `
+    function issueCard(issue) {
+      const laneBadges = issue.laneIds.map(id => {
+        const lane = lastSnap?.lanes.find(l => l.id === id);
+        const agent = lane?.sessionId ? fmtAgentName(lane.sessionId) : '';
+        const msg = agent ? `<span class="agent-msg">${agent} is working on this</span>` : '';
+        return `<span class="lane-badge">${id}</span>${msg}`;
+      }).join('');
+      const priorityBadge = issue.priority ? `<span class="priority-badge ${issue.priority}">${issue.priority}</span>` : '';
+      return `
     <div class="issue-card" data-id="${issue.id}" onclick="openIssueDialog('${issue.id}')">
       <div class="issue-card-head">
         <span class="issue-id">${issue.id}</span>
@@ -860,27 +1234,27 @@ function issueCard(issue) {
         ${laneBadges || '<span class="lane-badge none">no lane</span>'}
       </div>
     </div>`;
-}
+    }
 
-function renderKanban(lanesEl, issues) {
-  const filtered = searchQuery ? issues.filter(i => issueMatches(i, searchQuery)) : issues;
-  if (!filtered.length) {
-    lanesEl.innerHTML = searchQuery
-      ? `<div class="empty">No issues match “${searchQuery}”</div>`
-      : '<div class="empty">No issues yet — create one with <code>trellis issue create -t "title"</code></div>';
-    return;
-  }
-  const grouped = {};
-  for (const col of ISSUE_COLUMNS) grouped[col.key] = [];
-  for (const issue of filtered) {
-    const col = ISSUE_COLUMNS.find(c => c.statuses.includes(issue.status));
-    if (col) grouped[col.key].push(issue);
-    else grouped.backlog.push(issue);
-  }
-  lanesEl.className = 'kanban';
-  lanesEl.innerHTML = ISSUE_COLUMNS.map(col => {
-    const items = grouped[col.key] || [];
-    return `
+    function renderKanban(lanesEl, issues) {
+      const filtered = searchQuery ? issues.filter(i => issueMatches(i, searchQuery)) : issues;
+      if (!filtered.length) {
+        lanesEl.innerHTML = searchQuery
+          ? `<div class="empty">No issues match “${searchQuery}”</div>`
+          : '<div class="empty">No issues yet — create one with <code>trellis issue create -t "title"</code></div>';
+        return;
+      }
+      const grouped = {};
+      for (const col of ISSUE_COLUMNS) grouped[col.key] = [];
+      for (const issue of filtered) {
+        const col = ISSUE_COLUMNS.find(c => c.statuses.includes(issue.status));
+        if (col) grouped[col.key].push(issue);
+        else grouped.backlog.push(issue);
+      }
+      lanesEl.className = 'kanban';
+      lanesEl.innerHTML = ISSUE_COLUMNS.map(col => {
+        const items = grouped[col.key] || [];
+        return `
       <div class="kanban-col">
         <div class="kanban-col-head">
           <span class="col-title">${col.label}</span>
@@ -890,20 +1264,20 @@ function renderKanban(lanesEl, issues) {
           ${items.length ? items.map(issueCard).join('') : '<div class="kanban-empty">No issues</div>'}
         </div>
       </div>`;
-  }).join('');
-}
+      }).join('');
+    }
 
-function openIssueDialog(issueId) {
-  const issue = lastSnap?.issues.find(i => i.id === issueId);
-  if (!issue) return;
-  $('dialog-title').textContent = issue.id;
-  const lanes = (issue.laneIds || []).map(id => lastSnap?.lanes.find(l => l.id === id)).filter(Boolean);
-  let html = `<div style="font-size:13px;color:var(--text);margin-bottom:4px">${issue.title || ''}</div>`;
-  if (issue.priority) html += `<span class="priority-badge ${issue.priority}" style="display:inline-block;margin-bottom:12px">${issue.priority}</span>`;
-  if (lanes.length) {
-    html += '<div class="dialog-section"><h3>Lanes</h3>';
-    for (const l of lanes) {
-      html += `
+    function openIssueDialog(issueId) {
+      const issue = lastSnap?.issues.find(i => i.id === issueId);
+      if (!issue) return;
+      $('dialog-title').textContent = issue.id;
+      const lanes = (issue.laneIds || []).map(id => lastSnap?.lanes.find(l => l.id === id)).filter(Boolean);
+      let html = `<div style="font-size:13px;color:var(--text);margin-bottom:4px">${issue.title || ''}</div>`;
+      if (issue.priority) html += `<span class="priority-badge ${issue.priority}" style="display:inline-block;margin-bottom:12px">${issue.priority}</span>`;
+      if (lanes.length) {
+        html += '<div class="dialog-section"><h3>Lanes</h3>';
+        for (const l of lanes) {
+          html += `
         <div class="dialog-lane-card">
           <div class="lane-head">
             <span class="lane-id">${l.id}</span>
@@ -916,33 +1290,33 @@ function openIssueDialog(issueId) {
             <span><span class="k">Updated</span><span class="v">${fmtTime(l.updatedAt)}</span></span>
           </div>
         </div>`;
+        }
+        html += '</div>';
+      } else {
+        html += '<div class="dialog-empty">No lanes attached</div>';
+      }
+      $('dialog-body').innerHTML = html;
+      $('dialog-backdrop').classList.add('open');
     }
-    html += '</div>';
-  } else {
-    html += '<div class="dialog-empty">No lanes attached</div>';
-  }
-  $('dialog-body').innerHTML = html;
-  $('dialog-backdrop').classList.add('open');
-}
 
-function closeDialog() {
-  $('dialog-backdrop').classList.remove('open');
-}
+    function closeDialog() {
+      $('dialog-backdrop').classList.remove('open');
+    }
 
-function renderLogs() {
-  const list = $('log-list');
-  $('log-count').textContent = opLog.length;
-  if (!opLog.length) {
-    list.innerHTML = '<div class="log-empty">No ops yet — waiting on the stream</div>';
-    return;
-  }
-  // Real ops now: real kinds, real content-addressed hashes.
-  const rows = searchQuery ? opLog.filter(o => opMatches(o, searchQuery)) : opLog;
-  if (!rows.length && searchQuery) {
-    list.innerHTML = `<div class="log-empty">No ops match “${searchQuery}”</div>`;
-    return;
-  }
-  list.innerHTML = rows.slice(-100).reverse().map(op => `
+    function renderLogs() {
+      const list = $('log-list');
+      $('log-count').textContent = opLog.length;
+      if (!opLog.length) {
+        list.innerHTML = '<div class="log-empty">No ops yet — waiting on the stream</div>';
+        return;
+      }
+      // Real ops now: real kinds, real content-addressed hashes.
+      const rows = searchQuery ? opLog.filter(o => opMatches(o, searchQuery)) : opLog;
+      if (!rows.length && searchQuery) {
+        list.innerHTML = `<div class="log-empty">No ops match “${searchQuery}”</div>`;
+        return;
+      }
+      list.innerHTML = rows.slice(-100).reverse().map(op => `
     <div class="log-row" data-op="${op.hash}" title="${op.hash}">
       <span class="log-time">${fmtTime(op.timestamp)}</span>
       <span class="log-kind">${op.kind}</span>
@@ -950,78 +1324,78 @@ function renderLogs() {
       <span class="log-hash">${op.hash.replace(/^trellis:op:/, '').slice(0, 8)}</span>
     </div>
   `).join('');
-}
-
-// TRL-108: ops arrive as ops. This used to reconstruct them by diffing opCount
-// between snapshots and synthesising hashes (`snap.at + l.id`) — an op log
-// reverse-engineered from counter deltas, in a system built on an op log.
-function onOp(op) {
-  opLog.push(op);
-  if (opLog.length > MAX_LOG) opLog = opLog.slice(-MAX_LOG);
-  lastOpHash = op.hash;
-
-  toast(`<span class="op-kind">${op.kind}</span> <span class="op-file">${opDetail(op)}</span>`);
-
-  const target = op.laneId || op.vcs?.issueId;
-  if (target) flashEl(document.querySelector(`[data-id="${target}"]`));
-
-  renderLogs();
-}
-
-/** Pull the one human-meaningful field out of an op's payload. */
-function opDetail(op) {
-  const v = op.vcs || {};
-  return (
-    v.filePath || v.issueId || v.laneId || v.branchName || v.message ||
-    v.criterionId || v.decisionId || op.agentId || ''
-  );
-}
-
-const TABLE_COLS = [
-  { key: 'id', label: 'Lane', get: l => l.id },
-  { key: 'status', label: 'Status', get: l => l.status },
-  { key: 'agentId', label: 'Agent', get: l => l.agentId || '' },
-  { key: 'sessionId', label: 'Session', get: l => l.sessionId || '' },
-  { key: 'opCount', label: 'Ops', get: l => l.opCount, numeric: true },
-  { key: 'fileCount', label: 'Files', get: l => l.fileCount, numeric: true },
-  { key: 'targetBranch', label: 'Branch', get: l => l.targetBranch || '' },
-  { key: 'issueId', label: 'Issue', get: l => l.issueId || '' },
-  { key: 'updatedAt', label: 'Updated', get: l => l.updatedAt || '' },
-];
-let tableSort = { key: 'id', dir: 1 };
-
-function sortLanes(lanes) {
-  const col = TABLE_COLS.find(c => c.key === tableSort.key) || TABLE_COLS[0];
-  return [...lanes].sort((a, b) => {
-    let av = col.get(a);
-    let bv = col.get(b);
-    if (col.numeric) {
-      return ((av || 0) - (bv || 0)) * tableSort.dir;
     }
-    av = String(av).toLowerCase();
-    bv = String(bv).toLowerCase();
-    return av.localeCompare(bv) * tableSort.dir;
-  });
-}
 
-function renderTable(lanesEl, lanes) {
-  const filtered = searchQuery ? lanes.filter(l => laneMatches(l, searchQuery)) : lanes;
-  if (!filtered.length) {
-    lanesEl.className = 'grid';
-    lanesEl.innerHTML = searchQuery
-      ? `<div class="empty">No lanes match “${searchQuery}”</div>`
-      : '<div class="empty">No lanes yet — open an Agent tab or run <code>trellis lane ensure --session …</code></div>';
-    return;
-  }
-  const sorted = sortLanes(filtered);
-  lanesEl.className = 'grid';
-  lanesEl.innerHTML = `
+    // TRL-108: ops arrive as ops. This used to reconstruct them by diffing opCount
+    // between snapshots and synthesising hashes (`snap.at + l.id`) — an op log
+    // reverse-engineered from counter deltas, in a system built on an op log.
+    function onOp(op) {
+      opLog.push(op);
+      if (opLog.length > MAX_LOG) opLog = opLog.slice(-MAX_LOG);
+      lastOpHash = op.hash;
+
+      toast(`<span class="op-kind">${op.kind}</span> <span class="op-file">${opDetail(op)}</span>`);
+
+      const target = op.laneId || op.vcs?.issueId;
+      if (target) flashEl(document.querySelector(`[data-id="${target}"]`));
+
+      renderLogs();
+    }
+
+    /** Pull the one human-meaningful field out of an op's payload. */
+    function opDetail(op) {
+      const v = op.vcs || {};
+      return (
+        v.filePath || v.issueId || v.laneId || v.branchName || v.message ||
+        v.criterionId || v.decisionId || op.agentId || ''
+      );
+    }
+
+    const TABLE_COLS = [
+      { key: 'id', label: 'Lane', get: l => l.id },
+      { key: 'status', label: 'Status', get: l => l.status },
+      { key: 'agentId', label: 'Agent', get: l => l.agentId || '' },
+      { key: 'sessionId', label: 'Session', get: l => l.sessionId || '' },
+      { key: 'opCount', label: 'Ops', get: l => l.opCount, numeric: true },
+      { key: 'fileCount', label: 'Files', get: l => l.fileCount, numeric: true },
+      { key: 'targetBranch', label: 'Branch', get: l => l.targetBranch || '' },
+      { key: 'issueId', label: 'Issue', get: l => l.issueId || '' },
+      { key: 'updatedAt', label: 'Updated', get: l => l.updatedAt || '' },
+    ];
+    let tableSort = { key: 'id', dir: 1 };
+
+    function sortLanes(lanes) {
+      const col = TABLE_COLS.find(c => c.key === tableSort.key) || TABLE_COLS[0];
+      return [...lanes].sort((a, b) => {
+        let av = col.get(a);
+        let bv = col.get(b);
+        if (col.numeric) {
+          return ((av || 0) - (bv || 0)) * tableSort.dir;
+        }
+        av = String(av).toLowerCase();
+        bv = String(bv).toLowerCase();
+        return av.localeCompare(bv) * tableSort.dir;
+      });
+    }
+
+    function renderTable(lanesEl, lanes) {
+      const filtered = searchQuery ? lanes.filter(l => laneMatches(l, searchQuery)) : lanes;
+      if (!filtered.length) {
+        lanesEl.className = 'grid';
+        lanesEl.innerHTML = searchQuery
+          ? `<div class="empty">No lanes match “${searchQuery}”</div>`
+          : '<div class="empty">No lanes yet — open an Agent tab or run <code>trellis lane ensure --session …</code></div>';
+        return;
+      }
+      const sorted = sortLanes(filtered);
+      lanesEl.className = 'grid';
+      lanesEl.innerHTML = `
     <div class="table-wrap" style="grid-column:1/-1">
       <table class="lanes-table">
         <thead><tr>${TABLE_COLS.map(c => {
-          const ind = tableSort.key === c.key ? `<span class="sort-ind">${tableSort.dir > 0 ? '▲' : '▼'}</span>` : '';
-          return `<th onclick="setSort('${c.key}')">${c.label}${ind}</th>`;
-        }).join('')}</tr></thead>
+        const ind = tableSort.key === c.key ? `<span class="sort-ind">${tableSort.dir > 0 ? '▲' : '▼'}</span>` : '';
+        return `<th onclick="setSort('${c.key}')">${c.label}${ind}</th>`;
+      }).join('')}</tr></thead>
         <tbody>
           ${sorted.map(l => `
             <tr data-id="${l.id}">
@@ -1038,89 +1412,90 @@ function renderTable(lanesEl, lanes) {
         </tbody>
       </table>
     </div>`;
-}
+    }
 
-function setSort(key) {
-  if (tableSort.key === key) tableSort.dir *= -1;
-  else tableSort = { key, dir: 1 };
-  if (lastSnap) render(lastSnap);
-}
+    function setSort(key) {
+      if (tableSort.key === key) tableSort.dir *= -1;
+      else tableSort = { key, dir: 1 };
+      if (lastSnap) render(lastSnap);
+    }
 
-function render(snap) {
-  lastSnap = snap;
-  $('repo').textContent = shortPath(snap.rootPath);
-  $('updated').textContent = 'updated ' + fmtTime(snap.at);
+    function render(snap) {
+      lastSnap = snap;
+      $('repo').textContent = shortPath(snap.rootPath);
+      $('updated').textContent = 'updated ' + fmtTime(snap.at);
 
-  const active = snap.lanes.filter(l => l.status === 'active').length;
-  const totalIssues = (snap.issues || []).length;
-  $('stats').innerHTML = `
+      const active = snap.lanes.filter(l => l.status === 'active').length;
+      const totalIssues = (snap.issues || []).length;
+      $('stats').innerHTML = `
     <div class="stat"><div class="stat-label">Active lanes</div><div class="stat-value">${active}</div></div>
     <div class="stat"><div class="stat-label">Total lanes</div><div class="stat-value">${snap.lanes.length}</div></div>
     <div class="stat"><div class="stat-label">Integration</div><div class="stat-value"><small>${snap.integrationBranch}</small></div></div>
     <div class="stat"><div class="stat-label">Issues</div><div class="stat-value">${totalIssues}</div></div>
   `;
 
-  const lock = snap.promoteLock;
-  const lockEl = $('lock');
-  if (lock && lock.locked) {
-    lockEl.hidden = false;
-    lockEl.textContent = `Promote lock: ${lock.laneId} · pid ${lock.pid} · since ${fmtTime(lock.acquiredAt)}`;
-  } else if (lock && lock.stale) {
-    lockEl.hidden = false;
-    lockEl.textContent = `Stale promote lock: ${lock.laneId} — clear with trellis lane promote --force-lock`;
-  } else {
-    lockEl.hidden = true;
-  }
+      const lock = snap.promoteLock;
+      const lockEl = $('lock');
+      if (lock && lock.locked) {
+        lockEl.hidden = false;
+        lockEl.textContent = `Promote lock: ${lock.laneId} · pid ${lock.pid} · since ${fmtTime(lock.acquiredAt)}`;
+      } else if (lock && lock.stale) {
+        lockEl.hidden = false;
+        lockEl.textContent = `Stale promote lock: ${lock.laneId} — clear with trellis lane promote --force-lock`;
+      } else {
+        lockEl.hidden = true;
+      }
 
-  const lanesEl = $('lanes');
-  if (currentView === 'kanban') {
-    renderKanban(lanesEl, snap.issues || []);
-  } else if (currentView === 'table') {
-    renderTable(lanesEl, snap.lanes);
-  } else {
-    lanesEl.className = 'grid';
-    renderGrid(lanesEl, snap.lanes);
-  }
+      const lanesEl = $('lanes');
+      if (currentView === 'kanban') {
+        renderKanban(lanesEl, snap.issues || []);
+      } else if (currentView === 'table') {
+        renderTable(lanesEl, snap.lanes);
+      } else {
+        lanesEl.className = 'grid';
+        renderGrid(lanesEl, snap.lanes);
+      }
 
-  renderLogs();
-}
+      renderLogs();
+    }
 
-$('btn-grid').classList.toggle('active', currentView === 'grid');
-$('btn-kanban').classList.toggle('active', currentView === 'kanban');
-$('btn-table').classList.toggle('active', currentView === 'table');
+    $('btn-grid').classList.toggle('active', currentView === 'grid');
+    $('btn-kanban').classList.toggle('active', currentView === 'kanban');
+    $('btn-table').classList.toggle('active', currentView === 'table');
 
-function connect() {
-  // Resume from the last op we saw, so a reconnect replays only what we missed
-  // rather than re-sending the world.
-  const qs = lastOpHash ? `?since=${encodeURIComponent(lastOpHash)}` : '';
-  const es = new EventSource('/api/lanes/stream' + qs);
+    function connect() {
+      // Resume from the last op we saw, so a reconnect replays only what we missed
+      // rather than re-sending the world.
+      const qs = lastOpHash ? `?since=${encodeURIComponent(lastOpHash)}` : '';
+      const es = new EventSource('/api/lanes/stream' + qs);
 
-  es.onopen = () => {
-    $('live').classList.remove('off');
-    $('live-label').textContent = 'live';
-  };
+      es.onopen = () => {
+        $('live').classList.remove('off');
+        $('live-label').textContent = 'live';
+      };
 
-  // Projections (lanes/issues) are still server-derived; ops are the events.
-  es.addEventListener('snapshot', (ev) => {
-    try { render(JSON.parse(ev.data)); } catch (e) { console.error(e); }
-  });
+      // Projections (lanes/issues) are still server-derived; ops are the events.
+      es.addEventListener('snapshot', (ev) => {
+        try { render(JSON.parse(ev.data)); } catch (e) { console.error(e); }
+      });
 
-  es.addEventListener('op', (ev) => {
-    try { onOp(JSON.parse(ev.data)); } catch (e) { console.error(e); }
-  });
+      es.addEventListener('op', (ev) => {
+        try { onOp(JSON.parse(ev.data)); } catch (e) { console.error(e); }
+      });
 
-  es.addEventListener('error', (ev) => {
-    if (ev.data) { try { console.error('stream:', JSON.parse(ev.data)); } catch {} }
-  });
+      es.addEventListener('error', (ev) => {
+        if (ev.data) { try { console.error('stream:', JSON.parse(ev.data)); } catch { } }
+      });
 
-  es.onerror = () => {
-    $('live').classList.add('off');
-    $('live-label').textContent = 'reconnecting…';
-    es.close();
-    setTimeout(connect, 2000);
-  };
-}
-connect();
-</script>
+      es.onerror = () => {
+        $('live').classList.add('off');
+        $('live-label').textContent = 'reconnecting…';
+        es.close();
+        setTimeout(connect, 2000);
+      };
+    }
+    connect();
+  </script>
 </body>
+
 </html>

@@ -1,0 +1,12 @@
+<!-- HTML IR — identical to compiling shells/todo.row.tml + projects/todo.list.tml -->
+<template id="shell-todo-row" data-trellis-shell="todo.row">
+  <label data-trellis-shell="row" data-kind="todo" tml-attr-data-entity-id="todo.id">
+    <span data-trellis-slot="done" tml-text="todo.done"></span>
+    <span data-trellis-slot="title" tml-text="todo.title"></span>
+  </label>
+  <button type="button" tml-op="remove(todo.id)">Remove</button>
+</template>
+
+<div tml-query="find ?e where type = 'Todo'" tml-each="todo of todos" tml-live tml-ref="todos">
+  <div data-shell-slot="todo.row"></div>
+</div>

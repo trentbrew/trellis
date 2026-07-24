@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-trellis-band="L3">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trellis — Unified theme Phase C (TRL-164 design mock)</title>
+  <style>
+    :root {
+      --background-base: #101010;
+      --background-weak: #1e1e1e;
+      --surface-raised-base: #1c1c1c;
+      --surface-inset-base: #161616;
+      --surface-inset-alpha: rgba(0, 0, 0, 0.5);
+      --border-base: rgba(255, 255, 255, 0.195);
+      --border-strong: rgba(255, 255, 255, 0.266);
+      --text-strong: rgba(255, 255, 255, 0.936);
+      --text-base: rgba(255, 255, 255, 0.618);
+      --text-weak: rgba(255, 255, 255, 0.422);
+      --text-interactive-base: #9dbefe;
+      --surface-brand-base: #fab283;
+      --surface-success-strong: #12c905;
+      --surface-warning-strong: #fcd53a;
+      --surface-critical-strong: #fc533a;
+      --surface-info-strong: #edb2f1;
+      --background: var(--background-base);
+      --card: var(--surface-raised-base);
+      --surface-1: color-mix(in oklch, var(--card) 25%, var(--background));
+      --surface-2: color-mix(in oklch, var(--card) 50%, var(--background));
+      --surface-3: var(--card);
+      --tml-glass-surface: rgba(22, 22, 22, 0.75);
+      --tml-glass-border: rgba(255, 255, 255, 0.04);
+      --tml-accent-glow: rgba(157, 190, 254, 0.12);
+      --entity-file: #00ceb9;
+      --entity-milestone: #2090f5;
+      --entity-issue: #edb2f1;
+      --entity-branch: #fcd53a;
+      --entity-default: var(--text-base);
+      --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 10px;
+      --top-h: 48px;
+      --ui-vantage: 8;
+      --bg: var(--background-base);
+      --surface: var(--surface-raised-base);
+      --text: var(--text-strong);
+      --text2: var(--text-base);
+      --text3: var(--text-weak);
+      --accent: var(--text-interactive-base);
+      --glass: var(--tml-glass-surface);
+      --glass-border: var(--tml-glass-border);
+      --font: var(--font-family-sans);
+      --mono: var(--font-family-mono);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--background-base);
+      color: var(--text-strong);
+      font: 14px/1.5 var(--font-family-sans);
+    }
+
+    #topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      height: var(--top-h);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      background: var(--tml-glass-surface);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--tml-glass-border);
+    }
+
+    .logo {
+      font: 700 14px var(--font);
+      color: color-mix(in oklch, var(--accent) 85%, white);
+    }
+
+    .logo small {
+      color: var(--text-weak);
+      font-weight: 400;
+      margin-left: 6px;
+    }
+
+    .band {
+      margin-left: auto;
+      font: 500 10px var(--mono);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-weak);
+      border: 1px solid var(--border-base);
+      border-radius: 999px;
+      padding: 4px 10px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr 300px;
+      gap: 1px;
+      background: var(--border-base);
+      min-height: calc(100vh - var(--top-h));
+    }
+
+    .panel {
+      background: var(--background-base);
+      padding: 16px;
+      overflow: auto;
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font: 600 11px var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-weak);
+    }
+
+    /* Scrubber */
+    .scrubber {
+      background: var(--surface-raised-base);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-lg);
+      padding: 12px;
+    }
+
+    .scrubber[role="radiogroup"] {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .detents {
+      display: flex;
+      gap: 4px;
+    }
+
+    .detent {
+      flex: 1;
+      border: 1px solid var(--border-base);
+      background: var(--surface-1);
+      color: var(--text-base);
+      font: 500 11px var(--mono);
+      padding: 8px 6px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+
+    .detent:hover {
+      color: var(--text-strong);
+      background: var(--surface-2);
+    }
+
+    .detent[aria-checked="true"] {
+      color: var(--accent);
+      background: var(--tml-accent-glow);
+      border-color: color-mix(in oklch, var(--accent) 40%, transparent);
+    }
+
+    .detent:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .territory {
+      font: 400 12px var(--font);
+      color: var(--text-strong);
+      margin-top: 4px;
+    }
+
+    .territory strong {
+      font: 500 11px var(--mono);
+      color: var(--accent);
+    }
+
+    .note {
+      margin-top: 12px;
+      font: 400 11px/1.45 var(--font);
+      color: var(--text-weak);
+    }
+
+    /* Stage */
+    .stage {
+      background: var(--background-weak);
+      border-radius: var(--radius-md);
+      min-height: 280px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      border: 1px solid var(--border-base);
+    }
+
+    /* Morphing thing */
+    .thing {
+      transition: width 0.18s ease, height 0.18s ease, padding 0.18s ease, border-radius 0.18s ease;
+      border: 1px solid var(--border-base);
+      background: var(--surface-3);
+      color: var(--text-strong);
+      overflow: hidden;
+    }
+
+    .thing:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    /* unused while decorative */
+    .thing .pip {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--entity-issue);
+      flex-shrink: 0;
+    }
+
+    .thing .title {
+      font: 500 13px var(--font);
+    }
+
+    .thing .meta {
+      font: 400 11px var(--mono);
+      color: var(--text-weak);
+    }
+
+    .thing .body {
+      font: 400 12px var(--font);
+      color: var(--text-base);
+      display: none;
+    }
+
+    .thing .badge {
+      display: none;
+      font: 500 10px var(--mono);
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: color-mix(in oklch, var(--surface-success-strong) 15%, transparent);
+      color: var(--surface-success-strong);
+    }
+
+    .thing[data-trellis-shell="node"] {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      background: color-mix(in oklch, var(--entity-issue) 25%, var(--surface-3));
+    }
+
+    .thing[data-trellis-shell="node"] .title,
+    .thing[data-trellis-shell="node"] .meta,
+    .thing[data-trellis-shell="node"] .body,
+    .thing[data-trellis-shell="node"] .badge {
+      display: none;
+    }
+
+    .thing[data-trellis-shell="row"] {
+      width: min(420px, 100%);
+      height: auto;
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .thing[data-trellis-shell="row"] .title {
+      display: block;
+      flex: 1;
+    }
+
+    .thing[data-trellis-shell="row"] .meta {
+      display: block;
+    }
+
+    .thing[data-trellis-shell="row"] .body,
+    .thing[data-trellis-shell="row"] .badge {
+      display: none;
+    }
+
+    .thing[data-trellis-shell="card"] {
+      width: min(320px, 100%);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .thing[data-trellis-shell="card"] .head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .thing[data-trellis-shell="card"] .title {
+      flex: 1;
+    }
+
+    .thing[data-trellis-shell="card"] .meta,
+    .thing[data-trellis-shell="card"] .body,
+    .thing[data-trellis-shell="card"] .badge {
+      display: block;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .thing {
+        transition: none;
+      }
+    }
+
+    /* Issue card specimen */
+    .issue-card {
+      background: var(--surface-3);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .issue-card-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font: 500 13px var(--font);
+    }
+
+    .issue-meta {
+      font: 400 11px var(--mono);
+      color: var(--text-weak);
+    }
+
+    .issue-card .badge {
+      font: 500 10px var(--mono);
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: color-mix(in oklch, var(--surface-warning-strong) 15%, transparent);
+      color: var(--surface-warning-strong);
+      margin-left: auto;
+    }
+
+    /* Dual-shell prep (static) */
+    .prep {
+      position: relative;
+      height: 120px;
+      margin-top: 8px;
+      opacity: 0.55;
+      pointer-events: none;
+    }
+
+    .prep .ghost {
+      position: absolute;
+      inset: 12px 8px;
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-lg);
+      background: var(--surface-2);
+    }
+
+    .prep .ghost.b {
+      inset: 28px 24px;
+      opacity: 0.7;
+    }
+
+    .prep-label {
+      font: 400 10px var(--mono);
+      color: var(--text-weak);
+      margin-top: 8px;
+    }
+
+    .legend {
+      margin-top: 16px;
+      padding: 10px 12px;
+      background: var(--surface-1);
+      border-radius: var(--radius-md);
+      font: 400 11px/1.45 var(--font);
+      color: var(--text-base);
+    }
+
+    .legend code {
+      font: 500 10px var(--mono);
+      color: var(--accent);
+    }
+  </style>
+</head>
+
+<body>
+  <header id="topbar" data-design-note="Glass chrome invariant across vantage">
+    <div class="logo">Trellis <small>Phase C · fractal hooks</small></div>
+    <div class="band">L3 · operator</div>
+  </header>
+
+  <div class="layout">
+    <aside class="panel" data-design-note="Vantage scrubber — three detents only">
+      <h2>Vantage</h2>
+      <div class="scrubber" role="radiogroup" aria-label="UI vantage" id="scrubber">
+        <div class="detents">
+          <button type="button" class="detent" role="radio" aria-checked="false" tabindex="-1" data-v="2"
+            data-shell="node">Node</button>
+          <button type="button" class="detent" role="radio" aria-checked="false" tabindex="-1" data-v="5"
+            data-shell="row">Row</button>
+          <button type="button" class="detent" role="radio" aria-checked="true" tabindex="0" data-v="8"
+            data-shell="card">Card</button>
+        </div>
+        <div class="territory" id="territory" aria-live="polite">
+          Territory · <strong>Kanban card</strong> · <span id="vReadout">--ui-vantage: 8</span>
+        </div>
+        <p class="note">Detents 2 / 5 / 8 map to <code>data-trellis-shell</code>. Full 0–21 continuous axis → TRL-25.
+        </p>
+      </div>
+
+      <div class="legend">
+        Canonical: <code>--ui-vantage</code>, <code>data-ui-vantage</code>, <code>data-trellis-shell</code>.
+        Demo aliases <code>--vantage</code> / <code>data-trellis-vantage</code> are non-canonical.
+      </div>
+    </aside>
+
+    <main class="panel" id="focal" data-ui-vantage="8" data-design-note="Focal morph host">
+      <h2>Morph host · client stage</h2>
+      <div class="stage">
+        <div class="thing" id="thing" data-trellis-shell="card"
+          data-design-note="One live shell at a time — snaps; decorative (no tabindex)">
+          <div class="head">
+            <span class="pip" aria-hidden="true"></span>
+            <span class="title">TRL-164 Phase C hooks</span>
+            <span class="badge">queue</span>
+          </div>
+          <div class="meta">issue · agent:designer</div>
+          <div class="body">Activate fractal hooks on L3 runtime — scalar + shell snap. Dual-shell stays prep-only.
+          </div>
+        </div>
+      </div>
+      <p class="note" style="margin-top:12px">Inset ladder (<code>--surface-1/2/3</code>) is substrate behind this stage
+        — not shell names.</p>
+    </main>
+
+    <aside class="panel">
+      <h2>Kanban specimen</h2>
+      <article class="issue-card" data-trellis-shell="card" data-design-note="tml-lanes .issue-card anatomy">
+        <div class="issue-card-head">
+          <span class="pip" style="width:8px;height:8px;border-radius:50%;background:var(--entity-issue)"></span>
+          Spec: theme Phase C
+          <span class="badge">design</span>
+        </div>
+        <div class="issue-meta">TRL-165 · parent TRL-164</div>
+      </article>
+
+      <h2 style="margin-top:20px">Dual-shell prep</h2>
+      <div class="prep" data-design-note="Static — not interactive in Phase C">
+        <div class="ghost"></div>
+        <div class="ghost b"></div>
+      </div>
+      <p class="prep-label">Crossfade layers annotated only · TRL-25 owns dual-shell engine</p>
+    </aside>
+  </div>
+
+  <script>
+    (function () {
+      const labels = { 2: 'Labeled node', 5: 'Row', 8: 'Kanban card' };
+      const focal = document.getElementById('focal');
+      const thing = document.getElementById('thing');
+      const territory = document.getElementById('territory');
+      const detents = [...document.querySelectorAll('.detent')];
+
+      function setVantage(v, shell, { focus } = { focus: false }) {
+        document.documentElement.style.setProperty('--ui-vantage', String(v));
+        focal.setAttribute('data-ui-vantage', String(v));
+        thing.setAttribute('data-trellis-shell', shell);
+        detents.forEach((btn) => {
+          const on = btn.dataset.v === String(v);
+          btn.setAttribute('aria-checked', on ? 'true' : 'false');
+          btn.tabIndex = on ? 0 : -1;
+          if (on && focus) btn.focus();
+        });
+        territory.innerHTML =
+          'Territory · <strong>' + labels[v] + '</strong> · <span id="vReadout">--ui-vantage: ' + v + '</span>';
+      }
+
+      // Initial roving tabindex (default card / 8)
+      setVantage(8, 'card');
+
+      detents.forEach((btn) => {
+        btn.addEventListener('click', () => setVantage(Number(btn.dataset.v), btn.dataset.shell, { focus: true }));
+      });
+
+      document.getElementById('scrubber').addEventListener('keydown', (e) => {
+        const order = [2, 5, 8];
+        const cur = Number(focal.getAttribute('data-ui-vantage'));
+        let i = order.indexOf(cur);
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          i = Math.min(order.length - 1, i + 1);
+          const btn = detents.find((b) => Number(b.dataset.v) === order[i]);
+          if (btn) setVantage(order[i], btn.dataset.shell, { focus: true });
+        }
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          i = Math.max(0, i - 1);
+          const btn = detents.find((b) => Number(b.dataset.v) === order[i]);
+          if (btn) setVantage(order[i], btn.dataset.shell, { focus: true });
+        }
+      });
+    })();
+  </script>
+</body>
+
+</html>

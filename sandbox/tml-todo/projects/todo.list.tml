@@ -1,0 +1,7 @@
+project todo.list {
+  query: find ?e where type = 'Todo'
+  each todo in todos
+  live
+  ref todos
+  use todo.row
+}

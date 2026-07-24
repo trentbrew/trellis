@@ -11,6 +11,7 @@ import type { LaneMeta } from '../vcs/lane.js';
 import * as lanePromoteMod from '../vcs/lane-promote.js';
 import { resolveRepoRoot } from './repo-path.js';
 import { PROVENANCE } from '../core/persist/canonical-op.js';
+import { requireDestructiveConfirm } from '../vcs/destructive-guard.js';
 
 function formatRelativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -545,6 +546,7 @@ export function registerLaneCommands(program: Command): void {
     .option('--port <port>', 'HTTP port', '3939')
     .option('--poll <ms>', 'Snapshot poll interval (ms)', '1000')
     .option('--no-open', 'Do not auto-open browser')
+    .option('--dev', 'UI dev mode: esbuild watch + SSE live reload (or TRELLIS_UI_DEV=1)')
     .action(async (opts, command) => {
       const rootPath = resolveLaneRepoPath(opts, command);
       const port = parseInt(opts.port, 10) || 3939;
@@ -553,22 +555,19 @@ export function registerLaneCommands(program: Command): void {
       const { startLanesDashboard } = await import('../ui/lanes-dashboard.js');
 
       try {
-        const handle = await startLanesDashboard({ rootPath, port, pollMs });
+        const handle = await startLanesDashboard({ rootPath, port, pollMs, dev: !!opts.dev });
         const url = `http://localhost:${handle.port}/`;
 
         console.log(chalk.green(`✓ Lane dashboard → ${chalk.bold(url)}`));
+        if (opts.dev) {
+          console.log(chalk.dim('  UI dev: esbuild watch → .trellis/ui-dev/ · SSE /__dev/reload'));
+        }
         console.log(chalk.dim('  SSE stream: /api/lanes/stream'));
         console.log(chalk.dim('  Press Ctrl+C to stop\n'));
 
         if (opts.open !== false) {
-          const { exec } = await import('child_process');
-          const cmd =
-            process.platform === 'darwin'
-              ? 'open'
-              : process.platform === 'win32'
-                ? 'start'
-                : 'xdg-open';
-          exec(`${cmd} ${url}`);
+          const { openBrowser } = await import('./open-browser.js');
+          openBrowser(url);
         }
 
         process.on('SIGINT', () => {
@@ -620,11 +619,19 @@ export function registerLaneCommands(program: Command): void {
     .command('drop <id>')
     .description('Drop a lane (archive journal on disk)')
     .option('-p, --path <path>', 'Repository path', '.')
+    .option(
+      '--confirm-destructive',
+      'Allow lane drop (or set TRELLIS_CONFIRM_DESTRUCTIVE=1)',
+    )
     .action(async (id, opts, command) => {
       const rootPath = resolveLaneRepoPath(opts, command);
       const engine = await openEngine(rootPath);
 
       try {
+        requireDestructiveConfirm({
+          action: 'lane-drop',
+          confirmDestructive: opts.confirmDestructive,
+        });
         await engine.dropLane(id);
         console.log(chalk.green(`✓ Dropped lane ${chalk.bold(id)}`));
       } catch (err: unknown) {

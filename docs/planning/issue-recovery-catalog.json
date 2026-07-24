@@ -1,0 +1,808 @@
+{
+  "meta": {
+    "extractedAt": "2026-07-21T22:01:01.350Z",
+    "hookLogs": 2,
+    "note": "Metadata rehydrate only — AC pass/fail history not restored.",
+    "skipExisting": [
+      "TRL-219",
+      "TRL-220",
+      "TRL-221",
+      "TRL-222"
+    ]
+  },
+  "issues": {
+    "TRL-156": {
+      "title": "Proposal: Unified theme contract for runtime surfaces",
+      "priority": "high",
+      "status": "queue",
+      "labels": [
+        "proposal",
+        "theme",
+        "design",
+        "tml",
+        "fractal"
+      ],
+      "source": "manual-proposal-doc",
+      "id": "TRL-156"
+    },
+    "TRL-157": {
+      "title": "Spec: Unified theme contract (Phase A)",
+      "priority": "medium",
+      "labels": [
+        "spec",
+        "needs-e2e"
+      ],
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-157"
+    },
+    "TRL-158": {
+      "title": "Review pass: TRL-156 theme contract Phase A",
+      "priority": "medium",
+      "labels": [
+        "review"
+      ],
+      "parent": "TRL-157",
+      "source": "hooks-create",
+      "status": "backlog",
+      "id": "TRL-158"
+    },
+    "TRL-159": {
+      "title": "Proposal: Unified theme contract Phase B",
+      "priority": "medium",
+      "status": "backlog",
+      "labels": [
+        "proposal",
+        "theme",
+        "needs-design"
+      ],
+      "parent": "TRL-156",
+      "source": "manual-spec",
+      "id": "TRL-159"
+    },
+    "TRL-160": {
+      "title": "Design: Unified theme contract Phase B",
+      "priority": "medium",
+      "status": "backlog",
+      "labels": [
+        "design",
+        "theme"
+      ],
+      "parent": "TRL-159",
+      "source": "manual-spec",
+      "id": "TRL-160"
+    },
+    "TRL-161": {
+      "title": "Spec: Unified theme contract Phase B",
+      "priority": "medium",
+      "labels": [
+        "spec",
+        "theme",
+        "needs-e2e"
+      ],
+      "parent": "TRL-160",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-161"
+    },
+    "TRL-162": {
+      "title": "Impl: Unified theme contract Phase B",
+      "priority": "medium",
+      "labels": [
+        "impl",
+        "theme",
+        "needs-e2e"
+      ],
+      "parent": "TRL-161",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-162"
+    },
+    "TRL-163": {
+      "title": "Review pass: TRL-162",
+      "priority": "medium",
+      "labels": [
+        "review"
+      ],
+      "parent": "TRL-162",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-163"
+    },
+    "TRL-164": {
+      "title": "Proposal: Unified theme contract Phase C (fractal vantage hooks)",
+      "priority": "medium",
+      "labels": [
+        "proposal",
+        "theme",
+        "needs-design"
+      ],
+      "parent": "TRL-159",
+      "source": "hooks-create",
+      "status": "backlog",
+      "id": "TRL-164"
+    },
+    "TRL-165": {
+      "title": "Design: Unified theme contract Phase C",
+      "priority": "medium",
+      "status": "backlog",
+      "labels": [
+        "design",
+        "theme"
+      ],
+      "parent": "TRL-164",
+      "source": "manual-spec",
+      "id": "TRL-165"
+    },
+    "TRL-166": {
+      "title": "Spec: Unified theme contract Phase C",
+      "priority": "medium",
+      "labels": [
+        "spec",
+        "theme",
+        "needs-e2e"
+      ],
+      "parent": "TRL-165",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-166"
+    },
+    "TRL-167": {
+      "title": "Impl: Unified theme contract Phase C",
+      "priority": "medium",
+      "labels": [
+        "impl",
+        "theme",
+        "needs-e2e"
+      ],
+      "parent": "TRL-166",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-167"
+    },
+    "TRL-168": {
+      "title": "Review pass: TRL-167",
+      "priority": "medium",
+      "labels": [
+        "review"
+      ],
+      "parent": "TRL-167",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-168"
+    },
+    "TRL-169": {
+      "title": "Proposal: Harden unified theme — scrubber e2e + badge rgba",
+      "priority": "medium",
+      "labels": [
+        "proposal",
+        "theme",
+        "needs-e2e"
+      ],
+      "parent": "TRL-167",
+      "source": "hooks-create",
+      "status": "backlog",
+      "id": "TRL-169"
+    },
+    "TRL-170": {
+      "title": "Spec: Harden theme scrubber e2e + badge rgba",
+      "priority": "medium",
+      "labels": [
+        "spec",
+        "theme",
+        "needs-e2e"
+      ],
+      "parent": "TRL-169",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-170"
+    },
+    "TRL-171": {
+      "title": "Review fail: TRL-170 — /client 404 under Playwright dist",
+      "priority": "medium",
+      "labels": [
+        "review"
+      ],
+      "parent": "TRL-170",
+      "source": "hooks-create",
+      "status": "closed",
+      "id": "TRL-171"
+    },
+    "TRL-172": {
+      "title": "Review pass: TRL-170",
+      "priority": "medium",
+      "labels": [
+        "review"
+      ],
+      "parent": "TRL-170",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-172"
+    },
+    "TRL-173": {
+      "title": "Proposal: trellis admin fractal playground host",
+      "priority": "high",
+      "status": "backlog",
+      "labels": [
+        "proposal",
+        "admin",
+        "tml",
+        "needs-design"
+      ],
+      "source": "manual-design-doc",
+      "id": "TRL-173"
+    },
+    "TRL-174": {
+      "title": "Design: trellis admin — AffordanceShell + TML",
+      "priority": "medium",
+      "status": "backlog",
+      "labels": [
+        "design",
+        "admin",
+        "tml"
+      ],
+      "parent": "TRL-173",
+      "source": "manual-spec",
+      "id": "TRL-174"
+    },
+    "TRL-175": {
+      "title": "Spec: trellis admin — kernel shell + TML projections",
+      "priority": "medium",
+      "status": "queue",
+      "labels": [
+        "spec",
+        "tml",
+        "admin",
+        "needs-e2e"
+      ],
+      "parent": "TRL-174",
+      "source": "manual-spec",
+      "id": "TRL-175"
+    },
+    "TRL-176": {
+      "title": "Review fail: TRL-175 — TML clones #view-grid (duplicate ids)",
+      "priority": "medium",
+      "labels": [
+        "review"
+      ],
+      "parent": "TRL-175",
+      "source": "hooks-create",
+      "status": "closed",
+      "id": "TRL-176"
+    },
+    "TRL-177": {
+      "title": "Review pass: TRL-175 — trellis admin kernel shell",
+      "priority": "medium",
+      "labels": [
+        "review"
+      ],
+      "parent": "TRL-175",
+      "source": "hooks-create",
+      "status": "backlog",
+      "id": "TRL-177"
+    },
+    "TRL-178": {
+      "title": "Proposal: trellis admin v1.1 — fractal-playground host",
+      "priority": "high",
+      "status": "backlog",
+      "labels": [
+        "proposal",
+        "admin",
+        "tml",
+        "needs-design"
+      ],
+      "parent": "TRL-173",
+      "source": "manual-spec",
+      "id": "TRL-178"
+    },
+    "TRL-179": {
+      "title": "Design: trellis admin v1.1 — playground AffordanceShell",
+      "priority": "medium",
+      "status": "backlog",
+      "labels": [
+        "design",
+        "admin",
+        "tml"
+      ],
+      "parent": "TRL-178",
+      "source": "manual-spec",
+      "id": "TRL-179"
+    },
+    "TRL-180": {
+      "title": "Spec: trellis admin v1.1 — playground AffordanceShell host",
+      "priority": "high",
+      "status": "queue",
+      "labels": [
+        "spec",
+        "tml",
+        "admin",
+        "needs-e2e",
+        "cohesion"
+      ],
+      "parent": "TRL-179",
+      "source": "manual-spec",
+      "id": "TRL-180"
+    },
+    "TRL-181": {
+      "title": "Impl: trellis admin v1.1 — playground /vcs island + embed",
+      "priority": "high",
+      "labels": [
+        "impl",
+        "tml",
+        "admin",
+        "needs-e2e",
+        "cohesion"
+      ],
+      "parent": "TRL-180",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-181"
+    },
+    "TRL-182": {
+      "title": "Review pass: TRL-181 — admin v1.1 playground host",
+      "priority": "medium",
+      "labels": [
+        "review"
+      ],
+      "parent": "TRL-181",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-182"
+    },
+    "TRL-183": {
+      "title": "Proposal: trellis admin — visual parity harden",
+      "priority": "high",
+      "status": "backlog",
+      "labels": [
+        "proposal",
+        "admin",
+        "tml",
+        "needs-design"
+      ],
+      "source": "manual-spec",
+      "id": "TRL-183"
+    },
+    "TRL-184": {
+      "title": "Design: trellis admin — visual parity harden",
+      "priority": "medium",
+      "status": "backlog",
+      "labels": [
+        "design",
+        "admin",
+        "tml"
+      ],
+      "parent": "TRL-183",
+      "source": "manual-spec",
+      "id": "TRL-184"
+    },
+    "TRL-185": {
+      "title": "Spec: trellis admin — visual parity harden",
+      "priority": "high",
+      "status": "queue",
+      "labels": [
+        "spec",
+        "tml",
+        "admin",
+        "harden",
+        "needs-e2e"
+      ],
+      "parent": "TRL-184",
+      "source": "manual-spec",
+      "id": "TRL-185"
+    },
+    "TRL-187": {
+      "title": "Impl: trellis admin — visual parity harden",
+      "priority": "high",
+      "labels": [
+        "impl",
+        "tml",
+        "admin",
+        "harden",
+        "needs-e2e"
+      ],
+      "parent": "TRL-185",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-187"
+    },
+    "TRL-188": {
+      "title": "Review pass: TRL-187 — admin visual parity",
+      "priority": "medium",
+      "labels": [
+        "review"
+      ],
+      "parent": "TRL-187",
+      "source": "hooks-create",
+      "status": "backlog",
+      "id": "TRL-188"
+    },
+    "TRL-189": {
+      "title": "Proposal: trellis admin shell — Operate sidebar + index /",
+      "priority": "high",
+      "status": "backlog",
+      "labels": [
+        "proposal",
+        "admin",
+        "tml",
+        "needs-design"
+      ],
+      "source": "manual-spec",
+      "id": "TRL-189"
+    },
+    "TRL-190": {
+      "title": "Design: trellis admin shell — Operate sidebar + index /",
+      "priority": "medium",
+      "status": "backlog",
+      "labels": [
+        "design",
+        "admin",
+        "tml"
+      ],
+      "parent": "TRL-189",
+      "source": "manual-spec",
+      "id": "TRL-190"
+    },
+    "TRL-191": {
+      "title": "Spec: trellis admin shell — Operate sidebar + index /",
+      "priority": "high",
+      "labels": [
+        "spec",
+        "tml",
+        "admin",
+        "needs-e2e",
+        "cohesion"
+      ],
+      "parent": "TRL-190",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-191"
+    },
+    "TRL-192": {
+      "title": "Impl: trellis admin shell — Operate sidebar + index /",
+      "priority": "high",
+      "labels": [
+        "impl",
+        "tml",
+        "admin",
+        "needs-e2e"
+      ],
+      "parent": "TRL-191",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-192"
+    },
+    "TRL-193": {
+      "title": "Review pass: TRL-192 — admin shell Operate sidebar + index /",
+      "priority": "medium",
+      "labels": [
+        "review",
+        "admin",
+        "tml"
+      ],
+      "parent": "TRL-192",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-193"
+    },
+    "TRL-194": {
+      "title": "Proposal: trellis admin — Operate header/toolbar parity",
+      "priority": "high",
+      "status": "backlog",
+      "labels": [
+        "proposal",
+        "admin",
+        "tml",
+        "needs-design"
+      ],
+      "source": "manual-spec",
+      "id": "TRL-194"
+    },
+    "TRL-195": {
+      "title": "Design: trellis admin — Operate header/toolbar parity",
+      "priority": "medium",
+      "status": "backlog",
+      "labels": [
+        "design",
+        "admin",
+        "tml"
+      ],
+      "parent": "TRL-194",
+      "source": "manual-spec",
+      "id": "TRL-195"
+    },
+    "TRL-196": {
+      "title": "Spec: trellis admin — Operate header/toolbar parity",
+      "priority": "high",
+      "labels": [
+        "spec",
+        "tml",
+        "admin",
+        "needs-e2e",
+        "cohesion"
+      ],
+      "parent": "TRL-195",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-196"
+    },
+    "TRL-197": {
+      "title": "Impl: trellis admin — Operate header/toolbar parity",
+      "priority": "high",
+      "labels": [
+        "impl",
+        "tml",
+        "admin",
+        "needs-e2e"
+      ],
+      "parent": "TRL-196",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-197"
+    },
+    "TRL-198": {
+      "title": "Review rework: TRL-197 search-input 34px",
+      "priority": "medium",
+      "labels": [
+        "review"
+      ],
+      "parent": "TRL-197",
+      "source": "hooks-create",
+      "status": "backlog",
+      "id": "TRL-198"
+    },
+    "TRL-199": {
+      "title": "Review pass: TRL-197",
+      "priority": "medium",
+      "labels": [
+        "review"
+      ],
+      "parent": "TRL-197",
+      "source": "hooks-create",
+      "status": "backlog",
+      "id": "TRL-199"
+    },
+    "TRL-200": {
+      "title": "Proposal: trellis admin — Operate datatable (SpreadsheetTable TML)",
+      "priority": "high",
+      "status": "backlog",
+      "labels": [
+        "proposal",
+        "admin",
+        "tml",
+        "needs-design"
+      ],
+      "source": "manual-spec",
+      "id": "TRL-200"
+    },
+    "TRL-201": {
+      "title": "Design: trellis admin — Operate datatable (SpreadsheetTable TML)",
+      "priority": "medium",
+      "status": "backlog",
+      "labels": [
+        "design",
+        "admin",
+        "tml"
+      ],
+      "parent": "TRL-200",
+      "source": "manual-spec",
+      "id": "TRL-201"
+    },
+    "TRL-202": {
+      "title": "Spec: trellis admin — Operate datatable (SpreadsheetTable TML)",
+      "priority": "high",
+      "labels": [
+        "spec",
+        "tml",
+        "admin",
+        "needs-e2e",
+        "cohesion"
+      ],
+      "parent": "TRL-201",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-202"
+    },
+    "TRL-203": {
+      "title": "Impl: trellis admin — Operate datatable (SpreadsheetTable TML)",
+      "priority": "high",
+      "labels": [
+        "impl",
+        "tml",
+        "admin",
+        "needs-e2e"
+      ],
+      "parent": "TRL-202",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-203"
+    },
+    "TRL-204": {
+      "title": "Review rework: TRL-203 table-empty after search-clear",
+      "priority": "medium",
+      "labels": [
+        "review"
+      ],
+      "parent": "TRL-203",
+      "source": "hooks-create",
+      "status": "backlog",
+      "id": "TRL-204"
+    },
+    "TRL-205": {
+      "title": "Review pass: TRL-203",
+      "priority": "medium",
+      "labels": [
+        "review"
+      ],
+      "parent": "TRL-203",
+      "source": "hooks-create",
+      "status": "backlog",
+      "id": "TRL-205"
+    },
+    "TRL-206": {
+      "title": "Proposal: trellis admin — extract Operate datatable module",
+      "priority": "high",
+      "status": "backlog",
+      "labels": [
+        "proposal",
+        "admin",
+        "tml",
+        "harden"
+      ],
+      "source": "manual-spec",
+      "id": "TRL-206"
+    },
+    "TRL-207": {
+      "title": "Design: trellis admin — extract Operate datatable module",
+      "priority": "medium",
+      "status": "backlog",
+      "labels": [
+        "design",
+        "admin",
+        "tml"
+      ],
+      "parent": "TRL-206",
+      "source": "manual-spec",
+      "id": "TRL-207"
+    },
+    "TRL-208": {
+      "title": "Spec: trellis admin — extract Operate datatable module",
+      "priority": "high",
+      "labels": [
+        "spec",
+        "tml",
+        "admin",
+        "needs-e2e",
+        "cohesion",
+        "harden"
+      ],
+      "parent": "TRL-207",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-208"
+    },
+    "TRL-209": {
+      "title": "Impl: trellis admin — extract Operate datatable module",
+      "priority": "high",
+      "labels": [
+        "impl",
+        "tml",
+        "admin",
+        "needs-e2e",
+        "harden"
+      ],
+      "parent": "TRL-208",
+      "source": "hooks-create",
+      "status": "queue",
+      "id": "TRL-209"
+    },
+    "TRL-210": {
+      "title": "Review rework: TRL-209 sort mount race",
+      "priority": "medium",
+      "labels": [
+        "review"
+      ],
+      "parent": "TRL-209",
+      "source": "hooks-create",
+      "status": "backlog",
+      "id": "TRL-210"
+    },
+    "TRL-211": {
+      "title": "Review pass: TRL-209 extract Operate datatable",
+      "priority": "medium",
+      "labels": [
+        "review"
+      ],
+      "parent": "TRL-209",
+      "source": "hooks-create",
+      "status": "backlog",
+      "id": "TRL-211"
+    },
+    "TRL-212": {
+      "title": "Proposal: trellis admin — Operate inline cell edit",
+      "priority": "high",
+      "status": "backlog",
+      "labels": [
+        "proposal",
+        "admin",
+        "tml"
+      ],
+      "source": "manual-spec",
+      "id": "TRL-212"
+    },
+    "TRL-213": {
+      "title": "Design: trellis admin — Operate inline cell edit",
+      "priority": "medium",
+      "status": "backlog",
+      "labels": [
+        "design",
+        "admin",
+        "tml"
+      ],
+      "parent": "TRL-212",
+      "source": "manual-spec",
+      "id": "TRL-213"
+    },
+    "TRL-214": {
+      "title": "Spec: trellis admin — Operate inline cell edit",
+      "priority": "high",
+      "status": "queue",
+      "labels": [
+        "spec",
+        "tml",
+        "admin",
+        "needs-e2e",
+        "cohesion"
+      ],
+      "parent": "TRL-213",
+      "source": "manual-spec",
+      "id": "TRL-214"
+    },
+    "TRL-215": {
+      "title": "Impl: trellis admin — Operate inline cell edit",
+      "priority": "high",
+      "status": "queue",
+      "labels": [
+        "impl",
+        "tml",
+        "admin",
+        "needs-e2e"
+      ],
+      "parent": "TRL-214",
+      "source": "manual-spec",
+      "id": "TRL-215"
+    },
+    "TRL-216": {
+      "title": "Review rework: TRL-215 cell edit activation",
+      "priority": "medium",
+      "labels": [
+        "review"
+      ],
+      "parent": "TRL-215",
+      "source": "hooks-create",
+      "status": "backlog",
+      "id": "TRL-216"
+    },
+    "TRL-217": {
+      "title": "Review rework: TRL-215 edit survives live rebind",
+      "priority": "medium",
+      "labels": [
+        "review"
+      ],
+      "parent": "TRL-215",
+      "source": "hooks-create",
+      "status": "backlog",
+      "id": "TRL-217"
+    },
+    "TRL-218": {
+      "title": "Review pass: TRL-215 Operate inline cell edit",
+      "priority": "medium",
+      "labels": [
+        "review"
+      ],
+      "parent": "TRL-215",
+      "source": "hooks-create",
+      "status": "backlog",
+      "id": "TRL-218"
+    }
+  }
+}

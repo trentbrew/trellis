@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en" data-trellis-band="L3">
+<!-- trellis-design: slug=trellis-admin-shell issue=TRL-190 -->
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trellis — admin shell (TRL-190 design mock)</title>
+  <style>
+    :root {
+      --background-base: #101010;
+      --background-weak: #1e1e1e;
+      --surface-raised-base: #1c1c1c;
+      --surface-inset-base: #161616;
+      --border-base: rgba(255, 255, 255, 0.195);
+      --text-strong: rgba(255, 255, 255, 0.936);
+      --text-base: rgba(255, 255, 255, 0.618);
+      --text-weak: rgba(255, 255, 255, 0.422);
+      --text-interactive-base: #9dbefe;
+      --surface-success-strong: #12c905;
+      --live-dot: #12c905;
+      --search-input-h: 34px;
+      --tml-accent-glow: rgba(157, 190, 254, 0.12);
+      --tml-glass-surface: rgba(22, 22, 22, 0.75);
+      --tml-kanban-body-inset: rgba(255, 255, 255, 0.02);
+      --sidebar-bg: #0c0c0c;
+      --sidebar-item-hover: rgba(255, 255, 255, 0.06);
+      --sidebar-item-active: rgba(157, 190, 254, 0.12);
+      --bg: var(--background-base);
+      --surface: var(--surface-raised-base);
+      --border: var(--border-base);
+      --text: var(--text-strong);
+      --text2: var(--text-base);
+      --text3: var(--text-weak);
+      --accent: var(--text-interactive-base);
+      --green: var(--surface-success-strong);
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sidebar-w: 200px;
+      --oplog-w: 280px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--oplog-w);
+      grid-template-rows: 48px minmax(0, 1fr);
+      height: 100%;
+    }
+
+    html.admin-embed .shell {
+      grid-template-columns: minmax(0, 1fr) var(--oplog-w);
+    }
+
+    html.admin-embed .sidebar {
+      display: none;
+    }
+
+    html.admin-embed .header,
+    html.admin-embed .main {
+      grid-column: 1;
+    }
+
+    html.admin-embed .oplog {
+      grid-column: 2;
+      grid-row: 1 / -1;
+    }
+
+    .sidebar {
+      grid-row: 1 / -1;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 12px 10px;
+      gap: 4px;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px 14px;
+      font: 700 13px var(--font);
+      letter-spacing: -0.02em;
+    }
+
+    .sidebar-brand span {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background: var(--accent);
+      opacity: 0.9;
+    }
+
+    .zone {
+      font: 600 10px var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text3);
+      padding: 8px 10px 6px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 36px;
+      padding: 0 10px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text2);
+      font: 500 13px var(--font);
+      text-align: left;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .nav-item svg {
+      width: 16px;
+      height: 16px;
+      flex: none;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .nav-item:hover:not([aria-disabled="true"]):not([aria-current="page"]) {
+      background: var(--sidebar-item-hover);
+      color: var(--text);
+    }
+
+    .nav-item[aria-current="page"] {
+      background: var(--sidebar-item-active);
+      color: var(--accent);
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
+    }
+
+    .nav-item[aria-disabled="true"] {
+      opacity: 0.38;
+      cursor: not-allowed;
+      color: var(--text3);
+    }
+
+    .nav-item:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+      outline-offset: 2px;
+    }
+
+    .search-input {
+      height: var(--search-input-h);
+      width: 180px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text2);
+      padding: 0 10px;
+      font: 400 12px var(--font);
+    }
+
+    .live {
+      font: 500 11px var(--mono);
+      color: var(--live-dot);
+    }
+
+    .spacer {
+      flex: 1;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--tml-glass-surface);
+      backdrop-filter: blur(8px);
+    }
+
+    .header h1 {
+      font: 700 14px var(--font);
+      letter-spacing: -0.02em;
+    }
+
+    .header h1 em {
+      font-style: normal;
+      color: var(--text3);
+      font-weight: 500;
+    }
+
+    .chip {
+      font: 500 11px var(--mono);
+      color: var(--text2);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px 8px;
+    }
+
+    .views {
+      display: flex;
+      gap: 4px;
+      background: var(--background-weak);
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .views button {
+      border: none;
+      background: transparent;
+      color: var(--text3);
+      font: 500 12px var(--font);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .views button[aria-pressed="true"] {
+      background: var(--surface);
+      color: var(--accent);
+    }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .proj {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      padding: 16px;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .kanban {
+      display: flex;
+      gap: 16px;
+      flex: 1;
+      min-height: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    .kanban-col {
+      min-width: 300px;
+      max-width: 340px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      max-height: 100%;
+    }
+
+    .kanban-col-head {
+      flex: none;
+      padding: 10px 12px;
+      font: 600 12px var(--font);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--text2);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px 10px 0 0;
+      border-bottom: none;
+    }
+
+    .kanban-col-body {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+      background: var(--tml-kanban-body-inset);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 10px 10px;
+    }
+
+    .issue-card {
+      flex: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      text-align: left;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .issue-id {
+      font: 600 11px var(--mono);
+      color: var(--accent);
+    }
+
+    .card-title {
+      margin-top: 4px;
+      font: 600 13px var(--font);
+    }
+
+    .oplog {
+      grid-row: 1 / -1;
+      grid-column: 3;
+      background: var(--surface-inset-base);
+      border-left: 1px solid var(--border);
+      padding: 12px;
+      overflow: auto;
+    }
+
+    .oplog h2 {
+      font: 600 11px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text3);
+      margin-bottom: 10px;
+    }
+
+    .op {
+      font: 400 11px var(--mono);
+      color: var(--text3);
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, .04);
+    }
+
+    .legend {
+      position: fixed;
+      left: calc(var(--sidebar-w) + 16px);
+      bottom: 16px;
+      z-index: 40;
+      max-width: 380px;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font: 400 11px var(--mono);
+      color: var(--text2);
+    }
+
+    html.admin-embed .legend {
+      left: 16px;
+    }
+
+    .legend strong {
+      color: var(--accent);
+    }
+
+    .embed-toggle {
+      position: fixed;
+      right: calc(var(--oplog-w) + 16px);
+      bottom: 16px;
+      z-index: 40;
+      font: 500 11px var(--mono);
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text2);
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="shell">
+    <aside class="sidebar" data-design-note="200px labeled sidebar — OPERATE_NAV order; lucide-ish inline SVG">
+      <div class="sidebar-brand"><span aria-hidden="true"></span> Trellis</div>
+      <div class="zone">Operate</div>
+      <nav aria-label="Operate">
+        <button type="button" class="nav-item" aria-disabled="true" aria-label="Collections (coming soon)"
+          title="Collections (coming soon)" data-nav-id="collections">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <ellipse cx="12" cy="5" rx="9" ry="3" />
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+            <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
+          </svg>
+          Collections
+        </button>
+        <button type="button" class="nav-item" aria-disabled="true" aria-label="Storage (coming soon)"
+          title="Storage (coming soon)" data-nav-id="storage">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M22 12H2" />
+            <path
+              d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+            <path d="M6 16h.01" />
+            <path d="M10 16h.01" />
+          </svg>
+          Storage
+        </button>
+        <button type="button" class="nav-item" aria-disabled="true" aria-label="Pages (coming soon)"
+          title="Pages (coming soon)" data-nav-id="pages">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+            <path d="M14 2v6h6" />
+            <path d="M16 13H8" />
+            <path d="M16 17H8" />
+            <path d="M10 9H8" />
+          </svg>
+          Pages
+        </button>
+        <button type="button" class="nav-item" aria-disabled="true" aria-label="History (coming soon)"
+          title="History (coming soon)" data-nav-id="history">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+            <path d="M12 7v5l4 2" />
+          </svg>
+          History
+        </button>
+        <button type="button" class="nav-item" aria-disabled="true" aria-label="Cron (coming soon)"
+          title="Cron (coming soon)" data-nav-id="cron">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10 2h4" />
+            <path d="M12 14v-4" />
+            <circle cx="12" cy="14" r="8" />
+          </svg>
+          Cron
+        </button>
+        <button type="button" class="nav-item" aria-disabled="true" aria-label="Auth (coming soon)"
+          title="Auth (coming soon)" data-nav-id="auth">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+          </svg>
+          Auth
+        </button>
+        <button type="button" class="nav-item" aria-disabled="true" aria-label="API (coming soon)"
+          title="API (coming soon)" data-nav-id="apis">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m18 16 4-4-4-4" />
+            <path d="m6 8-4 4 4 4" />
+            <path d="m14.5 4-5 16" />
+          </svg>
+          API
+        </button>
+        <button type="button" class="nav-item" aria-current="page" data-nav-id="vcs" title="VCS">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="6" cy="6" r="3" />
+            <path d="M6 9v12" />
+            <path d="M6 12c6 0 6 4 12 4" />
+            <circle cx="18" cy="16" r="3" />
+          </svg>
+          VCS
+        </button>
+      </nav>
+    </aside>
+
+    <header class="header">
+      <h1>Trellis <em>admin</em></h1>
+      <span class="live">● Live</span>
+      <span class="chip"
+        style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">…/trellis-node</span>
+      <div class="spacer"></div>
+      <span class="chip"><b>54</b> active</span>
+      <div class="views" role="group" aria-label="Projection">
+        <button type="button" aria-pressed="false">Grid</button>
+        <button type="button" aria-pressed="true">Kanban</button>
+        <button type="button" aria-pressed="false">Table</button>
+      </div>
+      <input class="search-input" id="search-input" type="search" aria-label="Search lanes, issues, ops"
+        placeholder="Search…" />
+    </header>
+
+    <main class="main">
+      <section class="proj" id="view-kanban" data-design-note="VCS live — visual-parity kanban preserved">
+        <div class="kanban">
+          <div class="kanban-col">
+            <div class="kanban-col-head">Backlog</div>
+            <div class="kanban-col-body">
+              <button type="button" class="issue-card">
+                <div class="issue-id">TRL-189</div>
+                <div class="card-title">Proposal: admin shell</div>
+              </button>
+              <button type="button" class="issue-card">
+                <div class="issue-id">TRL-190</div>
+                <div class="card-title">Design: admin shell</div>
+              </button>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="kanban-col-head">In Progress</div>
+            <div class="kanban-col-body">
+              <button type="button" class="issue-card">
+                <div class="issue-id">TRL-187</div>
+                <div class="card-title">Visual parity (shipped)</div>
+              </button>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="kanban-col-head">Done</div>
+            <div class="kanban-col-body">
+              <button type="button" class="issue-card">
+                <div class="issue-id">TRL-181</div>
+                <div class="card-title">Playground /vcs host</div>
+              </button>
+              <button type="button" class="issue-card">
+                <div class="issue-id">TRL-175</div>
+                <div class="card-title">Admin kernel v1</div>
+              </button>
+              <button type="button" class="issue-card">
+                <div class="issue-id">TRL-173</div>
+                <div class="card-title">Admin epic</div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="oplog">
+      <h2>Op log</h2>
+      <div class="op">08:10 · vcs:branch…</div>
+      <div class="op">08:09 · trellis:issue…</div>
+      <div class="op">08:08 · vcs:commit…</div>
+    </aside>
+  </div>
+
+  <div class="legend">
+    <strong>Shell targets</strong><br />
+    Sidebar 200px · OPERATE_NAV (VCS live) · route <strong>GET /</strong> ·
+    <code>?embed=1</code> hides sidebar · datatable = later wedge
+  </div>
+  <button type="button" class="embed-toggle" id="embed-toggle">Toggle embed=1</button>
+
+  <script>
+    document.querySelectorAll('.nav-item[aria-disabled="true"]').forEach((btn) => {
+      btn.addEventListener('click', (e) => e.preventDefault());
+    });
+    document.getElementById('embed-toggle').addEventListener('click', () => {
+      document.documentElement.classList.toggle('admin-embed');
+    });
+  </script>
+</body>
+
+</html>

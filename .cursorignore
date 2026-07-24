@@ -1,0 +1,28 @@
+# TrellisVCS runtime (lane worktrees dominate file count + watcher load)
+.trellis/worktrees/
+.trellis/blobs/
+.trellis/agent-ops/
+
+# Dependencies + build output
+node_modules/
+dist/
+
+# Scratch / generated
+rug/
+.trellis-relay-blobs/
+.trellis-db/
+.trellis-deploy/
+sandbox/workspace/
+.sandbox/
+
+# Demo / example deps
+demo/realtime-app/node_modules/
+demo/realtime-app/.svelte-kit/
+examples/**/node_modules/
+examples/**/.data/
+examples/graph-nav/.graph-nav-db/
+
+# Test artifacts
+test-results/
+playwright-report/
+.playwright-mcp/

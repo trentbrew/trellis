@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trellis — trellis admin v1.1 playground (TRL-179 design mock)</title>
+  <!-- trellis-design: slug=trellis-admin-v1.1-playground parent=TRL-179 -->
+  <style>
+    :root {
+      /* Playground chrome (OKLCH) — outside island only */
+      --pg-bg: oklch(0.14 0.005 285);
+      --pg-rail: oklch(0.12 0.005 285);
+      --pg-border: oklch(0.28 0.01 285);
+      --pg-text: oklch(0.93 0 0);
+      --pg-muted: oklch(0.62 0.01 285);
+      --pg-accent: oklch(0.72 0.14 250);
+      --pg-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+      /* Kernel island — Phase B SSOT */
+      --background-base: #101010;
+      --background-weak: #1e1e1e;
+      --surface-raised-base: #1c1c1c;
+      --surface-inset-base: #161616;
+      --border-base: rgba(255, 255, 255, 0.195);
+      --text-strong: rgba(255, 255, 255, 0.936);
+      --text-base: rgba(255, 255, 255, 0.618);
+      --text-weak: rgba(255, 255, 255, 0.422);
+      --text-interactive-base: #9dbefe;
+      --surface-brand-base: #fab283;
+      --surface-success-strong: #12c905;
+      --surface-warning-strong: #fcd53a;
+      --surface-critical-strong: #fc533a;
+      --tml-glass-surface: rgba(22, 22, 22, 0.75);
+      --tml-kanban-body-inset: rgba(255, 255, 255, 0.02);
+      --rail-bg: #0c0c0c;
+      --live-dot: #12c905;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --toolbar-control-h: 34px;
+      --radius-md: 8px;
+      --radius-lg: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      background: #080808;
+      color: var(--pg-text);
+      font: 400 13px/1.45 var(--pg-mono);
+    }
+
+    .mock-stage {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      height: 100%;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      align-items: center;
+      padding: 8px 12px;
+      background: #050505;
+      border-bottom: 1px solid #222;
+      font: 500 11px/1.3 var(--pg-mono);
+      color: #9a9aa8;
+    }
+
+    .legend strong {
+      color: #e8e8f0;
+      font-weight: 600;
+    }
+
+    .legend label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .legend code {
+      color: var(--text-interactive-base);
+      font-size: 10px;
+    }
+
+    /* Playground AppShell */
+    .pg-shell {
+      display: flex;
+      height: 100%;
+      min-height: 0;
+      background: var(--pg-bg);
+    }
+
+    .pg-shell.is-embed .pg-rail,
+    .pg-shell.is-embed .embed-bar {}
+
+    /* bar shown */
+    .pg-shell.is-embed .pg-rail {
+      display: none;
+    }
+
+    .pg-shell:not(.is-embed) .embed-bar {
+      display: none;
+    }
+
+    .pg-rail {
+      width: 56px;
+      flex-shrink: 0;
+      background: var(--pg-rail);
+      border-right: 1px solid var(--pg-border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 0;
+      gap: 4px;
+    }
+
+    .pg-rail .zone {
+      font: 600 8px var(--pg-mono);
+      letter-spacing: 0.08em;
+      color: var(--pg-muted);
+      margin: 8px 0 4px;
+      text-transform: uppercase;
+    }
+
+    .pg-nav {
+      width: 36px;
+      height: 36px;
+      border-radius: 0;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--pg-muted);
+      font: 600 9px var(--pg-mono);
+      cursor: default;
+      display: grid;
+      place-items: center;
+    }
+
+    .pg-nav[aria-current="page"] {
+      color: var(--pg-accent);
+      border-color: var(--pg-border);
+      background: color-mix(in oklch, var(--pg-accent) 12%, transparent);
+    }
+
+    .pg-nav:disabled {
+      opacity: 0.35;
+    }
+
+    .pg-rail .sep {
+      width: 24px;
+      height: 1px;
+      background: var(--pg-border);
+      margin: 8px 0;
+    }
+
+    .pg-main-col {
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .embed-bar {
+      height: 36px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--pg-border);
+      background: color-mix(in oklch, var(--pg-bg) 80%, black);
+      font: 500 11px var(--pg-mono);
+      color: var(--pg-muted);
+    }
+
+    .embed-bar b {
+      color: var(--pg-text);
+      font-weight: 600;
+    }
+
+    .embed-bar .spacer {
+      flex: 1;
+    }
+
+    .embed-bar button {
+      border: 1px solid var(--pg-border);
+      background: transparent;
+      color: var(--pg-text);
+      font: 500 11px var(--pg-mono);
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+
+    /* Theme seam + island */
+    .island-frame {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid color-mix(in oklch, var(--pg-border) 60%, #9dbefe);
+      box-shadow: inset 3px 0 0 rgba(157, 190, 254, 0.08);
+      position: relative;
+    }
+
+    .island-frame::before {
+      content: "kernel island · runtime-theme.css";
+      position: absolute;
+      top: 6px;
+      right: 10px;
+      z-index: 5;
+      font: 500 9px var(--mono);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-weak);
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    .island {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      grid-template-rows: 48px minmax(0, 1fr);
+      background: var(--background-base);
+      color: var(--text-strong);
+      font-family: var(--font);
+    }
+
+    .pg-shell.is-degraded .island {
+      display: none;
+    }
+
+    .pg-shell.is-loading .island {
+      display: none;
+    }
+
+    .degraded {
+      display: none;
+      flex: 1;
+      align-items: center;
+      justify-content: center;
+      background: var(--background-base);
+      color: var(--text-base);
+      font-family: var(--font);
+      padding: 32px;
+      text-align: center;
+    }
+
+    .loading {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      gap: 12px;
+      padding: 24px;
+      background: var(--background-base);
+      font-family: var(--font);
+    }
+
+    .pg-shell.is-degraded .degraded {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .pg-shell.is-loading:not(.is-degraded) .loading {
+      display: flex;
+    }
+
+    .skel {
+      height: 48px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(90deg, var(--surface-inset-base), var(--surface-raised-base), var(--surface-inset-base));
+      background-size: 200% 100%;
+      animation: shimmer 1.2s linear infinite;
+    }
+
+    .skel.tall {
+      flex: 1;
+      min-height: 120px;
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: 100% 0;
+      }
+
+      100% {
+        background-position: -100% 0;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .skel {
+        animation: none;
+        background: var(--surface-raised-base);
+      }
+    }
+
+    .degraded h1 {
+      font: 700 16px var(--font);
+      color: var(--text-strong);
+      margin: 0;
+    }
+
+    .degraded p {
+      margin: 0;
+      max-width: 36ch;
+      color: var(--text-base);
+    }
+
+    .degraded a {
+      color: var(--text-interactive-base);
+      font: 500 13px var(--mono);
+    }
+
+    .admin-header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      background: var(--tml-glass-surface);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-base);
+    }
+
+    .brand {
+      font: 700 14px var(--font);
+      letter-spacing: -0.02em;
+    }
+
+    .brand span {
+      color: var(--surface-brand-base);
+      font-weight: 600;
+    }
+
+    .live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font: 500 11px var(--mono);
+      color: var(--text-base);
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--live-dot);
+      box-shadow: 0 0 0 0 rgba(18, 201, 5, 0.5);
+      animation: pulse 1.6s ease-out infinite;
+    }
+
+    @keyframes pulse {
+      70% {
+        box-shadow: 0 0 0 8px rgba(18, 201, 5, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(18, 201, 5, 0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .live-dot {
+        animation: none;
+      }
+    }
+
+    .meta {
+      font: 400 11px var(--mono);
+      color: var(--text-weak);
+      max-width: 14ch;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .stats {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      font: 500 10px var(--mono);
+      color: var(--text-base);
+      background: var(--surface-raised-base);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-md);
+      padding: 2px 8px;
+    }
+
+    .chip b {
+      color: var(--text-strong);
+    }
+
+    .toolbar {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .view-toggle {
+      display: inline-flex;
+      height: var(--toolbar-control-h);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .view-toggle button {
+      border: none;
+      background: transparent;
+      color: var(--text-weak);
+      font: 500 11px var(--mono);
+      padding: 0 12px;
+      cursor: pointer;
+      height: 100%;
+    }
+
+    .view-toggle button[aria-pressed="true"] {
+      background: var(--text-interactive-base);
+      color: #0a0a0a;
+    }
+
+    .search {
+      display: flex;
+      align-items: center;
+      height: var(--toolbar-control-h);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-md);
+      background: var(--surface-inset-base);
+      padding: 0 8px;
+      gap: 6px;
+    }
+
+    .search input {
+      border: none;
+      background: transparent;
+      color: var(--text-strong);
+      font: 400 12px var(--mono);
+      width: 180px;
+      outline: none;
+    }
+
+    .search-clear {
+      border: none;
+      background: transparent;
+      color: var(--text-weak);
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .board {
+      min-width: 0;
+      min-height: 0;
+      overflow: auto;
+      padding: 12px;
+      display: none;
+      background: var(--background-base);
+    }
+
+    .board.active {
+      display: flex;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .board.grid-view.active {
+      flex-wrap: wrap;
+      align-content: flex-start;
+    }
+
+    .board.table-view.active {
+      display: block;
+    }
+
+    .col {
+      flex: 1;
+      min-width: 220px;
+      background: var(--tml-kanban-body-inset);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .col-h {
+      padding: 10px 12px;
+      font: 600 11px var(--mono);
+      color: var(--text-base);
+      border-bottom: 1px solid var(--border-base);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .col-h em {
+      font-style: normal;
+      color: var(--text-weak);
+    }
+
+    .col-b {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow: auto;
+    }
+
+    .card {
+      text-align: left;
+      border: 1px solid var(--border-base);
+      background: var(--surface-raised-base);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .card:hover,
+    .card:focus-visible {
+      border-color: var(--text-interactive-base);
+      outline: none;
+    }
+
+    .card-id {
+      font: 500 11px var(--mono);
+      color: var(--text-interactive-base);
+    }
+
+    .card-title {
+      margin-top: 6px;
+      font: 600 13px var(--font);
+      color: var(--text-strong);
+    }
+
+    .card-row {
+      margin-top: 10px;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font: 500 10px var(--mono);
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(157, 190, 254, 0.15);
+      color: var(--text-interactive-base);
+    }
+
+    .lane-badge {
+      font: 500 10px var(--mono);
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(237, 178, 241, 0.12);
+      color: #edb2f1;
+    }
+
+    .lane-card {
+      width: 240px;
+      text-align: left;
+      border: 1px solid var(--border-base);
+      background: var(--surface-raised-base);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .lane-id {
+      font: 500 11px var(--mono);
+      color: var(--text-interactive-base);
+      word-break: break-all;
+    }
+
+    .lane-meta {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font: 400 11px var(--mono);
+      color: var(--text-base);
+    }
+
+    .oplog {
+      background: var(--surface-inset-base);
+      border-left: 1px solid var(--border-base);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .oplog h2 {
+      margin: 0;
+      padding: 12px 14px;
+      font: 600 11px var(--mono);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-weak);
+      border-bottom: 1px solid var(--border-base);
+    }
+
+    .ops {
+      padding: 8px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .op {
+      font: 400 11px/1.35 var(--mono);
+      color: var(--text-base);
+      padding: 8px;
+      border-radius: var(--radius-md);
+      border: 1px solid transparent;
+    }
+
+    .op:hover {
+      background: var(--surface-raised-base);
+      border-color: var(--border-base);
+    }
+
+    .op .hash {
+      color: var(--text-weak);
+    }
+
+    .banner {
+      display: none;
+      margin: 0 12px;
+      margin-top: 10px;
+      padding: 8px 10px;
+      border-radius: var(--radius-md);
+      border: 1px solid color-mix(in srgb, var(--surface-warning-strong) 45%, var(--border-base));
+      background: color-mix(in srgb, var(--surface-warning-strong) 12%, transparent);
+      color: var(--surface-warning-strong);
+      font: 500 11px var(--mono);
+    }
+
+    .banner.show {
+      display: block;
+    }
+
+    .tbl {
+      width: 100%;
+      border-collapse: collapse;
+      font: 400 12px var(--mono);
+    }
+
+    .tbl th,
+    .tbl td {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-base);
+      color: var(--text-base);
+    }
+
+    .tbl th {
+      color: var(--text-weak);
+      font-weight: 500;
+    }
+
+    @media (max-width: 1099px) {
+      .island {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: 48px minmax(0, 1fr) 180px;
+      }
+
+      .oplog {
+        border-left: none;
+        border-top: 1px solid var(--border-base);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="mock-stage">
+    <div class="legend" data-design-note="Mock controls — not product chrome">
+      <strong>TRL-179 mock</strong>
+      <span>playground <code>AppShell</code> rail + kernel <code>admin?embed=1</code> island</span>
+      <label><input type="checkbox" id="tog-embed" /> playground <code>?embed=1</code></label>
+      <label><input type="checkbox" id="tog-loading" /> iframe loading</label>
+      <label><input type="checkbox" id="tog-degraded" /> kernel unreachable</label>
+      <label><input type="checkbox" id="tog-lock" /> promote lock</label>
+      <span>seam = OKLCH chrome ≠ Phase B island</span>
+    </div>
+
+    <div class="pg-shell" id="pg-shell"
+      data-design-note="AppShell: PrimarySidebar | full-bleed island (header suppressed)">
+      <nav class="pg-rail" aria-label="Operate">
+        <div class="zone">Operate</div>
+        <button type="button" class="pg-nav" disabled title="Collections">COL</button>
+        <button type="button" class="pg-nav" disabled title="Storage">STO</button>
+        <button type="button" class="pg-nav" disabled title="Pages">PG</button>
+        <button type="button" class="pg-nav" disabled title="History">HIS</button>
+        <button type="button" class="pg-nav" disabled title="Cron">CRN</button>
+        <button type="button" class="pg-nav" disabled title="Auth">ATH</button>
+        <button type="button" class="pg-nav" disabled title="API">API</button>
+        <button type="button" class="pg-nav" aria-current="page" title="VCS / Lanes"
+          data-design-note="VCS in OPERATE_NAV — not Demos">VCS</button>
+        <div class="sep" aria-hidden="true"></div>
+        <div class="zone">Demo</div>
+        <button type="button" class="pg-nav" disabled title="Issues stub — wrong zone">ISS</button>
+      </nav>
+
+      <div class="pg-main-col">
+        <div class="embed-bar" data-design-note="ConsoleEmbedBar when playground embed">
+          <span>Console · <b>VCS</b></span>
+          <span class="spacer"></span>
+          <button type="button">Pop out</button>
+          <button type="button">Close</button>
+        </div>
+
+        <div class="island-frame">
+          <div class="loading" aria-busy="true" aria-label="Loading kernel admin">
+            <div class="skel"></div>
+            <div class="skel tall"></div>
+          </div>
+          <div class="degraded" role="status">
+            <h1>Kernel admin unreachable</h1>
+            <p>Playground could not load the kernel island. CLI falls back to <code>http://localhost:3939/admin</code>.
+            </p>
+            <a href="#">Open kernel admin</a>
+          </div>
+
+          <div class="island" data-design-note="iframe target: kernel /admin?embed=1 — no kernel rail">
+            <header class="admin-header">
+              <div class="brand">Trellis <span>admin</span></div>
+              <div class="live" aria-live="polite">
+                <span class="live-dot" aria-hidden="true"></span>
+                <span>live</span>
+              </div>
+              <div class="meta" title="kernel origin">kernel:3939</div>
+              <div class="stats" aria-label="Stats">
+                <span class="chip"><b>2</b> active</span>
+                <span class="chip"><b>3</b> lanes</span>
+                <span class="chip" title="integration"><b>issue/TRL-175-…</b></span>
+                <span class="chip"><b>12</b> issues</span>
+              </div>
+              <div class="toolbar">
+                <div class="view-toggle" role="group" aria-label="Projection">
+                  <button type="button" data-view="grid" aria-pressed="false">Grid</button>
+                  <button type="button" data-view="kanban" aria-pressed="true">Kanban</button>
+                  <button type="button" data-view="table" aria-pressed="false">Table</button>
+                </div>
+                <div class="search">
+                  <input type="search" aria-label="Search lanes, issues, ops" placeholder="Search…" />
+                  <button type="button" class="search-clear" aria-label="Clear search">&times;</button>
+                </div>
+              </div>
+            </header>
+
+            <div class="island-main" style="display:flex;flex-direction:column;min-height:0;min-width:0">
+              <div class="banner" id="lock">Promote lock held · lane-5d86419a…</div>
+              <div class="board kanban active" id="board-kanban" data-design-note="TML kanban inside island">
+                <section class="col">
+                  <div class="col-h">Backlog<em>1</em></div>
+                  <div class="col-b">
+                    <button type="button" class="card" data-trellis-shell="card">
+                      <div class="card-id">TRL-178</div>
+                      <div class="card-title">Proposal: admin v1.1 playground host</div>
+                      <div class="card-row">
+                        <span class="badge">QUEUE</span>
+                        <span class="lane-badge">lane-d3a1ea15…</span>
+                      </div>
+                    </button>
+                  </div>
+                </section>
+                <section class="col">
+                  <div class="col-h">In Progress<em>1</em></div>
+                  <div class="col-b">
+                    <button type="button" class="card" data-trellis-shell="card">
+                      <div class="card-id">TRL-179</div>
+                      <div class="card-title">Design: playground AffordanceShell host</div>
+                      <div class="card-row">
+                        <span class="badge">DESIGN</span>
+                        <span class="lane-badge">lane-8133eb6a…</span>
+                      </div>
+                    </button>
+                  </div>
+                </section>
+                <section class="col">
+                  <div class="col-h">Done<em>1</em></div>
+                  <div class="col-b">
+                    <button type="button" class="card" data-trellis-shell="card">
+                      <div class="card-id">TRL-175</div>
+                      <div class="card-title">Spec: kernel admin shell + TML</div>
+                      <div class="card-row">
+                        <span class="badge" style="color:#12c905;background:rgba(18,201,5,.15)">PASS</span>
+                        <span class="lane-badge">lane-5d86419a…</span>
+                      </div>
+                    </button>
+                  </div>
+                </section>
+              </div>
+              <div class="board grid-view" id="board-grid">
+                <button type="button" class="lane-card">
+                  <div class="lane-id">lane-5d86419a-06a6-46ec-a2e5-f8448ef58151</div>
+                  <div class="lane-meta">
+                    <span>agent:trentbrew</span>
+                    <span>ops 68 · files 12</span>
+                    <span>issue/TRL-175-…</span>
+                    <span>TRL-175</span>
+                  </div>
+                </button>
+                <button type="button" class="lane-card">
+                  <div class="lane-id">lane-8133eb6a-f24c-40d5-889c-04c5b9a6fd8b</div>
+                  <div class="lane-meta">
+                    <span>agent:trentbrew</span>
+                    <span>ops 4 · files 2</span>
+                    <span>issue/TRL-179-…</span>
+                    <span>TRL-179</span>
+                  </div>
+                </button>
+              </div>
+              <div class="board table-view" id="board-table">
+                <table class="tbl">
+                  <thead>
+                    <tr>
+                      <th>Lane</th>
+                      <th>Agent</th>
+                      <th>Ops</th>
+                      <th>Files</th>
+                      <th>Branch</th>
+                      <th>Issue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>lane-5d86419a…</td>
+                      <td>trentbrew</td>
+                      <td>68</td>
+                      <td>12</td>
+                      <td>issue/TRL-175-…</td>
+                      <td>TRL-175</td>
+                    </tr>
+                    <tr>
+                      <td>lane-8133eb6a…</td>
+                      <td>trentbrew</td>
+                      <td>4</td>
+                      <td>2</td>
+                      <td>issue/TRL-179-…</td>
+                      <td>TRL-179</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <aside class="oplog">
+              <h2>Op log</h2>
+              <div class="ops">
+                <div class="op">12:24:01 · promote · lane-5d86419a… <span class="hash">a91c0e2f</span></div>
+                <div class="op">12:23:44 · set · issue.status <span class="hash">788eb672</span></div>
+                <div class="op">12:22:10 · create · Issue TRL-179 <span class="hash">2fb0f05d</span></div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var shell = document.getElementById('pg-shell');
+      var lock = document.getElementById('lock');
+      document.getElementById('tog-embed').addEventListener('change', function (e) {
+        shell.classList.toggle('is-embed', e.target.checked);
+      });
+      document.getElementById('tog-loading').addEventListener('change', function (e) {
+        shell.classList.toggle('is-loading', e.target.checked);
+      });
+      document.getElementById('tog-degraded').addEventListener('change', function (e) {
+        shell.classList.toggle('is-degraded', e.target.checked);
+      });
+      document.getElementById('tog-lock').addEventListener('change', function (e) {
+        lock.classList.toggle('show', e.target.checked);
+      });
+      document.querySelectorAll('.view-toggle button').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          document.querySelectorAll('.view-toggle button').forEach(function (b) {
+            b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+          });
+          var view = btn.getAttribute('data-view');
+          document.querySelectorAll('.board').forEach(function (board) {
+            board.classList.toggle('active', board.id === 'board-' + view);
+          });
+        });
+      });
+    })();
+  </script>
+</body>
+
+</html>

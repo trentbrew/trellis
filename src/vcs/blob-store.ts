@@ -14,12 +14,15 @@ import {
   createReadStream as fsCreateReadStream,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
+  rmSync,
   statSync,
   writeFileSync,
   type ReadStream,
 } from 'fs';
 import { join } from 'path';
+import { createHash } from 'crypto';
 
 export type BlobMeta = {
   name?: string;
@@ -123,10 +126,9 @@ export class BlobStore {
 
   /**
    * Compute SHA-256 hash of content (sync).
-   * Uses Bun.CryptoHasher when running under Bun, else node:crypto.
+   * Uses node:crypto for cross-runtime compatibility.
    */
   hashSync(content: Buffer | Uint8Array): string {
-    const { createHash } = require('crypto');
     return createHash('sha256').update(content).digest('hex');
   }
 
@@ -135,7 +137,6 @@ export class BlobStore {
    */
   listHashes(): string[] {
     try {
-      const { readdirSync } = require('fs');
       const HASH_RE = /^[a-f0-9]{64}$/;
       return (readdirSync(this.blobDir) as string[]).filter((f) =>
         HASH_RE.test(f),
@@ -160,7 +161,23 @@ export class BlobStore {
       name: meta.name?.trim() || prev.name,
       contentType: meta.contentType?.trim() || prev.contentType,
     };
-    writeFileSync(this.metaPath, JSON.stringify(map));
+    this.writeMetaMap(map);
+  }
+
+  /**
+   * Delete a blob by hash. Returns true when a stored blob was removed.
+   * Also prunes any display metadata keyed by the same hash.
+   */
+  delete(hash: string): boolean {
+    const blobPath = join(this.blobDir, hash);
+    if (!existsSync(blobPath)) return false;
+    rmSync(blobPath, { force: true });
+    const map = this.readMetaMap();
+    if (hash in map) {
+      delete map[hash];
+      this.writeMetaMap(map);
+    }
+    return true;
   }
 
   /**
@@ -175,7 +192,6 @@ export class BlobStore {
    */
   totalSize(): number {
     try {
-      const { readdirSync, statSync } = require('fs');
       const files: string[] = readdirSync(this.blobDir);
       return files.reduce((sum: number, f: string) => {
         try {
@@ -198,6 +214,10 @@ export class BlobStore {
     } catch {
       return {};
     }
+  }
+
+  private writeMetaMap(map: BlobMetaMap): void {
+    writeFileSync(this.metaPath, JSON.stringify(map));
   }
 
   private hexFromBuffer(buffer: ArrayBuffer): string {

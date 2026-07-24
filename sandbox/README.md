@@ -2,6 +2,10 @@
 
 Isolated testing environment for Trellis features. Simulates a fresh user/developer experience.
 
+**TML Operate reference:** [`tml-admin/`](./tml-admin/) — north-star `.tml` tree for admin shells/projects (not wired to runtime; see that README).  
+**TML todo teaching app:** [`tml-todo/`](./tml-todo/).  
+**DSL planning doc:** [`docs/planning/tml-shell-dsl.md`](../docs/planning/tml-shell-dsl.md).
+
 ## Quick Start
 
 ```bash

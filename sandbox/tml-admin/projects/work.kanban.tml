@@ -1,0 +1,26 @@
+# Three columns = three live projects sharing shell issue.card.
+# Twin IR: ir/work.kanban.html
+
+project work.kanban.backlog {
+  query: find ?e where type = 'Issue' and not (status = 'in_progress' or status = 'paused' or status = 'closed')
+  each issue in issues
+  live
+  ref col-backlog
+  use issue.card
+}
+
+project work.kanban.in_progress {
+  query: find ?e where type = 'Issue' and (status = 'in_progress' or status = 'paused')
+  each issue in issues
+  live
+  ref col-in-progress
+  use issue.card
+}
+
+project work.kanban.done {
+  query: find ?e where type = 'Issue' and status = 'closed'
+  each issue in issues
+  live
+  ref col-done
+  use issue.card
+}

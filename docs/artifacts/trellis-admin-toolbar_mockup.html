@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trellis — Operate header/toolbar parity (TRL-195 design mock)</title>
+  <style>
+    :root {
+      --bg: #101010;
+      --background-weak: #1e1e1e;
+      --surface: #1c1c1c;
+      --surface-inset: #161616;
+      --border: rgba(255, 255, 255, 0.195);
+      --text: rgba(255, 255, 255, 0.936);
+      --text2: rgba(255, 255, 255, 0.618);
+      --text3: rgba(255, 255, 255, 0.422);
+      --accent: #9dbefe;
+      --green: #12c905;
+      --tml-glass-surface: rgba(22, 22, 22, 0.75);
+      --sidebar-bg: #0c0c0c;
+      --sidebar-w: 200px;
+      --oplog-w: 280px;
+      --toolbar-control-h: 34px;
+      --toolbar-track: #1e1e1e;
+      --toolbar-active: #1c1c1c;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--oplog-w);
+      grid-template-rows: 40px auto minmax(0, 1fr) 32px;
+      height: 100%;
+    }
+
+    html.admin-embed .shell {
+      grid-template-columns: minmax(0, 1fr) var(--oplog-w);
+    }
+
+    html.admin-embed .sidebar {
+      display: none;
+    }
+
+    html.admin-embed .header,
+    html.admin-embed .operate-toolbar,
+    html.admin-embed .main {
+      grid-column: 1;
+    }
+
+    html.admin-embed .oplog {
+      grid-column: 2;
+      grid-row: 1 / -1;
+    }
+
+    html.admin-embed .statusbar {
+      grid-column: 1;
+    }
+
+    .sidebar {
+      grid-row: 1 / -1;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      padding: 12px 10px;
+    }
+
+    .zone {
+      font: 600 10px var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text3);
+      padding: 8px 10px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 36px;
+      width: 100%;
+      padding: 0 10px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text2);
+      font: 500 13px var(--font);
+      text-align: left;
+      cursor: default;
+    }
+
+    .nav-item[aria-current="page"] {
+      background: rgba(157, 190, 254, 0.12);
+      color: var(--accent);
+    }
+
+    .nav-item[aria-disabled="true"] {
+      opacity: 0.38;
+      color: var(--text3);
+    }
+
+    .header {
+      grid-column: 2;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      background: var(--tml-glass-surface);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      font: 700 14px var(--font);
+      letter-spacing: -0.02em;
+    }
+
+    .brand span {
+      color: var(--text3);
+      font-weight: 500;
+    }
+
+    .crumb {
+      font: 500 11px var(--mono);
+      color: var(--text3);
+    }
+
+    .operate-toolbar {
+      grid-column: 2;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-height: 48px;
+      padding: 8px 16px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .view-picker {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      height: var(--toolbar-control-h);
+      padding: 2px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--toolbar-track);
+      flex: none;
+    }
+
+    .view-picker button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: calc(var(--toolbar-control-h) - 4px);
+      padding: 0 10px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text3);
+      font: 500 12.8px var(--font);
+      cursor: pointer;
+    }
+
+    .view-picker button svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .view-picker button .lbl {
+      display: none;
+    }
+
+    .view-picker button[aria-checked="true"] {
+      background: var(--toolbar-active);
+      color: var(--text);
+    }
+
+    .view-picker button[aria-checked="true"] .lbl {
+      display: inline;
+    }
+
+    .search {
+      flex: 1;
+      min-width: 140px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      height: var(--toolbar-control-h);
+      padding: 0 8px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .search svg {
+      width: 14px;
+      height: 14px;
+      stroke: var(--text3);
+      fill: none;
+      stroke-width: 1.75;
+      flex: none;
+    }
+
+    .search input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: var(--text2);
+      font: 400 12.8px var(--font);
+      outline: none;
+    }
+
+    .search-clear {
+      border: none;
+      background: transparent;
+      color: var(--text3);
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      display: none;
+    }
+
+    .search.has-value .search-clear {
+      display: block;
+    }
+
+    .icon-btn {
+      width: var(--toolbar-control-h);
+      height: var(--toolbar-control-h);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text2);
+      cursor: pointer;
+    }
+
+    .icon-btn:hover:not(:disabled) {
+      background: var(--background-weak);
+    }
+
+    .icon-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .icon-btn svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+    }
+
+    .btn-new {
+      height: var(--toolbar-control-h);
+      margin-left: 4px;
+      padding: 0 12px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #0a0a0a;
+      font: 600 12.8px var(--font);
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    .filters-menu {
+      position: absolute;
+      z-index: 20;
+      right: 0;
+      margin-top: 4px;
+      min-width: 180px;
+      padding: 8px 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font: 400 12px var(--font);
+      color: var(--text2);
+    }
+
+    .filters-menu[hidden] {
+      display: none;
+    }
+
+    .filters-wrap {
+      position: relative;
+    }
+
+    .main {
+      grid-column: 2;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+    }
+
+    .proj {
+      flex: 1;
+      min-height: 0;
+      padding: 16px;
+      overflow: hidden;
+    }
+
+    .kanban {
+      display: flex;
+      gap: 16px;
+      height: 100%;
+    }
+
+    .kanban-col {
+      min-width: 300px;
+      max-width: 340px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .kanban-col-head {
+      font: 600 11px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text3);
+      padding: 0 4px 8px;
+    }
+
+    .kanban-col-body {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 8px;
+      padding: 8px;
+    }
+
+    .issue-card {
+      display: block;
+      width: 100%;
+      text-align: left;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      padding: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+
+    .issue-id {
+      font: 500 11px var(--mono);
+      color: var(--accent);
+    }
+
+    .oplog {
+      grid-column: 3;
+      grid-row: 1 / span 3;
+      border-left: 1px solid var(--border);
+      background: var(--surface-inset);
+      padding: 12px;
+      overflow: auto;
+    }
+
+    .oplog h2 {
+      font: 600 11px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text3);
+      margin-bottom: 10px;
+    }
+
+    .op {
+      font: 400 11px var(--mono);
+      color: var(--text3);
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, .04);
+    }
+
+    .statusbar {
+      grid-column: 2;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      border-top: 1px solid var(--border);
+      background: var(--surface-inset);
+      font: 500 11px var(--mono);
+      color: var(--text3);
+    }
+
+    .live {
+      color: var(--green);
+    }
+
+    .legend {
+      position: fixed;
+      left: calc(var(--sidebar-w) + 16px);
+      bottom: 48px;
+      z-index: 40;
+      max-width: 360px;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font: 400 11px var(--mono);
+      color: var(--text2);
+    }
+
+    html.admin-embed .legend {
+      left: 16px;
+    }
+
+    .legend strong {
+      color: var(--accent);
+    }
+
+    .embed-toggle {
+      position: fixed;
+      right: calc(var(--oplog-w) + 16px);
+      bottom: 48px;
+      z-index: 40;
+      font: 500 11px var(--mono);
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text2);
+      cursor: pointer;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="shell">
+    <aside class="sidebar" data-design-note="TRL-192 sidebar unchanged">
+      <div class="zone">Operate</div>
+      <button type="button" class="nav-item" aria-disabled="true">Collections</button>
+      <button type="button" class="nav-item" aria-current="page">VCS</button>
+    </aside>
+
+    <header class="header" data-design-note="Slim brand only — no view/search">
+      <div class="brand">Trellis <span>admin</span></div>
+      <div class="crumb">Operate / VCS</div>
+    </header>
+
+    <div class="operate-toolbar" data-testid="operate-toolbar" data-design-note="CollectionBrowseToolbar L→R">
+      <div class="view-picker" role="radiogroup" aria-label="Projection">
+        <button type="button" role="radio" aria-checked="false" data-view="grid" aria-label="Grid">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+          </svg>
+          <span class="lbl">Grid</span>
+        </button>
+        <button type="button" role="radio" aria-checked="true" data-view="kanban" aria-label="Kanban">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="18" />
+            <rect x="14" y="3" width="7" height="11" />
+          </svg>
+          <span class="lbl">Kanban</span>
+        </button>
+        <button type="button" role="radio" aria-checked="false" data-view="table" aria-label="Table">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 5h18v14H3z" />
+            <path d="M3 10h18" />
+            <path d="M9 5v14" />
+          </svg>
+          <span class="lbl">Table</span>
+        </button>
+      </div>
+
+      <div class="search" id="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3-3" />
+        </svg>
+        <input id="search-input" type="search" aria-label="Search lanes, issues, ops"
+          placeholder="Search lanes, issues, ops…" />
+        <button type="button" class="search-clear" id="search-clear" aria-label="Clear search">&times;</button>
+      </div>
+
+      <div class="filters-wrap">
+        <button type="button" class="icon-btn" id="filters-btn" aria-label="Filters" aria-expanded="false"
+          aria-controls="filters-menu">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6h16" />
+            <path d="M7 12h10" />
+            <path d="M10 18h4" />
+          </svg>
+        </button>
+        <div class="filters-menu" id="filters-menu" role="status" hidden>Filters coming soon.</div>
+      </div>
+
+      <button type="button" class="icon-btn" disabled aria-label="Export">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3v12" />
+          <path d="m7 10 5 5 5-5" />
+          <path d="M5 19h14" />
+        </svg>
+      </button>
+
+      <button type="button" class="btn-new" disabled aria-label="New issue (coming soon)"
+        title="New issue (coming soon)">+ New issue</button>
+    </div>
+
+    <main class="main">
+      <section class="proj" data-design-note="visual-parity kanban preserved">
+        <div class="kanban">
+          <div class="kanban-col">
+            <div class="kanban-col-head">Backlog</div>
+            <div class="kanban-col-body">
+              <button type="button" class="issue-card">
+                <div class="issue-id">TRL-194</div>Toolbar parity
+              </button>
+              <button type="button" class="issue-card">
+                <div class="issue-id">TRL-195</div>Design pass
+              </button>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="kanban-col-head">In Progress</div>
+            <div class="kanban-col-body">
+              <button type="button" class="issue-card">
+                <div class="issue-id">TRL-192</div>Shell shipped
+              </button>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="kanban-col-head">Done</div>
+            <div class="kanban-col-body">
+              <button type="button" class="issue-card">
+                <div class="issue-id">TRL-187</div>Visual parity
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="oplog">
+      <h2>Op log</h2>
+      <div class="op">09:30 · vcs:branch…</div>
+      <div class="op">09:29 · trellis:issue…</div>
+    </aside>
+
+    <footer class="statusbar" data-design-note="Telemetry SSOT — not in brand header">
+      <span class="live">● Live</span>
+      <span>…/trellis-node</span>
+      <span><b>54</b> active</span>
+    </footer>
+  </div>
+
+  <div class="legend">
+    <strong>Toolbar targets</strong><br />
+    Full-bleed Operate row · 34px controls · muted active view ·
+    Filters stub · Export/New disabled · statusbar unchanged
+  </div>
+  <button type="button" class="embed-toggle" id="embed-toggle">Toggle embed=1</button>
+
+  <script>
+    document.getElementById('embed-toggle').addEventListener('click', () => {
+      document.documentElement.classList.toggle('admin-embed');
+    });
+    document.querySelectorAll('.view-picker button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.view-picker button').forEach((b) => b.setAttribute('aria-checked', 'false'));
+        btn.setAttribute('aria-checked', 'true');
+      });
+    });
+    const search = document.getElementById('search');
+    const input = document.getElementById('search-input');
+    input.addEventListener('input', () => search.classList.toggle('has-value', input.value.length > 0));
+    document.getElementById('search-clear').addEventListener('click', () => {
+      input.value = ''; search.classList.remove('has-value'); input.focus();
+    });
+    const fBtn = document.getElementById('filters-btn');
+    const fMenu = document.getElementById('filters-menu');
+    function closeFilters() {
+      fMenu.hidden = true;
+      fBtn.setAttribute('aria-expanded', 'false');
+      fBtn.focus();
+    }
+    function openFilters() {
+      fMenu.hidden = false;
+      fBtn.setAttribute('aria-expanded', 'true');
+    }
+    fBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (fMenu.hidden) openFilters(); else closeFilters();
+    });
+    document.addEventListener('click', (e) => {
+      if (!fMenu.hidden && !fBtn.contains(e.target) && !fMenu.contains(e.target)) closeFilters();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !fMenu.hidden) closeFilters();
+    });
+  </script>
+</body>
+
+</html>

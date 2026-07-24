@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-trellis-band="L3">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trellis — Unified theme contract (TRL-156 design mock)</title>
+<style>
+:root {
+  --background-base: #09090b;
+  --background-weak: #0f1015;
+  --surface-raised-base: #15161b;
+  --surface-inset-base: #1a1b22;
+  --border-base: #25262e;
+  --border-strong: #32333d;
+  --text-strong: #e4e4e7;
+  --text-base: #a1a1aa;
+  --text-weak: #63637a;
+  --text-interactive-base: #6d5bfa;
+  --surface-brand-base: #dcde8d;
+  --surface-success-strong: #34d399;
+  --surface-warning-strong: #fbbf24;
+  --surface-critical-strong: #f87171;
+  --surface-info-strong: #60a5fa;
+  --accent-glow: rgba(109, 91, 250, 0.12);
+  --tml-glass-surface: rgba(21, 22, 27, 0.75);
+  --tml-glass-border: rgba(255, 255, 255, 0.04);
+  --font-family-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-family-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-family-header: var(--font-family-sans);
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --tml-accent-glow: var(--accent-glow);
+  --tml-kanban-body-inset: rgba(255, 255, 255, 0.02);
+  --tml-badge-success-bg: color-mix(in srgb, var(--surface-success-strong) 15%, transparent);
+  --tml-badge-success-border: color-mix(in srgb, var(--surface-success-strong) 30%, transparent);
+  --tml-badge-critical-bg: color-mix(in srgb, var(--surface-critical-strong) 15%, transparent);
+  --tml-badge-critical-border: color-mix(in srgb, var(--surface-critical-strong) 30%, transparent);
+  --tml-badge-warning-bg: color-mix(in srgb, var(--surface-warning-strong) 15%, transparent);
+  --tml-badge-warning-border: color-mix(in srgb, var(--surface-warning-strong) 30%, transparent);
+  --tml-badge-info-bg: color-mix(in srgb, var(--surface-info-strong) 15%, transparent);
+  --tml-badge-info-border: color-mix(in srgb, var(--surface-info-strong) 30%, transparent);
+  --tml-badge-neutral-bg: color-mix(in srgb, var(--text-weak) 15%, transparent);
+  --bg: var(--background-base);
+  --surface: var(--surface-raised-base);
+  --surface2: var(--surface-inset-base);
+  --border: var(--border-base);
+  --text: var(--text-strong);
+  --text2: var(--text-base);
+  --text3: var(--text-weak);
+  --accent: var(--text-interactive-base);
+  --green: var(--surface-success-strong);
+  --yellow: var(--surface-warning-strong);
+  --red: var(--surface-critical-strong);
+  --blue: var(--surface-info-strong);
+  --font: var(--font-family-sans);
+  --mono: var(--font-family-mono);
+}
+[data-theme="light"] {
+  --background-base: #f8f8f8;
+  --background-weak: #f3f3f3;
+  --surface-raised-base: #fcfcfc;
+  --surface-inset-base: rgba(0, 0, 0, 0.034);
+  --border-base: rgba(11, 6, 0, 0.2);
+  --border-strong: rgba(11, 6, 0, 0.32);
+  --text-strong: #171717;
+  --text-base: #6f6f6f;
+  --text-weak: #8f8f8f;
+  --text-interactive-base: #034cff;
+  --accent-glow: rgba(3, 76, 255, 0.12);
+  --tml-glass-surface: rgba(252, 252, 252, 0.82);
+  --tml-glass-border: rgba(0, 0, 0, 0.06);
+  --tml-kanban-body-inset: rgba(0, 0, 0, 0.02);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  padding: var(--spacing-lg);
+  background:
+    linear-gradient(var(--border-base) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-base) 1px, transparent 1px),
+    var(--background-base);
+  background-size: 48px 48px;
+  color: var(--text-strong);
+  font: 14px/1.5 var(--font-family-sans);
+}
+button { font: inherit; }
+.shell { max-width: 1180px; margin: 0 auto; }
+.topbar {
+  position: sticky;
+  top: 12px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--tml-glass-border);
+  border-radius: var(--radius-md);
+  background: var(--tml-glass-surface);
+  backdrop-filter: blur(16px);
+}
+.mark {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--surface-brand-base);
+  color: var(--surface-brand-base);
+  font: 700 13px var(--font-family-mono);
+  transform: rotate(45deg);
+}
+.mark span { transform: rotate(-45deg); }
+.title { font: 700 14px var(--font-family-header); }
+.title small { margin-left: 8px; color: var(--text-weak); font-weight: 400; }
+.band {
+  margin-left: auto;
+  padding: 3px 8px;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-pill);
+  color: var(--text-base);
+  font: 600 10px var(--font-family-mono);
+  letter-spacing: .05em;
+}
+.toggle {
+  padding: 5px 9px;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised-base);
+  color: var(--text-base);
+  cursor: pointer;
+}
+.toggle:hover, .toggle:focus-visible { border-color: var(--text-interactive-base); color: var(--text-strong); }
+.hero { display: grid; grid-template-columns: 1.4fr 1fr; gap: 32px; padding: 64px 0 30px; }
+.eyebrow { color: var(--text-interactive-base); font: 600 11px var(--font-family-mono); letter-spacing: .08em; text-transform: uppercase; }
+h1 { max-width: 720px; margin: 8px 0 12px; font: 700 clamp(32px, 6vw, 62px)/.98 var(--font-family-header); letter-spacing: -.055em; }
+.lede { max-width: 630px; color: var(--text-base); font-size: 16px; }
+.contract {
+  align-self: end;
+  padding: 16px;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised-base);
+  box-shadow: 12px 12px 0 var(--surface-inset-base);
+}
+.contract code { display: block; color: var(--text-base); font: 12px/1.8 var(--font-family-mono); }
+.contract .alias { color: var(--text-weak); }
+.contract .semantic { color: var(--surface-brand-base); }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 24px 0 12px; }
+h2 { margin: 0; font: 700 14px var(--font-family-header); }
+.section-head span { color: var(--text-weak); font: 11px var(--font-family-mono); }
+.kanban { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 18px; }
+.kanban-col { min-width: 300px; max-width: 340px; flex: 1; }
+.kanban-col-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-base);
+  border-bottom: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--surface-raised-base);
+}
+.col-title { font: 600 11px var(--font-family-mono); letter-spacing: .06em; text-transform: uppercase; }
+.count { color: var(--text-weak); font: 11px var(--font-family-mono); }
+.kanban-col-body {
+  display: grid;
+  gap: 8px;
+  min-height: 190px;
+  padding: 10px;
+  border: 1px solid var(--border-base);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  background: var(--tml-kanban-body-inset);
+}
+.issue-card {
+  align-self: start;
+  padding: 14px;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised-base);
+  transition: border-color 100ms ease, box-shadow 100ms ease;
+}
+.issue-card:hover { border-color: var(--text-interactive-base); box-shadow: 0 0 0 1px var(--tml-accent-glow); }
+.issue-card.featured { border-color: var(--text-interactive-base); }
+.card-top, .meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.issue { color: var(--text-interactive-base); font: 600 12px var(--font-family-mono); }
+.issue-card h3 { margin: 10px 0; font-size: 13px; font-weight: 500; line-height: 1.4; }
+.meta { justify-content: flex-start; flex-wrap: wrap; }
+.badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  font: 600 10px var(--font-family-mono);
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+.high { background: var(--tml-badge-critical-bg); color: var(--surface-critical-strong); }
+.medium { background: var(--tml-badge-warning-bg); color: var(--surface-warning-strong); }
+.lane { background: var(--tml-badge-success-bg); border: 1px solid var(--tml-badge-success-border); color: var(--surface-success-strong); text-transform: none; }
+.none { background: var(--tml-badge-neutral-bg); border: 1px solid var(--border-base); color: var(--text-weak); text-transform: none; }
+.swatches { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; padding: 0 0 40px; }
+.swatch { min-height: 92px; padding: 10px; border: 1px solid var(--border-base); border-radius: var(--radius-md); background: var(--swatch); color: var(--label); font: 10px var(--font-family-mono); }
+.swatch span { display: block; margin-top: 32px; }
+:focus-visible { outline: 2px solid var(--text-interactive-base); outline-offset: 2px; }
+@media (max-width: 760px) {
+  body { padding: 12px; }
+  .hero { grid-template-columns: 1fr; padding-top: 40px; }
+  .contract { box-shadow: 7px 7px 0 var(--surface-inset-base); }
+  .swatches { grid-template-columns: repeat(3, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+<main class="shell">
+  <header class="topbar" data-design-note="L3 operator chrome uses glass tokens over the shared surface ladder.">
+    <div class="mark" aria-hidden="true"><span>T</span></div>
+    <div class="title">Trellis <small>runtime theme contract</small></div>
+    <span class="band">L3 · operator</span>
+    <button class="toggle" type="button" id="theme-toggle" aria-pressed="false">Light values</button>
+  </header>
+
+  <section class="hero">
+    <div>
+      <div class="eyebrow">TRL-156 · one vocabulary</div>
+      <h1>Static pages, Studio semantics.</h1>
+      <p class="lede">Lanes, TML, and the graph client keep their runtime density while adopting one semantic token contract. Phase A changes the source and names, not the pixels.</p>
+    </div>
+    <aside class="contract" aria-label="Token alias example" data-design-note="Legacy aliases bridge existing CSS while semantic names become canonical.">
+      <code><span class="alias">--bg</span>: var(<span class="semantic">--background-base</span>);</code>
+      <code><span class="alias">--surface</span>: var(<span class="semantic">--surface-raised-base</span>);</code>
+      <code><span class="alias">--accent</span>: var(<span class="semantic">--text-interactive-base</span>);</code>
+      <code><span class="alias">--green</span>: var(<span class="semantic">--surface-success-strong</span>);</code>
+    </aside>
+  </section>
+
+  <div class="section-head">
+    <h2>TML Kanban parity specimen</h2>
+    <span>semantic names · current appearance</span>
+  </div>
+  <section class="kanban" aria-label="Issue board theme specimen" data-design-note="Normative Phase A specimen: class names and dimensions match the landed Kanban. Hero and swatches are illustrative documentation chrome.">
+    <div class="kanban-col">
+      <div class="kanban-col-head"><span class="col-title">Backlog</span><span class="count">2</span></div>
+      <div class="kanban-col-body">
+        <article class="issue-card featured">
+          <div class="card-top"><span class="issue">TRL-156</span><span class="badge high">high</span></div>
+          <h3>Unified theme contract for runtime surfaces</h3>
+          <div class="meta"><span class="badge lane">agent:designer</span></div>
+        </article>
+        <article class="issue-card">
+          <div class="card-top"><span class="issue">TRL-25</span><span class="badge medium">medium</span></div>
+          <h3>Fractal shell contract for explorer</h3>
+          <div class="meta"><span class="badge none">no lane</span></div>
+        </article>
+      </div>
+    </div>
+    <div class="kanban-col">
+      <div class="kanban-col-head"><span class="col-title">In progress</span><span class="count">1</span></div>
+      <div class="kanban-col-body">
+        <article class="issue-card">
+          <div class="card-top"><span class="issue">TRL-149</span><span class="badge high">high</span></div>
+          <h3>TML v0.1 Kanban test bed</h3>
+          <div class="meta"><span class="badge lane">lane-7d9c</span></div>
+        </article>
+      </div>
+    </div>
+    <div class="kanban-col">
+      <div class="kanban-col-head"><span class="col-title">Done</span><span class="count">1</span></div>
+      <div class="kanban-col-body">
+        <article class="issue-card">
+          <div class="card-top"><span class="issue">TRL-117</span><span class="badge medium">medium</span></div>
+          <h3>Lane coherence for agent experience</h3>
+          <div class="meta"><span class="badge none">promoted</span></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-head">
+    <h2>Semantic surface ladder</h2>
+    <span>base → raised → inset → states</span>
+  </div>
+  <section class="swatches" aria-label="Theme color tokens">
+    <div class="swatch" style="--swatch:var(--background-base);--label:var(--text-base)"><span>background-base</span></div>
+    <div class="swatch" style="--swatch:var(--surface-raised-base);--label:var(--text-base)"><span>surface-raised</span></div>
+    <div class="swatch" style="--swatch:var(--surface-inset-base);--label:var(--text-base)"><span>surface-inset</span></div>
+    <div class="swatch" style="--swatch:var(--text-interactive-base);--label:white"><span>interactive</span></div>
+    <div class="swatch" style="--swatch:var(--surface-success-strong);--label:#07150f"><span>success</span></div>
+    <div class="swatch" style="--swatch:var(--surface-critical-strong);--label:#1b0808"><span>critical</span></div>
+  </section>
+</main>
+<script>
+const root = document.documentElement;
+const toggle = document.getElementById('theme-toggle');
+toggle.addEventListener('click', () => {
+  const light = root.dataset.theme !== 'light';
+  root.dataset.theme = light ? 'light' : 'dark';
+  toggle.textContent = light ? 'Dark values' : 'Light values';
+  toggle.setAttribute('aria-pressed', String(light));
+});
+</script>
+</body>
+</html>

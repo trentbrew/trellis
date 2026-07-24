@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trellis — Causal history graph (TRL-262 design mock)</title>
+  <style>
+    :root {
+      --background-base: #101010;
+      --background-weak: #1e1e1e;
+      --surface-raised-base: #1c1c1c;
+      --surface-inset-base: #161616;
+      --border-base: rgba(255, 255, 255, 0.195);
+      --text-strong: rgba(255, 255, 255, 0.936);
+      --text-base: rgba(255, 255, 255, 0.618);
+      --text-weak: rgba(255, 255, 255, 0.422);
+      --text-interactive-base: #9dbefe;
+      --live-dot: #12c905;
+      --logs: var(--zone-logs);
+      --sidebar-bg: #0c0c0c;
+      --sidebar-w: 200px;
+      --secondary-w: 224px;
+      --chrome-h: 56px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --lane-trunk: rgba(255, 255, 255, 0.422);
+      --lane-fork: #9dbefe;
+      --lane-fork-2: #34d399;
+      --lane-fork-3: #f59e0b;
+      --tag-flag-bg: rgba(255, 255, 255, 0.422);
+      --zone-logs: #f59e0b;
+      --row-h: 72px;
+      --lane-gap: 48px;
+      --left-pad: 28px;
+      --dot-r: 10px;
+      --line-w: 5px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      font-family: var(--font);
+      background: var(--background-base);
+      color: var(--text-strong);
+      font-size: 13px;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) var(--secondary-w) minmax(0, 1fr);
+      grid-template-rows: var(--chrome-h) minmax(0, 1fr);
+      height: 100%;
+    }
+
+    .sidebar {
+      grid-column: 1;
+      grid-row: 1 / -1;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border-base);
+      padding: 10px;
+    }
+
+    .header {
+      grid-column: 2 / -1;
+      grid-row: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      background: rgba(22, 22, 22, 0.75);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .secondary {
+      grid-column: 2;
+      grid-row: 2;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border-base);
+      padding: 8px;
+    }
+
+    .main {
+      grid-column: 3;
+      grid-row: 2;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .crumb {
+      font: 500 11px var(--mono);
+      color: var(--text-weak);
+      flex: 1;
+    }
+
+    .crumb .current {
+      color: var(--text-strong);
+    }
+
+    .view-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 48px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border-base);
+      background: var(--background-base);
+    }
+
+    #view-meta {
+      font: 500 11px var(--mono);
+      color: var(--text-weak);
+    }
+
+    .pin-btn {
+      height: 34px;
+      padding: 0 10px;
+      border: 1px solid var(--border-base);
+      border-radius: 6px;
+      background: var(--background-weak);
+      color: var(--text-base);
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .state-toggle {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .state-toggle button {
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-base);
+      background: var(--background-weak);
+      color: var(--text-base);
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .state-toggle button.active {
+      border-color: var(--text-interactive-base);
+      color: var(--text-interactive-base);
+    }
+
+    .zone-label {
+      font: 600 10px var(--mono);
+      letter-spacing: 0.08em;
+      color: var(--text-weak);
+      padding: 8px 6px 4px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 32px;
+      padding: 0 8px;
+      border-radius: 6px;
+      color: var(--text-base);
+      font-size: 13px;
+      cursor: default;
+    }
+
+    .nav-item.active {
+      background: rgba(245, 158, 11, 0.12);
+      color: var(--logs);
+    }
+
+    .nav-item svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+    }
+
+    .view-body {
+      flex: 1;
+      overflow: auto;
+      padding: 16px 20px 24px;
+    }
+
+    .graph-intro h2 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .graph-intro p {
+      color: var(--text-base);
+      margin-bottom: 16px;
+      max-width: 52ch;
+    }
+
+    .graph-card {
+      background: var(--surface-raised-base);
+      border: 1px solid var(--border-base);
+      border-radius: 10px;
+      padding: 16px 8px 8px;
+      overflow: hidden;
+    }
+
+    .graph-row {
+      display: flex;
+      min-height: 0;
+    }
+
+    .graph-svg {
+      flex: none;
+      overflow: visible;
+    }
+
+    .graph-list {
+      flex: 1;
+      list-style: none;
+      min-width: 0;
+    }
+
+    .graph-list li {
+      height: var(--row-h);
+      display: flex;
+      align-items: center;
+    }
+
+    .graph-list button {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      text-align: left;
+      border: none;
+      background: transparent;
+      color: inherit;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .graph-list button:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .graph-list button:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--text-interactive-base) 55%, transparent);
+      outline-offset: 2px;
+    }
+
+    .graph-list button.selected {
+      background: color-mix(in srgb, var(--surface-inset-base) 72%, var(--background-base));
+    }
+
+    .skeleton-row {
+      height: var(--row-h);
+      margin: 0 12px;
+      border-radius: 6px;
+      background: linear-gradient(90deg, var(--background-weak), var(--surface-inset-base), var(--background-weak));
+      background-size: 200% 100%;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        background-position: 100% 0;
+      }
+
+      50% {
+        background-position: 0 0;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .skeleton-row {
+        animation: none;
+      }
+
+      .graph-list button {
+        transition: none;
+      }
+    }
+
+    .empty-state {
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--text-base);
+    }
+
+    .empty-state strong {
+      display: block;
+      color: var(--text-strong);
+      margin-bottom: 8px;
+    }
+
+    .pill {
+      flex: none;
+      border: 2px solid var(--lane-fork);
+      color: var(--lane-fork);
+      background: var(--surface-raised-base);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .pill.trunk {
+      border-color: var(--lane-trunk);
+      color: var(--lane-trunk);
+    }
+
+    .flag {
+      flex: none;
+      background: var(--tag-flag-bg);
+      color: #101010;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px 4px 14px;
+      line-height: 1;
+      clip-path: polygon(0% 50%, 22% 0%, 100% 0%, 100% 100%, 22% 100%);
+    }
+
+    .msg-wrap {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .msg {
+      display: block;
+      font-size: 15px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .msg.trunk {
+      color: var(--text-base);
+    }
+
+    .msg.fork {
+      color: var(--lane-fork);
+      font-weight: 500;
+    }
+
+    .meta {
+      display: block;
+      margin-top: 2px;
+      font: 500 11px var(--mono);
+      color: var(--text-weak);
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px 24px;
+      margin-top: 14px;
+      padding: 0 4px;
+      color: var(--text-base);
+      font-size: 12px;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex: none;
+    }
+
+    .swatch.merge {
+      background: var(--surface-raised-base);
+      border: 3px solid var(--lane-trunk);
+      box-sizing: border-box;
+    }
+
+    .note {
+      margin-top: 20px;
+      padding: 12px 14px;
+      border: 1px dashed var(--border-base);
+      border-radius: 8px;
+      color: var(--text-weak);
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Operate">
+      <div style="height:36px;display:flex;align-items:center;font-weight:600;font-size:14px;">Trellis</div>
+    </aside>
+
+    <header class="header">
+      <div class="crumb">
+        trellis-node / <span class="current">operate / vcs / branches</span>
+      </div>
+    </header>
+
+    <nav class="secondary" aria-label="VCS routes">
+      <div class="zone-label">LOGS</div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24">
+          <path d="M4 12h16" />
+          <path d="M4 6h10" />
+          <path d="M4 18h14" />
+        </svg>
+        Ops
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 16v-4" />
+          <path d="M12 8h.01" />
+        </svg>
+        Decisions
+      </div>
+      <div class="nav-item active">
+        <svg viewBox="0 0 24 24">
+          <line x1="6" x2="6" y1="3" y2="15" />
+          <circle cx="18" cy="6" r="3" />
+          <circle cx="6" cy="18" r="3" />
+          <path d="M18 9a9 9 0 0 1-9 9" />
+        </svg>
+        Branches
+      </div>
+    </nav>
+
+    <main class="main">
+      <div class="view-header">
+        <div id="view-meta">7 events · 1 active fork · integration: main</div>
+        <button type="button" class="pin-btn" id="pin-toggle">Pin live tail</button>
+      </div>
+      <div class="view-body">
+        <div class="state-toggle" aria-label="Mock state">
+          <button type="button" class="active" data-state="demo">Demo</button>
+          <button type="button" data-state="loading">Loading</button>
+          <button type="button" data-state="empty">Empty</button>
+        </div>
+        <div class="graph-intro">
+          <h2>Causal history</h2>
+          <p>Milestones, agent forks, and promotes on the integration branch. Click any event for hash and agent
+            details.</p>
+        </div>
+
+        <div class="graph-card">
+          <div id="causal-graph-host">
+            <div class="graph-row" id="graph-host"></div>
+          </div>
+        </div>
+
+        <div class="legend" aria-label="Graph legend">
+          <span><i class="swatch" style="background:var(--lane-trunk)"></i> integration (main)</span>
+          <span><i class="swatch" style="background:var(--lane-fork)"></i> agent fork</span>
+          <span><i class="swatch merge"></i> promote (merge)</span>
+        </div>
+
+        <p class="note">TRL-262 design mock — replaces <code>logs/branches</code> stub. Data from
+          <code>GET /api/causal-graph</code>; mount via <code>mountAdminCausalGraph</code>.
+        </p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const ROW_HEIGHT = 72;
+    const LANE_GAP = 48;
+    const LEFT_PAD = 28;
+    const DOT_R = 10;
+    const LINE_W = 5;
+    const LANE_COLORS = ['var(--lane-trunk)', 'var(--lane-fork)', 'var(--lane-fork-2)', 'var(--lane-fork-3)'];
+
+    const demoCommits = [
+      { id: 'm7', hash: 'a1b2c3d', message: 'Promote lane-7087… — admin chrome polish', lane: 0, parents: ['h2', 'f2'], branches: ['main'], tags: ['MS-12'], author: 'agent:local', date: '1h ago', merge: true, kind: 'promote' },
+      { id: 'f2', hash: '7d3e8b1', message: 'Fix datatable cell edit wiring', lane: 1, parents: ['c1'], branches: ['issue/TRL-215'], author: 'agent:local', date: '3h ago', kind: 'head' },
+      { id: 'c1', hash: '1c0ffee', message: 'Child lane split — tml docs', lane: 2, parents: ['f1'], author: 'agent:local', date: '4h ago', kind: 'fork' },
+      { id: 'h2', hash: '9f0a2e1', message: 'Hotfix promote lock stale detection', lane: 0, parents: ['m5'], author: 'agent:local', date: '5h ago', kind: 'milestone' },
+      { id: 'f1', hash: '4c8d1f0', message: 'Implement admin datatable primitive', lane: 1, parents: ['m5'], author: 'agent:local', date: '6h ago', kind: 'fork' },
+      { id: 'm5', hash: '4e8f0c3', message: 'Add TML promote on admin grid', lane: 0, parents: ['m4'], tags: ['MS-11'], author: 'agent:local', date: '2d ago', kind: 'milestone' },
+      { id: 'm4', hash: '2aa91bc', message: 'Extract admin-shell driver', lane: 0, parents: ['m3'], author: 'agent:local', date: '2d ago', kind: 'milestone' },
+      { id: 'm3', hash: '0ff1ce00', message: 'Init TML causal loop on admin', lane: 0, parents: [], author: 'agent:local', date: '3d ago', kind: 'milestone' },
+    ];
+
+    let commits = demoCommits;
+    let selected = 'f2';
+    let viewState = 'demo';
+
+    document.querySelectorAll('.state-toggle button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.state-toggle button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        viewState = btn.getAttribute('data-state');
+        render();
+      });
+    });
+
+    function laneColor(lane) { return LANE_COLORS[lane % LANE_COLORS.length]; }
+    function laneX(lane) { return LEFT_PAD + lane * LANE_GAP; }
+    function rowY(row) { return row * ROW_HEIGHT + ROW_HEIGHT / 2; }
+
+    function render() {
+      const host = document.getElementById('graph-host');
+      if (viewState === 'loading') {
+        host.innerHTML = '<div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div>';
+        return;
+      }
+      if (viewState === 'empty') {
+        host.innerHTML = '<div class="empty-state"><strong>No fork history yet</strong>Start an issue to create an agent fork, then promote when done.</div>';
+        return;
+      }
+      const rowOf = new Map(commits.map((c, i) => [c.id, i]));
+      const laneOfId = new Map(commits.map((c) => [c.id, c.lane]));
+      const maxLane = Math.max(...commits.map((c) => c.lane));
+
+      const edges = [];
+      for (const c of commits) {
+        const childRow = rowOf.get(c.id);
+        for (const parentId of c.parents) {
+          const parentRow = rowOf.get(parentId);
+          const parentLane = laneOfId.get(parentId);
+          if (parentRow === undefined || parentLane === undefined) continue;
+          const xc = laneX(c.lane), yc = rowY(childRow);
+          const xp = laneX(parentLane), yp = rowY(parentRow);
+          const color = laneColor(Math.max(c.lane, parentLane));
+          let d;
+          if (xc === xp) d = `M ${xc} ${yc} L ${xp} ${yp}`;
+          else {
+            const midY = (yc + yp) / 2;
+            d = `M ${xc} ${yc} C ${xc} ${midY}, ${xp} ${midY}, ${xp} ${yp}`;
+          }
+          edges.push({ d, color, key: `${c.id}->${parentId}` });
+        }
+      }
+
+      const svgW = laneX(maxLane) + LEFT_PAD;
+      const svgH = commits.length * ROW_HEIGHT;
+
+      const paths = edges.map((e) => `<path d="${e.d}" fill="none" stroke="${e.color}" stroke-width="${LINE_W}" stroke-linecap="round"/>`).join('');
+      const dots = commits.map((c, i) => {
+        const sel = selected === c.id;
+        const merge = c.merge || c.parents.length > 1;
+        const r = sel ? DOT_R + 2 : DOT_R;
+        const fill = merge ? 'var(--surface-raised-base)' : laneColor(c.lane);
+        const stroke = laneColor(c.lane);
+        const sw = merge ? LINE_W : (sel ? 3 : 0);
+        return `<circle cx="${laneX(c.lane)}" cy="${rowY(i)}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" data-id="${c.id}" style="cursor:pointer"/>`;
+      }).join('');
+
+      const list = commits.map((c) => {
+        const sel = selected === c.id;
+        const trunk = c.lane === 0;
+        const pills = (c.branches || []).map((b) => `<span class="pill${trunk ? ' trunk' : ''}">${b}</span>`).join('');
+        const flags = (c.tags || []).map((t) => `<span class="flag">${t}</span>`).join('');
+        const meta = sel ? `<span class="meta">${c.hash} · ${c.author} · ${c.date}</span>` : '';
+        const label = `${c.message}, ${c.kind || 'event'}, lane ${c.lane}`;
+        return `<li><button type="button" class="${sel ? 'selected' : ''}" data-id="${c.id}" aria-selected="${sel}" aria-label="${label}">${pills}${flags}<span class="msg-wrap"><span class="msg ${trunk ? 'trunk' : 'fork'}">${c.message}</span>${meta}</span></button></li>`;
+      }).join('');
+
+      host.innerHTML = `<svg class="graph-svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" aria-hidden="true">${paths}${dots}</svg><ul class="graph-list">${list}</ul>`;
+
+      host.querySelectorAll('[data-id]').forEach((el) => {
+        el.addEventListener('click', () => {
+          const id = el.getAttribute('data-id');
+          selected = selected === id ? null : id;
+          render();
+        });
+      });
+    }
+
+    render();
+  </script>
+</body>
+
+</html>

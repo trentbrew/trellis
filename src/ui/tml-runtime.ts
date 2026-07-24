@@ -14,7 +14,7 @@
  * are provided at runtime (fetch is global in Node 18+, EventSource only in the
  * browser). Declared here so tsc is happy without pulling in DOM lib types. */
 declare const EventSource: {
-  new (url: string): {
+  new(url: string): {
     addEventListener(type: string, cb: (ev: { data: string }) => void): void;
     close(): void;
   };
@@ -53,8 +53,60 @@ export interface TmlBinding {
 }
 
 /* ------------------------------------------------------------------ *
+ * Diagnostics (spec: docs/specs/tml-v0.2-binding-diagnostics.md)
+ * ------------------------------------------------------------------ */
+
+/** Outcome of walking a dotted field path. See `resolvePath`. */
+export interface PathResult {
+  /** false = a key along the path was absent from its container. */
+  ok: boolean;
+  /** Identical to `getPath`'s return value. */
+  value: unknown;
+}
+
+export interface TmlDiagnostic {
+  code: 'unresolved-path' | 'malformed-each' | 'malformed-op' | 'each-without-query';
+  /** The attribute the diagnostic came from, e.g. `tml-text`. */
+  attr: string;
+  /** The offending expression, verbatim. */
+  expr: string;
+  /** Context, e.g. the scope's top-level keys. Never contains row values. */
+  detail?: string;
+}
+
+export interface MountOptions {
+  onDiagnostic?: (d: TmlDiagnostic) => void;
+  /** Throw on the first diagnostic instead of reporting and continuing. */
+  strict?: boolean;
+}
+
+function makeReporter(opts?: MountOptions): (d: TmlDiagnostic) => void {
+  return (d) => {
+    if (opts?.strict) {
+      throw new Error(`[tml] ${d.code} on ${d.attr}="${d.expr}"${d.detail ? ` (${d.detail})` : ''}`);
+    }
+    if (opts?.onDiagnostic) opts.onDiagnostic(d);
+    else console.warn(`[tml] ${d.code} on ${d.attr}="${d.expr}"`, d.detail ?? '');
+  };
+}
+
+/* ------------------------------------------------------------------ *
  * Field paths + expressions
  * ------------------------------------------------------------------ */
+
+/**
+ * Resolve a dotted field path, distinguishing "key absent" from "key present
+ * and undefined". `value` matches `getPath` exactly; `ok` is the new signal.
+ */
+export function resolvePath(obj: unknown, path: string): PathResult {
+  let cur: unknown = obj;
+  for (const k of String(path).split('.')) {
+    if (cur == null || typeof cur !== 'object') return { ok: false, value: undefined };
+    if (!(k in (cur as Record<string, unknown>))) return { ok: false, value: undefined };
+    cur = (cur as Record<string, unknown>)[k];
+  }
+  return { ok: true, value: cur };
+}
 
 /** Resolve a dotted field path against an object, e.g. `lane.id`. */
 export function getPath(obj: unknown, path: string): unknown {
@@ -102,6 +154,29 @@ export function resolveExpr(expr: string, scope: Record<string, unknown>): unkno
   });
   if (resolved.length === 1) return resolved[0];
   return resolved.map((v) => (v == null ? '' : String(v))).join('');
+}
+
+/**
+ * The field paths an expression reads, ignoring quoted literals. Shares
+ * `splitPlus` with `resolveExpr` so both agree on what a literal is.
+ */
+export function expressionPaths(expr: string): string[] {
+  if (expr == null) return [];
+  return splitPlus(expr)
+    .map((p) => p.trim())
+    .filter((p) => p !== '' && !/^'([^']*)'$/.test(p) && !/^"([^"]*)"$/.test(p));
+}
+
+/**
+ * Truthiness for `tml-if` only. Empty arrays and empty strings are falsy
+ * (unlike bare JS), so `tml-if="issue.laneIds"` hides when `laneIds === []`.
+ * Does not affect `tml-text` / `tml-attr-*` via `resolveExpr`.
+ */
+export function isTmlTruthy(v: unknown): boolean {
+  if (v == null || v === false) return false;
+  if (Array.isArray(v) && v.length === 0) return false;
+  if (v === '') return false;
+  return Boolean(v);
 }
 
 /* ------------------------------------------------------------------ *
@@ -154,6 +229,8 @@ function collectionFor(type: string, snapshot: any): ResultRow[] {
       return (snapshot?.lanes as ResultRow[]) || [];
     case 'Issue':
       return (snapshot?.issues as ResultRow[]) || [];
+    case 'Milestone':
+      return (snapshot?.milestones as ResultRow[]) || [];
     default:
       return [];
   }
@@ -195,9 +272,86 @@ function matchCond(row: ResultRow, c: { field: string; op: string; value: unknow
   }
 }
 
+type Cond = { field: string; op: string; value: unknown };
+type Clause =
+  | { kind: 'simple'; cond: Cond }
+  | { kind: 'or'; conds: Cond[] }
+  | { kind: 'not-or'; conds: Cond[] };
+
+function parseSimpleCond(c: string): Cond | null {
+  const cm = c
+    .trim()
+    .match(/^(\w+)\s*(=|!=|<=|>=|<|>|contains|startsWith|endsWith)\s*(.+)$/i);
+  if (!cm) return null;
+  return { field: cm[1], op: cm[2].toLowerCase(), value: parseValue(cm[3]) };
+}
+
+/** Split on top-level `and` only (ignore `and` inside `(… or …)` groups). */
+function splitTopLevelAnd(s: string): string[] {
+  const out: string[] = [];
+  let cur = '';
+  let depth = 0;
+  let i = 0;
+  while (i < s.length) {
+    const ch = s[i];
+    if (ch === '(') {
+      depth++;
+      cur += ch;
+      i++;
+      continue;
+    }
+    if (ch === ')') {
+      depth--;
+      cur += ch;
+      i++;
+      continue;
+    }
+    if (depth === 0) {
+      const m = s.slice(i).match(/^\s+and\s+/i);
+      if (m) {
+        if (cur.trim()) out.push(cur.trim());
+        cur = '';
+        i += m[0].length;
+        continue;
+      }
+    }
+    cur += ch;
+    i++;
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out;
+}
+
+function parseClause(raw: string): Clause | null {
+  const t = raw.trim();
+  const notMatch = t.match(/^not\s*\((.+)\)$/is);
+  if (notMatch) {
+    const parts = notMatch[1].split(/\s+or\s+/i);
+    const conds = parts.map(parseSimpleCond).filter(Boolean) as Cond[];
+    if (!conds.length) return null;
+    return { kind: 'not-or', conds };
+  }
+  if (t.startsWith('(') && t.endsWith(')')) {
+    const parts = t.slice(1, -1).split(/\s+or\s+/i);
+    const conds = parts.map(parseSimpleCond).filter(Boolean) as Cond[];
+    if (!conds.length) return null;
+    return { kind: 'or', conds };
+  }
+  const cond = parseSimpleCond(t);
+  return cond ? { kind: 'simple', cond } : null;
+}
+
+function matchClause(row: ResultRow, clause: Clause): boolean {
+  if (clause.kind === 'or') return clause.conds.some((c) => matchCond(row, c));
+  if (clause.kind === 'not-or') return !clause.conds.some((c) => matchCond(row, c));
+  return matchCond(row, clause.cond);
+}
+
 /**
- * Evaluate a minimal TQL `find ?e where type = 'X' [and <f> <op> <v> …]`
- * against a LanesSnapshot. v0 covers the grid projection's needs only.
+ * Evaluate a minimal TQL `find ?e where type = 'X' [and …]` against a
+ * LanesSnapshot. Supports parenthesized OR groups and negated OR groups:
+ * `and (status = 'backlog' or status = 'queue')`
+ * `and not (status = 'in_progress' or status = 'paused' or status = 'closed')`
  */
 export function evaluateQuery(query: string, snapshot: unknown): ResultRow[] {
   if (!snapshot) return [];
@@ -207,16 +361,10 @@ export function evaluateQuery(query: string, snapshot: unknown): ResultRow[] {
   const rest = query.slice((m.index ?? 0) + m[0].length).trim();
   const andMatch = rest.match(/^and\s+(.+)$/is);
   if (!andMatch) return rows;
-  const conditions = andMatch[1]
-    .split(/\s+and\s+/i)
-    .map((c) => {
-      const cm = c.match(/^(\w+)\s*(=|!=|<=|>=|<|>|contains|startsWith|endsWith)\s*(.+)$/i);
-      return cm
-        ? { field: cm[1], op: cm[2].toLowerCase(), value: parseValue(cm[3]) }
-        : null;
-    })
-    .filter(Boolean) as { field: string; op: string; value: unknown }[];
-  return rows.filter((r) => conditions.every((c) => matchCond(r, c)));
+  const clauses = splitTopLevelAnd(andMatch[1])
+    .map(parseClause)
+    .filter(Boolean) as Clause[];
+  return rows.filter((r) => clauses.every((c) => matchClause(r, c)));
 }
 
 /* ------------------------------------------------------------------ *
@@ -272,11 +420,21 @@ export class WebDriver implements TmlDriver {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, args }),
     });
-    if (!res.ok) throw new Error('tml op failed: ' + (await res.text()));
+    if (!res.ok) {
+      const text = await res.text();
+      let msg = text || 'tml op failed';
+      try {
+        const j = JSON.parse(text);
+        if (j?.error) msg = String(j.error);
+      } catch {
+        /* keep msg */
+      }
+      throw new Error(msg);
+    }
   }
   ref(id: string): RefHandle {
     if (!this._refs[id]) {
-      this._refs[id] = { id, read: () => this.store.snapshot, write: () => {} };
+      this._refs[id] = { id, read: () => this.store.snapshot, write: () => { } };
     }
     return this._refs[id];
   }
@@ -351,7 +509,11 @@ export class PeerDriver implements TmlDriver {
   async query(q: string): Promise<ResultRow[]> {
     const parsed = parseSimple(q);
     const res = await this._engine.execute(parsed);
-    return res.bindings as ResultRow[];
+    return res.bindings.map((b) => {
+      const row = { ...b } as ResultRow;
+      if (row.e != null && row.id == null) row.id = row.e;
+      return row;
+    });
   }
 
   live(_q: string, cb: () => void): () => void {
@@ -365,12 +527,22 @@ export class PeerDriver implements TmlDriver {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, args }),
     });
-    if (!res.ok) throw new Error('tml op failed: ' + (await res.text()));
+    if (!res.ok) {
+      const text = await res.text();
+      let msg = text || 'tml op failed';
+      try {
+        const j = JSON.parse(text);
+        if (j?.error) msg = String(j.error);
+      } catch {
+        /* keep msg */
+      }
+      throw new Error(msg);
+    }
   }
 
   ref(id: string): RefHandle {
     if (!this._refs[id]) {
-      this._refs[id] = { id, read: () => this.store, write: () => {} };
+      this._refs[id] = { id, read: () => this.store, write: () => { } };
     }
     return this._refs[id];
   }
@@ -409,7 +581,7 @@ export function applyBindings(el: any, scope: Record<string, unknown>, driver: T
   const binding = parseTmlAttrs(getAttrs(el));
 
   if (binding.if) {
-    if (!resolveExpr(binding.if, scope)) {
+    if (!isTmlTruthy(resolveExpr(binding.if, scope))) {
       el.remove();
       return false;
     }
@@ -421,10 +593,11 @@ export function applyBindings(el: any, scope: Record<string, unknown>, driver: T
     el.setAttribute(name, String(resolveExpr(expr, scope) ?? ''));
   }
   if (binding.op) {
-    el.addEventListener('click', () => {
+    el.addEventListener('click', (e: Event) => {
+      e?.stopPropagation?.();
       const args: Record<string, unknown> = {};
       for (const a of binding.op!.args) args[a.name] = resolveExpr(a.expr, scope);
-      driver.op(binding.op!.action, args).catch((e: unknown) => console.error('[tml] op failed', e));
+      driver.op(binding.op!.action, args).catch((err: unknown) => console.error('[tml] op failed', err));
     });
   }
 
@@ -435,18 +608,120 @@ export function applyBindings(el: any, scope: Record<string, unknown>, driver: T
   return true;
 }
 
-function setupContainer(container: any, driver: TmlDriver): void {
+/**
+ * Static tier: malformed attributes, detectable without data. Runs at mount on
+ * `el` and its descendants.
+ */
+export function checkStatic(el: any, report: (d: TmlDiagnostic) => void): void {
+  const attrs = getAttrs(el);
+  const binding = parseTmlAttrs(attrs);
+
+  const rawEach = attrs['tml-each'];
+  if (rawEach != null && binding.each == null) {
+    report({
+      code: 'malformed-each',
+      attr: 'tml-each',
+      expr: rawEach,
+      detail: "expected '<var> of <collection>'",
+    });
+  } else if (rawEach != null && attrs['tml-query'] == null) {
+    report({
+      code: 'each-without-query',
+      attr: 'tml-each',
+      expr: rawEach,
+      detail: 'tml-each requires tml-query on the same element',
+    });
+  }
+
+  const rawOp = attrs['tml-op'];
+  if (rawOp != null && binding.op == null) {
+    report({
+      code: 'malformed-op',
+      attr: 'tml-op',
+      expr: rawOp,
+      detail: "expected '<action>(<arg>)'",
+    });
+  }
+
+  for (const child of Array.from(el.children) as any[]) checkStatic(child, report);
+}
+
+/**
+ * Shape tier: field paths that do not resolve against a real result row. Runs
+ * once, against the first row — a binding well-formed for row 0 is well-formed
+ * for row N.
+ */
+export function checkShape(el: any, scope: Record<string, unknown>, report: (d: TmlDiagnostic) => void): void {
+  const binding = parseTmlAttrs(getAttrs(el));
+  const keys = Object.keys(scope).join(', ');
+
+  const checkExpr = (attr: string, expr: string) => {
+    for (const path of expressionPaths(expr)) {
+      if (!resolvePath(scope, path).ok) {
+        report({ code: 'unresolved-path', attr, expr, detail: `scope keys: ${keys}` });
+      }
+    }
+  };
+
+  if (binding.if !== undefined) checkExpr('tml-if', binding.if);
+  if (binding.text !== undefined) checkExpr('tml-text', binding.text);
+  for (const [name, expr] of Object.entries(binding.attrs)) checkExpr(`tml-attr-${name}`, expr);
+  if (binding.op) for (const a of binding.op.args) checkExpr('tml-op', a.expr);
+
+  for (const child of Array.from(el.children) as any[]) checkShape(child, scope, report);
+}
+
+/** True if a cell-edit session is mounted under `el` (TRL-215 live hold). */
+function hasCellEditLock(el: any): boolean {
+  if (!el) return false;
+  if (typeof el.getAttribute === 'function' && el.getAttribute('data-edit-hold') === '1') {
+    return true;
+  }
+  const cls =
+    (typeof el.className === 'string' && el.className) ||
+    (typeof el.getAttribute === 'function' && el.getAttribute('class')) ||
+    '';
+  if (/\bcell-editing\b/.test(cls) || /\bcell-edit-input\b/.test(cls)) return true;
+  for (const child of Array.from(el.children || [])) {
+    if (hasCellEditLock(child)) return true;
+  }
+  return false;
+}
+
+function setupContainer(container: any, driver: TmlDriver, opts?: MountOptions): void {
+  const report = makeReporter(opts);
   const binding = parseTmlAttrs(getAttrs(container));
   if (!binding.query) return;
 
-  const template = container.cloneNode(true);
-  ['tml-query', 'tml-each', 'tml-live', 'tml-ref'].forEach((a) => template.removeAttribute(a));
+  const tag = String(container.tagName || '').toUpperCase();
+  const tableSection = tag === 'TBODY' || tag === 'THEAD' || tag === 'TFOOT';
+  // Table sections must project <tr> children — cloning the tbody itself nests
+  // invalid <tbody> wrappers and breaks thead/body column alignment.
+  const sourceRow = tableSection
+    ? container.children?.[0] || container.firstElementChild
+    : null;
+  if (tableSection && !sourceRow) return;
+
+  const template = tableSection ? sourceRow.cloneNode(true) : container.cloneNode(true);
+  if (!tableSection) {
+    ['tml-query', 'tml-each', 'tml-live', 'tml-ref'].forEach((a) => template.removeAttribute(a));
+  }
   const eachVar = binding.each?.var || 'item';
 
+  let shapeChecked = false;
   const render = () => {
     driver
       .query(binding.query!)
       .then((rows) => {
+        // Empty result sets skip the shape tier: better than asserting a schema
+        // the driver never supplied (spec §3.3).
+        if (!shapeChecked && rows.length > 0) {
+          shapeChecked = true;
+          checkShape(template.cloneNode(true), { [eachVar]: rows[0] }, report);
+        }
+        // Hold live reproject while Operate inline edit is open — wiping
+        // innerHTML detaches .cell-edit-input (TRL-215 / e2e invalid-issue).
+        if (hasCellEditLock(container)) return;
         container.innerHTML = '';
         for (const row of rows) {
           const card = template.cloneNode(true);
@@ -463,6 +738,9 @@ function setupContainer(container: any, driver: TmlDriver): void {
 }
 
 /** Mount all `tml-query` subtrees under `root` against `driver`. */
-export function mount(root: any, driver: TmlDriver): void {
-  root.querySelectorAll('[tml-query]').forEach((c: any) => setupContainer(c, driver));
+export function mount(root: any, driver: TmlDriver, opts?: MountOptions): void {
+  // One walk of the whole tree, so a `tml-each` outside any `tml-query`
+  // container is still reported — setupContainer only ever sees `[tml-query]`.
+  checkStatic(root, makeReporter(opts));
+  root.querySelectorAll('[tml-query]').forEach((c: any) => setupContainer(c, driver, opts));
 }

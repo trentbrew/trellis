@@ -1,0 +1,22 @@
+# Twin IR: ir/lane.card.html
+
+shell lane.card (kind: lane, density: card) {
+  let opsLabel = "ops " + @lane.opCount + " · files " + @lane.fileCount
+  let agentLabel = "agent:" + @lane.agentId
+
+  article[entity=@lane.id, status=@lane.status] {
+    #id {
+      @lane.id
+    }
+    #meta {
+      =agentLabel
+      =opsLabel
+      @lane.targetBranch
+      @lane.issueId || "no issue"
+    }
+    action promote {
+      op promote(@lane.id)
+      label "Promote"
+    }
+  }
+}

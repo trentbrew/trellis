@@ -1,9 +1,9 @@
 # Spec: Lane coherence for agent experience
 
 **Status:** Done (AC1–AC5 shipped: split, issue⇄promote, promote==milestone,
-cross-agent ownership, coherence signal)
-**Date:** 2026-07-15 **Issue:** TRL-117 **Relates to:** ADR 0014 (lane worktree
-bind), ADR 0015 (agent handoff protocol), AGENTS.md "Agent Lanes" section.
+cross-agent ownership, coherence signal) **Date:** 2026-07-15 **Issue:** TRL-117
+**Relates to:** ADR 0014 (lane worktree bind), ADR 0015 (agent handoff
+protocol), AGENTS.md "Agent Lanes" section.
 
 ## Problem
 
@@ -106,8 +106,8 @@ signal.
   independent?~~ **Resolved:** fully independent journal + promote unit; parent
   recorded as sibling lineage only.
 - ~~Is auto-drafted milestone narrative good enough, or is a mandatory human
-  summary preferred at promote time?~~ **Resolved:** auto-draft by default;
-  `-m` for an explicit narrative; `--no-milestone` to skip.
+  summary preferred at promote time?~~ **Resolved:** auto-draft by default; `-m`
+  for an explicit narrative; `--no-milestone` to skip.
 - ~~Does the coherence signal belong in `lane status` or `whereami` (already the
   re-entry dump)?~~ **Resolved:** `lane status` owns live domain/repo spread;
   `whereami` stays ADR 0015 re-entry (waiting / active / moved).

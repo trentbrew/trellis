@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en" data-trellis-band="L3" data-ui-vantage="8">
+<!-- trellis-design: slug=tml-phase-4-vantage-shell issue=TRL-277 -->
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trellis — TML Phase 4 vantage shell (TRL-277 design mock)</title>
+  <style>
+    :root {
+      --background-base: #101010;
+      --background-weak: #1e1e1e;
+      --surface-raised-base: #1c1c1c;
+      --surface-inset-base: #161616;
+      --border-base: rgba(255, 255, 255, 0.195);
+      --text-strong: rgba(255, 255, 255, 0.936);
+      --text-base: rgba(255, 255, 255, 0.618);
+      --text-weak: rgba(255, 255, 255, 0.422);
+      --text-interactive-base: #9dbefe;
+      --surface-success-strong: #12c905;
+      --entity-issue: #e85d4c;
+      --entity-lane: #9dbefe;
+      --tml-accent-glow: rgba(157, 190, 254, 0.12);
+      --tml-glass-surface: rgba(22, 22, 22, 0.75);
+      --tml-kanban-body-inset: rgba(255, 255, 255, 0.02);
+      --shell-resolver-bg: rgba(157, 190, 254, 0.06);
+      --binding-highlight: rgba(232, 93, 76, 0.18);
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+      font: 400 13px/1.45 var(--font);
+      background: var(--background-base);
+      color: var(--text-strong);
+    }
+
+    .mock-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border-base);
+      background: var(--surface-inset-base);
+      flex-wrap: wrap;
+    }
+
+    .mock-bar h1 {
+      font: 700 14px var(--font);
+      letter-spacing: -0.02em;
+    }
+
+    .mock-bar .tag {
+      font: 600 10px var(--mono);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-interactive-base);
+      background: var(--tml-accent-glow);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      min-height: calc(100vh - 49px);
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .legend {
+        border-right: none;
+        border-bottom: 1px solid var(--border-base);
+      }
+    }
+
+    .legend {
+      padding: 16px;
+      border-right: 1px solid var(--border-base);
+      background: var(--surface-inset-base);
+    }
+
+    .legend h2 {
+      font: 600 10px var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-weak);
+      margin-bottom: 12px;
+    }
+
+    .legend p {
+      color: var(--text-base);
+      margin-bottom: 12px;
+      font-size: 12px;
+    }
+
+    .map-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      margin-bottom: 16px;
+    }
+
+    .map-table th,
+    .map-table td {
+      text-align: left;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border-base);
+      vertical-align: top;
+    }
+
+    .map-table th {
+      color: var(--text-weak);
+      font: 600 10px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .map-table code {
+      font: 400 11px var(--mono);
+      color: var(--text-interactive-base);
+    }
+
+    .binding-note {
+      padding: 10px;
+      border-radius: 8px;
+      background: var(--binding-highlight);
+      border: 1px dashed var(--entity-issue);
+      font-size: 12px;
+      color: var(--text-base);
+    }
+
+    .binding-note strong {
+      color: var(--entity-issue);
+    }
+
+    .stage {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: var(--tml-glass-surface);
+      border-bottom: 1px solid var(--border-base);
+      flex-wrap: wrap;
+    }
+
+    .view-toggle {
+      display: inline-flex;
+      background: var(--surface-inset-base);
+      border-radius: 8px;
+      padding: 2px;
+      border: 1px solid var(--border-base);
+    }
+
+    .view-toggle button {
+      border: none;
+      background: transparent;
+      color: var(--text-base);
+      font: 500 12px var(--font);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .view-toggle button[aria-checked="true"] {
+      background: var(--tml-accent-glow);
+      color: var(--text-interactive-base);
+    }
+
+    .view-toggle button:focus-visible {
+      outline: 2px solid var(--text-interactive-base);
+      outline-offset: 2px;
+    }
+
+    .vantage-scrubber {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .vantage-scrubber span {
+      font: 600 10px var(--mono);
+      color: var(--text-weak);
+      margin-right: 4px;
+    }
+
+    .vantage-scrubber button {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid var(--border-base);
+      background: var(--surface-raised-base);
+      color: var(--text-base);
+      font: 600 11px var(--mono);
+      cursor: pointer;
+    }
+
+    .vantage-scrubber button[aria-checked="true"] {
+      border-color: var(--text-interactive-base);
+      color: var(--text-interactive-base);
+      box-shadow: 0 0 0 1px var(--text-interactive-base);
+    }
+
+    .resolver {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      padding: 8px 16px;
+      background: var(--shell-resolver-bg);
+      border-bottom: 1px solid var(--border-base);
+      font: 400 12px var(--mono);
+      color: var(--text-base);
+    }
+
+    .resolver strong {
+      color: var(--text-interactive-base);
+    }
+
+    .resolver[aria-live="polite"] {
+      min-height: 36px;
+      align-items: center;
+    }
+
+    .proj {
+      display: none;
+      padding: 16px;
+      flex: 1;
+    }
+
+    .proj.active {
+      display: block;
+    }
+
+    /* Kanban preview */
+    .kanban {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .kanban-col {
+      background: var(--surface-raised-base);
+      border: 1px solid var(--border-base);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .kanban-col-head {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-base);
+      font: 600 11px var(--mono);
+      color: var(--text-weak);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .kanban-col-body {
+      padding: 10px;
+      background: var(--tml-kanban-body-inset);
+      min-height: 120px;
+    }
+
+    .issue-card {
+      width: 100%;
+      text-align: left;
+      border: 1px solid var(--border-base);
+      border-radius: 8px;
+      background: var(--surface-inset-base);
+      padding: 12px;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .issue-card:hover {
+      border-color: var(--text-interactive-base);
+    }
+
+    .issue-id {
+      font: 600 10px var(--mono);
+      color: var(--text-weak);
+      margin-bottom: 6px;
+    }
+
+    .issue-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+      background: var(--binding-highlight);
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+
+    .issue-title::after {
+      content: " ← single binding site";
+      font: 500 10px var(--mono);
+      color: var(--entity-issue);
+    }
+
+    /* Grid preview */
+    .grid-host {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .lane-card {
+      border: 1px solid var(--border-base);
+      border-radius: 10px;
+      background: var(--surface-raised-base);
+      padding: 12px;
+    }
+
+    .lane-id {
+      font: 600 11px var(--mono);
+      color: var(--entity-lane);
+      margin-bottom: 8px;
+    }
+
+    /* Table preview */
+    .table-wrap {
+      border: 1px solid var(--border-base);
+      border-radius: 12px;
+      overflow: auto;
+    }
+
+    .template-source {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border: 1px dashed var(--border-base);
+      border-radius: 8px;
+      font: 400 11px var(--mono);
+      color: var(--text-weak);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: 0 12px;
+      height: 42px;
+      border-bottom: 1px solid var(--border-base);
+      font-size: 12px;
+    }
+
+    th {
+      font: 600 10px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-weak);
+      background: var(--surface-inset-base);
+    }
+
+    tr[data-trellis-shell="row"] td:first-child {
+      font: 500 12px var(--mono);
+      color: var(--entity-lane);
+    }
+
+    .design-note {
+      margin-top: 16px;
+      padding: 10px 12px;
+      border-left: 3px solid var(--text-interactive-base);
+      background: var(--surface-inset-base);
+      color: var(--text-base);
+      font-size: 12px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="mock-bar">
+    <h1>TML Phase 4 — vantage shell resolution</h1>
+    <span class="tag">TRL-277 design mock</span>
+  </header>
+
+  <div class="layout">
+    <aside class="legend" data-design-note="Architecture legend — not shipped UI">
+      <h2>Shell map</h2>
+      <p>View toggle picks <strong>projection host</strong>. Registry resolves shell — not a template fork.</p>
+      <table class="map-table">
+        <thead>
+          <tr>
+            <th>View</th>
+            <th>Host</th>
+            <th>ShellId</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Kanban</td>
+            <td>col-body</td>
+            <td><code>issue.card</code></td>
+          </tr>
+          <tr>
+            <td>Grid</td>
+            <td>grid-host</td>
+            <td><code>lane.card</code></td>
+          </tr>
+          <tr>
+            <td>Table</td>
+            <td>tbody</td>
+            <td><code>lane.row</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="binding-note">
+        <strong>issue.title</strong> defined once in <code>#shell-issue-card</code> — all issue slots hydrate from it.
+      </div>
+      <div class="template-source" data-design-note="Off-screen in prod admin.html">
+        &lt;template id="shell-issue-card" data-trellis-shell="issue.card"&gt; … single tml-text="issue.title" …
+      </div>
+    </aside>
+
+    <main class="stage" id="tml-root" data-ui-vantage="8">
+      <div class="toolbar">
+        <div class="view-toggle" role="radiogroup" aria-label="Projection">
+          <button type="button" role="radio" data-view="grid" aria-checked="false">Grid</button>
+          <button type="button" role="radio" data-view="kanban" aria-checked="true">Kanban</button>
+          <button type="button" role="radio" data-view="table" aria-checked="false">Table</button>
+        </div>
+        <div class="vantage-scrubber" role="radiogroup" aria-label="UI vantage">
+          <span>vantage</span>
+          <button type="button" role="radio" data-vantage="2" aria-checked="false" title="Node">2</button>
+          <button type="button" role="radio" data-vantage="5" aria-checked="false" title="Row">5</button>
+          <button type="button" role="radio" data-vantage="8" aria-checked="true" title="Card">8</button>
+        </div>
+        <span id="vantage-territory" aria-live="polite"
+          style="font:500 11px var(--mono);color:var(--text-weak)">Territory · Card · v8</span>
+      </div>
+
+      <div id="shell-resolver" class="resolver" aria-live="polite"
+        data-design-note="Optional dev strip — hidden in prod by default">
+        host: <strong id="r-host">kanban</strong> ·
+        kind: <strong id="r-kind">issue</strong> ·
+        shell: <strong id="r-shell">issue.card</strong> ·
+        <strong id="r-disclosure">card</strong> ·
+        --ui-vantage: <strong id="r-vantage">8</strong>
+      </div>
+
+      <section class="proj kanban-view active" id="view-kanban" data-view="kanban" data-projection-host="kanban">
+        <div class="kanban">
+          <div class="kanban-col">
+            <div class="kanban-col-head">Backlog</div>
+            <div class="kanban-col-body" data-shell-slot="issue.card">
+              <button type="button" class="issue-card" data-trellis-shell="card" data-kind="issue">
+                <div class="issue-id">TRL-270</div>
+                <div class="issue-title">Vantage shell resolution</div>
+              </button>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="kanban-col-head">In progress</div>
+            <div class="kanban-col-body" data-shell-slot="issue.card">
+              <button type="button" class="issue-card" data-trellis-shell="card" data-kind="issue">
+                <div class="issue-id">TRL-277</div>
+                <div class="issue-title">Design: Phase 4 shells</div>
+              </button>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="kanban-col-head">Done</div>
+            <div class="kanban-col-body" data-shell-slot="issue.card">
+              <button type="button" class="issue-card" data-trellis-shell="card" data-kind="issue">
+                <div class="issue-id">TRL-251</div>
+                <div class="issue-title">Shell registry</div>
+              </button>
+            </div>
+          </div>
+        </div>
+        <p class="design-note">Three columns · one <code>data-shell-slot="issue.card"</code> per column · single
+          upstream query (partition by status).</p>
+      </section>
+
+      <section class="proj grid-view" id="view-grid" data-view="grid" data-projection-host="grid" hidden inert="">
+        <div class="grid-host" data-shell-slot="lane.card">
+          <article class="lane-card" data-trellis-shell="card" data-kind="lane">
+            <div class="lane-id">lane-4c2cd145…</div>
+            <div>agent:agent-f · ops 12 · issue/TRL-270</div>
+          </article>
+          <article class="lane-card" data-trellis-shell="card" data-kind="lane">
+            <div class="lane-id">lane-80e2fe59…</div>
+            <div>agent:agent-b · ops 8 · issue/TRL-222</div>
+          </article>
+        </div>
+        <p class="design-note">Grid uses <code>lane.card</code> shell — same lane query ref as table.</p>
+      </section>
+
+      <section class="proj table-view" id="view-table" data-view="table" data-projection-host="table" hidden inert="">
+        <div class="table-wrap">
+          <table aria-label="Lanes">
+            <thead>
+              <tr>
+                <th>Lane</th>
+                <th>Agent</th>
+                <th>Ops</th>
+                <th>Branch</th>
+                <th>Issue</th>
+              </tr>
+            </thead>
+            <tbody data-shell-slot="lane.row">
+              <tr data-trellis-shell="row" data-kind="lane">
+                <td>lane-4c2cd145…</td>
+                <td>agent-f</td>
+                <td>12</td>
+                <td>issue/TRL-270…</td>
+                <td>TRL-270</td>
+              </tr>
+              <tr data-trellis-shell="row" data-kind="lane">
+                <td>lane-80e2fe59…</td>
+                <td>agent-b</td>
+                <td>8</td>
+                <td>issue/TRL-222…</td>
+                <td>TRL-222</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="design-note">Table uses <code>lane.row</code> at all vantages — not kanban card in &lt;tr&gt;.</p>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const RESOLVER = {
+      kanban: { host: 'kanban', kind: 'issue', shell: 'issue.card', disclosure: 'card' },
+      grid: { host: 'grid', kind: 'lane', shell: 'lane.card', disclosure: 'card' },
+      table: { host: 'table', kind: 'lane', shell: 'lane.row', disclosure: 'row' },
+    };
+
+    const DISCLOSURE = { 2: 'node', 5: 'row', 8: 'card' };
+    const VANTAGE_LABELS = { 2: 'Node', 5: 'Row', 8: 'Card' };
+
+    let currentView = 'kanban';
+    let currentVantage = 8;
+
+    const views = {
+      kanban: document.getElementById('view-kanban'),
+      grid: document.getElementById('view-grid'),
+      table: document.getElementById('view-table'),
+    };
+
+    function updateResolver() {
+      const r = RESOLVER[currentView];
+      document.getElementById('r-host').textContent = r.host;
+      document.getElementById('r-kind').textContent = r.kind;
+      document.getElementById('r-shell').textContent = r.shell;
+      document.getElementById('r-disclosure').textContent = DISCLOSURE[currentVantage] || 'card';
+      document.getElementById('r-vantage').textContent = String(currentVantage);
+    }
+
+    function setView(view) {
+      currentView = view;
+      Object.entries(views).forEach(([key, el]) => {
+        const active = key === view;
+        el.classList.toggle('active', active);
+        el.hidden = !active;
+        el.inert = !active;
+      });
+      document.querySelectorAll('.view-toggle [data-view]').forEach((btn) => {
+        btn.setAttribute('aria-checked', btn.dataset.view === view ? 'true' : 'false');
+      });
+      updateResolver();
+    }
+
+    function setVantage(v) {
+      currentVantage = v;
+      document.documentElement.dataset.uiVantage = String(v);
+      document.getElementById('tml-root').dataset.uiVantage = String(v);
+      document.documentElement.style.setProperty('--ui-vantage', String(v));
+      document.querySelectorAll('.vantage-scrubber [data-vantage]').forEach((btn) => {
+        btn.setAttribute('aria-checked', Number(btn.dataset.vantage) === v ? 'true' : 'false');
+      });
+      const territory = document.getElementById('vantage-territory');
+      if (territory) {
+        territory.textContent = 'Territory · ' + (VANTAGE_LABELS[v] || 'Card') + ' · v' + v + ' (MVP: resolver only; morph CSS deferred)';
+      }
+      updateResolver();
+    }
+
+    document.querySelectorAll('.view-toggle [data-view]').forEach((btn) => {
+      btn.addEventListener('click', () => setView(btn.dataset.view));
+    });
+
+    document.querySelectorAll('.vantage-scrubber [data-vantage]').forEach((btn) => {
+      btn.addEventListener('click', () => setVantage(Number(btn.dataset.vantage)));
+    });
+
+    updateResolver();
+  </script>
+</body>
+
+</html>

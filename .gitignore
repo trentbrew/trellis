@@ -67,6 +67,10 @@ rug/
 # Playwright MCP snapshots
 .playwright-mcp/
 
+# Playwright e2e artifacts (root)
+/test-results/
+/playwright-report/
+
 # Examples — deps, build output, local runtime data
 examples/**/node_modules/
 examples/**/dist/

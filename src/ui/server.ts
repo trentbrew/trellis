@@ -6,6 +6,7 @@
  *
  * Endpoints:
  *   GET /              → client.html (System Visualizer)
+ *   GET /theme/runtime-theme.css → shared runtime theme contract
  *   GET /api/graph     → full graph (nodes + edges)
  *   GET /api/timeline  → causal op stream with branch lanes & markers
  *   GET /api/store     → EAV store overview (stats, catalog, entities)
@@ -28,6 +29,7 @@ import {
   getReferencedEntities,
   getBacklinks,
 } from '../links/index.js';
+import { resolveRuntimeThemeCss } from './theme/resolve-runtime-theme-css.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -524,7 +526,7 @@ export async function startUIServer(opts: UIServerOptions): Promise<{
     }
     throw new Error(
       `Could not find client.html. cwd=${process.cwd()} argv=${argvEntry ?? '(none)'}\n` +
-        'Try reinstalling the package or running `npm run build`.',
+      'Try reinstalling the package or running `npm run build`.',
     );
   }
 
@@ -550,126 +552,143 @@ export async function startUIServer(opts: UIServerOptions): Promise<{
   const requestedPort = opts.port ?? 3333;
 
   const fetchHandler = async (req: Request): Promise<Response> => {
-      const url = new URL(req.url);
-      const path = url.pathname;
+    const url = new URL(req.url);
+    const path = url.pathname;
 
-      // CORS headers
-      const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      };
+    // CORS headers
+    const headers = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    };
 
-      if (req.method === 'OPTIONS') {
-        return new Response(null, { status: 204, headers });
-      }
+    if (req.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers });
+    }
 
-      // --- API Routes ---
+    // --- API Routes ---
 
-      if (path === '/api/graph') {
-        const graph = buildGraph(engine);
-        return Response.json(graph, { headers });
-      }
+    if (path === '/api/graph') {
+      const graph = buildGraph(engine);
+      return Response.json(graph, { headers });
+    }
 
-      if (path === '/api/timeline') {
-        const timeline = buildTimeline(engine);
-        return Response.json(timeline, { headers });
-      }
+    if (path === '/api/timeline') {
+      const timeline = buildTimeline(engine);
+      return Response.json(timeline, { headers });
+    }
 
-      if (path === '/api/store') {
-        const overview = buildStoreOverview(engine);
-        return Response.json(overview, { headers });
-      }
+    if (path === '/api/store') {
+      const overview = buildStoreOverview(engine);
+      return Response.json(overview, { headers });
+    }
 
-      if (path.startsWith('/api/store/entity/')) {
-        const entityId = decodeURIComponent(
-          path.slice('/api/store/entity/'.length),
+    if (path.startsWith('/api/store/entity/')) {
+      const entityId = decodeURIComponent(
+        path.slice('/api/store/entity/'.length),
+      );
+      const detail = buildEntityDetail(engine, entityId);
+      if (!detail) {
+        return Response.json(
+          { error: 'Entity not found' },
+          { status: 404, headers },
         );
-        const detail = buildEntityDetail(engine, entityId);
-        if (!detail) {
-          return Response.json(
-            { error: 'Entity not found' },
-            { status: 404, headers },
-          );
-        }
-        return Response.json(detail, { headers });
+      }
+      return Response.json(detail, { headers });
+    }
+
+    if (path === '/api/system') {
+      const info = buildSystemInfo(engine);
+      return Response.json(info, { headers });
+    }
+
+    if (path === '/api/search') {
+      const query = url.searchParams.get('q');
+      if (!query) {
+        return Response.json(
+          { error: 'Missing ?q= parameter' },
+          { status: 400, headers },
+        );
+      }
+      const limit = parseInt(url.searchParams.get('limit') ?? '10', 10);
+      const typeFilter = url.searchParams.get('type');
+
+      const mgr = await getEmbeddingManager();
+      if (!mgr) {
+        return Response.json(
+          {
+            results: [],
+            message: 'No embedding index. Run `trellis reindex` first.',
+          },
+          { headers },
+        );
       }
 
-      if (path === '/api/system') {
-        const info = buildSystemInfo(engine);
-        return Response.json(info, { headers });
+      try {
+        const searchOpts: any = { limit };
+        if (typeFilter) {
+          searchOpts.types = typeFilter
+            .split(',')
+            .map((t: string) => t.trim());
+        }
+        const results = await mgr.search(query, searchOpts);
+        return Response.json(
+          {
+            results: results.map((r: any) => ({
+              score: r.score,
+              chunkType: r.chunk.chunkType,
+              filePath: r.chunk.filePath,
+              entityId: r.chunk.entityId,
+              content: r.chunk.content,
+            })),
+          },
+          { headers },
+        );
+      } catch (err: any) {
+        return Response.json(
+          { error: err.message },
+          { status: 500, headers },
+        );
       }
+    }
 
-      if (path === '/api/search') {
-        const query = url.searchParams.get('q');
-        if (!query) {
-          return Response.json(
-            { error: 'Missing ?q= parameter' },
-            { status: 400, headers },
-          );
-        }
-        const limit = parseInt(url.searchParams.get('limit') ?? '10', 10);
-        const typeFilter = url.searchParams.get('type');
-
-        const mgr = await getEmbeddingManager();
-        if (!mgr) {
-          return Response.json(
-            {
-              results: [],
-              message: 'No embedding index. Run `trellis reindex` first.',
-            },
-            { headers },
-          );
-        }
-
-        try {
-          const searchOpts: any = { limit };
-          if (typeFilter) {
-            searchOpts.types = typeFilter
-              .split(',')
-              .map((t: string) => t.trim());
-          }
-          const results = await mgr.search(query, searchOpts);
-          return Response.json(
-            {
-              results: results.map((r: any) => ({
-                score: r.score,
-                chunkType: r.chunk.chunkType,
-                filePath: r.chunk.filePath,
-                entityId: r.chunk.entityId,
-                content: r.chunk.content,
-              })),
-            },
-            { headers },
-          );
-        } catch (err: any) {
-          return Response.json(
-            { error: err.message },
-            { status: 500, headers },
-          );
-        }
+    if (path.startsWith('/api/node/')) {
+      const nodeId = decodeURIComponent(path.slice('/api/node/'.length));
+      const detail = getNodeDetail(engine, nodeId);
+      if (!detail) {
+        return Response.json(
+          { error: 'Node not found' },
+          { status: 404, headers },
+        );
       }
+      return Response.json(detail, { headers });
+    }
 
-      if (path.startsWith('/api/node/')) {
-        const nodeId = decodeURIComponent(path.slice('/api/node/'.length));
-        const detail = getNodeDetail(engine, nodeId);
-        if (!detail) {
-          return Response.json(
-            { error: 'Node not found' },
-            { status: 404, headers },
-          );
-        }
-        return Response.json(detail, { headers });
-      }
-
-      // --- Static ---
-      if (path === '/' || path === '/index.html') {
-        return new Response(clientHtml, {
-          headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8' },
+    // --- Static ---
+    if (path === '/theme/runtime-theme.css') {
+      const cssPath = resolveRuntimeThemeCss(opts.rootPath);
+      if (!cssPath) {
+        return new Response('runtime-theme.css not found — run from trellis-node.', {
+          status: 404,
+          headers,
         });
       }
+      return new Response(readFileSync(cssPath, 'utf-8'), {
+        headers: {
+          ...headers,
+          'Content-Type': 'text/css; charset=utf-8',
+          'Cache-Control': 'no-cache',
+        },
+      });
+    }
 
-      return new Response('Not Found', { status: 404, headers });
+    if (path === '/' || path === '/index.html') {
+      return new Response(clientHtml, {
+        headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
+
+    return new Response('Not Found', { status: 404, headers });
   };
 
   const server = await startNodeServer({
@@ -677,9 +696,9 @@ export async function startUIServer(opts: UIServerOptions): Promise<{
     fetch: fetchHandler,
     // UI server is HTTP-only — no WebSocket needed.
     websocket: {
-      open: () => {},
-      message: () => {},
-      close: () => {},
+      open: () => { },
+      message: () => { },
+      close: () => { },
     },
   });
 
@@ -690,7 +709,7 @@ export async function startUIServer(opts: UIServerOptions): Promise<{
       if (embeddingManager) {
         try {
           embeddingManager.close();
-        } catch {}
+        } catch { }
       }
     },
   };

@@ -1,0 +1,17 @@
+<!-- Resolved IR for shells/lane.card.tml -->
+<template id="shell-lane-card" data-trellis-shell="lane.card">
+  <article class="lane-card" tabindex="0" data-kind="lane" data-trellis-shell="card" tml-attr-data-entity-id="lane.id"
+    tml-attr-data-status="lane.status">
+    <div class="lane-card-head">
+      <div class="lane-id" data-trellis-slot="id" tml-text="lane.id"></div>
+      <span class="progress-spin" aria-hidden="true" title="In progress"></span>
+    </div>
+    <div class="lane-meta" data-trellis-slot="meta">
+      <span tml-text="'agent:' + lane.agentId"></span>
+      <span tml-text="'ops ' + lane.opCount + ' · files ' + lane.fileCount"></span>
+      <span tml-text="lane.targetBranch"></span>
+      <span tml-text="lane.issueId || 'no issue'"></span>
+    </div>
+    <button type="button" class="lane-promote" tml-op="promote(lane.id)">Promote</button>
+  </article>
+</template>

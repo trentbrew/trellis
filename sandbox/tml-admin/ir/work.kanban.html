@@ -1,0 +1,28 @@
+<!-- Resolved IR for projects/work.kanban.tml — three column hosts -->
+<section class="proj kanban-view" id="view-kanban" data-view="kanban">
+  <div class="kanban">
+    <div class="kanban-col">
+      <div class="kanban-col-head"><span class="col-title">Backlog</span></div>
+      <div class="kanban-col-body"
+        tml-query="find ?e where type = 'Issue' and not (status = 'in_progress' or status = 'paused' or status = 'closed')"
+        tml-each="issue of issues" tml-live tml-ref="col-backlog">
+        <div data-shell-slot="issue.card"></div>
+      </div>
+    </div>
+    <div class="kanban-col">
+      <div class="kanban-col-head"><span class="col-title">In Progress</span></div>
+      <div class="kanban-col-body"
+        tml-query="find ?e where type = 'Issue' and (status = 'in_progress' or status = 'paused')"
+        tml-each="issue of issues" tml-live tml-ref="col-in-progress">
+        <div data-shell-slot="issue.card"></div>
+      </div>
+    </div>
+    <div class="kanban-col">
+      <div class="kanban-col-head"><span class="col-title">Done</span></div>
+      <div class="kanban-col-body" tml-query="find ?e where type = 'Issue' and status = 'closed'"
+        tml-each="issue of issues" tml-live tml-ref="col-done">
+        <div data-shell-slot="issue.card"></div>
+      </div>
+    </div>
+  </div>
+</section>

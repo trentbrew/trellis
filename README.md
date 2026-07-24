@@ -111,18 +111,18 @@ bun test
 bun run build
 ```
 
-Global `trellis` is the published npm package. To opt into this checkout without
-replacing it:
+**In this checkout, prefer `just trellis …` over bare `trellis`.** Global npm
+may lag (format skew: array-era CLI + JSONL journal can wipe `ops.json` via
+`trellis repair`). Agents are blocked from bare `trellis` here by the Cursor
+shell guard; escape hatch: `TRELLIS_ALLOW_GLOBAL_CLI=1`.
 
 ```bash
-just alias-cli install   # adds `trellis-dev` to ~/.zshrc
-just build
-trellis-dev test --review -p /path/to/repo
-# or: just trellis-dev …
+just trellis status              # source CLI (bun src/cli) — default
+just trellis-dev status          # dist CLI after just build
+just alias-cli install           # adds `trellis-dev` alias; keeps global intact
+just link-cli                    # make global `trellis` → this checkout
+just unlink-cli                  # restore published trellis@latest
 ```
-
-Source without rebuild: `just trellis …`. Systemwide local (replaces global):
-`just link-cli` / `just unlink-cli`.
 
 ## License
 

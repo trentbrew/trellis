@@ -1,0 +1,25 @@
+# Twin IR: ir/lane.row.html
+# Table cells keep data-col / data-editable for the datatable primitive.
+
+shell lane.row (kind: lane, density: row) {
+  tr[entity=@lane.id, status=@lane.status] {
+    #lane {
+      @lane.id
+    }
+    #agent {
+      @lane.agentId
+    }
+    #ops {
+      @lane.opCount
+    }
+    #files {
+      @lane.fileCount
+    }
+    #branch {
+      @lane.targetBranch   # editable via primitive
+    }
+    #issue {
+      @lane.issueId || "—"
+    }
+  }
+}

@@ -118,6 +118,11 @@ export interface IssueCreateOptions {
    * `issue:lane-a:1`. Omit to keep the legacy repo-wide `TRL-N` allocator.
    */
   laneId?: string;
+  /**
+   * Recovery-only: mint a specific legacy `TRL-N` id. Bumps the repo counter so
+   * later allocates continue above N. Refuses if the id already exists.
+   */
+  forceIssueId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -135,6 +140,24 @@ function getLaneIssueCounterPath(rootPath: string, laneId: string): string {
     'issue-counters',
     `${encodeURIComponent(laneId)}.json`,
   );
+}
+
+/** Ensure legacy TRL counter is at least `n` (recovery rehydrate). */
+function bumpIssueCounterAtLeast(rootPath: string, n: number): void {
+  const counterPath = getIssueCounterPath(rootPath);
+  const dir = dirname(counterPath);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+
+  let counter = 0;
+  if (existsSync(counterPath)) {
+    try {
+      counter =
+        JSON.parse(readFileSync(counterPath, 'utf-8')).counter ?? 0;
+    } catch { }
+  }
+  if (n > counter) {
+    writeFileSync(counterPath, JSON.stringify({ counter: n }, null, 2));
+  }
 }
 
 function nextIssueId(rootPath: string, laneId?: string): string {
@@ -173,7 +196,7 @@ function nextIssueId(rootPath: string, laneId?: string): string {
       try {
         counter =
           JSON.parse(readFileSync(scopedCounterPath, 'utf-8')).counter ?? 0;
-      } catch {}
+      } catch { }
     }
     counter++;
     writeFileSync(scopedCounterPath, JSON.stringify({ counter }, null, 2));
@@ -183,7 +206,7 @@ function nextIssueId(rootPath: string, laneId?: string): string {
     closeSync(lockFd);
     try {
       unlinkSync(lockPath);
-    } catch {}
+    } catch { }
   }
 }
 
@@ -336,12 +359,12 @@ function buildIssueInfo(
 
   const blocking = indexes
     ? (indexes.blockedByReverse.get(entityId) ?? []).map(
-        issueInfoIdFromEntityId,
-      )
+      issueInfoIdFromEntityId,
+    )
     : ctx.store
-        .getLinksByAttribute('blockedBy')
-        .filter((l) => l.e2 === entityId)
-        .map((l) => issueInfoIdFromEntityId(l.e1));
+      .getLinksByAttribute('blockedBy')
+      .filter((l) => l.e2 === entityId)
+      .map((l) => issueInfoIdFromEntityId(l.e1));
 
   // Derived: isBlocked if any blocker is not closed
   const isBlocked = blockedByLinks.some((blockerEid) => {
@@ -410,7 +433,19 @@ export async function createIssue(
     }
   }
 
-  const id = nextIssueId(rootPath, opts?.laneId);
+  let id: string;
+  if (opts?.forceIssueId) {
+    id = opts.forceIssueId.trim();
+    if (!/^TRL-\d+$/.test(id)) {
+      throw new Error(`forceIssueId must be TRL-N (got ${id})`);
+    }
+    if (getIssue(ctx, id)) {
+      throw new Error(`Issue ${id} already exists.`);
+    }
+    bumpIssueCounterAtLeast(rootPath, parseInt(id.slice(4), 10));
+  } else {
+    id = nextIssueId(rootPath, opts?.laneId);
+  }
 
   const op = await createVcsOp('vcs:issueCreate', {
     agentId: ctx.agentId,
@@ -661,9 +696,9 @@ export async function closeIssue(
     const failing = results.filter((r) => r.status !== 'passed');
     throw new Error(
       `Cannot close issue ${id}: ${failing.length} criteria not passing:\n` +
-        failing
-          .map((f) => `  - ${f.description ?? f.id} (${f.status})`)
-          .join('\n'),
+      failing
+        .map((f) => `  - ${f.description ?? f.id} (${f.status})`)
+        .join('\n'),
     );
   }
 
@@ -943,7 +978,7 @@ export async function runCriteria(
 
     const executed = await executeTestCommand({
       command,
-      cwd,
+      cwd: manifestRoot,
     });
 
     const status = executed.status;

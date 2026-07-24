@@ -1,0 +1,20 @@
+# Combined authoring view (same as shells/ + projects/)
+
+shell todo.row (kind: todo, density: row) {
+  label[entity=@todo.id] {
+    #done { @todo.done }
+    #title { @todo.title }
+  }
+  action remove {
+    op remove(@todo.id)
+    label "Remove"
+  }
+}
+
+project todo.list {
+  query: find ?e where type = 'Todo'            # is the colon neccessary?
+  each todo in todos
+  live
+  ref todos
+  use todo.row
+}

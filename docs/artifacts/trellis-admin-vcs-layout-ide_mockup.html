@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trellis — Admin VCS layout Work/Logs (TRL-226 design mock)</title>
+  <style>
+    :root {
+      --bg: #101010;
+      --background-weak: #1e1e1e;
+      --surface: #1c1c1c;
+      --surface-inset: #161616;
+      --border: rgba(255, 255, 255, 0.195);
+      --text: rgba(255, 255, 255, 0.936);
+      --text2: rgba(255, 255, 255, 0.618);
+      --text3: rgba(255, 255, 255, 0.422);
+      --accent: #9dbefe;
+      --green: #12c905;
+      --logs-accent: #f59e0b;
+      --tml-glass-surface: rgba(22, 22, 22, 0.75);
+      --sidebar-bg: #0c0c0c;
+      --sidebar-w: 200px;
+      --sidebar-rail-w: 56px;
+      --secondary-w: 224px;
+      --secondary-rail-w: 48px;
+      --inspector-w: 280px;
+      --chrome-h: 56px;
+      --toolbar-control-h: 34px;
+      --toolbar-track: #1e1e1e;
+      --toolbar-active: #1c1c1c;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    html.sidebar-collapsed {
+      --sidebar-w: var(--sidebar-rail-w);
+    }
+
+    html.secondary-collapsed {
+      --secondary-w: var(--secondary-rail-w);
+    }
+
+    html.inspector-pinned {
+      --inspector-w: 280px;
+    }
+
+    html:not(.inspector-pinned) {
+      --inspector-w: 0px;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) var(--secondary-w) minmax(0, 1fr) var(--inspector-w);
+      grid-template-rows: var(--chrome-h) minmax(0, 1fr);
+      height: 100%;
+    }
+
+    .sidebar {
+      grid-row: 1 / -1;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .logomark-row {
+      height: var(--chrome-h);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 1px solid var(--border);
+      flex: none;
+    }
+
+    .logomark {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, var(--accent), #6366f1);
+    }
+
+    .sidebar-body {
+      padding: 12px 10px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .zone {
+      font: 600 10px var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text3);
+      padding: 8px 10px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 36px;
+      width: 100%;
+      padding: 0 10px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text2);
+      font: 500 13px var(--font);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .nav-item svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+      flex: none;
+    }
+
+    .nav-item[aria-current="page"] {
+      background: rgba(157, 190, 254, 0.12);
+      color: var(--accent);
+    }
+
+    html.sidebar-collapsed .sidebar-body .zone,
+    html.sidebar-collapsed .sidebar-body .nav-label {
+      display: none;
+    }
+
+    html.sidebar-collapsed .sidebar-body .nav-item {
+      justify-content: center;
+      padding: 0;
+      width: 36px;
+      margin: 0 auto;
+    }
+
+    .secondary {
+      grid-row: 1 / -1;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .secondary-zone-label {
+      font: 600 10px var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text3);
+      padding: 14px 12px 6px;
+    }
+
+    .secondary-zone-label.logs {
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      margin-top: 4px;
+    }
+
+    .route-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 0 8px 8px;
+    }
+
+    .route-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 32px;
+      width: 100%;
+      padding: 0 10px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text2);
+      font: 500 13px var(--font);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .route-item svg {
+      width: 15px;
+      height: 15px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+      flex: none;
+    }
+
+    .route-item[aria-current="page"] {
+      background: rgba(157, 190, 254, 0.12);
+      color: var(--accent);
+    }
+
+    .route-item[data-zone="logs"][aria-current="page"] {
+      background: rgba(245, 158, 11, 0.12);
+      color: var(--logs-accent);
+    }
+
+    .route-item .badge {
+      margin-left: auto;
+      font: 600 10px var(--mono);
+      color: var(--green);
+      display: none;
+    }
+
+    .route-item[data-tab="ops"] .badge.live {
+      display: none;
+    }
+
+    html.ops-badge-visible .route-item[data-tab="ops"] .badge.live {
+      display: inline;
+    }
+
+    html.secondary-collapsed .secondary-zone-label,
+    html.secondary-collapsed .route-item .nav-label,
+    html.secondary-collapsed .route-item .badge {
+      display: none;
+    }
+
+    html.secondary-collapsed .route-nav {
+      align-items: center;
+      padding: 8px 6px;
+    }
+
+    html.secondary-collapsed .route-item {
+      justify-content: center;
+      padding: 0;
+      width: 36px;
+    }
+
+    .header {
+      grid-column: 3 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 16px;
+      background: var(--tml-glass-surface);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    html.inspector-pinned .header {
+      grid-column: 3 / 4;
+    }
+
+    .header-start,
+    .header-end {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text2);
+      cursor: pointer;
+    }
+
+    .icon-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+    }
+
+    .crumb {
+      font: 500 11px var(--mono);
+      color: var(--text3);
+      white-space: nowrap;
+    }
+
+    .header-stats {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font: 500 11px var(--mono);
+      color: var(--text3);
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px rgba(18, 201, 5, 0.5);
+    }
+
+    .main {
+      grid-column: 3;
+      grid-row: 2;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      border-right: 1px solid var(--border);
+    }
+
+    html.inspector-pinned .main {
+      grid-column: 3;
+    }
+
+    .view-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 48px;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      flex: none;
+    }
+
+    .view-header-start {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .view-title-block {
+      min-width: 0;
+    }
+
+    .view-title {
+      font: 600 15px var(--font);
+      letter-spacing: -0.01em;
+    }
+
+    .view-meta {
+      font: 500 11px var(--mono);
+      color: var(--text3);
+      margin-top: 2px;
+    }
+
+    .view-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex: none;
+    }
+
+    .view-header-actions[hidden] {
+      display: none !important;
+    }
+
+    .view-picker {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      height: var(--toolbar-control-h);
+      padding: 2px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--toolbar-track);
+    }
+
+    .view-picker button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: calc(var(--toolbar-control-h) - 4px);
+      padding: 0 10px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text3);
+      font: 500 12.8px var(--font);
+      cursor: pointer;
+    }
+
+    .view-picker button[aria-checked="true"] {
+      background: var(--toolbar-active);
+      color: var(--text);
+    }
+
+    .search {
+      width: 220px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      height: var(--toolbar-control-h);
+      padding: 0 8px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .search input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: var(--text2);
+      font: 400 12.8px var(--font);
+      outline: none;
+    }
+
+    .pin-btn[aria-pressed="true"] {
+      background: rgba(245, 158, 11, 0.12);
+      color: var(--logs-accent);
+      border-color: rgba(245, 158, 11, 0.25);
+    }
+
+    .btn-new {
+      height: var(--toolbar-control-h);
+      margin-left: 4px;
+      padding: 0 12px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #0a0a0a;
+      font: 600 12.8px var(--font);
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    .icon-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .resize-handle {
+      width: 4px;
+      cursor: col-resize;
+      background: transparent;
+      flex: none;
+    }
+
+    .resize-handle:hover {
+      background: rgba(157, 190, 254, 0.25);
+    }
+
+    html.secondary-collapsed .resize-handle[data-resize="secondary"] {
+      display: none;
+    }
+
+    .view-body {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+    }
+
+    .panel {
+      display: none;
+      height: 100%;
+    }
+
+    .panel[data-active="true"] {
+      display: block;
+    }
+
+    .kanban {
+      display: flex;
+      gap: 16px;
+      height: 100%;
+      padding: 16px;
+      overflow-x: auto;
+    }
+
+    .kanban-col {
+      min-width: 300px;
+      max-width: 340px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .kanban-col-head {
+      font: 600 11px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text3);
+      padding: 0 4px 8px;
+    }
+
+    .card {
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      margin-bottom: 8px;
+      font-size: 12.8px;
+    }
+
+    .card-id {
+      font: 600 10px var(--mono);
+      color: var(--accent);
+    }
+
+    .milestones {
+      padding: 16px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .milestone-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+
+    .ops-timeline {
+      padding: 8px 0;
+    }
+
+    .op-row {
+      display: grid;
+      grid-template-columns: 72px 1fr auto;
+      gap: 12px;
+      padding: 8px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      font: 400 12px var(--mono);
+      color: var(--text2);
+    }
+
+    .op-row:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .op-kind {
+      color: var(--logs-accent);
+    }
+
+    .empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      min-height: 240px;
+      color: var(--text3);
+      gap: 8px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .inspector {
+      grid-column: 4;
+      grid-row: 1 / -1;
+      background: var(--surface-inset);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    html:not(.inspector-pinned) .inspector {
+      display: none;
+    }
+
+    .inspector-head {
+      height: var(--chrome-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--border);
+      font: 600 12px var(--font);
+    }
+
+    .legend {
+      position: fixed;
+      bottom: 12px;
+      left: 12px;
+      max-width: 320px;
+      padding: 10px 12px;
+      background: rgba(0, 0, 0, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font: 400 11px var(--font);
+      color: var(--text2);
+      z-index: 50;
+    }
+
+    .legend strong {
+      color: var(--text);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="shell" data-design-note="Default 3-col + optional pin inspector (4th when pinned)">
+    <aside class="sidebar" aria-label="Operate">
+      <div class="logomark-row">
+        <div class="logomark" aria-hidden="true"></div>
+      </div>
+      <div class="sidebar-body">
+        <div class="zone">Operate</div>
+        <nav aria-label="Operate navigation">
+          <button type="button" class="nav-item" aria-disabled="true" aria-label="Collections (coming soon)">
+            <svg viewBox="0 0 24 24">
+              <rect width="7" height="7" x="3" y="3" rx="1" />
+              <rect width="7" height="7" x="14" y="3" rx="1" />
+              <rect width="7" height="7" x="3" y="14" rx="1" />
+            </svg>
+            <span class="nav-label">Collections</span>
+          </button>
+          <button type="button" class="nav-item" aria-current="page" title="VCS">
+            <svg viewBox="0 0 24 24">
+              <circle cx="6" cy="6" r="3" />
+              <path d="M6 9v12" />
+              <path d="M6 12c6 0 6 4 12 4" />
+              <circle cx="18" cy="16" r="3" />
+            </svg>
+            <span class="nav-label">VCS</span>
+          </button>
+        </nav>
+      </div>
+    </aside>
+
+    <aside class="secondary" id="secondary" aria-label="VCS routes"
+      data-design-note="WORK + LOGS zones replace flat Milestones/Issues/Lanes/Workflows">
+      <div class="secondary-zone-label" id="zone-work-label">Work</div>
+      <nav class="route-nav" aria-labelledby="zone-work-label">
+        <button type="button" class="route-item" data-zone="work" data-tab="board" aria-current="page">
+          <svg viewBox="0 0 24 24">
+            <rect width="7" height="7" x="3" y="3" rx="1" />
+            <rect width="7" height="7" x="14" y="3" rx="1" />
+            <rect width="7" height="7" x="3" y="14" rx="1" />
+            <rect width="7" height="7" x="14" y="14" rx="1" />
+          </svg>
+          <span class="nav-label">Board</span>
+        </button>
+        <button type="button" class="route-item" data-zone="work" data-tab="milestones">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+            <line x1="4" x2="4" y1="22" y2="15" />
+          </svg>
+          <span class="nav-label">Milestones</span>
+        </button>
+        <button type="button" class="route-item" data-zone="work" data-tab="workflows">
+          <svg viewBox="0 0 24 24">
+            <rect width="8" height="8" x="3" y="3" rx="2" />
+            <path d="M7 11v4a2 2 0 0 0 2 2h4" />
+            <rect width="8" height="8" x="13" y="13" rx="2" />
+          </svg>
+          <span class="nav-label">Workflows</span>
+        </button>
+      </nav>
+      <div class="secondary-zone-label logs" id="zone-logs-label">Logs</div>
+      <nav class="route-nav" aria-labelledby="zone-logs-label">
+        <button type="button" class="route-item" data-zone="logs" data-tab="ops">
+          <svg viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <path d="M14 2v6h6" />
+            <path d="M16 13H8" />
+            <path d="M16 17H8" />
+            <path d="M10 9H8" />
+          </svg>
+          <span class="nav-label">Ops</span>
+          <span class="badge live">● 346</span>
+        </button>
+        <button type="button" class="route-item" data-zone="logs" data-tab="decisions">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+            <path d="m9 12 2 2 4-4" />
+          </svg>
+          <span class="nav-label">Decisions</span>
+        </button>
+        <button type="button" class="route-item" data-zone="logs" data-tab="branches">
+          <svg viewBox="0 0 24 24">
+            <line x1="6" x2="6" y1="3" y2="15" />
+            <circle cx="18" cy="6" r="3" />
+            <circle cx="6" cy="18" r="3" />
+            <path d="M18 9a9 9 0 0 1-9 9" />
+          </svg>
+          <span class="nav-label">Branches</span>
+        </button>
+      </nav>
+      <div class="resize-handle" data-resize="secondary" role="separator" aria-orientation="vertical"
+        aria-label="Resize secondary sidebar" tabindex="0"></div>
+    </aside>
+
+    <header class="header">
+      <div class="header-start">
+        <button type="button" class="icon-btn" id="sidebar-toggle" aria-label="Collapse primary sidebar"
+          title="Collapse sidebar">
+          <svg viewBox="0 0 24 24">
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+            <path d="M9 3v18" />
+            <path d="m16 15-3-3 3-3" />
+          </svg>
+        </button>
+        <div class="crumb">trellis-node / operate / vcs</div>
+      </div>
+      <div class="header-end">
+        <div class="header-stats" role="status">
+          <span class="live-dot" aria-hidden="true"></span>
+          <span>live</span>
+          <span>4 lanes</span>
+          <span>131 issues</span>
+        </div>
+        <button type="button" class="icon-btn" aria-label="Notifications"><svg viewBox="0 0 24 24">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+          </svg></button>
+      </div>
+    </header>
+
+    <section class="main">
+      <div class="view-header" role="region" aria-labelledby="view-title"
+        data-design-note="AffordanceShell analogue — replaces global operate-toolbar">
+        <div class="view-header-start">
+          <button type="button" class="icon-btn" id="secondary-toggle" aria-label="Collapse secondary sidebar"
+            title="Collapse secondary">
+            <svg viewBox="0 0 24 24">
+              <rect width="18" height="18" x="3" y="3" rx="2" />
+              <path d="M12 3v18" />
+              <path d="m9 15-3-3 3-3" />
+            </svg>
+          </button>
+          <div class="view-title-block">
+            <div class="view-title" id="view-title">Work · Board</div>
+            <div class="view-meta" id="view-meta">131 issues · 4 lanes</div>
+          </div>
+        </div>
+        <div class="view-header-actions" id="board-toolbar">
+          <div class="view-picker" role="radiogroup" aria-label="Projection">
+            <button type="button" aria-checked="true">Kanban</button>
+            <button type="button" aria-checked="false">Grid</button>
+            <button type="button" aria-checked="false">Table</button>
+          </div>
+          <label class="search"><span class="sr-only">Search issues</span><input placeholder="Search issues…" /></label>
+          <button type="button" class="icon-btn" disabled aria-label="Filters (coming soon)"
+            title="Filters (coming soon)"><svg viewBox="0 0 24 24">
+              <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
+            </svg></button>
+          <button type="button" class="icon-btn" disabled aria-label="Export (coming soon)"
+            title="Export (coming soon)"><svg viewBox="0 0 24 24">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" x2="12" y1="15" y2="3" />
+            </svg></button>
+          <button type="button" class="btn-new" disabled aria-disabled="true">+ New issue</button>
+        </div>
+        <div class="view-header-actions" id="logs-toolbar" hidden>
+          <button type="button" class="icon-btn pin-btn" id="pin-toggle" aria-pressed="false" aria-label="Pin live tail"
+            title="Pin live tail">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 17v5" />
+              <path
+                d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="view-body">
+        <div class="panel" data-panel="work/board" data-active="true">
+          <div class="kanban">
+            <div class="kanban-col">
+              <div class="kanban-col-head">queue</div>
+              <div class="card">
+                <div class="card-id">TRL-225</div>IDE Work/Logs IA
+              </div>
+            </div>
+            <div class="kanban-col">
+              <div class="kanban-col-head">in progress</div>
+              <div class="card">
+                <div class="card-id">TRL-215</div>Inline cell edit
+              </div>
+            </div>
+            <div class="kanban-col">
+              <div class="kanban-col-head">review</div>
+              <div class="card">
+                <div class="card-id">TRL-192</div>Admin shell
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel" data-panel="work/milestones">
+          <div class="milestones">
+            <div class="milestone-row"><strong>Cycle: Operate inline cell edit</strong><span
+                style="color:var(--text3);margin-left:auto;font:500 11px var(--mono)">A ship</span></div>
+            <div class="milestone-row"><strong>Admin chrome v2</strong><span
+                style="color:var(--text3);margin-left:auto;font:500 11px var(--mono)">unreviewed</span></div>
+          </div>
+        </div>
+        <div class="panel" data-panel="work/workflows">
+          <div class="empty"><strong>Workflows</strong><span>Coming soon — pipeline canvas lands in TRL-219 epic.</span>
+          </div>
+        </div>
+        <div class="panel" data-panel="logs/ops">
+          <div class="ops-timeline" data-design-note="Canonical ops home — replaces always-on oplog column">
+            <div class="op-row"><span>5m</span><span><span class="op-kind">vcs:issueClaim</span>
+                TRL-225</span><span>agent</span></div>
+            <div class="op-row"><span>5m</span><span><span class="op-kind">→branch</span>
+                issue/TRL-215…</span><span>cli</span></div>
+            <div class="op-row"><span>1m</span><span><span class="op-kind">vcs:laneCreate</span>
+                lane-9b86…</span><span>cli</span></div>
+            <div class="op-row"><span>1m</span><span><span class="op-kind">→branch</span> main</span><span>cli</span>
+            </div>
+          </div>
+        </div>
+        <div class="panel" data-panel="logs/decisions">
+          <div class="empty"><strong>Decisions</strong><span>Coming soon — graph decision ops surface here.</span></div>
+        </div>
+        <div class="panel" data-panel="logs/branches">
+          <div class="empty"><strong>Branches</strong><span>Coming soon — branch manager parity with IDE Logs.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="inspector" aria-label="Live ops stream">
+      <div class="inspector-head">
+        <span>Live ops</span>
+        <button type="button" class="icon-btn" id="inspector-close" aria-label="Close live ops inspector">✕</button>
+      </div>
+      <div class="ops-timeline">
+        <div class="op-row"><span>now</span><span><span class="op-kind">vcs:issueDescribe</span>
+            TRL-225</span><span>cli</span></div>
+        <div class="op-row"><span>5m</span><span><span class="op-kind">vcs:issueClaim</span>
+            TRL-225</span><span>agent</span></div>
+      </div>
+      <div class="resize-handle" data-resize="inspector" role="separator" aria-orientation="vertical"
+        aria-label="Resize live ops inspector" tabindex="0"></div>
+    </aside>
+  </div>
+
+  <div class="legend">
+    <strong>TRL-226 mock — click to explore</strong>
+    Secondary: Work/Logs tabs · View header tools on Board only · Pin live tail adds inspector column.
+    Toggle primary/secondary collapse via header buttons.
+  </div>
+
+  <style>
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0
+    }
+  </style>
+  <script>
+    const routes = {
+      'work/board': { title: 'Work · Board', meta: '131 issues · 4 lanes', boardTools: true, logsTools: false },
+      'work/milestones': { title: 'Work · Milestones', meta: '2 milestones', boardTools: false, logsTools: false },
+      'work/workflows': { title: 'Work · Workflows', meta: 'Coming soon', boardTools: false, logsTools: false },
+      'logs/ops': { title: 'Logs · Ops', meta: '346 ops · live', boardTools: false, logsTools: true },
+      'logs/decisions': { title: 'Logs · Decisions', meta: 'Coming soon', boardTools: false, logsTools: true },
+      'logs/branches': { title: 'Logs · Branches', meta: 'Coming soon', boardTools: false, logsTools: true },
+    };
+
+    function setRoute(zone, tab) {
+      document.querySelectorAll('.route-item').forEach((btn) => {
+        const active = btn.dataset.zone === zone && btn.dataset.tab === tab;
+        btn.toggleAttribute('aria-current', active ? 'page' : false);
+      });
+      document.querySelectorAll('.panel').forEach((p) => {
+        p.dataset.active = p.dataset.panel === `${zone}/${tab}` ? 'true' : 'false';
+      });
+      const r = routes[`${zone}/${tab}`];
+      document.getElementById('view-title').textContent = r.title;
+      document.getElementById('view-meta').textContent = r.meta;
+      document.getElementById('board-toolbar').hidden = !r.boardTools;
+      document.getElementById('logs-toolbar').hidden = !r.logsTools;
+      document.documentElement.classList.toggle('ops-badge-visible', zone !== 'logs' || tab !== 'ops');
+    }
+
+    document.querySelectorAll('.route-item').forEach((btn) => {
+      btn.addEventListener('click', () => setRoute(btn.dataset.zone, btn.dataset.tab));
+    });
+
+    document.getElementById('sidebar-toggle').addEventListener('click', () => {
+      document.documentElement.classList.toggle('sidebar-collapsed');
+    });
+    document.getElementById('secondary-toggle').addEventListener('click', () => {
+      document.documentElement.classList.toggle('secondary-collapsed');
+    });
+    document.getElementById('pin-toggle').addEventListener('click', (e) => {
+      const pinned = document.documentElement.classList.toggle('inspector-pinned');
+      e.currentTarget.setAttribute('aria-pressed', pinned ? 'true' : 'false');
+    });
+    document.getElementById('inspector-close').addEventListener('click', () => {
+      document.documentElement.classList.remove('inspector-pinned');
+      document.getElementById('pin-toggle').setAttribute('aria-pressed', 'false');
+    });
+
+    setRoute('work', 'board');
+  </script>
+</body>
+
+</html>

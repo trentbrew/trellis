@@ -19,6 +19,11 @@ import { HookRegistry } from '../decisions/index.js';
 import { wrapToolHandler } from '../decisions/auto-capture.js';
 import type { DecisionRecorder } from '../decisions/auto-capture.js';
 import { PROVENANCE } from '../core/persist/canonical-op.js';
+import {
+  assembleContextPack,
+  serializePack,
+} from '../context/pack.js';
+import { ContextPackFocusError } from '../context/types.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1301,6 +1306,50 @@ export function createTrellisMcpServer(): McpServer {
       return text(
         `Decision chain for ${entityId} (${chain.length} decisions):\n${lines.join('\n')}`,
       );
+    },
+  );
+
+  // -----------------------------------------------------------------------
+  // Tool: trellis_context_pack (TRL-127)
+  // -----------------------------------------------------------------------
+  server.registerTool(
+    'trellis_context_pack',
+    {
+      description:
+        'Emit a token-budgeted agent orientation pack (lane, focus issue, AC summaries, handoffs, milestone, decision/link handles). Prefer this over dumping full issue lists or AGENTS prose.',
+      inputSchema: {
+        path: z.string().default('.').describe('Repository path'),
+        budget: z
+          .number()
+          .optional()
+          .describe('Token budget (chars/4 estimator). Default 4000.'),
+        vantage: z
+          .enum(['boot', 'edit', 'review'])
+          .optional()
+          .describe('boot | edit | review (default: boot)'),
+        issue: z
+          .string()
+          .optional()
+          .describe('Focus issue id (required for edit/review if ambiguous)'),
+      },
+    },
+    async ({ path, budget, vantage, issue }) => {
+      const absPath = resolve(path);
+      const engine = getEngine(path);
+      try {
+        const pack = assembleContextPack(engine, {
+          rootPath: absPath,
+          budgetTokens: budget ?? 4000,
+          vantage: vantage ?? 'boot',
+          issueId: issue,
+        });
+        return text(serializePack(pack));
+      } catch (err) {
+        if (err instanceof ContextPackFocusError) {
+          return text(`Error: ${err.message}`);
+        }
+        throw err;
+      }
     },
   );
 

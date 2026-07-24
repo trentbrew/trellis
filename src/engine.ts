@@ -222,6 +222,8 @@ const ISSUE_INTEGRATION_KINDS = new Set<string>([
   'vcs:zoneRename',
   'vcs:grantSet',
   'vcs:grantRetract',
+  'vcs:remotePush',
+  'vcs:remotePull',
 ]);
 
 export type IntegrateOpRejectReason =
@@ -412,7 +414,7 @@ export class TrellisVcsEngine {
       rootPath: this.config.rootPath,
       ignorePatterns: [...this.config.ignorePatterns, '.trellis'],
       debounceMs: this.config.debounceMs,
-      onEvent: () => {},
+      onEvent: () => { },
     });
     const scanEvents = await scanner.scan({
       onProgress: (progress: ScanProgress) => {
@@ -445,7 +447,7 @@ export class TrellisVcsEngine {
           const absPath = join(this.config.rootPath, event.path);
           const content = await readFile(absPath);
           await this._blobStore.put(content);
-        } catch {}
+        } catch { }
       }
 
       const op = await createVcsOp('vcs:fileAdd', {
@@ -694,7 +696,7 @@ export class TrellisVcsEngine {
             const absPath = join(rootPath, event.path);
             const content = await readFile(absPath);
             await this._blobStore.put(content);
-          } catch {}
+          } catch { }
         }
         await this.ingestion!.process(event);
       },
@@ -715,7 +717,7 @@ export class TrellisVcsEngine {
               const absPath = join(rootPath, event.path);
               const content = await readFile(absPath);
               await this._blobStore.put(content);
-            } catch {}
+            } catch { }
           }
           await this.ingestion!.process(event);
         }
@@ -1050,9 +1052,12 @@ export class TrellisVcsEngine {
     return existsSync(join(rootPath, '.trellis', 'config.json'));
   }
 
-  static repair(rootPath: string): { recovered: number; lost: number } {
+  static repair(
+    rootPath: string,
+    opts?: import('./vcs/op-log.js').RepairOptions,
+  ): import('./vcs/op-log.js').RepairResult {
     const opsPath = join(rootPath, '.trellis', 'ops.json');
-    return JsonOpLog.repair(opsPath);
+    return JsonOpLog.repair(opsPath, { ...opts, rootPath });
   }
 
   // -------------------------------------------------------------------------
@@ -1741,140 +1746,140 @@ export class TrellisVcsEngine {
     });
 
     try {
-    meta.status = 'promoting';
-    meta.updatedAt = new Date().toISOString();
-    laneMod.saveLaneMeta(this.trellisDir(), meta);
-
-    const startOp = await createVcsOp('vcs:lanePromoteStart', {
-      agentId: this.agentId,
-      previousHash: this.opLog.getLastOp()?.hash,
-      vcs: {
-        laneId,
-        targetBranch,
-        baseOpHash: meta.baseOpHash,
-      },
-    });
-    await this.applyOp(startOp, { skipBranchAdvance: true });
-
-    const currentHead =
-      lanePromoteMod.resolveBranchHeadFromOps(this.opLog.readAll(), targetBranch) ??
-      branchMod.getBranchHeadOpHash(this._ctx(), targetBranch);
-    if (currentHead !== snapshotHead) {
-      meta.status = 'active';
+      meta.status = 'promoting';
       meta.updatedAt = new Date().toISOString();
       laneMod.saveLaneMeta(this.trellisDir(), meta);
 
-      const abortOp = await createVcsOp('vcs:lanePromoteAbort', {
+      const startOp = await createVcsOp('vcs:lanePromoteStart', {
         agentId: this.agentId,
         previousHash: this.opLog.getLastOp()?.hash,
-        vcs: { laneId },
+        vcs: {
+          laneId,
+          targetBranch,
+          baseOpHash: meta.baseOpHash,
+        },
       });
-      await this.applyOp(abortOp, { skipBranchAdvance: true });
-      throw new Error(
-        `Integration head moved during promote — retry after integration settles`,
-      );
-    }
+      await this.applyOp(startOp, { skipBranchAdvance: true });
 
-    let previousHash = this.opLog.getLastOp()?.hash;
-    let lastReplayedHash: string | undefined;
-    let opsAppended = 0;
+      const currentHead =
+        lanePromoteMod.resolveBranchHeadFromOps(this.opLog.readAll(), targetBranch) ??
+        branchMod.getBranchHeadOpHash(this._ctx(), targetBranch);
+      if (currentHead !== snapshotHead) {
+        meta.status = 'active';
+        meta.updatedAt = new Date().toISOString();
+        laneMod.saveLaneMeta(this.trellisDir(), meta);
 
-    for (const action of plan.opsToReplay) {
-      let opToApply: VcsOp;
-
-      if (action.mergedContent !== undefined && action.sourceOp.vcs?.filePath) {
-        const contentHash = await this._blobStore!.put(
-          Buffer.from(action.mergedContent, 'utf-8'),
-        );
-        opToApply = await createVcsOp('vcs:fileModify', {
-          agentId: action.sourceOp.agentId,
-          previousHash,
-          vcs: {
-            filePath: action.sourceOp.vcs.filePath,
-            contentHash,
-          },
+        const abortOp = await createVcsOp('vcs:lanePromoteAbort', {
+          agentId: this.agentId,
+          previousHash: this.opLog.getLastOp()?.hash,
+          vcs: { laneId },
         });
-        // Lane is envelope provenance, not identity (TRL-102) — a merged
-        // fileModify must hash on its path + content, not on its lane.
-        opToApply.laneId = action.sourceOp.laneId ?? laneId;
-      } else {
-        opToApply = await lanePromoteMod.rechainOpForIntegration(
-          action.sourceOp,
-          previousHash,
+        await this.applyOp(abortOp, { skipBranchAdvance: true });
+        throw new Error(
+          `Integration head moved during promote — retry after integration settles`,
         );
       }
 
-      await this.applyOp(opToApply, {
-        skipBranchAdvance: true,
-        skipOwnershipCheck: true,
+      let previousHash = this.opLog.getLastOp()?.hash;
+      let lastReplayedHash: string | undefined;
+      let opsAppended = 0;
+
+      for (const action of plan.opsToReplay) {
+        let opToApply: VcsOp;
+
+        if (action.mergedContent !== undefined && action.sourceOp.vcs?.filePath) {
+          const contentHash = await this._blobStore!.put(
+            Buffer.from(action.mergedContent, 'utf-8'),
+          );
+          opToApply = await createVcsOp('vcs:fileModify', {
+            agentId: action.sourceOp.agentId,
+            previousHash,
+            vcs: {
+              filePath: action.sourceOp.vcs.filePath,
+              contentHash,
+            },
+          });
+          // Lane is envelope provenance, not identity (TRL-102) — a merged
+          // fileModify must hash on its path + content, not on its lane.
+          opToApply.laneId = action.sourceOp.laneId ?? laneId;
+        } else {
+          opToApply = await lanePromoteMod.rechainOpForIntegration(
+            action.sourceOp,
+            previousHash,
+          );
+        }
+
+        await this.applyOp(opToApply, {
+          skipBranchAdvance: true,
+          skipOwnershipCheck: true,
+        });
+        previousHash = opToApply.hash;
+        lastReplayedHash = opToApply.hash;
+        opsAppended++;
+      }
+
+      if (lastReplayedHash) {
+        await this.appendBranchAdvance(lastReplayedHash);
+      }
+
+      const completeOp = await createVcsOp('vcs:lanePromoteComplete', {
+        agentId: this.agentId,
+        previousHash: this.opLog.getLastOp()?.hash,
+        vcs: {
+          laneId,
+          targetBranch,
+          laneStatus: 'promoted',
+        },
       });
-      previousHash = opToApply.hash;
-      lastReplayedHash = opToApply.hash;
-      opsAppended++;
-    }
+      await this.applyOp(completeOp, { skipBranchAdvance: true });
 
-    if (lastReplayedHash) {
-      await this.appendBranchAdvance(lastReplayedHash);
-    }
+      meta.status = 'promoted';
+      meta.headOpHash = lastReplayedHash ?? meta.headOpHash;
+      meta.updatedAt = new Date().toISOString();
+      laneMod.saveLaneMeta(this.trellisDir(), meta);
 
-    const completeOp = await createVcsOp('vcs:lanePromoteComplete', {
-      agentId: this.agentId,
-      previousHash: this.opLog.getLastOp()?.hash,
-      vcs: {
-        laneId,
-        targetBranch,
-        laneStatus: 'promoted',
-      },
-    });
-    await this.applyOp(completeOp, { skipBranchAdvance: true });
+      this.invalidateIntegrationCache();
+      this.refreshMaterializedStore(this.opLog.readAll());
+      this.syncIngestionLastOpHash();
 
-    meta.status = 'promoted';
-    meta.headOpHash = lastReplayedHash ?? meta.headOpHash;
-    meta.updatedAt = new Date().toISOString();
-    laneMod.saveLaneMeta(this.trellisDir(), meta);
+      let gitSync: GitSyncResult | undefined;
+      if (this.config.git?.syncOnPromote !== false) {
+        gitSync = this.syncGitIntegration({
+          lane: meta,
+          laneOps,
+          force: true,
+        });
+      }
 
-    this.invalidateIntegrationCache();
-    this.refreshMaterializedStore(this.opLog.readAll());
-    this.syncIngestionLastOpHash();
+      let milestoneId: string | undefined;
+      let milestoneMessage: string | undefined;
+      if (opts?.milestone !== false) {
+        const issuePlain = meta.issueId?.replace(/^issue:/, '');
+        const issueTitle = issuePlain
+          ? issueMod.getIssue(this._ctx(), issuePlain)?.title
+          : undefined;
+        milestoneMessage = lanePromoteMod.draftLanePromoteMilestoneMessage({
+          message: opts?.message,
+          meta,
+          opsToReplay: plan.opsToReplay,
+          issueTitle,
+        });
+        const milestoneOp = await this.createMilestone(milestoneMessage, {
+          fromOpHash: snapshotHead,
+          toOpHash: completeOp.hash,
+        });
+        milestoneId = milestoneOp.vcs?.milestoneId;
+      }
 
-    let gitSync: GitSyncResult | undefined;
-    if (this.config.git?.syncOnPromote !== false) {
-      gitSync = this.syncGitIntegration({
-        lane: meta,
-        laneOps,
-        force: true,
-      });
-    }
-
-    let milestoneId: string | undefined;
-    let milestoneMessage: string | undefined;
-    if (opts?.milestone !== false) {
-      const issuePlain = meta.issueId?.replace(/^issue:/, '');
-      const issueTitle = issuePlain
-        ? issueMod.getIssue(this._ctx(), issuePlain)?.title
-        : undefined;
-      milestoneMessage = lanePromoteMod.draftLanePromoteMilestoneMessage({
-        message: opts?.message,
-        meta,
-        opsToReplay: plan.opsToReplay,
-        issueTitle,
-      });
-      const milestoneOp = await this.createMilestone(milestoneMessage, {
-        fromOpHash: snapshotHead,
-        toOpHash: completeOp.hash,
-      });
-      milestoneId = milestoneOp.vcs?.milestoneId;
-    }
-
-    return {
-      ...plan,
-      promoted: true,
-      integrationOpsAppended: opsAppended + 2,
-      completeOpHash: completeOp.hash,
-      gitSync,
-      milestoneId,
-      milestoneMessage,
-    };
+      return {
+        ...plan,
+        promoted: true,
+        integrationOpsAppended: opsAppended + 2,
+        completeOpHash: completeOp.hash,
+        gitSync,
+        milestoneId,
+        milestoneMessage,
+      };
     } finally {
       promoteLockMod.releasePromoteLock(this.trellisDir(), laneId);
     }
@@ -1909,7 +1914,7 @@ export class TrellisVcsEngine {
     if (opts?.noPromote) {
       throw new Error(
         `Lane ${lane.id} has ${plan.opsToReplay.length} unpromoted ops — promote boundary not met. ` +
-          `Run \`trellis lane promote ${lane.id}\` first, or omit --no-promote to auto-promote on close.`,
+        `Run \`trellis lane promote ${lane.id}\` first, or omit --no-promote to auto-promote on close.`,
       );
     }
 
@@ -2611,6 +2616,48 @@ export class TrellisVcsEngine {
       this.config.rootPath,
       input,
     );
+    await this.flushAutoCheckpoint();
+    return op;
+  }
+
+  async recordRemotePush(info: {
+    remoteName?: string;
+    remoteRepoId?: string;
+    remoteTailHash?: string;
+    remoteByteLength?: number;
+  }): Promise<VcsOp> {
+    const op = await createVcsOp('vcs:remotePush', {
+      agentId: this.agentId,
+      previousHash: this.opLog.getLastOp()?.hash,
+      vcs: {
+        remoteName: info.remoteName,
+        remoteRepoId: info.remoteRepoId,
+        remoteTailHash: info.remoteTailHash,
+        remoteByteLength: info.remoteByteLength,
+      },
+    });
+    await this.applyOp(op, { allowIntegrationWrite: true });
+    await this.flushAutoCheckpoint();
+    return op;
+  }
+
+  async recordRemotePull(info: {
+    remoteName?: string;
+    remoteRepoId?: string;
+    remoteTailHash?: string;
+    remoteByteLength?: number;
+  }): Promise<VcsOp> {
+    const op = await createVcsOp('vcs:remotePull', {
+      agentId: this.agentId,
+      previousHash: this.opLog.getLastOp()?.hash,
+      vcs: {
+        remoteName: info.remoteName,
+        remoteRepoId: info.remoteRepoId,
+        remoteTailHash: info.remoteTailHash,
+        remoteByteLength: info.remoteByteLength,
+      },
+    });
+    await this.applyOp(op, { allowIntegrationWrite: true });
     await this.flushAutoCheckpoint();
     return op;
   }

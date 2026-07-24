@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en" data-trellis-band="L3">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trellis — trellis admin (TRL-174 design mock)</title>
+  <style>
+    :root {
+      --background-base: #101010;
+      --background-weak: #1e1e1e;
+      --surface-raised-base: #1c1c1c;
+      --surface-inset-base: #161616;
+      --surface-inset-alpha: rgba(0, 0, 0, 0.5);
+      --border-base: rgba(255, 255, 255, 0.195);
+      --border-strong: rgba(255, 255, 255, 0.266);
+      --text-strong: rgba(255, 255, 255, 0.936);
+      --text-base: rgba(255, 255, 255, 0.618);
+      --text-weak: rgba(255, 255, 255, 0.422);
+      --text-interactive-base: #9dbefe;
+      --surface-brand-base: #fab283;
+      --surface-success-strong: #12c905;
+      --surface-warning-strong: #fcd53a;
+      --surface-critical-strong: #fc533a;
+      --tml-glass-surface: rgba(22, 22, 22, 0.75);
+      --tml-glass-border: rgba(255, 255, 255, 0.04);
+      --tml-accent-glow: rgba(157, 190, 254, 0.12);
+      --tml-kanban-body-inset: rgba(255, 255, 255, 0.02);
+      --entity-file: #00ceb9;
+      --entity-milestone: #2090f5;
+      --entity-issue: #edb2f1;
+      --entity-branch: #fcd53a;
+      --entity-default: rgba(255, 255, 255, 0.618);
+      --rail-bg: #0c0c0c;
+      --live-dot: #12c905;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --toolbar-control-h: 34px;
+      --radius-md: 8px;
+      --radius-lg: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      background: var(--background-base);
+      color: var(--text-strong);
+      font: 400 13px/1.45 var(--font);
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 56px minmax(0, 1fr) 280px;
+      grid-template-rows: 48px minmax(0, 1fr);
+      height: 100%;
+    }
+
+    .rail {
+      grid-row: 1 / -1;
+      background: var(--rail-bg);
+      border-right: 1px solid var(--border-base);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 0;
+      gap: 8px;
+    }
+
+    .rail-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-weak);
+      font: 600 10px var(--mono);
+      letter-spacing: 0.04em;
+      cursor: pointer;
+    }
+
+    .rail-btn[aria-current="page"] {
+      background: var(--surface-raised-base);
+      border-color: var(--border-base);
+      color: var(--text-interactive-base);
+      box-shadow: 0 0 0 1px var(--tml-accent-glow);
+    }
+
+    .header {
+      grid-column: 2;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      background: var(--tml-glass-surface);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-base);
+    }
+
+    .brand {
+      font: 700 14px var(--font);
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+    }
+
+    .brand span {
+      color: var(--text-base);
+      font-weight: 500;
+    }
+
+    .live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font: 500 11px var(--mono);
+      color: var(--text-base);
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--live-dot);
+      box-shadow: 0 0 0 0 rgba(18, 201, 5, 0.5);
+      animation: pulse 1.6s ease-out infinite;
+    }
+
+    @keyframes pulse {
+      70% {
+        box-shadow: 0 0 0 8px rgba(18, 201, 5, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(18, 201, 5, 0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .live-dot {
+        animation: none;
+      }
+    }
+
+    .meta {
+      font: 400 11px var(--mono);
+      color: var(--text-weak);
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .stats {
+      display: flex;
+      gap: 6px;
+      margin-left: auto;
+    }
+
+    .chip {
+      font: 500 10px var(--mono);
+      color: var(--text-base);
+      background: var(--surface-raised-base);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-md);
+      padding: 4px 8px;
+      white-space: nowrap;
+    }
+
+    .chip b {
+      color: var(--text-strong);
+      font-weight: 600;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 0 1 420px;
+      min-width: 240px;
+    }
+
+    .view-toggle {
+      display: flex;
+      height: var(--toolbar-control-h);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: var(--surface-raised-base);
+    }
+
+    .view-toggle button {
+      height: 100%;
+      border: none;
+      background: transparent;
+      color: var(--text-weak);
+      font: 500 12px var(--mono);
+      padding: 0 12px;
+      cursor: pointer;
+    }
+
+    .view-toggle button[aria-pressed="true"] {
+      background: var(--text-interactive-base);
+      color: #0a0a0a;
+    }
+
+    .search {
+      position: relative;
+      flex: 1;
+      height: var(--toolbar-control-h);
+    }
+
+    .search input {
+      width: 100%;
+      height: 100%;
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-md);
+      background: var(--surface-raised-base);
+      color: var(--text-strong);
+      font: 400 12px var(--mono);
+      padding: 0 28px 0 32px;
+      outline: none;
+    }
+
+    .search-clear {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: none;
+      background: transparent;
+      color: var(--text-weak);
+      font-size: 16px;
+      cursor: pointer;
+      display: none;
+      line-height: 1;
+    }
+
+    .search.has-value .search-clear {
+      display: block;
+    }
+
+    .search input:focus {
+      border-color: var(--text-interactive-base);
+      box-shadow: 0 0 0 1px var(--tml-accent-glow);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      color: var(--text-weak);
+      pointer-events: none;
+    }
+
+    .main {
+      grid-column: 2;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .banner {
+      display: none;
+      margin: 12px 16px 0;
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid color-mix(in srgb, var(--surface-warning-strong) 40%, transparent);
+      background: color-mix(in srgb, var(--surface-warning-strong) 12%, transparent);
+      font: 500 12px var(--mono);
+      color: var(--surface-warning-strong);
+    }
+
+    .banner.show {
+      display: block;
+    }
+
+    .banner.stale {
+      border-color: color-mix(in srgb, var(--surface-critical-strong) 40%, transparent);
+      background: color-mix(in srgb, var(--surface-critical-strong) 12%, transparent);
+      color: var(--surface-critical-strong);
+    }
+
+    .proj {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      background: var(--tml-kanban-body-inset);
+      display: none;
+      padding: 16px;
+    }
+
+    .proj.active {
+      display: flex;
+    }
+
+    .proj.grid-view {
+      display: none;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-content: flex-start;
+    }
+
+    .proj.grid-view.active {
+      display: flex;
+    }
+
+    .proj.table-view {
+      display: none;
+      flex-direction: column;
+      padding: 0;
+    }
+
+    .proj.table-view.active {
+      display: flex;
+    }
+
+    .lane-card {
+      width: 280px;
+      padding: 12px 14px;
+      background: var(--surface-raised-base);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-lg);
+      text-align: left;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .lane-card:hover,
+    .lane-card:focus-visible {
+      border-color: var(--text-interactive-base);
+      outline: none;
+    }
+
+    .lane-id {
+      font: 600 11px var(--mono);
+      color: var(--surface-success-strong);
+    }
+
+    .lane-meta {
+      margin-top: 6px;
+      font: 400 11px var(--mono);
+      color: var(--text-weak);
+    }
+
+    .lane-meta span {
+      display: block;
+    }
+
+    .tbl {
+      width: 100%;
+      border-collapse: collapse;
+      font: 400 12px var(--mono);
+    }
+
+    .tbl th,
+    .tbl td {
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-base);
+    }
+
+    .tbl th {
+      color: var(--text-weak);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 10px;
+      background: var(--surface-raised-base);
+      position: sticky;
+      top: 0;
+    }
+
+    .tbl td {
+      color: var(--text-base);
+    }
+
+    .tbl tr:hover td {
+      background: color-mix(in srgb, var(--text-interactive-base) 6%, transparent);
+    }
+
+    .empty-state {
+      display: none;
+      padding: 48px 24px;
+      color: var(--text-weak);
+      font: 400 13px var(--mono);
+      text-align: center;
+      width: 100%;
+    }
+
+    .empty-state.show {
+      display: block;
+    }
+
+    .board {
+      flex: 1;
+      display: none;
+      gap: 14px;
+      padding: 16px;
+      overflow: auto;
+      background: var(--tml-kanban-body-inset);
+      width: 100%;
+    }
+
+    .board.active {
+      display: flex;
+    }
+
+    .col {
+      flex: 1;
+      min-width: 260px;
+      max-width: 320px;
+      background: var(--surface-raised-base);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      min-height: 280px;
+    }
+
+    .col-h {
+      padding: 12px 14px 8px;
+      font: 600 11px var(--mono);
+      letter-spacing: 0.06em;
+      color: var(--text-base);
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border-base);
+    }
+
+    .col-h em {
+      font-style: normal;
+      color: var(--text-weak);
+      margin-left: 6px;
+    }
+
+    .card {
+      margin: 10px 10px 0;
+      padding: 12px 14px;
+      background: var(--surface-raised-base);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      text-align: left;
+      color: inherit;
+      font: inherit;
+      transition: border-color .15s;
+    }
+
+    .card:last-child {
+      margin-bottom: 10px;
+    }
+
+    .card:hover,
+    .card:focus-visible {
+      border-color: var(--text-interactive-base);
+      box-shadow: 0 0 0 1px var(--tml-accent-glow);
+      outline: none;
+    }
+
+    .card.flash {
+      border-color: var(--surface-success-strong);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .card.flash {
+        transition: none;
+      }
+    }
+
+    .card-id {
+      font: 600 11px var(--mono);
+      color: var(--text-interactive-base);
+    }
+
+    .card-title {
+      margin-top: 4px;
+      font: 600 13px var(--font);
+      color: var(--text-strong);
+    }
+
+    .card-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-block;
+      font: 600 10px var(--mono);
+      letter-spacing: 0.04em;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--surface-warning-strong) 18%, transparent);
+      color: var(--surface-warning-strong);
+    }
+
+    .lane-badge {
+      font: 500 10px var(--mono);
+      color: var(--entity-issue);
+      background: color-mix(in srgb, var(--entity-issue) 14%, transparent);
+      padding: 2px 7px;
+      border-radius: 999px;
+    }
+
+    .prio {
+      font: 500 10px var(--mono);
+      color: var(--text-weak);
+    }
+
+    .placeholder {
+      display: none;
+    }
+
+    .oplog {
+      grid-row: 1 / -1;
+      grid-column: 3;
+      background: var(--surface-inset-base);
+      border-left: 1px solid var(--border-base);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .oplog h2 {
+      margin: 0;
+      padding: 14px 14px 10px;
+      font: 600 11px var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-base);
+      border-bottom: 1px solid var(--border-base);
+    }
+
+    .ops {
+      flex: 1;
+      overflow: auto;
+      padding: 8px 0;
+    }
+
+    .op {
+      display: grid;
+      grid-template-columns: 64px 1fr 72px;
+      gap: 8px;
+      padding: 8px 14px;
+      font: 400 11px var(--mono);
+      border-bottom: 1px solid color-mix(in srgb, var(--border-base) 50%, transparent);
+    }
+
+    .op time {
+      color: var(--text-weak);
+    }
+
+    .op .kind {
+      color: var(--text-base);
+    }
+
+    .op .hash {
+      color: var(--text-interactive-base);
+    }
+
+    .toast {
+      position: fixed;
+      right: 300px;
+      bottom: 20px;
+      padding: 10px 14px;
+      background: var(--surface-raised-base);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-md);
+      font: 500 12px var(--mono);
+      color: var(--text-strong);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity .2s, transform .2s;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .toast {
+        transition: none;
+      }
+    }
+
+    .legend {
+      position: fixed;
+      left: 68px;
+      bottom: 12px;
+      font: 400 10px var(--mono);
+      color: var(--text-weak);
+      max-width: 420px;
+      background: var(--tml-glass-surface);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-md);
+      padding: 8px 10px;
+      z-index: 5;
+    }
+
+    dialog {
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-lg);
+      background: var(--surface-raised-base);
+      color: var(--text-strong);
+      padding: 0;
+      max-width: 420px;
+      width: calc(100% - 32px);
+    }
+
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.55);
+    }
+
+    .dlg-h {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-base);
+      font: 700 14px var(--font);
+    }
+
+    .dlg-b {
+      padding: 14px 16px 18px;
+      font: 400 13px var(--font);
+      color: var(--text-base);
+    }
+
+    .dlg-h button {
+      border: none;
+      background: transparent;
+      color: var(--text-weak);
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 1099px) {
+      .shell {
+        grid-template-columns: 56px minmax(0, 1fr);
+        grid-template-rows: 48px minmax(0, 1fr) 200px;
+      }
+
+      .oplog {
+        grid-row: 3;
+        grid-column: 2;
+        border-left: none;
+        border-top: 1px solid var(--border-base);
+      }
+
+      .toast {
+        right: 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="shell" data-design-note="AffordanceShell: rail | header+content | op-log detail">
+    <nav class="rail" aria-label="Operate">
+      <button type="button" class="rail-btn" aria-current="page" title="VCS / Lanes">VCS</button>
+      <button type="button" class="rail-btn" title="Collections (peer)" disabled style="opacity:.35">COL</button>
+      <button type="button" class="rail-btn" title="Cron (peer)" disabled style="opacity:.35">CRN</button>
+    </nav>
+
+    <header class="header" data-design-note="Glass header; view toggle + search share 34px height">
+      <div class="brand">Trellis <span>admin</span></div>
+      <div class="live" aria-live="polite" id="live"><span class="live-dot" aria-hidden="true"></span><span
+          id="live-label">live</span></div>
+      <div class="meta" title="…/Projects/TRELLIS/trellis-node">…/trellis-node</div>
+      <div class="stats" aria-label="Stats">
+        <span class="chip"><b>87</b> active</span>
+        <span class="chip"><b>101</b> lanes</span>
+        <span class="chip" title="integration"><b>issue/TRL-170-…</b></span>
+        <span class="chip"><b>16</b> issues</span>
+      </div>
+      <div class="toolbar">
+        <div class="view-toggle" role="group" aria-label="Projection">
+          <button type="button" data-view="grid" aria-pressed="false">Grid</button>
+          <button type="button" data-view="kanban" aria-pressed="true">Kanban</button>
+          <button type="button" data-view="table" aria-pressed="false">Table</button>
+        </div>
+        <div class="search" id="search">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input id="search-input" type="search" aria-label="Search lanes, issues, ops"
+            placeholder="Search lanes, issues, ops…" />
+          <button type="button" class="search-clear" id="search-clear" aria-label="Clear search">&times;</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <div class="banner" id="lock" data-design-note="Promote lock — L live, S stale">Promote lock held · lane-e8f967f2…
+      </div>
+
+      <div class="board active" id="board-kanban" data-design-note="TML kanban mount">
+        <section class="col">
+          <div class="col-h">Backlog<em>2</em></div>
+          <button type="button" class="card" data-trellis-shell="card" data-id="TRL-165">
+            <div class="card-id">TRL-165</div>
+            <div class="card-title">Design: Unified theme contract Phase C</div>
+            <div class="card-row">
+              <span class="badge">REVIEW</span>
+              <span class="prio">P2</span>
+              <span class="lane-badge">lane-a35f9a55…</span>
+            </div>
+          </button>
+          <button type="button" class="card" data-trellis-shell="card" data-id="TRL-171">
+            <div class="card-id">TRL-171</div>
+            <div class="card-title">Review fail: /client 404 under Playwright dist</div>
+            <div class="card-row">
+              <span class="badge">REVIEW</span>
+              <span class="prio">P1</span>
+              <span class="lane-badge"
+                style="color:var(--text-weak);background:transparent;border:1px solid var(--border-base)">no lane</span>
+            </div>
+          </button>
+        </section>
+        <section class="col">
+          <div class="col-h">In Progress<em>0</em></div>
+          <div class="empty-state show" style="padding:24px 12px">No issues</div>
+        </section>
+        <section class="col">
+          <div class="col-h">Done<em>2</em></div>
+          <button type="button" class="card" data-trellis-shell="card" data-id="TRL-170">
+            <div class="card-id">TRL-170</div>
+            <div class="card-title">Spec: Harden theme scrubber e2e + badge rgba</div>
+            <div class="card-row">
+              <span class="badge"
+                style="background:color-mix(in srgb,#12c905 18%,transparent);color:#12c905">DONE</span>
+              <span class="lane-badge">lane-e2d847c5…</span>
+            </div>
+          </button>
+          <button type="button" class="card" data-trellis-shell="card" data-id="TRL-167">
+            <div class="card-id">TRL-167</div>
+            <div class="card-title">Impl: Unified theme contract Phase C</div>
+            <div class="card-row">
+              <span class="badge"
+                style="background:color-mix(in srgb,#12c905 18%,transparent);color:#12c905">DONE</span>
+              <span class="lane-badge">lane-23b0f333…</span>
+            </div>
+          </button>
+        </section>
+      </div>
+
+      <div class="proj grid-view" id="board-grid" data-design-note="TML lane grid parity">
+        <button type="button" class="lane-card" data-id="lane-e2d847c5">
+          <div class="lane-id">lane-e2d847c5-52e7-…</div>
+          <div class="lane-meta">
+            <span>agent:trentbrew · session open</span>
+            <span>ops 12 · files 8 · branch issue/TRL-170-…</span>
+            <span>worktree …/e2d847c5 · issue TRL-170</span>
+          </div>
+        </button>
+        <button type="button" class="lane-card" data-id="lane-23b0f333">
+          <div class="lane-id">lane-23b0f333-679f-…</div>
+          <div class="lane-meta">
+            <span>agent:trentbrew · session closed</span>
+            <span>ops 40 · files 15 · branch issue/TRL-167-…</span>
+            <span>worktree …/23b0f333 · issue TRL-167</span>
+          </div>
+        </button>
+        <div class="empty-state" id="grid-empty">No lanes match search</div>
+      </div>
+
+      <div class="proj table-view" id="board-table" data-design-note="TML lane table parity">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Lane</th>
+              <th>Agent</th>
+              <th>Ops</th>
+              <th>Files</th>
+              <th>Branch</th>
+              <th>Issue</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>lane-e2d847c5…</td>
+              <td>trentbrew</td>
+              <td>12</td>
+              <td>8</td>
+              <td>issue/TRL-170-…</td>
+              <td>TRL-170</td>
+            </tr>
+            <tr>
+              <td>lane-23b0f333…</td>
+              <td>trentbrew</td>
+              <td>40</td>
+              <td>15</td>
+              <td>issue/TRL-167-…</td>
+              <td>TRL-167</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="empty-state" id="table-empty">No lanes match search</div>
+      </div>
+    </main>
+
+    <aside class="oplog" data-design-note="Detail slot = always-on op heartbeat (not selection drawer)">
+      <h2>Op log</h2>
+      <div class="ops" id="ops">
+        <div class="op"><time>04:15:03</time><span class="kind">vcs:issueUpdate · TRL-170</span><span
+            class="hash">a82988aa</span></div>
+        <div class="op"><time>04:14:51</time><span class="kind">vcs:branchAdvance</span><span
+            class="hash">e2925347</span></div>
+        <div class="op"><time>04:14:22</time><span class="kind">vcs:issueClose · TRL-169</span><span
+            class="hash">6daff580</span></div>
+        <div class="op"><time>04:13:08</time><span class="kind">vcs:milestoneCreate</span><span
+            class="hash">018a7f65</span></div>
+        <div class="op"><time>04:12:40</time><span class="kind">vcs:laneCreate</span><span class="hash">caa70c06</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite">vcs:issueUpdate · TRL-170</div>
+  <p class="legend">TRL-174 mock · parity shell replacing <code>trellis lane watch</code> · default view=kanban (was
+    grid) · L lock · R reconnect · chrome=AffordanceShell · board=TML · tokens=Phase B</p>
+
+  <dialog id="dlg">
+    <div class="dlg-h">
+      <span id="dlg-title">Issue</span>
+      <button type="button" aria-label="Close" id="dlg-x">&times;</button>
+    </div>
+    <div class="dlg-b" id="dlg-body">Attached lanes + promote affordance (parity with lanes.html).</div>
+  </dialog>
+
+  <script>
+    const toast = document.getElementById('toast');
+    const dlg = document.getElementById('dlg');
+    const lock = document.getElementById('lock');
+    const liveLabel = document.getElementById('live-label');
+    const search = document.getElementById('search');
+    const searchInput = document.getElementById('search-input');
+    const views = {
+      kanban: document.getElementById('board-kanban'),
+      grid: document.getElementById('board-grid'),
+      table: document.getElementById('board-table'),
+    };
+
+    function setView(v) {
+      document.querySelectorAll('.view-toggle button').forEach((b) => {
+        b.setAttribute('aria-pressed', b.dataset.view === v ? 'true' : 'false');
+      });
+      Object.entries(views).forEach(([key, el]) => {
+        el.classList.toggle('active', key === v);
+      });
+      history.replaceState(null, '', '?view=' + v);
+    }
+
+    document.querySelectorAll('.view-toggle button').forEach((b) => {
+      b.addEventListener('click', () => setView(b.dataset.view));
+    });
+
+    searchInput.addEventListener('input', () => {
+      search.classList.toggle('has-value', searchInput.value.length > 0);
+    });
+    document.getElementById('search-clear').addEventListener('click', () => {
+      searchInput.value = '';
+      search.classList.remove('has-value');
+      searchInput.focus();
+    });
+
+    document.querySelectorAll('.card, .lane-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        document.getElementById('dlg-title').textContent = card.dataset.id;
+        document.getElementById('dlg-body').textContent =
+          (card.querySelector('.card-title') || card.querySelector('.lane-id')).textContent +
+          ' — attached detail + promote in production.';
+        dlg.showModal();
+        card.classList.add('flash');
+        setTimeout(() => card.classList.remove('flash'), 600);
+        toast.textContent = 'inspect · ' + card.dataset.id;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 1600);
+      });
+    });
+
+    document.getElementById('dlg-x').addEventListener('click', () => dlg.close());
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+
+    let lockMode = 0;
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'l' || e.key === 'L') {
+        lockMode = (lockMode + 1) % 3;
+        lock.classList.toggle('show', lockMode > 0);
+        lock.classList.toggle('stale', lockMode === 2);
+        lock.textContent = lockMode === 2
+          ? 'Stale promote lock · resolve or clear'
+          : 'Promote lock held · lane-e8f967f2…';
+      }
+      if (e.key === 'r' || e.key === 'R') {
+        const reconnecting = liveLabel.textContent === 'live';
+        liveLabel.textContent = reconnecting ? 'reconnecting…' : 'live';
+        document.querySelector('.live-dot').style.opacity = reconnecting ? '0.35' : '1';
+      }
+    });
+
+    const params = new URLSearchParams(location.search);
+    if (params.get('view')) setView(params.get('view'));
+  </script>
+</body>
+
+</html>

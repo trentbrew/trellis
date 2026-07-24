@@ -73,11 +73,18 @@ import {
   writeHeartbeat,
   type PresenceInfo,
 } from './presence.js';
+import { requireDestructiveConfirm } from '../vcs/destructive-guard.js';
 import { registerLaneCommands } from './lane.js';
+import { registerAdminCommands } from './admin.js';
 import { registerTestCommands } from './test-cli.js';
 import { registerBrowserCommands } from './browser-cli.js';
 import { registerProtocolCommands } from './protocol.js';
+import { registerContextCommands } from './context.js';
 import { registerDoctorCommand } from './doctor.js';
+import { registerQueryStressCommand } from './query-stress.js';
+import { registerStorageCommand } from './storage.js';
+import { registerRemoteCommands } from './remote-cli.js';
+import { registerLedgerSpriteCommands } from './ledger-sprite-cli.js';
 
 export type IdeType =
   | 'cursor'
@@ -516,8 +523,7 @@ program
       `  ${chalk.dim('Files indexed:')}  ${configResult.filesIndexed}`,
     );
     console.log(
-      `  ${chalk.dim('Ops:')}            ${configResult.opsCreated} initial ${
-        configResult.opsCreated === 1 ? 'operation' : 'operations'
+      `  ${chalk.dim('Ops:')}            ${configResult.opsCreated} initial ${configResult.opsCreated === 1 ? 'operation' : 'operations'
       }`,
     );
     console.log(`  ${chalk.dim('Config:')}         .trellis/config.json`);
@@ -629,24 +635,60 @@ program
 
 program
   .command('repair')
-  .description('Attempt to repair a corrupted .trellis/ops.json file')
+  .description(
+    'Attempt to repair a corrupted .trellis/ops.json file (requires --confirm-destructive to rewrite)',
+  )
   .option('-p, --path <path>', 'Repository path', '.')
+  .option(
+    '--confirm-destructive',
+    'Allow journal truncate/restore writes (or set TRELLIS_CONFIRM_DESTRUCTIVE=1)',
+  )
+  .option(
+    '--i-know',
+    'Acknowledge remote backup may be stale (repair gate; or set TRELLIS_I_KNOW=1)',
+  )
+  .option('--no-from-mirror', 'Skip ~/.trellis/oplog-mirror restore attempt')
   .action((opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
     console.log(chalk.yellow('Attempting to repair ops.json...'));
-    const result = TrellisVcsEngine.repair(rootPath);
+    try {
+      const result = TrellisVcsEngine.repair(rootPath, {
+        confirmDestructive: opts.confirmDestructive,
+        iKnow: opts.iKnow,
+        preferMirror: opts.fromMirror !== false,
+      });
 
-    if (result.lost === -1) {
-      console.log(
-        chalk.red(
-          'Could not recover any ops. A corrupted backup was saved as ops.json.corrupted',
-        ),
-      );
-    } else if (result.recovered > 0) {
-      console.log(chalk.green(`✓ Recovered ${result.recovered} ops.`));
-    } else {
-      console.log(chalk.green('ops.json is already valid. No repair needed.'));
+      if (result.mirrorRestored) {
+        console.log(
+          chalk.green(
+            `✓ Restored ${result.mirrorRestored} ops from ~/.trellis/oplog-mirror before repair.`,
+          ),
+        );
+      }
+
+      if (result.lost === -1 && result.recovered === 0) {
+        console.log(chalk.red('Repair failed — could not write recovered journal.'));
+      } else if (result.lost === -1) {
+        console.log(
+          chalk.yellow(
+            `✓ Truncated corrupt tail — kept ${result.recovered} valid ops (.corrupted.<ts> backup written).`,
+          ),
+        );
+      } else if (result.recovered > 0) {
+        console.log(
+          chalk.green(
+            result.lost === 0
+              ? `✓ Journal valid (${result.recovered} ops). No repair needed.`
+              : `✓ Recovered ${result.recovered} ops.`,
+          ),
+        );
+      } else {
+        console.log(chalk.green('ops.json is already valid. No repair needed.'));
+      }
+    } catch (err: any) {
+      console.error(chalk.red(err?.message ?? String(err)));
+      process.exitCode = 1;
     }
   });
 
@@ -772,17 +814,17 @@ program
     const groupedOps =
       opts.all || opts.remote
         ? ops.reduce(
-            (groups, op) => {
-              const remoteFact = op.facts?.find(
-                (fact) => fact.e === 'op' && fact.a === 'remote',
-              );
-              const remote = remoteFact ? (remoteFact.v as string) : 'local';
-              if (!groups[remote]) groups[remote] = [];
-              groups[remote].push(op);
-              return groups;
-            },
-            {} as Record<string, typeof ops>,
-          )
+          (groups, op) => {
+            const remoteFact = op.facts?.find(
+              (fact) => fact.e === 'op' && fact.a === 'remote',
+            );
+            const remote = remoteFact ? (remoteFact.v as string) : 'local';
+            if (!groups[remote]) groups[remote] = [];
+            groups[remote].push(op);
+            return groups;
+          },
+          {} as Record<string, typeof ops>,
+        )
         : { local: ops };
 
     console.log(chalk.bold(`Causal Stream — ${ops.length} ops`));
@@ -1041,6 +1083,10 @@ program
   .option('-l, --list', 'List all branches')
   .option('--json', 'Emit machine-readable JSON (no color)')
   .option('-p, --path <path>', 'Repository path', '.')
+  .option(
+    '--confirm-destructive',
+    'Allow branch delete (or set TRELLIS_CONFIRM_DESTRUCTIVE=1)',
+  )
   .action(async (name, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
@@ -1050,6 +1096,10 @@ program
     // Delete
     if (opts.delete) {
       try {
+        requireDestructiveConfirm({
+          action: 'branch-delete',
+          confirmDestructive: opts.confirmDestructive,
+        });
         await engine.deleteBranch(opts.delete);
         console.log(chalk.green(`✓ Deleted branch '${opts.delete}'`));
       } catch (err: any) {
@@ -1914,11 +1964,11 @@ issueCmd
 
     const criteria = opts.ac
       ? opts.ac.map((ac: string) => {
-          if (ac.startsWith('test:')) {
-            return { description: ac.slice(5), command: ac.slice(5) };
-          }
-          return { description: ac };
-        })
+        if (ac.startsWith('test:')) {
+          return { description: ac.slice(5), command: ac.slice(5) };
+        }
+        return { description: ac };
+      })
       : undefined;
 
     const op = await engine.createIssue(opts.title, {
@@ -3483,14 +3533,8 @@ program
 
     const openBrowser = (url: string) => {
       if (opts.open === false) return;
-      const { exec } = require('child_process');
-      const cmd =
-        process.platform === 'darwin'
-          ? 'open'
-          : process.platform === 'win32'
-            ? 'start'
-            : 'xdg-open';
-      exec(`${cmd} ${url}`);
+      const { openBrowser: open } = require('./open-browser.js');
+      open(url);
     };
 
     if (opts.legacy) {
@@ -3754,13 +3798,13 @@ entityCmd
       const entities =
         mode === 'vcs' && engine
           ? engine.listStoreEntities(
-              opts.type,
-              Object.keys(filters).length > 0 ? filters : undefined,
-            )
+            opts.type,
+            Object.keys(filters).length > 0 ? filters : undefined,
+          )
           : kernel!.listEntities(
-              opts.type,
-              Object.keys(filters).length > 0 ? filters : undefined,
-            );
+            opts.type,
+            Object.keys(filters).length > 0 ? filters : undefined,
+          );
 
       if (opts.json) {
         const out = entities.map((e) => {
@@ -4131,7 +4175,7 @@ program
 
     let store: any;
     let engine: QueryEngine;
-    let closeStore: () => void = () => {};
+    let closeStore: () => void = () => { };
 
     if (TrellisVcsEngine.isRepo(rootPath)) {
       const vcsEngine = new TrellisVcsEngine({
@@ -4380,10 +4424,10 @@ ontologyCmd
     console.log(
       chalk.dim(
         'Available ontologies: ' +
-          registry
-            .list()
-            .map((s) => s.id)
-            .join(', '),
+        registry
+          .list()
+          .map((s) => s.id)
+          .join(', '),
       ),
     );
     console.log(
@@ -5493,7 +5537,7 @@ program
       existing.generatedAt = new Date().toISOString();
       existing.confidence = 'high';
       writeFileSync(agentContextPath, JSON.stringify(existing, null, 2));
-    } catch {}
+    } catch { }
 
     console.log();
     console.log(chalk.green('✓ Project context updated'));
@@ -5667,12 +5711,12 @@ program
       mcpServers: {
         'trellis-vcs': opts.web
           ? {
-              url: `${mcpUrl}/sse`,
-            }
+            url: `${mcpUrl}/sse`,
+          }
           : {
-              command: 'bun',
-              args: ['run', mcp, '--quiet', '--path', rootPath],
-            },
+            command: 'bun',
+            args: ['run', mcp, '--quiet', '--path', rootPath],
+          },
       },
     };
 
@@ -5834,7 +5878,7 @@ cmsCmd
   .command('register-library <pkg>')
   .description(
     'Register a Svelte 5 component library as DesignComponent entities. ' +
-      'The package must ship dist/components.json (see @turtle.tech/ui for the format).',
+    'The package must ship dist/components.json (see @turtle.tech/ui for the format).',
   )
   .option('-p, --path <path>', 'Repository path', '.')
   .option('--url <url>', 'Trellis server URL', 'http://localhost:4096')
@@ -5976,8 +6020,8 @@ cmsCmd
 // ---------------------------------------------------------------------------
 
 program
-  .command('remote')
-  .description('Manage remote workspace subscriptions')
+  .command('federation')
+  .description('Manage federation workspace subscriptions (legacy)')
   .argument('[action]', '"add", "remove", or "list" (default: list)')
   .argument('[name]', 'Remote name (for add/remove)')
   .argument('[path]', 'Remote path (for add)')
@@ -5998,8 +6042,8 @@ program
         for (const remote of remotes) {
           const lastPulled = remote.pulledAt
             ? chalk.dim(
-                ` (pulled ${new Date(remote.pulledAt).toLocaleDateString()})`,
-              )
+              ` (pulled ${new Date(remote.pulledAt).toLocaleDateString()})`,
+            )
             : chalk.dim(' (never pulled)');
           console.log(
             `  ${chalk.cyan(remote.name)}: ${remote.path}${lastPulled}`,
@@ -6250,10 +6294,16 @@ gatewayProgram
 // ---------------------------------------------------------------------------
 
 registerLaneCommands(program);
+registerAdminCommands(program);
 registerTestCommands(program);
 registerBrowserCommands(program);
 registerProtocolCommands(program);
+registerContextCommands(program);
 registerDoctorCommand(program);
+registerQueryStressCommand(program);
+registerStorageCommand(program);
+registerRemoteCommands(program);
+registerLedgerSpriteCommands(program);
 
 // ---------------------------------------------------------------------------
 // trellis who / trellis presence — ambient agent awareness (TRL stigmergy)

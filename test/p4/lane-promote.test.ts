@@ -110,7 +110,7 @@ describe('Lane promote', () => {
     ).toBe('TRL-9: Do the thing');
   });
 
-  test('same issue attribute diverged since fork is a hard conflict', async () => {
+  test('integration description wins over stale lane describe', async () => {
     const created = await engine.createIssue('Conflict issue');
     const issueId = created.vcs!.issueId!;
 
@@ -122,13 +122,52 @@ describe('Lane promote', () => {
     await engine.leaveLane();
 
     const dryRun = await engine.promoteLane(lane.id, { dryRun: true });
-    expect(dryRun.promoted).toBe(false);
-    expect(dryRun.canPromote).toBe(false);
-    expect(dryRun.blockingConflicts.some((c) => c.class === 'hard')).toBe(true);
+    expect(dryRun.blockingConflicts).toHaveLength(0);
+    expect(dryRun.opsToReplay).toHaveLength(0);
+    expect(engine.getIssue(issueId)?.description).toBe('integration version');
+  });
 
-    const result = await engine.promoteLane(lane.id);
-    expect(result.promoted).toBe(false);
-    expect(result.blockingConflicts.some((c) => c.class === 'hard')).toBe(true);
+  test('claim metadata does not soft-block when lane edits title', async () => {
+    const created = await engine.createIssue('Claim metadata issue', {
+      description: 'base description',
+    });
+    const issueId = created.vcs!.issueId!;
+
+    await engine.startIssue(issueId, { branch: false });
+    const laneId = engine.getActiveLaneId()!;
+    await engine.leaveLane();
+
+    await engine.enterLane(laneId);
+    await engine.updateIssue(issueId, { title: 'lane changed title' });
+    await engine.leaveLane();
+
+    const plan = await engine.promoteLane(laneId, { dryRun: true });
+    expect(plan.blockingConflicts).toHaveLength(0);
+    expect(plan.canPromote).toBe(true);
+
+    const result = await engine.promoteLane(laneId);
+    expect(result.promoted).toBe(true);
+    expect(engine.getIssue(issueId)?.title).toBe('lane changed title');
+    expect(engine.getIssue(issueId)?.description).toBe('base description');
+  });
+
+  test('stale lane describe yields integration description', async () => {
+    const created = await engine.createIssue('Describe wins issue', {
+      description: 'base description',
+    });
+    const issueId = created.vcs!.issueId!;
+
+    const lane = await engine.createLane();
+    await engine.updateIssue(issueId, { description: 'integration description' });
+
+    await engine.enterLane(lane.id);
+    await engine.updateIssue(issueId, { description: 'lane stale description' });
+    await engine.leaveLane();
+
+    const plan = await engine.promoteLane(lane.id, { dryRun: true });
+    expect(plan.blockingConflicts).toHaveLength(0);
+    expect(plan.opsToReplay).toHaveLength(0);
+    expect(engine.getIssue(issueId)?.description).toBe('integration description');
   });
 
   test('criterion added inside a lane routes to integration (no promote needed)', async () => {

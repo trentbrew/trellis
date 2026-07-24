@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trellis — extract Operate datatable module (TRL-207 design mock)</title>
+  <style>
+    :root {
+      --background-base: #101010;
+      --surface-raised-base: #1c1c1c;
+      --surface-hover: #222222;
+      --border-base: rgba(255, 255, 255, 0.195);
+      --border-column: rgba(255, 255, 255, 0.06);
+      --text-strong: rgba(255, 255, 255, 0.936);
+      --text-base: rgba(255, 255, 255, 0.618);
+      --text-weak: rgba(255, 255, 255, 0.422);
+      --seam-accent: #9dbefe;
+      --text-interactive-base: #9dbefe;
+      --module-bg: #161616;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --rounded-md: 8px;
+      --rounded-xl: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font: 400 13px/1.45 var(--font);
+      color: var(--text-strong);
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 0%, rgba(157, 190, 254, 0.06), transparent),
+        var(--background-base);
+      padding: 32px 24px 48px;
+    }
+
+    h1 {
+      font: 700 22px/1.2 var(--font);
+      letter-spacing: -0.02em;
+      margin: 0 0 8px;
+    }
+
+    .lede {
+      color: var(--text-base);
+      max-width: 52rem;
+      margin: 0 0 28px;
+    }
+
+    .lede strong {
+      color: var(--seam-accent);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+      gap: 20px;
+      align-items: start;
+      max-width: 1100px;
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--module-bg);
+      border: 1px solid var(--border-base);
+      border-radius: var(--rounded-md);
+      padding: 16px 18px;
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font: 600 10px var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-weak);
+    }
+
+    .shell-box {
+      border: 1px dashed rgba(255, 255, 255, 0.22);
+      border-radius: var(--rounded-md);
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    .shell-label {
+      font: 600 10px var(--mono);
+      color: var(--text-weak);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      background: #101010;
+      border: 1px solid var(--border-base);
+      font: 500 12px var(--font);
+      color: var(--text-weak);
+    }
+
+    .toolbar .search {
+      flex: 1;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--surface-raised-base);
+      box-shadow: inset 0 0 0 1px var(--border-base);
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      color: var(--text-base);
+      font: 400 12px var(--mono);
+    }
+
+    .seam {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 8px 0;
+      color: var(--seam-accent);
+      font: 600 11px var(--mono);
+    }
+
+    .seam::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--seam-accent);
+      box-shadow: 0 0 0 3px rgba(157, 190, 254, 0.2);
+    }
+
+    .arrow {
+      color: var(--seam-accent);
+      font: 600 12px var(--mono);
+      margin: 4px 0 4px 12px;
+    }
+
+    .module {
+      margin-top: 8px;
+      padding: 12px;
+      border-radius: var(--rounded-md);
+      border: 1px solid rgba(157, 190, 254, 0.35);
+      background: rgba(157, 190, 254, 0.06);
+    }
+
+    .module .title {
+      font: 600 13px var(--font);
+      color: var(--text-strong);
+      margin-bottom: 6px;
+    }
+
+    .module code {
+      font: 400 11px var(--mono);
+      color: var(--seam-accent);
+    }
+
+    .module ul {
+      margin: 8px 0 0;
+      padding-left: 18px;
+      color: var(--text-base);
+      font: 400 12px var(--mono);
+    }
+
+    .table-mini {
+      margin-top: 10px;
+      border: 1px solid var(--border-base);
+      border-radius: var(--rounded-xl);
+      overflow: hidden;
+      background: var(--surface-raised-base);
+    }
+
+    .table-mini table {
+      width: 100%;
+      border-collapse: collapse;
+      font: 400 11px var(--mono);
+      table-layout: fixed;
+    }
+
+    .table-mini th,
+    .table-mini td {
+      text-align: left;
+      padding: 0 10px;
+      border-bottom: 1px solid var(--border-base);
+      border-right: 1px solid var(--border-column);
+      height: 28px;
+      color: var(--text-base);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .table-mini th:last-child,
+    .table-mini td:last-child {
+      border-right: none;
+    }
+
+    .table-mini th {
+      height: 26px;
+      color: var(--text-weak);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 9px;
+    }
+
+    .hook {
+      outline: 1px dashed rgba(157, 190, 254, 0.5);
+      outline-offset: -2px;
+    }
+
+    .side .item {
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .side .item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .side .k {
+      font: 600 10px var(--mono);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--seam-accent);
+      margin-bottom: 4px;
+    }
+
+    .side .v {
+      color: var(--text-base);
+      font: 400 12px var(--font);
+    }
+
+    .side code {
+      font: 400 11px var(--mono);
+      color: var(--text-strong);
+    }
+
+    .out {
+      margin-top: 20px;
+      max-width: 1100px;
+      padding: 12px 14px;
+      border-radius: var(--rounded-md);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-weak);
+      font: 400 12px var(--font);
+    }
+
+    .out b {
+      color: var(--text-base);
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Extract Operate datatable module</h1>
+  <p class="lede">
+    Harden before cell edit: move table <strong>behavior + CSS</strong> out of
+    <code>admin.html</code>. Visual density frozen (TRL-203). This mock is a
+    <strong>module map</strong> — not new chrome.
+  </p>
+
+  <div class="grid">
+    <div class="panel" data-design-note="Architecture diagram — primary deliverable of this mock">
+      <h2>Boundary</h2>
+      <div class="shell-box">
+        <div class="shell-label">admin.html · shell (stays)</div>
+        <div class="toolbar" data-design-note="Seam A — search ownership remains on toolbar">
+          <span>View</span>
+          <div class="search">#search-input</div>
+          <span style="opacity:0.45">Filters</span>
+          <span style="opacity:0.45">+ New</span>
+        </div>
+        <div class="seam">Seam A — applySearchQuery(q)</div>
+        <div class="arrow">↓</div>
+        <div class="module" data-design-note="New module boundary">
+          <div class="title">mountAdminDatatable(#view-table)</div>
+          <div><code>/admin-datatable.js</code> · <code>/admin-datatable.css</code></div>
+          <ul>
+            <li>sort cycle + aria-sort on th</li>
+            <li>#table-empty · MutationObserver refresh</li>
+            <li>events: trellis:table-sort · trellis:table-empty</li>
+          </ul>
+          <div class="table-mini" aria-hidden="true"
+            data-design-note="Schematic only — density SSOT TRL-201/203 (42/36)">
+            <table>
+              <thead>
+                <tr>
+                  <th>Lane</th>
+                  <th>Agent</th>
+                  <th>Ops</th>
+                  <th>Issue</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="hook" title="data-col data-editable=false data-field">lane-…</td>
+                  <td class="hook">agent-b</td>
+                  <td class="hook">48</td>
+                  <td class="hook">TRL-203</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="seam" style="margin-top:10px">Seam D — theme tokens only; local --table-*</div>
+        </div>
+        <div class="seam" style="margin-top:12px">Seam B — TML live → refresh()</div>
+        <div class="seam">Seam C — row activate → #dlg (shell, not module)</div>
+      </div>
+    </div>
+
+    <aside class="panel side">
+      <h2>Locks</h2>
+      <div class="item">
+        <div class="k">Serve pattern</div>
+        <div class="v">Option B — TS like <code>tml-runtime.ts</code> → <code>GET /admin-datatable.js</code></div>
+      </div>
+      <div class="item">
+        <div class="k">Markup</div>
+        <div class="v">TML <code>tbody</code> stays in HTML — module does not generate rows</div>
+      </div>
+      <div class="item">
+        <div class="k">Visual</div>
+        <div class="v">Zero delta vs TRL-203 (42/36, sort, empty, hover #222)</div>
+      </div>
+      <div class="item">
+        <div class="k">Edit-ready (attrs only)</div>
+        <div class="v"><code>data-col</code> · <code>data-editable="false"</code> · <code>data-field</code> — dashed
+          cells above. No editors.</div>
+      </div>
+      <div class="item">
+        <div class="k">e2e selectors</div>
+        <div class="v"><code>#view-table</code> · <code>.sort-btn</code> · <code>#table-empty</code> ·
+          <code>.lanes-table</code></div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="out">
+    <b>Out of this wedge:</b> inline cell edit, Filters model, New-issue wire,
+    React SpreadsheetTable, AppShell. Follow-up proposal owns cell editors after extract lands.
+  </div>
+</body>
+
+</html>

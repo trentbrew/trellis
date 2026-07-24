@@ -136,6 +136,7 @@ The brand stack is not fully aligned across surfaces. This is the honest state.
 | Surface                                                                             | Tokens                                                                        | Fonts                                                | Status                                                                               |
 | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | **Trellis Studio** ([turtlecode/ide/packages/app](../turtlecode/ide/packages/app/)) | Semantic tokens in `packages/ui/src/styles/theme.css`                         | Berkley Mono headers + system sans/mono              | **Canonical**                                                                        |
+| **Kernel runtime** ([src/ui/](./src/ui/)) | `src/ui/theme/runtime-theme.css` (semantic + legacy + inset/glass/entity) | System stacks (Phase B) | **Aligned** to Studio dark ([Phase B spec](./docs/specs/unified-theme-contract-phase-b.md)) |
 | **Docs site** ([trellis-docs/www](../trellis-docs/www/))                            | shadcn-style: `--background`, `--foreground`, `--primary`, `--accent` (oklch) | System sans, system mono                             | Diverges. Built on Reka UI + Tailwind v4 + Nuxt Content.                             |
 | **Pitch deck kit** ([trellis-pitch/](../trellis-pitch/))                            | Custom paper/ink palette (`#f6f3eb` paper, `#0d1b14` ink, `#2f6f4e` accent)   | Söhne/Inter + Iowan Old Style serif + JetBrains Mono | Diverges. Marketing voice; metaphor-led, literary feel.                              |
 | **brew.build blog** ([brew.build](../brew.build/))                                  | Astro theme tokens                                                            | Whatever the Astro theme ships                       | Not aligned with Trellis brand at all (it's a personal blog hosting Trellis essays). |
@@ -176,6 +177,8 @@ These are deliberately unanswered and worth revisiting when the product position
 ## References
 
 - [`turtlecode/ide/packages/ui/src/styles/theme.css`](../turtlecode/ide/packages/ui/src/styles/theme.css) — canonical Studio tokens
+- [`docs/specs/unified-theme-contract.md`](./docs/specs/unified-theme-contract.md) — kernel runtime HTML theme contract (Phase A)
+- [`docs/specs/unified-theme-contract-phase-b.md`](./docs/specs/unified-theme-contract-phase-b.md) — Phase B (client.html + Studio values)
 - [`trellis-package/logo.svg`](./logo.svg) — canonical logo
 - [`trellis-docs/www/app/assets/css/theme.css`](../trellis-docs/www/app/assets/css/theme.css) — docs site tokens (diverges from Studio)
 - [`trellis-pitch/`](../trellis-pitch/) — pitch kit with current marketing voice

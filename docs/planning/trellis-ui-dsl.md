@@ -4,6 +4,12 @@
 **Author:** revisiting the "Omni / trellis-ui" thread against the current codebase
 **Date:** 2026-07-14
 
+> **Superseding direction (2026-07-21):** internal product UI is **TML-first**
+> (Thing → shell → primitive). See
+> [`tml-thing-shell-primitive.md`](./tml-thing-shell-primitive.md). Framework
+> SDKs remain for external consumers; this note’s embedded React/Vue/Svelte
+> path is no longer the internal product default.
+
 ---
 
 ## TL;DR
