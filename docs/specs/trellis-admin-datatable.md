@@ -5,7 +5,8 @@
 **Proposal:** TRL-200  
 **Design:** TRL-201 · [`docs/artifacts/trellis-admin-datatable_design.md`](../artifacts/trellis-admin-datatable_design.md) · [`trellis-admin-datatable_mockup.html`](../artifacts/trellis-admin-datatable_mockup.html)  
 **Amends:** visual-parity / toolbar table projection density only  
-**Preserves:** OPERATE_NAV, operate-toolbar (search ownership), statusbar, embed, TML live tbody, row→`#dlg` + `lastFocus`  
+**Preserves:** OPERATE_NAV, `.view-header` / `#board-toolbar` search (`#search-input`), statusbar, embed, TML live tbody, row→`#dlg` + `lastFocus`  
+**Note:** Sort/empty/search logic lives in `src/ui/admin-datatable.ts` + `admin-datatable.css` (extracted on desk; see TRL-208/209 harden slice).  
 **Labels:** `spec`, `tml`, `admin`, `needs-e2e`, `cohesion`
 
 ---
@@ -46,11 +47,13 @@ React/shadcn.
 
 | File | Change |
 | ---- | ------ |
-| `src/ui/admin.html` | Table CSS density; sortable headers; `.table-empty`; sort JS + re-apply after live; empty toggle wired to search + tbody |
-| `e2e/admin.spec.cjs` | Sort `aria-sort`; ~42px row height; empty / no-match; keep shell/toolbar/parity green |
+| `src/ui/admin.html` | Table markup (sortable headers, `.table-empty`); mount `mountAdminDatatable` on `#view-table` |
+| `src/ui/admin-datatable.ts` | Sort cycle, `applyTableSort`, `updateTableEmpty`, search hook, TML tbody observer |
+| `src/ui/admin-datatable.css` | Density tokens (`--table-row-h`, `--table-header-h`), column hairlines, hover |
+| `e2e/admin.spec.cjs` | Sort `aria-sort`; ~42px row height; empty / no-match; keep shell/view-header/parity green |
 | `docs/specs/trellis-admin-datatable.md` | This file |
 
-**Out of touch:** `lanes-dashboard.ts`, `admin.ts`, `runtime-theme.css` palette tokens (unless documenting a local CSS var only in `admin.html`), shell/sidebar/toolbar markup contracts.
+**Out of touch:** `lanes-dashboard.ts`, `admin.ts`, `runtime-theme.css` palette tokens, shell/sidebar/view-header markup contracts. Cell edit is TRL-214/215 (separate spec).
 
 ---
 
