@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   ROW_HEIGHT,
   LANE_GAP,
@@ -60,8 +60,14 @@ describe('admin-causal-graph layout helpers', () => {
   });
 
   it('formatGraphTime uses trunk date labels', () => {
-    expect(TIME_COL_W).toBe(52);
-    expect(formatGraphTime('2026-07-21T12:00:00.000Z', true)).toMatch(/Jul/);
-    expect(formatGraphTime('2026-07-21T12:00:00.000Z', false)).toMatch(/^\d+[mhd]|now$/);
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-21T18:00:00.000Z'));
+    try {
+      expect(TIME_COL_W).toBe(52);
+      expect(formatGraphTime('2026-07-21T12:00:00.000Z', true)).toMatch(/Jul/);
+      expect(formatGraphTime('2026-07-21T12:00:00.000Z', false)).toMatch(/^\d+[mhd]|now$/);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
