@@ -1,0 +1,7 @@
+<!-- Resolved IR for projects/work.grid.tml -->
+<section class="proj grid-view" id="view-grid" data-view="grid">
+  <div class="grid-host" tml-query="find ?e where type = 'Lane'" tml-each="lane of lanes" tml-live
+    tml-ref="lanes-board">
+    <div data-shell-slot="lane.card"></div>
+  </div>
+</section>

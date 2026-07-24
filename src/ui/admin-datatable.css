@@ -1,0 +1,189 @@
+/* Operate datatable — extracted from admin.html (TRL-208/209). Density SSOT: TRL-203. */
+:root {
+  --table-row-h: 42px;
+  --table-header-h: 36px;
+  --border-column: rgba(255, 255, 255, 0.06);
+  --surface-hover: #222222;
+}
+
+.table-wrap {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  border: none;
+  border-radius: 0;
+  background: var(--surface);
+}
+
+table.lanes-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font: 400 12px var(--mono);
+}
+
+table.lanes-table th,
+table.lanes-table td {
+  text-align: left;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border-column);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+table.lanes-table th:last-child,
+table.lanes-table td:last-child {
+  border-right: none;
+}
+
+table.lanes-table th {
+  height: var(--table-header-h);
+  padding: 0;
+  color: var(--text3);
+  font: 600 10px var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+table.lanes-table th .sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  height: var(--table-header-h);
+  padding: 0 14px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+table.lanes-table th .sort-btn:hover {
+  color: var(--text2);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+table.lanes-table th .sort-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+table.lanes-table th .sort-ind {
+  opacity: 0.35;
+  font-size: 11px;
+}
+
+table.lanes-table th[aria-sort='ascending'] .sort-ind,
+table.lanes-table th[aria-sort='descending'] .sort-ind {
+  opacity: 1;
+  color: var(--accent);
+}
+
+table.lanes-table td {
+  height: var(--table-row-h);
+  color: var(--text2);
+  vertical-align: middle;
+}
+
+table.lanes-table tbody tr {
+  cursor: pointer;
+}
+
+table.lanes-table tbody tr:hover td {
+  background: var(--surface-hover);
+}
+
+table.lanes-table tbody tr:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.table-empty {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  padding: 48px 24px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.table-empty:not([hidden]) {
+  display: flex;
+}
+
+.table-empty[hidden] {
+  display: none !important;
+}
+
+.table-empty-title {
+  font: 600 13px var(--font);
+  color: var(--text);
+}
+
+.table-empty-desc {
+  font: 400 12px var(--font);
+  color: var(--text3);
+}
+
+/* Inline cell edit (TRL-215) */
+table.lanes-table td[data-editable='true'] {
+  cursor: text;
+}
+
+table.lanes-table td.cell-editing {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  padding: 0;
+}
+
+table.lanes-table td.cell-editing[aria-invalid='true'] {
+  outline-color: var(--red, #f87171);
+}
+
+.cell-edit-input {
+  width: 100%;
+  height: var(--table-row-h);
+  padding: 0 14px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: 400 12px var(--mono);
+  outline: none;
+}
+
+#cell-edit-error {
+  display: none;
+  padding: 8px 14px;
+  font: 400 11px var(--mono);
+  color: var(--red, #f87171);
+  border-top: 1px solid var(--border-column);
+}
+
+#cell-edit-error:not([hidden]) {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  table.lanes-table td.cell-editing {
+    transition: none;
+  }
+}

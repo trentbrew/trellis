@@ -1,0 +1,203 @@
+/**
+ * Trellis kernel runtime theme contract (Phase B + C).
+ * Studio dark + inset/glass/entity; Phase C live --ui-vantage + shell disclosure.
+ * See docs/specs/unified-theme-contract-phase-b.md
+ * See docs/specs/unified-theme-contract-phase-c.md
+ */
+:root {
+  --background-base: #101010;
+  --background-weak: #1e1e1e;
+  --surface-raised-base: #1c1c1c;
+  --surface-inset-base: #161616;
+  --surface-inset-alpha: rgba(0, 0, 0, 0.5);
+  --border-base: rgba(255, 255, 255, 0.195);
+  --border-strong: rgba(255, 255, 255, 0.266);
+  --text-strong: rgba(255, 255, 255, 0.936);
+  --text-base: rgba(255, 255, 255, 0.618);
+  --text-weak: rgba(255, 255, 255, 0.422);
+  --text-interactive-base: #9dbefe;
+  --surface-brand-base: #fab283;
+  --surface-success-strong: #12c905;
+  --surface-warning-strong: #fcd53a;
+  --surface-critical-strong: #fc533a;
+  --surface-info-strong: #edb2f1;
+
+  /* Inset ladder (containment depth — not fractal vantage) */
+  --background: var(--background-base);
+  --card: var(--surface-raised-base);
+  --surface-1: color-mix(in oklch, var(--card) 25%, var(--background));
+  --surface-2: color-mix(in oklch, var(--card) 50%, var(--background));
+  --surface-3: var(--card);
+
+  /* Phase C fractal scalar — L3 UI detents 2|5|8; demo alias: --vantage → --ui-vantage */
+  --ui-vantage: 8;
+  /* default card detent; range 0–21; NOT deck present/edit mode */
+
+  --font-family-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-family-header: var(--font-family-sans);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  --tml-accent-glow: color-mix(in oklch, var(--text-interactive-base) 12%, transparent);
+  --tml-kanban-body-inset: rgba(255, 255, 255, 0.02);
+  --tml-badge-success-bg: color-mix(in oklch, var(--surface-success-strong) 15%, transparent);
+  --tml-badge-success-border: color-mix(in oklch, var(--surface-success-strong) 30%, transparent);
+  --tml-badge-success-bg-strong: color-mix(in oklch, var(--surface-success-strong) 15%, transparent);
+  --tml-badge-warning-bg: color-mix(in oklch, var(--surface-warning-strong) 15%, transparent);
+  --tml-badge-warning-bg-subtle: color-mix(in oklch, var(--surface-warning-strong) 8%, transparent);
+  --tml-badge-warning-border: color-mix(in oklch, var(--surface-warning-strong) 25%, transparent);
+  --tml-badge-info-bg: color-mix(in oklch, var(--surface-info-strong) 15%, transparent);
+  --tml-badge-critical-bg: color-mix(in oklch, var(--surface-critical-strong) 15%, transparent);
+  --tml-badge-neutral-bg: color-mix(in oklch, var(--text-weak) 15%, transparent);
+
+  --tml-glass-surface: rgba(22, 22, 22, 0.75);
+  --tml-glass-border: rgba(255, 255, 255, 0.04);
+
+  --entity-file: #00ceb9;
+  --entity-milestone: #2090f5;
+  --entity-issue: #edb2f1;
+  --entity-branch: #fcd53a;
+  --entity-default: var(--text-base);
+
+  /* Legacy aliases (deprecate after full migration) */
+  --bg: var(--background-base);
+  --bg2: var(--background-weak);
+  --surface: var(--surface-raised-base);
+  --surface2: var(--surface-inset-base);
+  --border: var(--border-base);
+  --border2: var(--border-strong);
+  --text: var(--text-strong);
+  --text2: var(--text-base);
+  --text3: var(--text-weak);
+  --accent: var(--text-interactive-base);
+  --accent2: color-mix(in oklch, var(--text-interactive-base) 85%, white);
+  --accent-glow: var(--tml-accent-glow);
+  --green: var(--surface-success-strong);
+  --yellow: var(--surface-warning-strong);
+  --red: var(--surface-critical-strong);
+  --blue: var(--surface-info-strong);
+  --font: var(--font-family-sans);
+  --mono: var(--font-family-mono);
+  --glass: var(--tml-glass-surface);
+  --glass-border: var(--tml-glass-border);
+}
+
+/* Phase C — morphing thing disclosure (one live shell at a time) */
+.ui-thing {
+  border: 1px solid var(--border-base);
+  background: var(--surface-3);
+  color: var(--text-strong);
+  overflow: hidden;
+  transition: width 0.18s ease, height 0.18s ease, padding 0.18s ease, border-radius 0.18s ease;
+}
+
+.ui-thing .ui-thing-pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--entity-issue);
+  flex-shrink: 0;
+}
+
+.ui-thing .ui-thing-title {
+  font: 500 13px var(--font-family-sans);
+}
+
+.ui-thing .ui-thing-meta {
+  font: 400 11px var(--font-family-mono);
+  color: var(--text-weak);
+}
+
+.ui-thing .ui-thing-body {
+  font: 400 12px var(--font-family-sans);
+  color: var(--text-base);
+}
+
+.ui-thing .ui-thing-badge {
+  font: 500 10px var(--font-family-mono);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--tml-badge-success-bg);
+  color: var(--surface-success-strong);
+}
+
+.ui-thing[data-trellis-shell="node"] {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: color-mix(in oklch, var(--entity-issue) 25%, var(--surface-3));
+}
+
+.ui-thing[data-trellis-shell="node"] .ui-thing-title,
+.ui-thing[data-trellis-shell="node"] .ui-thing-meta,
+.ui-thing[data-trellis-shell="node"] .ui-thing-body,
+.ui-thing[data-trellis-shell="node"] .ui-thing-badge {
+  display: none;
+}
+
+.ui-thing[data-trellis-shell="row"] {
+  width: min(420px, 100%);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ui-thing[data-trellis-shell="row"] .ui-thing-title {
+  flex: 1;
+}
+
+.ui-thing[data-trellis-shell="row"] .ui-thing-body,
+.ui-thing[data-trellis-shell="row"] .ui-thing-badge {
+  display: none;
+}
+
+.ui-thing[data-trellis-shell="card"] {
+  width: min(320px, 100%);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.ui-thing[data-trellis-shell="card"] .ui-thing-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.ui-thing[data-trellis-shell="card"] .ui-thing-title {
+  flex: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-thing {
+    transition: none;
+  }
+}
+
+/*
+  Phase C+ / TRL-25 (not in this wedge):
+  dual-shell crossfade; full 0–21 territory table; band ACL L1|L2
+  html[data-trellis-band="L1|L2|L3"]
+  [data-ui-vantage] [data-trellis-shell="node|row|card"]
+*/

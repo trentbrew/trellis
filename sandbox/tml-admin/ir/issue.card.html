@@ -1,0 +1,16 @@
+<!-- Resolved IR for shells/issue.card.tml — dialect matches src/ui/admin.html today -->
+<template id="shell-issue-card" data-trellis-shell="issue.card">
+  <button type="button" class="issue-card" data-trellis-shell="card" data-kind="issue"
+    tml-attr-data-entity-id="issue.id" tml-attr-data-status="issue.status">
+    <div class="issue-card-head">
+      <div class="issue-id" data-trellis-slot="id" tml-text="issue.id"></div>
+      <!-- progress-spin: decorative; future icon registry -->
+      <span class="progress-spin" aria-hidden="true" title="In progress"></span>
+    </div>
+    <div class="issue-title" data-trellis-slot="title" tml-text="issue.title"></div>
+    <div class="issue-meta" data-trellis-slot="meta">
+      <span tml-text="issue.priority" tml-attr-class="'priority-badge ' + (issue.priority || 'low')"></span>
+      <span class="lane-badge" tml-if="issue.laneIds" tml-text="issue.laneIds"></span>
+    </div>
+  </button>
+</template>

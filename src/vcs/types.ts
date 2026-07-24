@@ -65,6 +65,9 @@ export type VcsOpKind =
   | 'vcs:lanePromoteStart'
   | 'vcs:lanePromoteComplete'
   | 'vcs:lanePromoteAbort'
+  // Remote ledger peer (TRL-235)
+  | 'vcs:remotePush'
+  | 'vcs:remotePull'
   // EAV store (CMS / knowledge graph)
   | 'vcs:storeAssert'
   | 'vcs:storeRetract'
@@ -187,6 +190,12 @@ export interface VcsPayload {
   testRunExitCode?: number;
   testRunDurationMs?: number;
   testRunTrigger?: 'manual' | 'watch' | 'pre-promote' | 'pre-close' | 'criterion';
+
+  // Remote ledger peer (TRL-235)
+  remoteName?: string;
+  remoteRepoId?: string;
+  remoteTailHash?: string;
+  remoteByteLength?: number;
 
   // Agent lanes
   laneId?: string;

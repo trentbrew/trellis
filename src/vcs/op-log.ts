@@ -27,8 +27,28 @@ import {
   renameSync,
   appendFileSync,
 } from 'fs';
-import { dirname } from 'path';
+import { dirname, resolve } from 'path';
 import type { VcsOp } from './types.js';
+import { requireDestructiveConfirm } from './destructive-guard.js';
+import { mirrorOpLine, restoreOpsFromMirror, backfillMirrorIfBehind } from './oplog-mirror.js';
+import { assertRecentRemoteAckForRepair } from './oplog-remote.js';
+
+export interface RepairOptions {
+  confirmDestructive?: boolean;
+  /** Human ack that remote backup may be stale (repair gate). */
+  iKnow?: boolean;
+  /** Repo root for remote ack check (defaults from ops path). */
+  rootPath?: string;
+  /** Attempt ~/.trellis/oplog-mirror restore before truncating local file */
+  preferMirror?: boolean;
+}
+
+export interface RepairResult {
+  recovered: number;
+  lost: number;
+  /** Restored from local mirror before repair */
+  mirrorRestored?: number;
+}
 
 /**
  * Backend-agnostic op log surface.
@@ -92,6 +112,7 @@ export class JsonOpLog implements OpLog {
     this.legacy = raw.trim().startsWith('[');
     this.ops = this.parseFile(raw);
     this.hashes = new Set(this.ops.map((o) => o.hash));
+    backfillMirrorIfBehind(this.filePath);
   }
 
   append(op: VcsOp): void {
@@ -192,18 +213,34 @@ export class JsonOpLog implements OpLog {
       (this.ops.length ? '\n' : '');
     writeFileSync(tmp, payload);
     renameSync(tmp, this.filePath);
+    for (const line of payload.split('\n')) {
+      if (line.trim()) mirrorOpLine(this.filePath, line);
+    }
   }
 
   private appendLineToDisk(op: VcsOp): void {
     const dir = dirname(this.filePath);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     this.backupCurrentFile();
-    appendFileSync(this.filePath, JSON.stringify(op) + '\n');
+    const line = JSON.stringify(op) + '\n';
+    appendFileSync(this.filePath, line);
+    mirrorOpLine(this.filePath, line, op.hash);
   }
 
   private backupCurrentFile(): void {
     if (!existsSync(this.filePath)) return;
     const backupPath = this.filePath + '.bak';
+    // Ring: .bak.2 ← .bak.1 ← .bak ← current (single-slot overwrite was the wipe amplifier)
+    for (let i = 2; i >= 1; i--) {
+      const from = i === 1 ? backupPath : `${backupPath}.${i - 1}`;
+      const to = `${backupPath}.${i}`;
+      if (!existsSync(from)) continue;
+      try {
+        copyFileSync(from, to);
+      } catch {
+        /* best-effort */
+      }
+    }
     try {
       copyFileSync(this.filePath, backupPath);
     } catch {
@@ -247,24 +284,100 @@ export class JsonOpLog implements OpLog {
     }
   }
 
-  static repair(filePath: string): { recovered: number; lost: number } {
+  static repair(filePath: string, opts?: RepairOptions): RepairResult {
     if (!existsSync(filePath)) {
       return { recovered: 0, lost: 0 };
     }
 
-    const raw = readFileSync(filePath, 'utf-8');
-
-    // Legacy single JSON array: try whole-file parse first.
-    if (raw.trim().startsWith('[')) {
-      try {
-        const ops = JSON.parse(raw);
-        if (Array.isArray(ops)) return { recovered: ops.length, lost: 0 };
-      } catch {
-        // fall through to JSONL/truncation repair
+    let mirrorRestored: number | undefined;
+    if (opts?.preferMirror !== false) {
+      const localLines = JsonOpLog.parseFileForRepair(
+        readFileSync(filePath, 'utf-8'),
+      ).valid.length;
+      const mirror = restoreOpsFromMirror(filePath);
+      if (mirror && mirror.restored > localLines) {
+        mirrorRestored = mirror.restored;
       }
     }
 
-    // JSONL: validate line by line, truncate at the last good line.
+    const raw = readFileSync(filePath, 'utf-8');
+    const parsed = JsonOpLog.parseFileForRepair(raw);
+    const beforeCount = parsed.valid.length;
+
+    if (!parsed.corrupt) {
+      return { recovered: beforeCount, lost: 0, mirrorRestored };
+    }
+
+    if (parsed.valid.length === 0) {
+      const rootPath =
+        opts?.rootPath ?? resolve(dirname(filePath), '..', '..');
+      assertRecentRemoteAckForRepair(rootPath, {
+        iKnow: opts?.iKnow,
+        confirmDestructive: opts?.confirmDestructive,
+      });
+      requireDestructiveConfirm({
+        action: 'repair-empty-journal',
+        confirmDestructive: opts?.confirmDestructive,
+      });
+    } else {
+      const rootPath =
+        opts?.rootPath ?? resolve(dirname(filePath), '..', '..');
+      assertRecentRemoteAckForRepair(rootPath, {
+        iKnow: opts?.iKnow,
+        confirmDestructive: opts?.confirmDestructive,
+      });
+      requireDestructiveConfirm({
+        action: 'repair-truncate-journal',
+        confirmDestructive: opts?.confirmDestructive,
+      });
+    }
+
+    const payload =
+      parsed.valid.join('\n') + (parsed.valid.length ? '\n' : '');
+    if (!payload.trim()) {
+      throw new Error(
+        'Refusing to write an empty ops journal. Restore from ~/.trellis/oplog-mirror or remote peer.',
+      );
+    }
+
+    const backupPath = filePath + '.corrupted.' + Date.now();
+    try {
+      copyFileSync(filePath, backupPath);
+    } catch {
+      /* best-effort */
+    }
+
+    try {
+      writeFileSync(filePath, payload);
+    } catch {
+      return { recovered: 0, lost: -1, mirrorRestored };
+    }
+    return {
+      recovered: parsed.valid.length,
+      lost: parsed.dropped,
+      mirrorRestored,
+    };
+  }
+
+  /** Exposed for repair + tests */
+  static parseFileForRepair(raw: string): {
+    valid: string[];
+    corrupt: boolean;
+    dropped: number;
+  } {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('[')) {
+      try {
+        const ops = JSON.parse(raw);
+        if (Array.isArray(ops)) {
+          const valid = ops.map((o) => JSON.stringify(o));
+          return { valid, corrupt: false, dropped: 0 };
+        }
+      } catch {
+        // JSONL / truncation path
+      }
+    }
+
     const lines = raw.split('\n');
     const valid: string[] = [];
     let corrupt = false;
@@ -278,18 +391,7 @@ export class JsonOpLog implements OpLog {
         corrupt = true;
       }
     }
-
-    if (!corrupt) return { recovered: valid.length, lost: 0 };
-
-    try {
-      writeFileSync(
-        filePath,
-        valid.join('\n') + (valid.length ? '\n' : ''),
-      );
-    } catch {
-      return { recovered: 0, lost: -1 };
-    }
-    return { recovered: valid.length, lost: -1 };
+    return { valid, corrupt, dropped: corrupt ? -1 : 0 };
   }
 }
 

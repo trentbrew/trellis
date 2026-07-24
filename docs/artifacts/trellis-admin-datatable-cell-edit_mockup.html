@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en" data-trellis-band="L3">
+<!-- trellis-design: slug=trellis-admin-datatable-cell-edit parent=TRL-212 design=TRL-213 -->
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trellis — Operate inline cell edit (TRL-213 design mock)</title>
+  <style>
+    :root {
+      --background-base: #101010;
+      --surface-raised-base: #1c1c1c;
+      --surface-hover: #222222;
+      --border-base: rgba(255, 255, 255, 0.195);
+      --border-column: rgba(255, 255, 255, 0.06);
+      --text-strong: rgba(255, 255, 255, 0.936);
+      --text-base: rgba(255, 255, 255, 0.618);
+      --text-weak: rgba(255, 255, 255, 0.422);
+      --text-interactive-base: #9dbefe;
+      --edit-ring: #9dbefe;
+      --edit-fill: color-mix(in srgb, #9dbefe 8%, transparent);
+      --error: #f87171;
+      --table-row-h: 42px;
+      --table-header-h: 36px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --rounded-xl: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--background-base);
+      color: var(--text-strong);
+      min-height: 100vh;
+      padding: 32px 28px 64px;
+    }
+
+    h1 {
+      font: 600 18px var(--font);
+      margin-bottom: 6px;
+    }
+
+    .lede {
+      color: var(--text-base);
+      font-size: 13px;
+      max-width: 52rem;
+      margin-bottom: 20px;
+      line-height: 1.45;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      margin-bottom: 18px;
+      font: 400 11px var(--mono);
+      color: var(--text-weak);
+    }
+
+    .legend span[data-tone="edit"] {
+      color: var(--edit-ring);
+    }
+
+    .legend span[data-tone="ro"] {
+      color: var(--text-weak);
+    }
+
+    .legend span[data-tone="dlg"] {
+      color: var(--text-base);
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+
+    .toolbar button {
+      height: 28px;
+      padding: 0 10px;
+      border: 1px solid var(--border-base);
+      border-radius: 6px;
+      background: var(--surface-raised-base);
+      color: var(--text-base);
+      font: 500 11px var(--mono);
+      cursor: pointer;
+    }
+
+    .toolbar button[aria-pressed="true"] {
+      border-color: var(--edit-ring);
+      color: var(--edit-ring);
+    }
+
+    .table-wrap {
+      position: relative;
+      max-width: 920px;
+      overflow-x: auto;
+      border: 1px solid var(--border-base);
+      border-radius: var(--rounded-xl);
+      background: var(--surface-raised-base);
+    }
+
+    table.lanes-table {
+      width: 100%;
+      table-layout: fixed;
+      border-collapse: collapse;
+      font: 400 12px var(--mono);
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--border-base);
+      border-right: 1px solid var(--border-column);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    th:last-child,
+    td:last-child {
+      border-right: none;
+    }
+
+    th {
+      height: var(--table-header-h);
+      color: var(--text-weak);
+      font: 600 10px var(--mono);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: var(--surface-raised-base);
+    }
+
+    td {
+      height: var(--table-row-h);
+      color: var(--text-base);
+      vertical-align: middle;
+    }
+
+    tbody tr {
+      cursor: pointer;
+    }
+
+    tbody tr:hover td {
+      background: var(--surface-hover);
+    }
+
+    td[data-editable="true"] {
+      cursor: text;
+      color: var(--text-strong);
+    }
+
+    td.cell-editing {
+      outline: 2px solid var(--edit-ring);
+      outline-offset: -2px;
+      background: var(--edit-fill) !important;
+      padding: 0;
+    }
+
+    td.cell-editing[aria-invalid="true"] {
+      outline-color: var(--error);
+    }
+
+    .cell-edit-input {
+      width: 100%;
+      height: var(--table-row-h);
+      padding: 0 14px;
+      border: none;
+      background: transparent;
+      color: var(--text-strong);
+      font: 400 12px var(--mono);
+      outline: none;
+    }
+
+    #cell-edit-error {
+      display: none;
+      padding: 8px 14px;
+      font: 400 11px var(--mono);
+      color: var(--error);
+      border-top: 1px solid var(--border-column);
+    }
+
+    #cell-edit-error:not([hidden]) {
+      display: block;
+    }
+
+    .ro-tag {
+      font-size: 9px;
+      color: var(--text-weak);
+      margin-left: 6px;
+      opacity: 0.7;
+    }
+
+    .notes {
+      margin-top: 28px;
+      max-width: 920px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .note {
+      border-left: 2px solid var(--edit-ring);
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.03);
+      font-size: 12px;
+      color: var(--text-base);
+      line-height: 1.45;
+    }
+
+    .note strong {
+      color: var(--text-strong);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: var(--surface-raised-base);
+      border: 1px solid var(--border-base);
+      font: 400 12px var(--mono);
+      color: var(--text-base);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .toast {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Operate — inline cell edit</h1>
+  <p class="lede">
+    TRL-213 design mock. Branch + issue are editable (SpreadsheetTable split:
+    click editable cell → edit; click read-only / row chrome → dialog).
+    Density locked at 42×36. Module owns edit; shell owns dialog.
+  </p>
+
+  <div class="legend">
+    <span data-tone="edit">● editable (branch, issue)</span>
+    <span data-tone="ro">● read-only (lane, agent, ops, files)</span>
+    <span data-tone="dlg">● row activate → #dlg (Seam C)</span>
+  </div>
+
+  <div class="toolbar" role="toolbar" aria-label="Mock state">
+    <button type="button" id="btn-idle" aria-pressed="true">Idle</button>
+    <button type="button" id="btn-edit-branch" aria-pressed="false">Edit branch (click)</button>
+    <button type="button" id="btn-f2" aria-pressed="false">F2 → branch</button>
+    <button type="button" id="btn-edit-issue" aria-pressed="false">Edit issue</button>
+    <button type="button" id="btn-error" aria-pressed="false">Issue invalid</button>
+    <button type="button" id="btn-empty-branch" aria-pressed="false">Empty branch reject</button>
+  </div>
+
+  <div class="table-wrap" data-design-note="Preserve .table-wrap / .lanes-table selectors">
+    <table class="lanes-table" aria-label="Lanes">
+      <caption class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">
+        Lane inventory — cell edit mock
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col" data-key="lane">Lane</th>
+          <th scope="col" data-key="agent">Agent</th>
+          <th scope="col" data-key="ops">Ops</th>
+          <th scope="col" data-key="files">Files</th>
+          <th scope="col" data-key="branch">Branch</th>
+          <th scope="col" data-key="issue">Issue</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr data-kind="lane" data-entity-id="lane-5442df2e" tabindex="0" id="row-0">
+          <td data-col="lane" data-editable="false" data-field="lane.id">
+            lane-5442df2e<span class="ro-tag">RO</span>
+          </td>
+          <td data-col="agent" data-editable="false" data-field="lane.agentId">
+            agent:trentbrew<span class="ro-tag">RO</span>
+          </td>
+          <td data-col="ops" data-editable="false" data-field="lane.opCount">12<span class="ro-tag">RO</span></td>
+          <td data-col="files" data-editable="false" data-field="lane.fileCount">4<span class="ro-tag">RO</span></td>
+          <td id="cell-branch" data-col="branch" data-editable="true" data-field="lane.targetBranch"
+            data-design-note="Single-click or F2 begins edit; stopPropagation">
+            issue/TRL-212-proposal-…
+          </td>
+          <td id="cell-issue" data-col="issue" data-editable="true" data-field="lane.issueId"
+            data-design-note="Empty → — ; /^TRL-\d+$/i">
+            TRL-212
+          </td>
+        </tr>
+        <tr data-kind="lane" data-entity-id="lane-abc" tabindex="0">
+          <td data-col="lane" data-editable="false">lane-abc<span class="ro-tag">RO</span></td>
+          <td data-col="agent" data-editable="false">agent:b<span class="ro-tag">RO</span></td>
+          <td data-col="ops" data-editable="false">3<span class="ro-tag">RO</span></td>
+          <td data-col="files" data-editable="false">1<span class="ro-tag">RO</span></td>
+          <td data-col="branch" data-editable="true">main</td>
+          <td data-col="issue" data-editable="true">—</td>
+        </tr>
+      </tbody>
+    </table>
+    <div id="cell-edit-error" role="alert" hidden></div>
+  </div>
+
+  <div class="notes">
+    <div class="note" data-design-note="Seam C">
+      <strong>Seam C:</strong> Clicking lane/agent/ops/files (or row Enter when not editing)
+      opens <code>#dlg</code>. Editable cell clicks must not. Keyboard enter-edit: <strong>F2</strong> /
+      <strong>e</strong>.
+    </div>
+    <div class="note">
+      <strong>Keyboard:</strong> Enter commit + next row · Tab next editable · Escape cancel ·
+      Blur commits. Skip TML <code>refresh()</code> while <code>.cell-editing</code>.
+    </div>
+    <div class="note">
+      <strong>Chrome:</strong> <code>outline: 2px solid accent; outline-offset: -2px</code> inside
+      42px row — error text in <code>#cell-edit-error</code>.
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const branch = document.getElementById('cell-branch');
+    const issue = document.getElementById('cell-issue');
+    const errEl = document.getElementById('cell-edit-error');
+    const toast = document.getElementById('toast');
+    const row0 = document.getElementById('row-0');
+    const buttons = {
+      idle: document.getElementById('btn-idle'),
+      editBranch: document.getElementById('btn-edit-branch'),
+      f2: document.getElementById('btn-f2'),
+      editIssue: document.getElementById('btn-edit-issue'),
+      error: document.getElementById('btn-error'),
+      emptyBranch: document.getElementById('btn-empty-branch'),
+    };
+
+    const saved = { branch: branch.textContent.trim(), issue: issue.textContent.trim() };
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => toast.classList.remove('show'), 1600);
+    }
+
+    function setError(msg) {
+      if (!msg) {
+        errEl.hidden = true;
+        errEl.textContent = '';
+        return;
+      }
+      errEl.hidden = false;
+      errEl.textContent = msg;
+    }
+
+    function clearEdit() {
+      [branch, issue].forEach((td) => {
+        td.classList.remove('cell-editing');
+        td.removeAttribute('aria-invalid');
+        const input = td.querySelector('input');
+        if (input) {
+          const v = input.dataset.restore ?? '';
+          td.textContent = td === issue && !String(v).trim() ? '—' : (input.dataset.display || v);
+        }
+      });
+      setError('');
+    }
+
+    function setPressed(active) {
+      Object.values(buttons).forEach((b) => b.setAttribute('aria-pressed', 'false'));
+      active.setAttribute('aria-pressed', 'true');
+    }
+
+    function beginEdit(td, { invalid = false, value, errorMsg } = {}) {
+      clearEdit();
+      const current = value != null ? value : (td.textContent.trim() === '—' ? '' : td.textContent.trim());
+      td.classList.add('cell-editing');
+      if (invalid) td.setAttribute('aria-invalid', 'true');
+      td.textContent = '';
+      const input = document.createElement('input');
+      input.className = 'cell-edit-input';
+      input.value = current;
+      input.dataset.restore = current;
+      input.setAttribute('aria-label', td.dataset.col === 'branch' ? 'Edit branch' : 'Edit issue');
+      if (invalid) {
+        input.setAttribute('aria-invalid', 'true');
+        input.setAttribute('aria-describedby', 'cell-edit-error');
+        setError(errorMsg || 'Invalid issue id — use TRL-N');
+      }
+      td.appendChild(input);
+      input.focus();
+      input.select();
+      showToast('trellis:cell-activate · ' + td.dataset.field);
+    }
+
+    buttons.idle.addEventListener('click', () => {
+      setPressed(buttons.idle);
+      clearEdit();
+      branch.textContent = saved.branch;
+      issue.textContent = saved.issue;
+      showToast('idle browse');
+    });
+
+    buttons.editBranch.addEventListener('click', () => {
+      setPressed(buttons.editBranch);
+      beginEdit(branch, { value: saved.branch });
+    });
+
+    buttons.f2.addEventListener('click', () => {
+      setPressed(buttons.f2);
+      row0.focus();
+      beginEdit(branch, { value: saved.branch });
+      showToast('F2 / e → first editable (branch)');
+    });
+
+    buttons.editIssue.addEventListener('click', () => {
+      setPressed(buttons.editIssue);
+      beginEdit(issue, { value: 'TRL-212' });
+    });
+
+    buttons.error.addEventListener('click', () => {
+      setPressed(buttons.error);
+      beginEdit(issue, { value: 'not-an-issue', invalid: true, errorMsg: 'Invalid issue id — use TRL-N' });
+    });
+
+    buttons.emptyBranch.addEventListener('click', () => {
+      setPressed(buttons.emptyBranch);
+      beginEdit(branch, { value: '', invalid: true, errorMsg: 'Branch required' });
+    });
+
+    document.querySelectorAll('td[data-editable="true"]').forEach((td) => {
+      td.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (td.classList.contains('cell-editing')) return;
+        setPressed(td === branch ? buttons.editBranch : buttons.editIssue);
+        beginEdit(td);
+      });
+    });
+
+    document.querySelectorAll('tbody tr').forEach((tr) => {
+      tr.addEventListener('click', (e) => {
+        if (e.target.closest('td[data-editable="true"]')) return;
+        showToast('Seam C → #dlg · ' + tr.dataset.entityId);
+      });
+      tr.addEventListener('keydown', (e) => {
+        if (e.key === 'F2' || e.key === 'e' || e.key === 'E') {
+          if (tr.querySelector('.cell-editing')) return;
+          e.preventDefault();
+          const first = tr.querySelector('td[data-editable="true"]');
+          if (first) {
+            setPressed(buttons.f2);
+            beginEdit(first);
+          }
+        }
+      });
+    });
+  </script>
+</body>
+
+</html>

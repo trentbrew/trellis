@@ -1,0 +1,10 @@
+shell todo.row (kind: todo, density: row) {
+  label[entity=@todo.id] {
+    #done { @todo.done }
+    #title { @todo.title }
+  }
+  action remove {
+    op remove(@todo.id)
+    label "Remove"
+  }
+}

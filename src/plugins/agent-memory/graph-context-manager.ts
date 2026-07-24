@@ -32,6 +32,7 @@ interface MessageRecord {
   entityId: string;
   message: LLMMessage;
   timestamp: string;
+  sequence: number;
   status: 'active' | 'archived';
 }
 
@@ -99,7 +100,10 @@ export class GraphContextManager implements ContextManager {
 
     this.conversationId = conversationId;
     this.cache = this._loadMessagesFromGraph(conversationId);
-    this.messageCounter = this.cache.length;
+    this.messageCounter = this.cache.reduce(
+      (max, record) => Math.max(max, record.sequence),
+      0,
+    );
   }
 
   /**
@@ -129,11 +133,13 @@ export class GraphContextManager implements ContextManager {
     }
 
     const timestamp = new Date().toISOString();
+    const sequence = ++this.messageCounter;
     const entityId = `message:${this.conversationId.replace('conversation:', '')}:${++globalIdCounter}`;
 
     const attrs: Record<string, Atom> = {
       role: message.role,
       timestamp,
+      sequence,
       status: 'active',
     };
     if (message.content != null) attrs.content = message.content;
@@ -163,6 +169,7 @@ export class GraphContextManager implements ContextManager {
       entityId,
       message,
       timestamp,
+      sequence,
       status: 'active',
     });
   }
@@ -309,12 +316,18 @@ export class GraphContextManager implements ContextManager {
         entityId: entity.id,
         message,
         timestamp: String(get('timestamp') ?? ''),
+        sequence: Number(get('sequence') ?? 0),
         status: (get('status') as 'active' | 'archived') ?? 'active',
       });
     }
 
-    // Sort by timestamp ascending
-    records.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+    // Sort by sequence when present; fall back to timestamp for legacy rows.
+    records.sort((a, b) => {
+      const seqA = a.sequence || 0;
+      const seqB = b.sequence || 0;
+      if (seqA !== seqB) return seqA - seqB;
+      return a.timestamp.localeCompare(b.timestamp);
+    });
     return records;
   }
 }

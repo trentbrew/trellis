@@ -1,0 +1,10 @@
+# Twin IR: ir/work.table.html
+# Host wraps <table>; shell is the row. Datatable primitive mounts after hydrate.
+
+project work.table {
+  query: find ?e where type = 'Lane'
+  each lane in lanes
+  live
+  ref table-lanes
+  use lane.row
+}

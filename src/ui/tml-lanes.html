@@ -1,86 +1,261 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-trellis-band="L3">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trellis — TML v0 (Lanes)</title>
-<style>
-  :root {
-    --bg: #09090b; --surface: #15161b; --border: #25262e;
-    --text: #e4e4e7; --text2: #a1a1aa; --text3: #63637a;
-    --accent: #6d5bfa; --green: #34d399; --yellow: #fbbf24;
-    --blue: #60a5fa; --mono: 'JetBrains Mono', ui-monospace, monospace;
-    --font: 'Inter', -apple-system, sans-serif;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: var(--font); background: var(--bg); color: var(--text); padding: 24px; }
-  header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-  h1 { font-size: 16px; font-weight: 700; }
-  h1 span { color: var(--text3); font-weight: 400; font-size: 12px; margin-left: 8px; }
-  .tag { font: 600 10px var(--mono); text-transform: uppercase; letter-spacing: .3px;
-    color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 3px 9px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
-  .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
-  .lane-id { font: 600 13px var(--mono); word-break: break-all; }
-  .badge { font: 600 10px var(--mono); text-transform: uppercase; letter-spacing: .3px;
-    padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
-  .badge.active { background: rgba(52,211,153,.15); color: var(--green); }
-  .badge.promoting { background: rgba(251,191,36,.15); color: var(--yellow); }
-  .badge.promoted { background: rgba(96,165,250,.15); color: var(--blue); }
-  .badge.dropped { background: rgba(99,99,122,.15); color: var(--text3); }
-  .row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px;
-    padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,.03); }
-  .row:last-child { border-bottom: none; }
-  .row .k { color: var(--text3); }
-  .row .v { color: var(--text2); font-family: var(--mono); font-size: 11px; text-align: right; }
-  .promote-btn { margin-top: 12px; width: 100%; font: 500 11px var(--mono); padding: 8px;
-    background: var(--accent); color: #fff; border: none; border-radius: 8px; cursor: pointer; }
-  .promote-btn:hover { filter: brightness(1.1); }
-  .empty { grid-column: 1 / -1; text-align: center; padding: 48px; color: var(--text3); font-size: 14px; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trellis — TML v0.1 (Kanban)</title>
+  <link rel="stylesheet" href="/theme/runtime-theme.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      padding: 24px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    h1 span {
+      color: var(--text3);
+      font-weight: 400;
+      font-size: 12px;
+      margin-left: 8px;
+    }
+
+    .tag {
+      font: 600 10px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 999px;
+      padding: 3px 9px;
+    }
+
+    .kanban {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding-bottom: 16px;
+      min-height: 200px;
+    }
+
+    .kanban-col {
+      min-width: 300px;
+      max-width: 340px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .kanban-col-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px 10px 0 0;
+      border-bottom: none;
+    }
+
+    .kanban-col-head .col-title {
+      font: 600 12px var(--font);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+
+    .kanban-col-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+      background: var(--tml-kanban-body-inset);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 10px 10px;
+      min-height: 80px;
+    }
+
+    .issue-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      flex: none;
+    }
+
+    .issue-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .issue-card .issue-id {
+      font: 600 12px var(--mono);
+      color: var(--accent);
+    }
+
+    .issue-card .issue-title {
+      font-size: 13px;
+      color: var(--text);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .issue-card .issue-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .issue-card .lane-badge {
+      font: 500 10px var(--mono);
+      background: var(--tml-badge-success-bg);
+      border: 1px solid var(--tml-badge-success-border);
+      padding: 2px 8px;
+      border-radius: 999px;
+      color: var(--green);
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .issue-card .lane-badge.none {
+      background: var(--surface2);
+      border-color: var(--border);
+      color: var(--text3);
+    }
+
+    .priority-badge {
+      font: 600 10px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .priority-badge.critical,
+    .priority-badge.high {
+      background: var(--tml-badge-critical-bg);
+      color: var(--red);
+    }
+
+    .priority-badge.medium {
+      background: var(--tml-badge-warning-bg);
+      color: var(--yellow);
+    }
+
+    .priority-badge.low {
+      background: var(--tml-badge-neutral-bg);
+      color: var(--text3);
+    }
+  </style>
 </head>
 
 <body>
-<header>
-  <h1>Trellis <span>TML v0 · Lanes</span></h1>
-  <span class="tag">tml-*</span>
-</header>
+  <header>
+    <h1>Trellis <span>TML v0.1 · Kanban</span></h1>
+    <span class="tag">tml-*</span>
+  </header>
 
-<!--
-  The grid below is declared entirely in TML. The card is a tml-query container;
-  its child elements bind fields via tml-text / tml-attr-* / tml-if / tml-op.
-  tml-live re-renders on every SSE snapshot push. See docs/specs/tml-v0.md.
+  <!--
+  Three columns = ISSUE_COLUMNS collapse from lanes.html.
+  Each .kanban-col-body is a tml-query list container; its child card is the
+  per-row template. tml-live re-renders on every SSE snapshot. See
+  docs/specs/tml-v0.1-kanban.md.
 -->
-<div id="lanes" class="grid">
-  <article class="card"
-      tml-query="find ?e where type = 'Lane'"
-      tml-each="lane of lanes"
-      tml-live
-      tml-ref="active-lanes">
-    <div class="card-head">
-      <div class="lane-id" tml-text="lane.id"></div>
-      <span class="badge" tml-text="lane.status" tml-attr-class="lane.status"></span>
+  <section id="board" class="kanban">
+    <div class="kanban-col">
+      <div class="kanban-col-head"><span class="col-title">Backlog</span></div>
+      <div class="kanban-col-body"
+        tml-query="find ?e where type = 'Issue' and not (status = 'in_progress' or status = 'paused' or status = 'closed')"
+        tml-each="issue of issues" tml-live tml-ref="col-backlog">
+        <article class="issue-card" data-trellis-shell="card">
+          <div class="issue-card-head">
+            <span class="issue-id" tml-text="issue.id"></span>
+            <span tml-text="issue.priority" tml-attr-class="'priority-badge ' + issue.priority"></span>
+          </div>
+          <div class="issue-title" tml-text="issue.title"></div>
+          <div class="issue-meta" tml-if="issue.laneIds">
+            <span class="lane-badge" tml-text="issue.laneIds"></span>
+          </div>
+        </article>
+      </div>
     </div>
-    <div class="row"><span class="k">Agent</span><span class="v" tml-text="lane.agentId"></span></div>
-    <div class="row"><span class="k">Ops / files</span><span class="v" tml-text="lane.opCount + ' / ' + lane.fileCount"></span></div>
-    <div class="row"><span class="k">Branch</span><span class="v" tml-text="lane.targetBranch"></span></div>
-    <div class="row" tml-if="lane.issueId"><span class="k">Issue</span><span class="v" tml-text="lane.issueId"></span></div>
-    <button class="promote-btn" tml-op="promote(lane.id)">Promote</button>
-  </article>
-</div>
 
-<script type="module">
-  import { WebDriver, mount } from '/tml-runtime.js';
+    <div class="kanban-col">
+      <div class="kanban-col-head"><span class="col-title">In Progress</span></div>
+      <div class="kanban-col-body"
+        tml-query="find ?e where type = 'Issue' and (status = 'in_progress' or status = 'paused')"
+        tml-each="issue of issues" tml-live tml-ref="col-in-progress">
+        <article class="issue-card" data-trellis-shell="card">
+          <div class="issue-card-head">
+            <span class="issue-id" tml-text="issue.id"></span>
+            <span tml-text="issue.priority" tml-attr-class="'priority-badge ' + issue.priority"></span>
+          </div>
+          <div class="issue-title" tml-text="issue.title"></div>
+          <div class="issue-meta" tml-if="issue.laneIds">
+            <span class="lane-badge" tml-text="issue.laneIds"></span>
+          </div>
+        </article>
+      </div>
+    </div>
 
-  const driver = new WebDriver({ baseUrl: '' });
-  driver
-    // `events=snapshot`: this page renders from snapshots and ignores `op`
-    // frames, so asking for them meant ~9.6k SSE frames per load, parsed and
-    // discarded. Ask for what we actually consume.
-    .connect({ snapshotUrl: '/api/lanes', streamUrl: '/api/lanes/stream?events=snapshot' })
-    .then(() => mount(document.getElementById('lanes'), driver))
-    .catch((e) => console.error('[tml] mount failed', e));
-</script>
+    <div class="kanban-col">
+      <div class="kanban-col-head"><span class="col-title">Done</span></div>
+      <div class="kanban-col-body" tml-query="find ?e where type = 'Issue' and status = 'closed'"
+        tml-each="issue of issues" tml-live tml-ref="col-done">
+        <article class="issue-card" data-trellis-shell="card">
+          <div class="issue-card-head">
+            <span class="issue-id" tml-text="issue.id"></span>
+            <span tml-text="issue.priority" tml-attr-class="'priority-badge ' + issue.priority"></span>
+          </div>
+          <div class="issue-title" tml-text="issue.title"></div>
+          <div class="issue-meta" tml-if="issue.laneIds">
+            <span class="lane-badge" tml-text="issue.laneIds"></span>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <script type="module">
+    import { WebDriver, mount } from '/tml-runtime.js';
+
+    const driver = new WebDriver({ baseUrl: '' });
+    driver
+      .connect({
+        snapshotUrl: '/api/lanes',
+        streamUrl: '/api/lanes/stream?events=snapshot',
+      })
+      .then(() => mount(document.getElementById('board'), driver))
+      .catch((e) => console.error('[tml] mount failed', e));
+  </script>
 </body>
+
 </html>

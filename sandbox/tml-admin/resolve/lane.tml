@@ -1,0 +1,6 @@
+resolve lane {
+  when host == grid             -> lane.card
+  when host == table            -> lane.row
+  when vantage <= 6             -> lane.row
+  else                          -> lane.card
+}

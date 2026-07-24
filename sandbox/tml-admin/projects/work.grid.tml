@@ -1,0 +1,10 @@
+# Twin IR: ir/work.grid.html
+# Same collection ref as table (lanes-board) — Phase 4 shared query family.
+
+project work.grid {
+  query: find ?e where type = 'Lane'
+  each lane in lanes
+  live
+  ref lanes-board
+  use lane.card
+}

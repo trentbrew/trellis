@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en" data-trellis-band="L3">
+<!-- trellis-design: slug=trellis-admin-visual-parity issue=TRL-184 -->
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trellis — admin visual parity (TRL-184 design mock)</title>
+  <style>
+    :root {
+      --background-base: #101010;
+      --background-weak: #1e1e1e;
+      --surface-raised-base: #1c1c1c;
+      --surface-inset-base: #161616;
+      --border-base: rgba(255, 255, 255, 0.195);
+      --text-strong: rgba(255, 255, 255, 0.936);
+      --text-base: rgba(255, 255, 255, 0.618);
+      --text-weak: rgba(255, 255, 255, 0.422);
+      --text-interactive-base: #9dbefe;
+      --surface-success-strong: #12c905;
+      --surface-critical-strong: #fc533a;
+      --tml-accent-glow: rgba(157, 190, 254, 0.12);
+      --tml-kanban-body-inset: rgba(255, 255, 255, 0.02);
+      --tml-glass-surface: rgba(22, 22, 22, 0.75);
+      --dialog-backdrop: rgba(0, 0, 0, 0.6);
+      --rail-bg: #0c0c0c;
+      --bg: var(--background-base);
+      --surface: var(--surface-raised-base);
+      --surface2: var(--background-weak);
+      --border: var(--border-base);
+      --text: var(--text-strong);
+      --text2: var(--text-base);
+      --text3: var(--text-weak);
+      --accent: var(--text-interactive-base);
+      --green: var(--surface-success-strong);
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --oplog-w: 280px;
+      --rail-w: 56px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--oplog-w);
+      grid-template-rows: 48px minmax(0, 1fr);
+      height: 100%;
+    }
+
+    .rail {
+      grid-row: 1 / -1;
+      background: var(--rail-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 0;
+      gap: 8px;
+    }
+
+    .rail-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text3);
+      font: 600 10px var(--mono);
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--tml-glass-surface);
+      backdrop-filter: blur(8px);
+    }
+
+    .header h1 {
+      font: 700 14px var(--font);
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+    }
+
+    .live {
+      font: 500 11px var(--mono);
+      color: var(--green);
+    }
+
+    .spacer {
+      flex: 1;
+    }
+
+    .views {
+      display: flex;
+      gap: 4px;
+      background: var(--surface2);
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .views button {
+      border: none;
+      background: transparent;
+      color: var(--text3);
+      font: 500 12px var(--font);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .views button[aria-pressed="true"] {
+      background: var(--surface);
+      color: var(--accent);
+    }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* AFTER: stage is not washed with kanban inset */
+    .proj {
+      display: none;
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 16px;
+      background: var(--bg);
+    }
+
+    .proj.active {
+      display: block;
+    }
+
+    .proj.table-view.active {
+      display: block;
+      padding: 16px;
+    }
+
+    /* AFTER: CSS grid auto-fill (lanes .grid) */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 14px;
+      width: 100%;
+    }
+
+    .lane-card,
+    .issue-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      text-align: left;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .lane-card:hover,
+    .issue-card:hover,
+    .lane-card:focus-visible,
+    .issue-card:focus-visible {
+      border-color: var(--accent);
+      outline: none;
+      box-shadow: 0 0 0 1px var(--tml-accent-glow);
+    }
+
+    .lane-id {
+      font: 600 11px var(--mono);
+      color: var(--green);
+    }
+
+    .issue-id {
+      font: 600 11px var(--mono);
+      color: var(--accent);
+    }
+
+    .card-title {
+      margin-top: 4px;
+      font: 600 13px var(--font);
+    }
+
+    .card-meta {
+      margin-top: 8px;
+      font: 400 11px var(--mono);
+      color: var(--text3);
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* AFTER: flex row kanban */
+    .kanban {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding-bottom: 16px;
+      min-height: 200px;
+      width: 100%;
+    }
+
+    .kanban-col {
+      min-width: 300px;
+      max-width: 340px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .kanban-col-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px 10px 0 0;
+      border-bottom: none;
+    }
+
+    .kanban-col-head .col-title {
+      font: 600 12px var(--font);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+
+    .kanban-col-head .col-count {
+      font: 600 10px var(--mono);
+      background: var(--surface2);
+      padding: 2px 7px;
+      border-radius: 999px;
+      color: var(--text3);
+    }
+
+    .kanban-col-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+      min-height: 120px;
+      background: var(--tml-kanban-body-inset);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 10px 10px;
+    }
+
+    /* AFTER: full-bleed table wrap */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      width: 100%;
+    }
+
+    table.lanes-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      table-layout: fixed;
+    }
+
+    table.lanes-table th {
+      text-align: left;
+      font: 600 10px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      color: var(--text3);
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+    }
+
+    table.lanes-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, .03);
+      color: var(--text2);
+      vertical-align: middle;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    table.lanes-table tbody tr {
+      cursor: pointer;
+    }
+
+    table.lanes-table tbody tr:hover td {
+      background: var(--surface2);
+    }
+
+    table.lanes-table td.l-id {
+      font-family: var(--mono);
+      color: var(--text);
+    }
+
+    .oplog {
+      grid-row: 1 / -1;
+      grid-column: 3;
+      background: var(--surface-inset-base);
+      border-left: 1px solid var(--border);
+      padding: 12px;
+      overflow: auto;
+    }
+
+    .oplog h2 {
+      font: 600 11px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text3);
+      margin-bottom: 10px;
+    }
+
+    .op {
+      font: 400 11px var(--mono);
+      color: var(--text3);
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, .04);
+    }
+
+    .legend {
+      position: fixed;
+      left: 72px;
+      bottom: 16px;
+      z-index: 50;
+      max-width: 360px;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font: 400 11px var(--mono);
+      color: var(--text2);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+    }
+
+    .legend strong {
+      color: var(--accent);
+    }
+
+    /* AFTER: native <dialog> centered — override *{margin:0} */
+    dialog#dlg {
+      margin: auto;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--bg);
+      color: var(--text);
+      padding: 0;
+      width: 90%;
+      max-width: 560px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    dialog#dlg::backdrop {
+      background: var(--dialog-backdrop);
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      dialog#dlg[open] {
+        animation: dlg-in .2s ease-out;
+      }
+    }
+
+    @keyframes dlg-in {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .dialog-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 24px 24px 0;
+      margin-bottom: 16px;
+    }
+
+    .dialog-title {
+      font: 600 15px var(--font);
+    }
+
+    .dialog-close {
+      background: none;
+      border: none;
+      color: var(--text3);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    .dialog-close:hover {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .dlg-body-pad {
+      padding: 0 24px 24px;
+    }
+
+    .dlg-actions {
+      margin-top: 16px;
+    }
+
+    .dlg-actions button {
+      font: 500 12px var(--mono);
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--accent);
+      color: #0a0a0a;
+      cursor: pointer;
+    }
+
+    [data-design-note] {
+      position: relative;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="shell">
+    <aside class="rail" aria-label="Primary">
+      <button class="rail-btn" type="button" aria-current="page">vcs</button>
+    </aside>
+
+    <header class="header">
+      <h1>Trellis — admin visual parity</h1>
+      <span class="live">● Live</span>
+      <div class="spacer"></div>
+      <div class="views" role="group" aria-label="Projection">
+        <button type="button" data-view="grid" aria-pressed="true">Grid</button>
+        <button type="button" data-view="kanban" aria-pressed="false">Kanban</button>
+        <button type="button" data-view="table" aria-pressed="false">Table</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="proj grid-view active" id="view-grid" data-view="grid"
+        data-design-note="CSS grid auto-fill minmax(320px,1fr) — not flex-wrap fixed 280px cards">
+        <div class="grid">
+          <button type="button" class="lane-card" data-open="lane-95b25a86">
+            <div class="lane-id">lane-95b25a86…</div>
+            <div class="card-title">agent:trentbrew</div>
+            <div class="card-meta"><span>ops 41</span><span>files 0</span><span>TRL-181</span></div>
+          </button>
+          <button type="button" class="lane-card" data-open="lane-5d86419a">
+            <div class="lane-id">lane-5d86419a…</div>
+            <div class="card-title">agent:trentbrew</div>
+            <div class="card-meta"><span>ops 12</span><span>files 3</span><span>TRL-175</span></div>
+          </button>
+          <button type="button" class="lane-card" data-open="lane-e0e211c7">
+            <div class="lane-id">lane-e0e211c7…</div>
+            <div class="card-title">agent:trentbrew</div>
+            <div class="card-meta"><span>ops 8</span><span>files 2</span><span>TRL-174</span></div>
+          </button>
+          <button type="button" class="lane-card" data-open="lane-8133eb6a">
+            <div class="lane-id">lane-8133eb6a…</div>
+            <div class="card-title">agent:trentbrew</div>
+            <div class="card-meta"><span>ops 5</span><span>files 1</span><span>TRL-179</span></div>
+          </button>
+        </div>
+      </section>
+
+      <section class="proj kanban-view" id="view-kanban" data-view="kanban"
+        data-design-note="display:flex row; col 300–340; inset on col-body only">
+        <div class="kanban">
+          <div class="kanban-col">
+            <div class="kanban-col-head">
+              <span class="col-title">Backlog</span>
+              <span class="col-count">2</span>
+            </div>
+            <div class="kanban-col-body">
+              <button type="button" class="issue-card" data-open="TRL-183">
+                <div class="issue-id">TRL-183</div>
+                <div class="card-title">Proposal: visual parity harden</div>
+                <div class="card-meta"><span>MEDIUM</span></div>
+              </button>
+              <button type="button" class="issue-card" data-open="TRL-184">
+                <div class="issue-id">TRL-184</div>
+                <div class="card-title">Design: visual parity harden</div>
+                <div class="card-meta"><span>MEDIUM</span></div>
+              </button>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="kanban-col-head">
+              <span class="col-title">In Progress</span>
+              <span class="col-count">1</span>
+            </div>
+            <div class="kanban-col-body">
+              <button type="button" class="issue-card" data-open="TRL-135">
+                <div class="issue-id">TRL-135</div>
+                <div class="card-title">Lane coherence follow-up</div>
+                <div class="card-meta"><span>HIGH</span><span class="lane-id">lane-1049…</span></div>
+              </button>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="kanban-col-head">
+              <span class="col-title">Done</span>
+              <span class="col-count">3</span>
+            </div>
+            <div class="kanban-col-body">
+              <button type="button" class="issue-card" data-open="TRL-181">
+                <div class="issue-id">TRL-181</div>
+                <div class="card-title">Impl: admin v1.1 playground host</div>
+                <div class="card-meta"><span>HIGH</span></div>
+              </button>
+              <button type="button" class="issue-card" data-open="TRL-175">
+                <div class="issue-id">TRL-175</div>
+                <div class="card-title">Spec: admin kernel shell</div>
+                <div class="card-meta"><span>MEDIUM</span></div>
+              </button>
+              <button type="button" class="issue-card" data-open="TRL-173">
+                <div class="issue-id">TRL-173</div>
+                <div class="card-title">Proposal: trellis admin</div>
+                <div class="card-meta"><span>MEDIUM</span></div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="proj table-view" id="view-table" data-view="table"
+        data-design-note="table-wrap full width + table-layout:fixed — no content-sized skinny table">
+        <div class="table-wrap">
+          <table class="lanes-table">
+            <thead>
+              <tr>
+                <th style="width:28%">Lane</th>
+                <th style="width:16%">Agent</th>
+                <th style="width:8%">Ops</th>
+                <th style="width:8%">Files</th>
+                <th style="width:20%">Branch</th>
+                <th style="width:20%">Issue</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr data-open="lane-95b25a86" tabindex="0">
+                <td class="l-id">lane-95b25a86-9e85-40db…</td>
+                <td>trentbrew</td>
+                <td>41</td>
+                <td>0</td>
+                <td>issue/TRL-181-…</td>
+                <td>TRL-181</td>
+              </tr>
+              <tr data-open="lane-5d86419a" tabindex="0">
+                <td class="l-id">lane-5d86419a-06a6-46ec…</td>
+                <td>trentbrew</td>
+                <td>12</td>
+                <td>3</td>
+                <td>issue/TRL-175-…</td>
+                <td>TRL-175</td>
+              </tr>
+              <tr data-open="lane-e0e211c7" tabindex="0">
+                <td class="l-id">lane-e0e211c7-fdda-4036…</td>
+                <td>trentbrew</td>
+                <td>8</td>
+                <td>2</td>
+                <td>issue/TRL-174-…</td>
+                <td>TRL-174</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <aside class="oplog">
+      <h2>Op log</h2>
+      <div class="op">08:25:34 · vcs:branchAdv…</div>
+      <div class="op">08:25:31 · vcs:commitCre…</div>
+      <div class="op">08:25:12 · trellis:issue…</div>
+    </aside>
+  </div>
+
+  <div class="legend">
+    <strong>Parity targets</strong><br />
+    Grid: auto-fill tracks · Kanban: flex + col counts · Table: full-bleed wrap ·
+    Click any card/row → <strong>centered</strong> native dialog (margin:auto)
+  </div>
+
+  <dialog id="dlg" aria-labelledby="dlg-title"
+    data-design-note="native dialog + margin:auto — overrides *{margin:0} top-left bug">
+    <div class="dialog-head">
+      <div class="dialog-title" id="dlg-title">Detail</div>
+      <button type="button" class="dialog-close" id="dlg-x" aria-label="Close">&times;</button>
+    </div>
+    <div class="dlg-body-pad">
+      <div id="dlg-body" style="color:var(--text2);font:400 13px var(--font);">
+        Lane / issue detail body. Promote CTA below.
+      </div>
+      <div class="dlg-actions">
+        <button type="button" id="dlg-promote">Promote lane</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    const views = {
+      grid: document.getElementById('view-grid'),
+      kanban: document.getElementById('view-kanban'),
+      table: document.getElementById('view-table'),
+    };
+    const dlg = document.getElementById('dlg');
+    const dlgTitle = document.getElementById('dlg-title');
+    const dlgBody = document.getElementById('dlg-body');
+    let lastFocus = null;
+
+    function setView(v) {
+      Object.entries(views).forEach(([k, el]) => {
+        el.classList.toggle('active', k === v);
+      });
+      document.querySelectorAll('.views button').forEach((btn) => {
+        btn.setAttribute('aria-pressed', String(btn.dataset.view === v));
+      });
+    }
+
+    document.querySelectorAll('.views button').forEach((btn) => {
+      btn.addEventListener('click', () => setView(btn.dataset.view));
+    });
+
+    function openDlg(id) {
+      lastFocus = document.activeElement;
+      dlgTitle.textContent = id;
+      dlgBody.textContent = 'Detail for ' + id + '. Centered via dialog { margin: auto }.';
+      dlg.showModal();
+    }
+
+    function closeDlg() {
+      dlg.close();
+      if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+
+    function bindOpen(el) {
+      el.addEventListener('click', () => openDlg(el.getAttribute('data-open')));
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openDlg(el.getAttribute('data-open'));
+        }
+      });
+    }
+
+    document.querySelectorAll('[data-open]').forEach(bindOpen);
+
+    dlg.addEventListener('click', (e) => {
+      const rect = dlg.getBoundingClientRect();
+      const inDialog =
+        e.clientX >= rect.left && e.clientX <= rect.right &&
+        e.clientY >= rect.top && e.clientY <= rect.bottom;
+      if (!inDialog) closeDlg();
+    });
+    document.getElementById('dlg-x').addEventListener('click', closeDlg);
+    document.getElementById('dlg-promote').addEventListener('click', closeDlg);
+    dlg.addEventListener('close', () => {
+      if (lastFocus && lastFocus.focus) lastFocus.focus();
+    });
+  </script>
+</body>
+
+</html>

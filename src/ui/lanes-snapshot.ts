@@ -31,10 +31,27 @@ export interface IssueRow {
   status?: string;
   priority?: string;
   labels: string[];
+  createdAt?: string;
   claimedLaneId?: string;
   claimedSessionId?: string;
   laneCount: number;
   laneIds: string[];
+}
+
+export interface MilestoneRow {
+  id: string;
+  message?: string;
+  createdAt?: string;
+  createdBy?: string;
+  fileCount: number;
+  affectedFiles: string[];
+}
+
+export interface LanesSnapshotExtras {
+  /** Bound HTTP port for the dashboard (status bar). */
+  port?: number;
+  /** Connected SSE viewers (admin/dashboard clients). */
+  viewers?: number;
 }
 
 export interface LanesSnapshot {
@@ -42,6 +59,12 @@ export interface LanesSnapshot {
   rootPath: string;
   integrationBranch: string;
   activeLaneId?: string;
+  /** Dashboard listen port when served via lanes-dashboard. */
+  port?: number;
+  /** Connected SSE clients watching this dashboard. */
+  viewers: number;
+  /** Distinct agentIds on active lanes. */
+  activeAgents: number;
   promoteLock: {
     locked: boolean;
     stale?: boolean;
@@ -51,6 +74,7 @@ export interface LanesSnapshot {
   };
   lanes: LaneRow[];
   issues: IssueRow[];
+  milestones: MilestoneRow[];
   inProgressIssues: Array<{
     id: string;
     title?: string;
@@ -62,6 +86,7 @@ export interface LanesSnapshot {
 export function buildLanesSnapshot(
   engine: TrellisVcsEngine,
   rootPath: string,
+  extras: LanesSnapshotExtras = {},
 ): LanesSnapshot {
   const trellisDir = join(rootPath, '.trellis');
   const lock = getPromoteLockStatus(trellisDir);
@@ -91,15 +116,6 @@ export function buildLanesSnapshot(
     } satisfies LaneRow;
   });
 
-  lanes.sort((a, b) => {
-    if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
-    if (a.status !== b.status) {
-      const order = ['active', 'promoting', 'promoted', 'dropped'];
-      return order.indexOf(a.status) - order.indexOf(b.status);
-    }
-    return b.updatedAt.localeCompare(a.updatedAt);
-  });
-
   const inProgressIssues = engine.getActiveIssues().map((issue) => ({
     id: issue.id,
     title: issue.title,
@@ -122,6 +138,7 @@ export function buildLanesSnapshot(
       status: issue.status,
       priority: issue.priority,
       labels: issue.labels || [],
+      createdAt: issue.createdAt,
       claimedLaneId: issue.claimedLaneId,
       claimedSessionId: issue.claimedSessionId,
       laneCount: issueLanes.length,
@@ -129,16 +146,63 @@ export function buildLanesSnapshot(
     } satisfies IssueRow;
   });
 
+  // Newest first — kanban columns, and any issue lists, show creates at the top.
+  allIssues.sort((a, b) => {
+    const ac = a.createdAt || '';
+    const bc = b.createdAt || '';
+    if (ac && bc && ac !== bc) return bc.localeCompare(ac);
+    return b.id.localeCompare(a.id, undefined, { numeric: true });
+  });
+
+  const milestones = engine.listMilestones().map((m) => ({
+    id: m.id.replace(/^milestone:/, ''),
+    message: m.message,
+    createdAt: m.createdAt,
+    createdBy: m.createdBy,
+    fileCount: m.affectedFiles?.length ?? 0,
+    affectedFiles: m.affectedFiles ?? [],
+  } satisfies MilestoneRow));
+
+  milestones.sort((a, b) => {
+    const ac = a.createdAt || '';
+    const bc = b.createdAt || '';
+    if (ac && bc && ac !== bc) return bc.localeCompare(ac);
+    return b.id.localeCompare(a.id, undefined, { numeric: true });
+  });
+
   // Restore lane context
   (engine as any).activeLaneId = savedLaneId;
   (engine as any).activeLaneLog = savedLaneLog;
   if (savedLaneId) engine.open();
+
+  // Newest / most recently updated lanes first within status (grid + table).
+  lanes.sort((a, b) => {
+    if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
+    if (a.status !== b.status) {
+      const order = ['active', 'promoting', 'promoted', 'dropped'];
+      return order.indexOf(a.status) - order.indexOf(b.status);
+    }
+    const au = a.updatedAt || a.createdAt || '';
+    const bu = b.updatedAt || b.createdAt || '';
+    if (au !== bu) return bu.localeCompare(au);
+    return b.id.localeCompare(a.id, undefined, { numeric: true });
+  });
+
+  const activeAgentIds = new Set(
+    lanes
+      .filter((l) => l.isActive || l.status === 'active')
+      .map((l) => l.agentId)
+      .filter(Boolean),
+  );
 
   return {
     at: new Date().toISOString(),
     rootPath,
     integrationBranch: engine.getCurrentBranch?.() ?? 'main',
     activeLaneId,
+    port: extras.port,
+    viewers: extras.viewers ?? 0,
+    activeAgents: activeAgentIds.size,
     promoteLock: {
       locked: lock.locked,
       stale: lock.stale,
@@ -148,6 +212,7 @@ export function buildLanesSnapshot(
     },
     lanes,
     issues: allIssues,
+    milestones,
     inProgressIssues,
   };
 }

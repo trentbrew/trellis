@@ -1,0 +1,20 @@
+<!-- Resolved IR for shells/lane.row.tml -->
+<template id="shell-lane-row" data-trellis-shell="lane.row">
+  <tr data-kind="lane" data-trellis-shell="row" tabindex="0" tml-attr-data-entity-id="lane.id"
+    tml-attr-data-status="lane.status">
+    <td data-col="lane" data-editable="false" data-field="lane.id" data-trellis-slot="lane">
+      <span class="progress-spin" aria-hidden="true" title="In progress"></span>
+      <span tml-text="lane.id"></span>
+    </td>
+    <td data-col="agent" data-editable="false" data-field="lane.agentId" data-trellis-slot="agent"
+      tml-text="lane.agentId"></td>
+    <td data-col="ops" data-editable="false" data-field="lane.opCount" data-trellis-slot="ops" tml-text="lane.opCount">
+    </td>
+    <td data-col="files" data-editable="false" data-field="lane.fileCount" data-trellis-slot="files"
+      tml-text="lane.fileCount"></td>
+    <td data-col="branch" data-editable="true" data-field="lane.targetBranch" data-trellis-slot="branch"
+      tml-text="lane.targetBranch"></td>
+    <td data-col="issue" data-editable="true" data-field="lane.issueId" data-trellis-slot="issue"
+      tml-text="lane.issueId || '—'"></td>
+  </tr>
+</template>

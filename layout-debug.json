@@ -1,0 +1,52 @@
+{
+  "cols": "200px 224px 856px",
+  "rows": "56px 744px",
+  "rects": {
+    ".sidebar": {
+      "col": "1",
+      "row": "1 / -1",
+      "left": 0,
+      "right": 200,
+      "top": 0,
+      "width": 200,
+      "z": "3"
+    },
+    ".secondary": {
+      "col": "2",
+      "row": "2",
+      "left": 200,
+      "right": 424,
+      "top": 56,
+      "width": 224,
+      "z": "2"
+    },
+    ".header": {
+      "col": "2 / -1",
+      "row": "1",
+      "left": 200,
+      "right": 1280,
+      "top": 0,
+      "width": 1080,
+      "z": "2"
+    },
+    ".operate-toolbar": null,
+    ".main": {
+      "col": "3",
+      "row": "2",
+      "left": 424,
+      "right": 1280,
+      "top": 56,
+      "width": 856,
+      "z": "auto"
+    },
+    ".oplog": {
+      "col": "4",
+      "row": "2",
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "width": 0,
+      "z": "auto"
+    }
+  }
+}

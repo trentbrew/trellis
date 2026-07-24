@@ -5,9 +5,17 @@
 # Load .env if present (for NPM_TOKEN, VSCE_PAT)
 set dotenv-load := true
 
-# Default: show trellis status
+# Default: show trellis status (SOURCE CLI — use this, not global `trellis`)
+#
+# Global npm `trellis` may lag this checkout (e.g. array-era vs JSONL). Cursor
+# beforeShellExecution denies bare `trellis` here; escape: TRELLIS_ALLOW_GLOBAL_CLI=1.
+# Humans: prefer `just trellis …`, or `just link-cli` / `just alias-cli install`.
 trellis *args="status":
   bun run src/cli/index.ts {{args}}
+
+# Admin with esbuild watch + SSE live reload (same :3939 origin, no Vite)
+admin-dev *args="":
+  bun run src/cli/index.ts admin-dev {{args}}
 
 # ---------------------------------------------------------------------------
 # Development

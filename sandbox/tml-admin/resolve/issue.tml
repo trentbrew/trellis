@@ -1,0 +1,10 @@
+# Resolver-first salience/vantage — not wired in admin yet (setView still toggles hosts).
+# When live: shellForVantage(kind, vantage, host, salience) consults this table.
+
+resolve issue {
+  when salience.focal           -> issue.detail   # future shell
+  when vantage <= 3             -> issue.pip      # future shell
+  when vantage <= 6             -> issue.row      # future shell
+  when host == kanban           -> issue.card
+  else                          -> issue.card
+}

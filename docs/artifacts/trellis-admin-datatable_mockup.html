@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trellis — Operate datatable (TRL-201 design mock)</title>
+  <style>
+    :root {
+      --background-base: #101010;
+      --surface-raised-base: #1c1c1c;
+      --surface-inset-base: #161616;
+      --surface-hover: #222222;
+      --border-base: rgba(255, 255, 255, 0.195);
+      --border-column: rgba(255, 255, 255, 0.06);
+      --text-strong: rgba(255, 255, 255, 0.936);
+      --text-base: rgba(255, 255, 255, 0.618);
+      --text-weak: rgba(255, 255, 255, 0.422);
+      --text-interactive-base: #9dbefe;
+      --surface-success-strong: #12c905;
+      --toolbar-bg: #101010;
+      --sidebar-bg: #0c0c0c;
+      --toolbar-track: #1e1e1e;
+      --toolbar-active: #1c1c1c;
+      --sidebar-w: 200px;
+      --oplog-w: 280px;
+      --statusbar-h: 28px;
+      --toolbar-control-h: 34px;
+      --table-row-h: 42px;
+      --table-header-h: 36px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --rounded-sm: 6px;
+      --rounded-md: 8px;
+      --rounded-lg: 10px;
+      --rounded-xl: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      font: 400 13px/1.4 var(--font);
+      color: var(--text-strong);
+      background: var(--background-base);
+    }
+
+    .shell {
+      display: grid;
+      height: 100%;
+      grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--oplog-w);
+      grid-template-rows: 40px auto minmax(0, 1fr) var(--statusbar-h);
+    }
+
+    .sidebar {
+      grid-row: 1 / -1;
+      grid-column: 1;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border-base);
+      padding: 12px 8px;
+      font: 500 12px var(--font);
+      color: var(--text-weak);
+    }
+
+    .sidebar .nav-active {
+      color: var(--text-strong);
+      background: var(--surface-raised-base);
+      border-radius: var(--rounded-md);
+      padding: 8px 10px;
+    }
+
+    .header {
+      grid-row: 1;
+      grid-column: 2;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border-base);
+      background: rgba(22, 22, 22, 0.75);
+      backdrop-filter: blur(8px);
+    }
+
+    .brand {
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .brand span {
+      color: var(--text-weak);
+      font-weight: 500;
+    }
+
+    .crumb {
+      font: 500 11px var(--mono);
+      color: var(--text-weak);
+      margin-left: auto;
+    }
+
+    .operate-toolbar {
+      grid-row: 2;
+      grid-column: 2;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-height: 48px;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border-base);
+      background: var(--toolbar-bg);
+    }
+
+    .view-toggle {
+      display: inline-flex;
+      height: var(--toolbar-control-h);
+      padding: 2px;
+      border: 1px solid var(--border-base);
+      border-radius: var(--rounded-md);
+      background: var(--toolbar-track);
+    }
+
+    .view-toggle button {
+      border: none;
+      background: transparent;
+      color: var(--text-weak);
+      font: 500 12px var(--font);
+      padding: 0 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .view-toggle button[aria-checked="true"] {
+      background: var(--toolbar-active);
+      color: var(--text-strong);
+    }
+
+    .search {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      height: var(--toolbar-control-h);
+      padding: 0 8px;
+      border-radius: var(--rounded-md);
+      background: var(--surface-raised-base);
+      box-shadow: inset 0 0 0 1px var(--border-base);
+    }
+
+    .search input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: var(--text-strong);
+      font: 400 12.8px var(--font);
+      height: var(--toolbar-control-h);
+      outline: none;
+    }
+
+    .stub {
+      height: var(--toolbar-control-h);
+      padding: 0 12px;
+      border-radius: var(--rounded-md);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-weak);
+      opacity: 0.45;
+      font: 500 12px var(--font);
+    }
+
+    .main {
+      grid-row: 3;
+      grid-column: 2;
+      min-height: 0;
+      overflow: auto;
+      padding: 16px;
+    }
+
+    .table-wrap {
+      width: 100%;
+      min-height: 220px;
+      overflow: auto;
+      border: 1px solid var(--border-base);
+      border-radius: var(--rounded-xl);
+      background: var(--surface-raised-base);
+      position: relative;
+    }
+
+    table.lanes-table {
+      width: 100%;
+      table-layout: fixed;
+      border-collapse: collapse;
+      font: 400 12px var(--mono);
+    }
+
+    table.lanes-table th,
+    table.lanes-table td {
+      text-align: left;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--border-base);
+      border-right: 1px solid var(--border-column);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    table.lanes-table th:last-child,
+    table.lanes-table td:last-child {
+      border-right: none;
+    }
+
+    table.lanes-table th {
+      height: var(--table-header-h);
+      color: var(--text-weak);
+      font: 600 10px var(--mono);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: var(--surface-raised-base);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      padding: 0;
+    }
+
+    table.lanes-table th .sort-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      width: 100%;
+      height: var(--table-header-h);
+      padding: 0 14px;
+      border: none;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      letter-spacing: inherit;
+      text-transform: inherit;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    table.lanes-table th .sort-btn:hover {
+      color: var(--text-base);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    table.lanes-table th .sort-btn:focus-visible {
+      outline: 2px solid var(--text-interactive-base);
+      outline-offset: -2px;
+    }
+
+    .sort-ind {
+      opacity: 0.35;
+      font-size: 11px;
+    }
+
+    th[aria-sort="ascending"] .sort-ind,
+    th[aria-sort="descending"] .sort-ind {
+      opacity: 1;
+      color: var(--text-interactive-base);
+    }
+
+    table.lanes-table td {
+      height: var(--table-row-h);
+      color: var(--text-base);
+      vertical-align: middle;
+    }
+
+    table.lanes-table tbody tr {
+      cursor: pointer;
+    }
+
+    table.lanes-table tbody tr:hover td {
+      background: var(--surface-hover);
+    }
+
+    table.lanes-table tbody tr:focus-visible {
+      outline: 2px solid var(--text-interactive-base);
+      outline-offset: -2px;
+    }
+
+    table.lanes-table tbody tr.hidden-by-search {
+      display: none;
+    }
+
+    .table-empty {
+      display: none;
+      position: absolute;
+      inset: 0;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 6px;
+      padding: 48px 24px;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .table-empty[data-visible="true"] {
+      display: flex;
+    }
+
+    .table-empty strong {
+      font: 600 13px var(--font);
+      color: var(--text-strong);
+    }
+
+    .table-empty span {
+      font: 400 12px var(--font);
+      color: var(--text-weak);
+    }
+
+    .oplog {
+      grid-row: 1 / 4;
+      grid-column: 3;
+      background: var(--surface-inset-base);
+      border-left: 1px solid var(--border-base);
+      padding: 12px;
+      color: var(--text-weak);
+      font: 500 11px var(--mono);
+    }
+
+    .statusbar {
+      grid-row: 4;
+      grid-column: 2;
+      height: var(--statusbar-h);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 12px;
+      border-top: 1px solid var(--border-base);
+      font: 400 11px var(--mono);
+      color: var(--text-weak);
+      background: #181818;
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--surface-success-strong);
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    .legend {
+      position: fixed;
+      right: 16px;
+      bottom: 40px;
+      max-width: 280px;
+      padding: 10px 12px;
+      border-radius: var(--rounded-md);
+      border: 1px solid var(--border-base);
+      background: rgba(16, 16, 16, 0.92);
+      font: 400 11px var(--mono);
+      color: var(--text-weak);
+      z-index: 20;
+    }
+
+    .legend b {
+      color: var(--text-base);
+    }
+
+    dialog {
+      border: 1px solid var(--border-base);
+      border-radius: var(--rounded-xl);
+      background: var(--surface-raised-base);
+      color: var(--text-strong);
+      padding: 20px 24px;
+      max-width: 420px;
+    }
+
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.55);
+    }
+
+    dialog button {
+      margin-top: 12px;
+      height: 34px;
+      padding: 0 14px;
+      border-radius: var(--rounded-md);
+      border: none;
+      background: var(--text-interactive-base);
+      color: #0a0a0a;
+      font: 600 12px var(--font);
+      cursor: pointer;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="shell" data-design-note="Shell + toolbar preserved; density work is #view-table only">
+    <aside class="sidebar" aria-label="Operate">
+      <div class="nav-active">VCS</div>
+      <div style="padding:8px 10px;margin-top:4px">Collections</div>
+      <div style="padding:8px 10px">Graph</div>
+    </aside>
+
+    <header class="header">
+      <div class="brand">Trellis <span>admin</span></div>
+      <div class="crumb">Operate / VCS</div>
+    </header>
+
+    <div class="operate-toolbar" data-testid="operate-toolbar"
+      data-design-note="Chrome contextual only — label-on-active per toolbar design; not normative this wedge">
+      <div class="view-toggle" role="radiogroup" aria-label="Projection">
+        <button type="button" role="radio" aria-checked="false">Grid</button>
+        <button type="button" role="radio" aria-checked="false">Kanban</button>
+        <button type="button" role="radio" aria-checked="true">Table</button>
+      </div>
+      <div class="search" id="search">
+        <input id="search-input" type="search" aria-label="Search lanes" placeholder="Search lanes…" />
+      </div>
+      <button type="button" class="stub" disabled>Filters</button>
+      <button type="button" class="stub" disabled>Export</button>
+      <button type="button" class="stub" disabled>+ New issue</button>
+    </div>
+
+    <main class="main">
+      <div class="table-wrap"
+        data-design-note="SpreadsheetTable embedded well: 36px sort headers, 42px rows, column hairlines">
+        <table class="lanes-table" aria-label="Lanes">
+          <caption class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">
+            Lane inventory — sortable columns
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col" aria-sort="none" data-key="lane">
+                <button type="button" class="sort-btn">Lane <span class="sort-ind" aria-hidden="true">⇅</span></button>
+              </th>
+              <th scope="col" aria-sort="none" data-key="agent">
+                <button type="button" class="sort-btn">Agent <span class="sort-ind" aria-hidden="true">⇅</span></button>
+              </th>
+              <th scope="col" aria-sort="none" data-key="ops">
+                <button type="button" class="sort-btn">Ops <span class="sort-ind" aria-hidden="true">⇅</span></button>
+              </th>
+              <th scope="col" aria-sort="none" data-key="files">
+                <button type="button" class="sort-btn">Files <span class="sort-ind" aria-hidden="true">⇅</span></button>
+              </th>
+              <th scope="col" aria-sort="none" data-key="branch">
+                <button type="button" class="sort-btn">Branch <span class="sort-ind"
+                    aria-hidden="true">⇅</span></button>
+              </th>
+              <th scope="col" aria-sort="none" data-key="issue">
+                <button type="button" class="sort-btn">Issue <span class="sort-ind" aria-hidden="true">⇅</span></button>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr data-kind="lane" tabindex="0" data-search="lane-a251 agent-f toolbar">
+              <td>lane-a251d242</td>
+              <td>agent-f</td>
+              <td>12</td>
+              <td>3</td>
+              <td>issue/TRL-201-…</td>
+              <td>TRL-201</td>
+            </tr>
+            <tr data-kind="lane" tabindex="0" data-search="lane-1bb9 agent-b toolbar">
+              <td>lane-1bb97589</td>
+              <td>agent-b</td>
+              <td>48</td>
+              <td>7</td>
+              <td>issue/TRL-197-…</td>
+              <td>TRL-197</td>
+            </tr>
+            <tr data-kind="lane" tabindex="0" data-search="lane-e7c4 agent-b shell">
+              <td>lane-e7c410be</td>
+              <td>agent-b</td>
+              <td>31</td>
+              <td>5</td>
+              <td>issue/TRL-192-…</td>
+              <td>TRL-192</td>
+            </tr>
+            <tr data-kind="lane" tabindex="0" data-search="lane-945e agent-f shell">
+              <td>lane-945e24d3</td>
+              <td>agent-f</td>
+              <td>9</td>
+              <td>2</td>
+              <td>issue/TRL-190-…</td>
+              <td>TRL-190</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="table-empty" id="table-empty" role="status" aria-live="polite">
+          <strong id="empty-title">No lanes</strong>
+          <span id="empty-desc">Create a lane or clear filters to see rows.</span>
+        </div>
+      </div>
+    </main>
+
+    <aside class="oplog">Op log (unchanged)</aside>
+    <footer class="statusbar" role="status">
+      <span><span class="live-dot"></span>live</span>
+      <span>trellis-node</span>
+      <span>4 lanes</span>
+    </footer>
+  </div>
+
+  <div class="legend" data-design-note="Mock controls">
+    <b>Mock</b><br />
+    · Click headers → sort cycle<br />
+    · Search filters rows<br />
+    · Click row → detail dialog<br />
+    <button type="button" id="toggle-empty"
+      style="margin-top:8px;height:28px;padding:0 8px;border-radius:6px;border:1px solid var(--border-base);background:transparent;color:var(--text-base);font:500 11px var(--mono);cursor:pointer">
+      Toggle zero-lanes empty
+    </button>
+  </div>
+
+  <dialog id="dlg">
+    <form method="dialog">
+      <div id="dlg-body">Lane detail</div>
+      <button type="submit">Close</button>
+    </form>
+  </dialog>
+
+  <script>
+    const tbody = document.getElementById('tbody');
+    const empty = document.getElementById('table-empty');
+    const emptyTitle = document.getElementById('empty-title');
+    const emptyDesc = document.getElementById('empty-desc');
+    const dlg = document.getElementById('dlg');
+    const dlgBody = document.getElementById('dlg-body');
+    let sortKey = null;
+    let sortDir = null; // null | asc | desc
+    let forceEmpty = false;
+    const snapshot = Array.from(tbody.querySelectorAll('tr')).map((tr) => tr.cloneNode(true));
+
+    function updateEmpty() {
+      if (forceEmpty) {
+        tbody.innerHTML = '';
+        empty.dataset.visible = 'true';
+        emptyTitle.textContent = 'No lanes';
+        emptyDesc.textContent = 'Create a lane or clear filters to see rows.';
+        return;
+      }
+      if (tbody.children.length === 0) {
+        snapshot.forEach((tr) => tbody.appendChild(tr.cloneNode(true)));
+        bindRows();
+      }
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const visible = rows.filter((r) => !r.classList.contains('hidden-by-search'));
+      if (visible.length === 0) {
+        empty.dataset.visible = 'true';
+        emptyTitle.textContent = 'No matches';
+        emptyDesc.textContent = 'Try a different search query.';
+      } else {
+        empty.dataset.visible = 'false';
+      }
+    }
+
+    function setSortIcons() {
+      document.querySelectorAll('th[data-key]').forEach((th) => {
+        const key = th.dataset.key;
+        const ind = th.querySelector('.sort-ind');
+        if (sortKey !== key || !sortDir) {
+          th.setAttribute('aria-sort', 'none');
+          ind.textContent = '⇅';
+        } else if (sortDir === 'asc') {
+          th.setAttribute('aria-sort', 'ascending');
+          ind.textContent = '▲';
+        } else {
+          th.setAttribute('aria-sort', 'descending');
+          ind.textContent = '▼';
+        }
+      });
+    }
+
+    function applySort() {
+      if (!sortKey || !sortDir) return;
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const idx = ['lane', 'agent', 'ops', 'files', 'branch', 'issue'].indexOf(sortKey);
+      rows.sort((a, b) => {
+        const av = a.children[idx]?.textContent.trim() || '';
+        const bv = b.children[idx]?.textContent.trim() || '';
+        const an = Number(av);
+        const bn = Number(bv);
+        let cmp;
+        if (!Number.isNaN(an) && !Number.isNaN(bn) && av !== '' && bv !== '') cmp = an - bn;
+        else cmp = av.localeCompare(bv);
+        return sortDir === 'asc' ? cmp : -cmp;
+      });
+      rows.forEach((r) => tbody.appendChild(r));
+    }
+
+    document.querySelectorAll('th[data-key] .sort-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const th = btn.closest('th');
+        const key = th.dataset.key;
+        if (sortKey !== key) {
+          sortKey = key;
+          sortDir = 'asc';
+        } else if (sortDir === 'asc') {
+          sortDir = 'desc';
+        } else if (sortDir === 'desc') {
+          sortKey = null;
+          sortDir = null;
+        } else {
+          sortDir = 'asc';
+        }
+        setSortIcons();
+        if (!sortDir) {
+          tbody.innerHTML = '';
+          snapshot.forEach((tr) => tbody.appendChild(tr.cloneNode(true)));
+          bindRows();
+          document.getElementById('search-input').dispatchEvent(new Event('input'));
+        } else {
+          applySort();
+        }
+        updateEmpty();
+      });
+    });
+
+    function bindRows() {
+      tbody.querySelectorAll('tr[data-kind="lane"]').forEach((tr) => {
+        tr.onclick = () => {
+          dlgBody.textContent = 'Lane ' + tr.children[0].textContent + ' · ' + tr.children[5].textContent;
+          dlg.showModal();
+        };
+        tr.onkeydown = (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            tr.click();
+          }
+        };
+      });
+    }
+    bindRows();
+
+    document.getElementById('search-input').addEventListener('input', (e) => {
+      const q = e.target.value.trim().toLowerCase();
+      tbody.querySelectorAll('tr').forEach((tr) => {
+        const hay = (tr.dataset.search || tr.textContent).toLowerCase();
+        tr.classList.toggle('hidden-by-search', q && !hay.includes(q));
+      });
+      updateEmpty();
+    });
+
+    document.getElementById('toggle-empty').addEventListener('click', () => {
+      forceEmpty = !forceEmpty;
+      updateEmpty();
+    });
+
+    setSortIcons();
+    updateEmpty();
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,11 @@
+<!-- Resolved IR for projects/work.table.tml — thead is chrome; body slot is the shell -->
+<section class="proj table-view" id="view-table" data-view="table">
+  <div class="table-wrap">
+    <table class="lanes-table" aria-label="Lanes">
+      <thead><!-- sort headers remain host chrome / datatable primitive --></thead>
+      <tbody tml-query="find ?e where type = 'Lane'" tml-each="lane of lanes" tml-live tml-ref="table-lanes">
+        <tr data-shell-slot="lane.row"></tr>
+      </tbody>
+    </table>
+  </div>
+</section>

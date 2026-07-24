@@ -59,10 +59,27 @@ Ship failures print a step summary + write `rug/ship-report-*.json`. Ensure
 ```bash
 trellis lane watch              # http://localhost:3939 — SSE updates ~1s
 trellis lane watch --no-open --port 3940
+# prefer:
+trellis admin
 ```
 
 Shows active lanes, session ids, op/file counts, worktrees, promote lock, and
 in-progress issues with claims. Useful for demos and multi-tab sanity checks.
+
+## Admin write surface / agents / pipeline canvas (backlog)
+
+**Issue:** TRL-219 · **Doc:** `docs/planning/admin-write-agents-pipeline.md`
+
+Phased: (A) surgical board writes via `tml-mutations`; (B) agents roster;
+(C) pipeline as Trellis-owned data; (D) xyflow canvas — park until C.
+
+## VCS remote peer / GitHub analog seed (backlog)
+
+**Issue:** TRL-222 · **Doc:** `docs/planning/vcs-oplog-sprite-backup.md`
+
+**Thesis:** a ledger needs ≥2 peers holding the chain to count as truth; default
+remote peer = sprite (not backup sidecar). Seed for `trellis remote push|pull`
+and the GitHub analog on causal op journals.
 
 ## Tab-close abandonment (`sessionEnd` hook) (not yet)
 

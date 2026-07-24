@@ -1,0 +1,5 @@
+<!-- HTML-adjacent flavor — same AST as brace form / crosswalk/todo.tml -->
+
+<projection id="todo.list" live ref="todos" query="find ?e where type = 'Todo'">
+  <use shell="todo.row" each="todo of todos" />
+</projection>

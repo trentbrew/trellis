@@ -85,6 +85,13 @@ const FILE_OP_KINDS = new Set<string>([
   'vcs:fileRename',
 ]);
 
+/** Integration-owned issue metadata — never block promote on cross-lane noise. */
+export const ISSUE_COORDINATION_ATTRS = new Set([
+  'claimedLaneId',
+  'claimedAt',
+  'claimedSessionId',
+]);
+
 // ---------------------------------------------------------------------------
 // Store helpers
 // ---------------------------------------------------------------------------
@@ -169,6 +176,30 @@ function atomsEqual(a: Atom | undefined, b: Atom | undefined): boolean {
   return String(a) === String(b);
 }
 
+function isIssueEntity(entityId: string): boolean {
+  return entityId.startsWith('issue:');
+}
+
+/** Integration describe/claim wins over stale lane journal facts. */
+function isIntegrationWinsStaleFact(
+  fact: Fact,
+  headStore: EAVStore,
+  baseStore: EAVStore,
+): boolean {
+  if (!isIssueEntity(fact.e)) return false;
+  const headValue = getFactValue(headStore, fact.e, fact.a);
+  const baseValue = getFactValue(baseStore, fact.e, fact.a);
+  if (atomsEqual(headValue, fact.v)) return true;
+  if (fact.a === 'description') {
+    return (
+      headValue !== undefined &&
+      !atomsEqual(headValue, baseValue) &&
+      !atomsEqual(headValue, fact.v)
+    );
+  }
+  return false;
+}
+
 function buildLaneFileState(laneOps: VcsOp[], throughIndex: number): Map<string, FileState> {
   const slice = laneOps.slice(0, throughIndex + 1);
   return buildFileStateAtOp(slice);
@@ -201,6 +232,8 @@ function detectEntityConflicts(
 
     if (atomsEqual(headValue, fact.v)) continue;
 
+    if (isIntegrationWinsStaleFact(fact, headStore, baseStore)) continue;
+
     if (!atomsEqual(headValue, baseValue) && headValue !== undefined) {
       conflicts.push({
         class: 'hard',
@@ -226,6 +259,12 @@ function detectEntityConflicts(
 
     for (const [attribute, headValue] of headAttrs) {
       if (laneAttrs.has(attribute)) continue;
+      if (
+        isIssueEntity(entityId) &&
+        ISSUE_COORDINATION_ATTRS.has(attribute)
+      ) {
+        continue;
+      }
       const baseValue = baseAttrs.get(attribute);
       if (!atomsEqual(headValue, baseValue)) {
         conflicts.push({
@@ -408,8 +447,10 @@ export async function planLanePromote(
     if (
       decomposed.addFacts.length > 0 &&
       decomposed.deleteFacts.length === 0 &&
-      decomposed.addFacts.every((fact) =>
-        atomsEqual(getFactValue(headStore, fact.e, fact.a), fact.v),
+      decomposed.addFacts.every(
+        (fact) =>
+          isIntegrationWinsStaleFact(fact, headStore, baseStore) ||
+          atomsEqual(getFactValue(headStore, fact.e, fact.a), fact.v),
       )
     ) {
       continue;

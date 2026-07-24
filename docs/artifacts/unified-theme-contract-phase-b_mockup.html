@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-trellis-band="L3">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trellis — Unified theme Phase B (TRL-159 design mock)</title>
+  <style>
+    :root {
+      --background-base: #101010;
+      --background-weak: #1e1e1e;
+      --surface-raised-base: #1c1c1c;
+      --surface-inset-base: #161616;
+      --surface-inset-alpha: rgba(0, 0, 0, 0.5);
+      --border-base: rgba(255, 255, 255, 0.195);
+      --border-strong: rgba(255, 255, 255, 0.266);
+      --text-strong: rgba(255, 255, 255, 0.936);
+      --text-base: rgba(255, 255, 255, 0.618);
+      --text-weak: rgba(255, 255, 255, 0.422);
+      --text-interactive-base: #9dbefe;
+      --surface-brand-base: #fab283;
+      --surface-success-strong: #12c905;
+      --surface-warning-strong: #fcd53a;
+      --surface-critical-strong: #fc533a;
+      --surface-info-strong: #edb2f1;
+      --background: var(--background-base);
+      --card: var(--surface-raised-base);
+      --surface-1: color-mix(in oklch, var(--card) 25%, var(--background));
+      --surface-2: color-mix(in oklch, var(--card) 50%, var(--background));
+      --surface-3: var(--card);
+      --tml-glass-surface: rgba(22, 22, 22, 0.75);
+      --tml-glass-border: rgba(255, 255, 255, 0.04);
+      --tml-accent-glow: rgba(157, 190, 254, 0.12);
+      --tml-badge-success-bg: color-mix(in oklch, var(--surface-success-strong) 15%, transparent);
+      --tml-badge-warning-bg: color-mix(in oklch, var(--surface-warning-strong) 15%, transparent);
+      --tml-badge-critical-bg: color-mix(in oklch, var(--surface-critical-strong) 15%, transparent);
+      --tml-badge-info-bg: color-mix(in oklch, var(--surface-info-strong) 15%, transparent);
+      --entity-file: #00ceb9;
+      --entity-milestone: #2090f5;
+      --entity-issue: #edb2f1;
+      --entity-branch: #fcd53a;
+      --entity-default: var(--text-base);
+      --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 10px;
+      --top-h: 48px;
+      --nav-w: 56px;
+      --bg: var(--background-base);
+      --surface: var(--surface-raised-base);
+      --text: var(--text-strong);
+      --text2: var(--text-base);
+      --text3: var(--text-weak);
+      --accent: var(--text-interactive-base);
+      --accent2: color-mix(in oklch, var(--text-interactive-base) 85%, white);
+      --glass: var(--tml-glass-surface);
+      --glass-border: var(--tml-glass-border);
+      --font: var(--font-family-sans);
+      --mono: var(--font-family-mono);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--background-base);
+      color: var(--text-strong);
+      font: 14px/1.5 var(--font-family-sans);
+    }
+
+    #topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      height: var(--top-h);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      background: var(--tml-glass-surface);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--tml-glass-border);
+    }
+
+    .logo {
+      font: 700 14px var(--font-family-sans);
+      color: var(--accent2);
+      letter-spacing: -0.02em;
+    }
+
+    .logo small {
+      color: var(--text-weak);
+      font-weight: 400;
+      margin-left: 6px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 2px;
+      margin-left: 16px;
+    }
+
+    .tab {
+      border: none;
+      background: transparent;
+      color: var(--text-weak);
+      font: 500 12px var(--font-family-sans);
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+
+    .tab:hover {
+      color: var(--text-base);
+      background: var(--surface-2);
+    }
+
+    .tab.active {
+      color: var(--text-interactive-base);
+      background: var(--tml-accent-glow);
+    }
+
+    .band {
+      margin-left: auto;
+      font: 600 10px var(--font-family-mono);
+      letter-spacing: 0.05em;
+      padding: 3px 8px;
+      border: 1px solid var(--border-base);
+      border-radius: 999px;
+      color: var(--text-base);
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 0;
+      min-height: calc(100vh - var(--top-h));
+    }
+
+    .canvas {
+      padding: 24px;
+      background:
+        linear-gradient(var(--border-base) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border-base) 1px, transparent 1px),
+        var(--background-base);
+      background-size: 40px 40px;
+    }
+
+    .lede {
+      max-width: 520px;
+      color: var(--text-base);
+      margin: 0 0 20px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font: 700 28px/1.1 var(--font-family-sans);
+      letter-spacing: -0.04em;
+    }
+
+    .nodes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .node {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      border: 2px solid var(--background-base);
+      display: grid;
+      place-items: center;
+      font: 600 10px var(--font-family-mono);
+      color: #0a0a0a;
+      box-shadow: 0 0 0 1px color-mix(in oklch, var(--node) 40%, transparent);
+      background: var(--node);
+    }
+
+    .drawer {
+      border-left: 1px solid var(--tml-glass-border);
+      background: var(--tml-glass-surface);
+      backdrop-filter: blur(20px);
+      padding: 16px;
+    }
+
+    .drawer h2 {
+      margin: 0 0 12px;
+      font: 600 13px var(--font-family-sans);
+    }
+
+    .ladder {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .rung {
+      padding: 12px;
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-md);
+      font: 11px var(--font-family-mono);
+      color: var(--text-base);
+    }
+
+    .card {
+      background: var(--surface-3);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      margin-top: 12px;
+    }
+
+    .card h3 {
+      margin: 0 0 6px;
+      font-size: 13px;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--text-base);
+      font-size: 12px;
+    }
+
+    .compare {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .chip {
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-base);
+      font: 10px var(--font-family-mono);
+    }
+
+    .chip.old {
+      color: #a1a1aa;
+      background: #15161b;
+    }
+
+    .chip.new {
+      color: var(--text-interactive-base);
+      background: var(--tml-accent-glow);
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .badge {
+      padding: 3px 8px;
+      border-radius: 999px;
+      font: 600 10px var(--font-family-mono);
+      text-transform: uppercase;
+    }
+
+    .badge.ok {
+      background: var(--tml-badge-success-bg);
+      color: var(--surface-success-strong);
+    }
+
+    .badge.warn {
+      background: var(--tml-badge-warning-bg);
+      color: var(--surface-warning-strong);
+    }
+
+    .badge.crit {
+      background: var(--tml-badge-critical-bg);
+      color: var(--surface-critical-strong);
+    }
+
+    .badge.info {
+      background: var(--tml-badge-info-bg);
+      color: var(--surface-info-strong);
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--text-interactive-base);
+      outline-offset: 2px;
+    }
+
+    @media (max-width: 800px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .drawer {
+        border-left: none;
+        border-top: 1px solid var(--tml-glass-border);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header id="topbar" data-design-note="Glass chrome uses --tml-glass-* over Studio dark base.">
+    <div class="logo">Trellis <small>system visualizer · Phase B</small></div>
+    <nav class="tabs" aria-label="Panels">
+      <button type="button" class="tab active">Graph</button>
+      <button type="button" class="tab">Store</button>
+      <button type="button" class="tab">System</button>
+    </nav>
+    <span class="band">L3 · operator</span>
+  </header>
+  <div class="shell">
+    <main class="canvas">
+      <h1>Studio dark on kernel chrome.</h1>
+      <p class="lede">Phase B moves <code>client.html</code> onto <code>runtime-theme.css</code>, activates inset
+        <code>--surface-1/2/3</code>, and shifts interactive accent from purple to Studio blue. Lanes surfaces share the
+        value update.
+      </p>
+      <div class="nodes" data-design-note="Entity fills read --entity-* CSS vars (JS getComputedStyle in impl).">
+        <div class="node" style="--node:var(--entity-file)">file</div>
+        <div class="node" style="--node:var(--entity-milestone)">milestone</div>
+        <div class="node" style="--node:var(--entity-issue)">issue</div>
+        <div class="node" style="--node:var(--entity-branch)">branch</div>
+        <div class="node" style="--node:var(--entity-default);color:var(--background-base)">default</div>
+      </div>
+      <div class="compare" aria-label="Accent migration">
+        <div class="chip old">Phase A accent #6d5bfa</div>
+        <div class="chip new">Phase B interactive #9dbefe</div>
+      </div>
+      <div class="badges" data-design-note="Badge fills re-derived from Studio status tokens via color-mix.">
+        <span class="badge ok">active</span>
+        <span class="badge warn">promoting</span>
+        <span class="badge crit">high</span>
+        <span class="badge info">promoted</span>
+      </div>
+    </main>
+    <aside class="drawer" aria-label="Inset ladder">
+      <h2>Inset substrate</h2>
+      <div class="ladder">
+        <div class="rung" style="background:var(--surface-1)">--surface-1 · sticky / subtle</div>
+        <div class="rung" style="background:var(--surface-2)">--surface-2 · scroll regions</div>
+        <div class="rung" style="background:var(--surface-3)">--surface-3 · cards</div>
+      </div>
+      <div class="card">
+        <h3>Command palette specimen</h3>
+        <p>Raised on --surface-3 with --border-strong. System fonts only — no Google Fonts.</p>
+      </div>
+    </aside>
+  </div>
+  <script>
+    document.querySelectorAll('.tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
+        tab.classList.add('active');
+      });
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,11 @@
+<!-- HTML-adjacent shell — root is <label>, not a framework <template> -->
+
+let doneLabel = todo.done
+
+<shell id="todo.row" kind="todo" density="row">
+  <label entity={todo.id}>
+    <slot name="done">{doneLabel}</slot>
+    <slot name="title">{todo.title}</slot>
+  </label>
+  <button type="button" on:op={remove(todo.id)}>Remove</button>
+</shell>
