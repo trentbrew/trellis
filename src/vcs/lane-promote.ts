@@ -90,6 +90,8 @@ export const ISSUE_COORDINATION_ATTRS = new Set([
   'claimedLaneId',
   'claimedAt',
   'claimedSessionId',
+  /** Strategist/protocol describe on integration; lane journal describe is orientation noise. */
+  'description',
 ]);
 
 // ---------------------------------------------------------------------------
