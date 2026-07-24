@@ -7,7 +7,7 @@ import { existsSync, mkdirSync, rmSync } from 'fs';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { TrellisVcsEngine } from '../../src/engine.js';
-import { runQueryStress } from '../../src/query/stress.js';
+import { runQueryStress, formatQueryStressHints } from '../../src/query/stress.js';
 import { QueryEngine, parseSimple } from '../../src/core/query/index.js';
 
 const FIXTURE_ROOT = '/tmp/trellis-query-stress-fixture';
@@ -22,7 +22,10 @@ describe('runQueryStress (fixture)', () => {
     await engine.initRepo({ indexWorkspace: false });
     engine.setCheckpointThreshold(0);
 
-    const parentOp = await engine.createIssue('Parent epic', { status: 'queue' });
+    const parentOp = await engine.createIssue('Parent epic', {
+      status: 'queue',
+      labels: ['query', 'fixture'],
+    });
     const parentId = parentOp.vcs?.issueId!;
     await engine.createIssue('Child task', {
       status: 'in_progress',
@@ -52,6 +55,17 @@ describe('runQueryStress (fixture)', () => {
 
     const decisions = report.checks.find((c) => c.name === 'decision.projection');
     expect(decisions?.detail).toMatch(/Decision entities/);
+
+    const labels = report.checks.find((c) => c.name === 'issue.labels_scalar');
+    expect(labels?.detail).toMatch(/comma-separated string/);
+  });
+
+  test('formatQueryStressHints documents childOf and Decision adoption', () => {
+    const hints = formatQueryStressHints();
+    expect(hints.join('\n')).toMatch(/childOf/);
+    expect(hints.join('\n')).toMatch(/parentOf/);
+    expect(hints.join('\n')).toMatch(/recordDecision/);
+    expect(hints.join('\n')).toMatch(/just check/);
   });
 
   test('childOf links are queryable via EQL-S', () => {

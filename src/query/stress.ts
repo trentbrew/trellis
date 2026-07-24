@@ -138,6 +138,26 @@ export function runQueryStress(
     });
   }
 
+  // Labels stored as comma-separated scalar (common agent mistake: set membership)
+  {
+    const { count, ms } = runQuery(
+      engine,
+      `SELECT ?e ?labels WHERE {
+        [?e "type" "Issue"]
+        [?e "labels" ?labels]
+      } LIMIT 1`,
+    );
+    checks.push({
+      name: 'issue.labels_scalar',
+      ok: true,
+      detail:
+        count > 0
+          ? 'labels stored as comma-separated string (not a set); filter with substring match'
+          : 'no labeled issues — labels stored as comma-separated string when present',
+      ms,
+    });
+  }
+
   // Decision projection (empty ok unless requireDecisions)
   {
     const { count, ms } = runQuery(engine, 'find ?e where type = "Decision"');
@@ -173,4 +193,13 @@ export function runQueryStress(
 
   const ok = checks.every((c) => c.ok);
   return { checks, ok };
+}
+
+/** Agent cookbook lines printed after human CLI report (non-JSON). */
+export function formatQueryStressHints(): string[] {
+  return [
+    'Hierarchy: query childOf links — parentOf is not stored (empty is expected)',
+    'Decisions: materialize via engine.recordDecision() or MCP — zero rows is adoption, not a projection bug',
+    'Regression: run just check or trellis query-stress on any repo',
+  ];
 }

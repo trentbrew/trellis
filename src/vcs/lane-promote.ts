@@ -92,6 +92,7 @@ export const ISSUE_COORDINATION_ATTRS = new Set([
   'claimedSessionId',
   /** Issue lifecycle + strategist/protocol fields on integration. */
   'status',
+  'startedAt',
   /** Strategist/protocol describe on integration; lane journal describe is orientation noise. */
   'description',
 ]);
