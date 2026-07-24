@@ -294,6 +294,19 @@ trellis whereami checkpoint
 Requires trellis **3.2.3+**. Pair with `lanes.worktreeBind` when dogfooding
 concurrent lane isolation.
 
+### 9. 3.4.0 reliability helpers
+
+```bash
+trellis issue ac-rm TRL-1 1          # tombstone stale AC (index 1)
+trellis lane split --domain <name>   # domain lane without issue start
+trellis doctor                       # probe mutation safety before writes
+trellis milestone create "M1" --commit # integration branch: auto git commit
+```
+
+**Promote gate:** `promote.require` includes `check` (project lint/typecheck)
+alongside smoke tests. Lane op **`laneId`** is envelope data (outside hash
+preimage) — existing lane journals migrate on open.
+
 ---
 
 ## Critical Rules
