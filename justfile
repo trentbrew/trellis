@@ -116,6 +116,11 @@ test:
 test-core:
   bun test test/vcs test/git test/p2 test/p3 test/p4 test/p5 test/p6 test/p7 test/engine.test.ts test/links/ test/embeddings/ test/decisions/ test/issue.test.ts
 
+# Static check + agent-path regression guards (query stress + lane promote)
+check:
+  pnpm check
+  pnpm exec vitest run test/query/query-path-stress.test.ts test/p4/lane-promote.test.ts
+
 # Build npm package (bun build → dist/)
 build:
   rm -rf dist
