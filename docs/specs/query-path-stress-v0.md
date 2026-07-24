@@ -44,6 +44,9 @@ Desk stress test (2026-07-24) found:
 | `issue.priority_order` | ORDER BY priority runs |
 | `decision.projection` | `--require-decisions` fails if empty |
 | `context_pack.boot_budget` | boot pack ≤ budget |
+| `issue.labels_scalar` | v0.1 — documents comma-string label storage |
+
+See also: `docs/specs/query-path-credibility-v0.1.md` (agent hints footer).
 
 ## 5. Acceptance criteria
 

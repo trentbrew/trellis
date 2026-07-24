@@ -49,6 +49,7 @@ export const ISSUE_COORDINATION_ATTRS = new Set([
   'claimedLaneId',
   'claimedAt',
   'claimedSessionId',
+  'status',
   'description',
 ]);
 ```

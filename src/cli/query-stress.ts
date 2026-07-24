@@ -5,7 +5,7 @@
 import type { Command } from 'commander';
 import chalk from 'chalk';
 import { TrellisVcsEngine } from '../engine.js';
-import { runQueryStress } from '../query/stress.js';
+import { runQueryStress, formatQueryStressHints } from '../query/stress.js';
 import { resolveRepoRoot } from './repo-path.js';
 import { PROVENANCE } from '../core/persist/canonical-op.js';
 
@@ -62,13 +62,18 @@ export function registerQueryStressCommand(program: Command): void {
       console.log();
       if (report.ok) {
         console.log(chalk.green(`All ${report.checks.length} checks passed.`));
-        process.exit(0);
       } else {
         const failed = report.checks.filter((c) => !c.ok).map((c) => c.name);
         console.error(
           chalk.red(`Failed: ${failed.join(', ')}`),
         );
-        process.exit(1);
       }
+
+      console.log(chalk.cyan.bold('\nAgent hints'));
+      for (const line of formatQueryStressHints()) {
+        console.log(chalk.dim(`  • ${line}`));
+      }
+
+      process.exit(report.ok ? 0 : 1);
     });
 }
