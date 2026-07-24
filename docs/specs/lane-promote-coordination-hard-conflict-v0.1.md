@@ -4,7 +4,8 @@
 **Date:** 2026-07-24  
 **Proposal:** TRL-296  
 **Parent:** TRL-286 coordination-metadata v0 (TRL-287/289)  
-**Unblocks:** TRL-281, TRL-170 close (theme scrubber harden)
+**Unblocks:** TRL-281, TRL-170 close (theme scrubber harden)  
+**Sibling:** [lane-promote-snapshot-head-v0.1.md](./lane-promote-snapshot-head-v0.1.md) — post-start head race on issue branches (required for spec-parent close batch)
 
 ---
 

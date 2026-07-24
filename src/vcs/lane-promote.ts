@@ -85,6 +85,13 @@ const FILE_OP_KINDS = new Set<string>([
   'vcs:fileRename',
 ]);
 
+/** Promote envelope ops — excluded from integration content-tail fallback. */
+export const PROMOTE_LIFECYCLE_KINDS = new Set<string>([
+  'vcs:lanePromoteStart',
+  'vcs:lanePromoteAbort',
+  'vcs:lanePromoteComplete',
+]);
+
 /** Integration-owned issue metadata — never block promote on cross-lane noise. */
 export const ISSUE_COORDINATION_ATTRS = new Set([
   'claimedLaneId',
@@ -123,7 +130,12 @@ export function resolveBranchHeadFromOps(
       return op.vcs.targetOpHash;
     }
   }
-  return ops[ops.length - 1]?.hash;
+  for (let i = ops.length - 1; i >= 0; i--) {
+    const op = ops[i]!;
+    if (PROMOTE_LIFECYCLE_KINDS.has(op.kind)) continue;
+    return op.hash;
+  }
+  return undefined;
 }
 
 export function buildStoreUpTo(ops: VcsOp[], atOpHash?: string): EAVStore {
