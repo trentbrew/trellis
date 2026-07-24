@@ -193,7 +193,7 @@ describe('Lane promote', () => {
     expect(plan.canPromote).toBe(false);
   });
 
-  test('same entity different attributes is a soft conflict', async () => {
+  test('parallel title edit promotes when integration owns description', async () => {
     const created = await engine.createIssue('Soft conflict issue', {
       description: 'base description',
     });
@@ -207,8 +207,15 @@ describe('Lane promote', () => {
     await engine.leaveLane();
 
     const plan = await engine.promoteLane(lane.id, { dryRun: true });
-    expect(plan.canPromote).toBe(false);
-    expect(plan.blockingConflicts.some((c) => c.class === 'soft')).toBe(true);
+    expect(plan.blockingConflicts).toHaveLength(0);
+    expect(plan.canPromote).toBe(true);
+
+    const result = await engine.promoteLane(lane.id);
+    expect(result.promoted).toBe(true);
+    expect(engine.getIssue(issueId)?.title).toBe('lane changed title');
+    expect(engine.getIssue(issueId)?.description).toBe(
+      'integration changed description',
+    );
   });
 
   test('dry-run reports ready when lane ops are safe', async () => {
