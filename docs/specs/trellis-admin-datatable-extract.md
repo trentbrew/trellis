@@ -5,7 +5,7 @@
 **Proposal:** TRL-206  
 **Design:** TRL-207 · [`docs/artifacts/trellis-admin-datatable-extract_design.md`](../artifacts/trellis-admin-datatable-extract_design.md) · [`trellis-admin-datatable-extract_mockup.html`](../artifacts/trellis-admin-datatable-extract_mockup.html)  
 **Inherits density:** [`trellis-admin-datatable.md`](./trellis-admin-datatable.md) / TRL-203 (zero visual delta)  
-**Preserves:** shell/toolbar/statusbar, TML tbody in HTML, e2e selectors, multi-view search  
+**Preserves:** shell/view-header (`#board-toolbar` search), statusbar, TML tbody in HTML, e2e selectors, multi-view search  
 **Labels:** `spec`, `tml`, `admin`, `needs-e2e`, `cohesion`, `harden`
 
 ---
@@ -49,7 +49,7 @@ cell editors this wedge.
 | `docs/specs/trellis-admin-datatable-extract.md` | This file |
 | `package.json` build | Ensure `admin-datatable.css` copied to `dist/ui/` if build copies other UI static assets |
 
-**Out of touch:** `runtime-theme.css` palette, OPERATE_NAV, operate-toolbar markup contracts, `server.ts` (unless already serving admin — it does not today).
+**Out of touch:** `runtime-theme.css` palette, OPERATE_NAV, view-header markup contracts, `server.ts` (unless already serving admin — it does not today).
 
 ---
 
