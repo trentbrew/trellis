@@ -1,7 +1,8 @@
 # Spec: trellis admin — kernel AffordanceShell + TML (v1)
 
-**Status:** Ready for impl  
+**Status:** Shipped on desk (v1 intent satisfied via child specs)  
 **Date:** 2026-07-21  
+**Amended:** 2026-07-24 — routing/index superseded by [`trellis-admin-shell.md`](./trellis-admin-shell.md); chrome by [`trellis-admin-chrome-polish.md`](./trellis-admin-chrome-polish.md); VCS IA by [`trellis-admin-vcs-layout-ide.md`](./trellis-admin-vcs-layout-ide.md); datatable by TRL-202/209. This doc remains **v1 kernel + TML intent** SSOT.  
 **Design:** TRL-174 · `docs/artifacts/trellis-admin_design.md` + `trellis-admin_mockup.html`  
 **Proposal:** TRL-173  
 **Labels:** `spec`, `tml`, `admin`, `needs-e2e`
@@ -63,8 +64,9 @@ Behavior: start the same dashboard server family as `lane watch`, open
 
 | Path | Behavior |
 | ---- | -------- |
-| `GET /admin` | Serve `admin.html` (200) |
-| `GET /` | Keep serving `lanes.html` **until** parity + alias flip; optional redirect to `/admin` only when alias enabled |
+| `GET /` | Serves `admin.html` (per [`trellis-admin-shell.md`](./trellis-admin-shell.md)) |
+| `GET /admin` | Redirect to `/` preserving query |
+| `GET /lanes` | Legacy `lanes.html` |
 | Existing | `/theme/runtime-theme.css`, `/tml-runtime.js`, `/api/lanes`, `/api/lanes/stream`, `/api/tml-mutations`, `/tml-lanes`, `/client` unchanged |
 
 ---
@@ -191,14 +193,19 @@ Minimum cases:
 
 ```text
 test:pnpm check
+test:test -f docs/specs/trellis-admin.md
+test:grep -q trellis-admin_design.md docs/specs/trellis-admin.md
+test:grep -q admin.html docs/specs/trellis-admin.md
+test:grep -q tml-runtime docs/specs/trellis-admin.md
+test:grep -q runtime-theme.css docs/specs/trellis-admin.md
+test:grep -q AffordanceShell docs/specs/trellis-admin.md
+test:grep -q trellis-admin-shell.md docs/specs/trellis-admin.md
+```
+
+**Impl verification (carry on impl issue):**
+
+```text
+test:pnpm check
 test:CI=1 pnpm test:e2e e2e/admin.spec.cjs
 test:CI=1 pnpm test:e2e e2e/tml-lanes.spec.cjs e2e/client-vantage.spec.cjs
 ```
-
-Behavioral:
-
-- [ ] `trellis admin` serves `/admin` with AffordanceShell-lite + TML projections
-- [ ] `?view=grid|kanban|table` works; default kanban; toolbar controls 34px
-- [ ] Theme from `/theme/runtime-theme.css` only
-- [ ] Op-log uses full op SSE; boards may use snapshot stream
-- [ ] Design artifact IA honored; kill gate documented (no silent delete of lane watch)
