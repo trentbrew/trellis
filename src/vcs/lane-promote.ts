@@ -185,7 +185,7 @@ function isIssueEntity(entityId: string): boolean {
   return entityId.startsWith('issue:');
 }
 
-/** Integration describe/claim wins over stale lane journal facts. */
+/** Integration coordination metadata wins over stale lane journal facts. */
 function isIntegrationWinsStaleFact(
   fact: Fact,
   headStore: EAVStore,
@@ -195,14 +195,56 @@ function isIntegrationWinsStaleFact(
   const headValue = getFactValue(headStore, fact.e, fact.a);
   const baseValue = getFactValue(baseStore, fact.e, fact.a);
   if (atomsEqual(headValue, fact.v)) return true;
-  if (fact.a === 'description') {
-    return (
-      headValue !== undefined &&
-      !atomsEqual(headValue, baseValue) &&
-      !atomsEqual(headValue, fact.v)
-    );
+  if (ISSUE_COORDINATION_ATTRS.has(fact.a)) {
+    // Integration head wins on coordination metadata whenever it disagrees with
+    // a lane journal fact (lifecycle / claim / describe noise).
+    return headValue !== undefined && !atomsEqual(headValue, fact.v);
   }
   return false;
+}
+
+/** Lane journal delete of coordination metadata integration already moved past. */
+function isStaleCoordinationDelete(
+  fact: Fact,
+  headStore: EAVStore,
+): boolean {
+  if (!isIssueEntity(fact.e) || !ISSUE_COORDINATION_ATTRS.has(fact.a)) {
+    return false;
+  }
+  const headValue = getFactValue(headStore, fact.e, fact.a);
+  return headValue !== undefined && !atomsEqual(headValue, fact.v);
+}
+
+/** Skip replay when every add/delete fact is redundant or integration-wins stale. */
+function shouldSkipStaleLaneOp(
+  decomposed: ReturnType<typeof decompose>,
+  headStore: EAVStore,
+  baseStore: EAVStore,
+): boolean {
+  if (decomposed.addLinks.length > 0 || decomposed.deleteLinks.length > 0) {
+    return false;
+  }
+  if (decomposed.addFacts.length === 0 && decomposed.deleteFacts.length === 0) {
+    return false;
+  }
+  const addsOk = decomposed.addFacts.every(
+    (fact) =>
+      isIntegrationWinsStaleFact(fact, headStore, baseStore) ||
+      atomsEqual(getFactValue(headStore, fact.e, fact.a), fact.v),
+  );
+  const deletesOk = decomposed.deleteFacts.every((fact) =>
+    isStaleCoordinationDelete(fact, headStore),
+  );
+  return addsOk && deletesOk;
+}
+
+/** @internal Test-only export for coordination stale-fact regression. */
+export function coordinationStaleFactForTest(
+  fact: Fact,
+  headStore: EAVStore,
+  baseStore: EAVStore,
+): boolean {
+  return isIntegrationWinsStaleFact(fact, headStore, baseStore);
 }
 
 function buildLaneFileState(laneOps: VcsOp[], throughIndex: number): Map<string, FileState> {
@@ -449,15 +491,7 @@ export async function planLanePromote(
     }
 
     const decomposed = decompose(op);
-    if (
-      decomposed.addFacts.length > 0 &&
-      decomposed.deleteFacts.length === 0 &&
-      decomposed.addFacts.every(
-        (fact) =>
-          isIntegrationWinsStaleFact(fact, headStore, baseStore) ||
-          atomsEqual(getFactValue(headStore, fact.e, fact.a), fact.v),
-      )
-    ) {
+    if (shouldSkipStaleLaneOp(decomposed, headStore, baseStore)) {
       continue;
     }
 

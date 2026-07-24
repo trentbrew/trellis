@@ -1,7 +1,8 @@
 # Spec: Lane promote — coordination metadata non-blocking (v0)
 
 **Status:** Shipped · **Date:** 2026-07-24\
-**Proposal:** TRL-286 · **Impl:** TRL-287, TRL-289 · **Unblocks:** TRL-284, TRL-279 close
+**Proposal:** TRL-286 · **Impl:** TRL-287, TRL-289 · **Unblocks:** TRL-284, TRL-279 close\
+**Follow-up:** [lane-promote-coordination-hard-conflict-v0.1.md](./lane-promote-coordination-hard-conflict-v0.1.md) (TRL-296/298) — hard axis for all `ISSUE_COORDINATION_ATTRS`
 
 > Issue lifecycle ops (`issueStart`, `issueClaim`, …) write to **integration**
 > even inside a lane (`ISSUE_INTEGRATION_KINDS`). Lane journals often hold
