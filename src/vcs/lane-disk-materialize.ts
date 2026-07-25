@@ -1,10 +1,6 @@
-/**
- * Materialize lane file ops to disk from the blob store (ADR 0014 Phase 2).
- */
-
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
-import type { BlobStore } from './blob-store.js';
+import type { BlobResolver } from './blob-resolver.js';
 import { buildFileStateAtOp, type FileState } from './diff.js';
 import type { LaneMeta } from './lane.js';
 import type { VcsOp } from './types.js';
@@ -49,7 +45,7 @@ export function collectLaneFileStates(
 export function materializeToDisk(
   rootPath: string,
   fileStates: Map<string, FileState>,
-  blobStore: BlobStore,
+  blobResolver: BlobResolver,
 ): void {
   for (const [relPath, fileState] of fileStates.entries()) {
     const absPath = join(rootPath, relPath);
@@ -63,7 +59,7 @@ export function materializeToDisk(
 
     if (!fileState.contentHash) continue;
 
-    const content = blobStore.get(fileState.contentHash);
+    const content = blobResolver.get(fileState.contentHash, relPath);
     if (!content) continue;
 
     mkdirSync(dirname(absPath), { recursive: true });

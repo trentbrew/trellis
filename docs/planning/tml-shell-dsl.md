@@ -11,6 +11,45 @@
 
 ---
 
+## 0. Three primitives to nail early
+
+Before DSL compiler polish, lock these **host primitives** — they carry most of Operate UX:
+
+| # | Primitive | Job |
+| - | --------- | --- |
+| **1** | **Stacked dialog / inspect host** | Activate Thing → push inspect frame (preview + Properties · References · Activity). Variants: dialog stack · sidebar · fullscreen · floating canvas node |
+| **2** | **Richtext** (mentions + slash) | Default text surface. Mentions = mention-density shells → activate → #1. Slash = insert blocks / run allowlisted ops. **UX north star: Notion.** Best public reference: [Plate](https://github.com/udecode/plate) (Slate + React + shadcn-style registry) |
+| **3** | **Browse shell** | One projection query, many **view shells**: grid · list · table · kanban · calendar · … Same Things; chrome + density change. Pattern already lives across turtlecode / trellis-client / Raster / Toolkit |
+
+```mermaid
+flowchart LR
+  Browse["browse shell — view mode"]
+  Mention["richtext mark — mention"]
+  Stack["stacked dialog — inspect"]
+  Thing["Thing"]
+  Browse -->|"select / open"| Stack
+  Mention -->|"activate"| Stack
+  Stack --> Thing
+  Browse --> Thing
+  Mention --> Thing
+```
+
+**Test bed:** trellis-node **admin** for #1 and #2 (locked). Scope docs: [`primitive-stacked-dialog.md`](./primitive-stacked-dialog.md) · [`primitive-richtext.md`](./primitive-richtext.md).
+
+**Why this order:** #1 is chrome + stack policy. #3 is resolve × view mode. #2 is the largest product bet — own a **mark/doc IR** + slash→op bridge. Do **not** wait on `.tml` compile.
+
+**Scope before build:** lock #1 and #2 before implementing either or starting #3. Phase 4–5 not blocked; stack/richtext can land as parallel admin wedges.
+
+**Activity tab:** one feed — op/change history **and** ad-hoc comments (not separate top-level tabs).
+
+**Inspect shells:** universal **host** chrome + **fallback** `thing.inspect` + **per-kind** preview shells via resolve — not one mega-dialog per kind and not a single shell that switches on every type.
+
+**Plate / Slate:** [Plate](https://github.com/udecode/plate) and [Slate examples](https://www.slatejs.org/examples/richtext) are **references** (and fine spike substrate). **Owning** a Notion-class richtext primitive — TrellisDoc, mention→inspect, slash→ops — *is* the point; avoid only accidental demos without those contracts. TipTap may remain an adapter in Vue hosts.
+
+**Browse:** `projection` + `resolve` keyed by `view` / density. Open → #1; rich cells → #2. Scope #3 after #1+#2 stick.
+
+---
+
 ## 1. Why this exists
 
 Attribute soup (`tml-*`, `data-trellis-*`, `tml-attr-data-*`, `data-shell-*`) is a DX smell. The fractal model is clear — Thing → resolve → shell → optional primitive — but authoring was never given a grammar of its own.
@@ -717,7 +756,8 @@ Optional TextMate grammar; LSP after check CLI
 - Resolve: separate file by convention for shared kinds; colocation allowed  
 - Mentions: density/vantage of the target Thing inside richtext — not a separate component family  
 - **Richtext = default** for text fields that should support mentions/refs everywhere  
-- Richtext **engine**: TipTap/PM as GUI host adapter (where already in use); not a TML/kernel dependency — durable model is structured marks + entity refs  
+- Richtext **engine**: GUI adapters — [Plate](https://github.com/udecode/plate) as Notion-UX reference (React/Slate/shadcn registry); TipTap/PM where Vue hosts already use it. Not a TML/kernel dependency — durable model is structured marks + entity refs + slash→op  
+- **Early wedge:** stacked dialog · richtext (mentions/slash) · browse multi-view — before DSL compiler  
 - **Activate mention** → shared **inspect host** (stacked resizable dialog by default): main preview + sidebar tabs Properties · References/backlinks · Activity/ops ‖ comments  
 - Inspect **presentation variants** (same shell): sidebar/inset · fullscreen · floating canvas node · tabs/fractal zoom · VR depth; TUI/e-paper/a11y/AI degrade to focus-navigate the Thing  
 - Spec examples: always DSL + HTML twins  

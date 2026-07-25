@@ -66,6 +66,7 @@ import {
 } from '../scaffold/index.js';
 import { cliVersion, findRepoRoot, resolveRepoRoot } from './repo-path.js';
 import { handleCliError } from './errors.js';
+import { applyInitIndexGate } from '../vcs/init-storage-guard.js';
 import {
   clearHeartbeat,
   readPresence,
@@ -127,6 +128,7 @@ async function runInit(
     footprint?: string;
     plugins?: string[];
     indexWorkspace?: boolean;
+    explicitIndexWorkspace?: boolean;
   } = {},
 ): Promise<{
   selectedIdes: string[];
@@ -148,7 +150,7 @@ async function runInit(
       framework: opts.framework || 'none',
       opsCreated: 0,
       filesIndexed: 0,
-      indexWorkspace: opts.indexWorkspace ?? true,
+      indexWorkspace: opts.indexWorkspace ?? false,
     };
   }
 
@@ -180,7 +182,7 @@ async function runInit(
   let framework: FrameworkType =
     (opts.framework as FrameworkType) || detectedFramework || 'none';
   let plugins: string[] = opts.plugins || [];
-  let indexWorkspace = opts.indexWorkspace ?? true;
+  let indexWorkspace = opts.indexWorkspace ?? false;
 
   if (!isInteractive && framework === 'none' && detectedFramework) {
     framework = detectedFramework;
@@ -363,6 +365,32 @@ async function runInit(
     }
   }
 
+  const gate = await applyInitIndexGate({
+    rootPath,
+    indexWorkspace,
+    explicitIndexWorkspace: opts.explicitIndexWorkspace,
+    isInteractive,
+    confirmLargeIndex: isInteractive
+      ? async () => {
+        const { confirm } = await import('@inquirer/prompts');
+        return confirm({
+          message:
+            'This workspace exceeds the safe indexing threshold. Index all files anyway?',
+          default: false,
+        });
+      }
+      : undefined,
+  });
+
+  if (!gate.ok) {
+    throw new Error(gate.message);
+  }
+
+  indexWorkspace = gate.indexWorkspace;
+  if (gate.umbrellaWarning) {
+    console.log(chalk.yellow(`  ⚠ ${gate.umbrellaWarning}`));
+  }
+
   const engine = new TrellisVcsEngine({ rootPath, indexWorkspace, provenance: PROVENANCE.cli });
   let renderedProgress = false;
   const result = await engine.initRepo({
@@ -452,143 +480,148 @@ program
   .option('--no-index', 'Skip indexing existing workspace files during init')
   .option('--no-interactive', 'Skip interactive prompts')
   .action(async (opts) => {
-    const rootPath = resolve(opts.path);
-    const indexWorkspace =
-      opts.minimal || opts.index === false
-        ? false
-        : opts.indexWorkspace === true
-          ? true
-          : undefined;
-    const footprint = opts.minimal ? 'minimal' : opts.footprint;
+    try {
+      const rootPath = resolve(opts.path);
+      const indexWorkspace =
+        opts.minimal || opts.index === false
+          ? false
+          : opts.indexWorkspace === true
+            ? true
+            : undefined;
+      const footprint = opts.minimal ? 'minimal' : opts.footprint;
 
-    if (TrellisVcsEngine.isRepo(rootPath)) {
-      if (opts.indexWorkspace === true && indexWorkspace !== false) {
-        const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
-        engine.open();
-        let renderedProgress = false;
-        const result = await engine.indexWorkspace({
-          onProgress: (progress) => {
-            renderedProgress = true;
-            if (progress.phase === 'done') {
-              process.stdout.write('\r\x1b[2K');
-              return;
-            }
+      if (TrellisVcsEngine.isRepo(rootPath)) {
+        if (opts.indexWorkspace === true && indexWorkspace !== false) {
+          const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
+          engine.open();
+          let renderedProgress = false;
+          const result = await engine.indexWorkspace({
+            onProgress: (progress) => {
+              renderedProgress = true;
+              if (progress.phase === 'done') {
+                process.stdout.write('\r\x1b[2K');
+                return;
+              }
 
-            const label =
-              progress.phase === 'discovering'
-                ? 'Discovering…'
-                : progress.phase === 'hashing'
-                  ? 'Hashing…'
-                  : progress.phase === 'scaffolding'
-                    ? 'Scaffolding…'
-                    : 'Scanning…';
+              const label =
+                progress.phase === 'discovering'
+                  ? 'Discovering…'
+                  : progress.phase === 'hashing'
+                    ? 'Hashing…'
+                    : progress.phase === 'scaffolding'
+                      ? 'Scaffolding…'
+                      : 'Scanning…';
 
-            process.stdout.write(
-              `\r\x1b[2K  ${chalk.dim(label)} ${progress.message}`,
-            );
-          },
-        });
+              process.stdout.write(
+                `\r\x1b[2K  ${chalk.dim(label)} ${progress.message}`,
+              );
+            },
+          });
 
-        if (renderedProgress) {
-          process.stdout.write('\n');
+          if (renderedProgress) {
+            process.stdout.write('\n');
+          }
+
+          console.log(chalk.green('✓ Indexed Trellis workspace'));
+          console.log(`  ${chalk.dim('Path:')}           ${rootPath}`);
+          console.log(
+            `  ${chalk.dim('Files indexed:')}  ${result.filesIndexed}`,
+          );
+          console.log(
+            `  ${chalk.dim('Ops created:')}    ${result.opsCreated}`,
+          );
+          return;
         }
 
-        console.log(chalk.green('✓ Indexed Trellis workspace'));
-        console.log(`  ${chalk.dim('Path:')}           ${rootPath}`);
-        console.log(
-          `  ${chalk.dim('Files indexed:')}  ${result.filesIndexed}`,
-        );
-        console.log(
-          `  ${chalk.dim('Ops created:')}    ${result.opsCreated}`,
-        );
+        console.log(chalk.yellow('Already a Trellis workspace.'));
         return;
       }
 
-      console.log(chalk.yellow('Already a Trellis workspace.'));
-      return;
-    }
+      const configResult = await runInit(rootPath, {
+        interactive:
+          process.stdout.isTTY && !process.argv.includes('--no-interactive'),
+        ides: opts.ides,
+        framework: opts.framework,
+        footprint,
+        indexWorkspace: indexWorkspace ?? false,
+        explicitIndexWorkspace: opts.indexWorkspace === true,
+      });
 
-    const configResult = await runInit(rootPath, {
-      interactive:
-        process.stdout.isTTY && !process.argv.includes('--no-interactive'),
-      ides: opts.ides,
-      framework: opts.framework,
-      footprint,
-      indexWorkspace,
-    });
-
-    console.log(chalk.green('✓ Initialized Trellis repository'));
-    console.log(`  ${chalk.dim('Path:')}           ${rootPath}`);
-    console.log(
-      `  ${chalk.dim('Files indexed:')}  ${configResult.filesIndexed}`,
-    );
-    console.log(
-      `  ${chalk.dim('Ops:')}            ${configResult.opsCreated} initial ${configResult.opsCreated === 1 ? 'operation' : 'operations'
-      }`,
-    );
-    console.log(`  ${chalk.dim('Config:')}         .trellis/config.json`);
-    console.log(`  ${chalk.dim('Op log:')}         .trellis/ops.json`);
-    console.log(`  ${chalk.dim('Agent context:')}  .trellis/agents/AGENTS.md`);
-    const preInfer = await inferProjectContext(rootPath);
-    if (preInfer.domain) {
+      console.log(chalk.green('✓ Initialized Trellis repository'));
+      console.log(`  ${chalk.dim('Path:')}           ${rootPath}`);
       console.log(
-        `  ${chalk.dim('Domain:')}         ${chalk.cyan(preInfer.domain)} ${chalk.dim('(inferred)')}`,
+        `  ${chalk.dim('Files indexed:')}  ${configResult.filesIndexed}`,
       );
-    }
-    if (preInfer.ecosystem && preInfer.ecosystem !== 'unknown') {
-      console.log(`  ${chalk.dim('Ecosystem:')}      ${preInfer.ecosystem}`);
-    }
-    console.log();
-    console.log(chalk.bold('Next steps (VCS):'));
-    console.log();
-    console.log(
-      `  ${chalk.cyan('trellis status')}     Check repository status`,
-    );
-    console.log(`  ${chalk.cyan('trellis log')}        View recent history`);
-    console.log(
-      `  ${chalk.cyan('trellis branch')}     List or create branches`,
-    );
-    console.log(
-      `  ${chalk.cyan('trellis milestone')}  Create narrative checkpoints`,
-    );
-    console.log(
-      `  ${chalk.cyan('trellis garden')}     Discover abandoned work`,
-    );
-    console.log(
-      `  ${chalk.cyan('trellis issue')}      Create and track issues`,
-    );
-    if (preInfer.confidence !== 'high') {
       console.log(
-        `  ${chalk.cyan('trellis season')}     Enrich project context for agents`,
+        `  ${chalk.dim('Ops:')}            ${configResult.opsCreated} initial ${configResult.opsCreated === 1 ? 'operation' : 'operations'
+        }`,
       );
-    }
-    console.log();
-    console.log(chalk.bold('Semantic Substrate (Live local services):'));
-    console.log();
-    console.log(
-      `  ${chalk.cyan('trellis web')}        Launch local web client / graph visualizer`,
-    );
-    console.log(
-      `  ${chalk.cyan('trellis query')}      Run TQL semantic queries against your code graph`,
-    );
-    if (configResult.selectedIdes.length > 0) {
+      console.log(`  ${chalk.dim('Config:')}         .trellis/config.json`);
+      console.log(`  ${chalk.dim('Op log:')}         .trellis/ops.json`);
+      console.log(`  ${chalk.dim('Agent context:')}  .trellis/agents/AGENTS.md`);
+      const preInfer = await inferProjectContext(rootPath);
+      if (preInfer.domain) {
+        console.log(
+          `  ${chalk.dim('Domain:')}         ${chalk.cyan(preInfer.domain)} ${chalk.dim('(inferred)')}`,
+        );
+      }
+      if (preInfer.ecosystem && preInfer.ecosystem !== 'unknown') {
+        console.log(`  ${chalk.dim('Ecosystem:')}      ${preInfer.ecosystem}`);
+      }
+      console.log();
+      console.log(chalk.bold('Next steps (VCS):'));
+      console.log();
       console.log(
-        `  ${chalk.cyan('Agent Rules')}       Active for ${chalk.bold(configResult.selectedIdes.join(', '))}. Agents will auto-detect the graph.`,
+        `  ${chalk.cyan('trellis status')}     Check repository status`,
       );
-    }
-    console.log();
-    if (configResult.indexWorkspace) {
+      console.log(`  ${chalk.cyan('trellis log')}        View recent history`);
       console.log(
-        chalk.dim(
-          'The causal stream is now active. Every file change will be tracked.',
-        ),
+        `  ${chalk.cyan('trellis branch')}     List or create branches`,
       );
-    } else {
       console.log(
-        chalk.dim(
-          'Minimal workspace initialized. Existing files were not indexed.',
-        ),
+        `  ${chalk.cyan('trellis milestone')}  Create narrative checkpoints`,
       );
+      console.log(
+        `  ${chalk.cyan('trellis garden')}     Discover abandoned work`,
+      );
+      console.log(
+        `  ${chalk.cyan('trellis issue')}      Create and track issues`,
+      );
+      if (preInfer.confidence !== 'high') {
+        console.log(
+          `  ${chalk.cyan('trellis season')}     Enrich project context for agents`,
+        );
+      }
+      console.log();
+      console.log(chalk.bold('Semantic Substrate (Live local services):'));
+      console.log();
+      console.log(
+        `  ${chalk.cyan('trellis web')}        Launch local web client / graph visualizer`,
+      );
+      console.log(
+        `  ${chalk.cyan('trellis query')}      Run TQL semantic queries against your code graph`,
+      );
+      if (configResult.selectedIdes.length > 0) {
+        console.log(
+          `  ${chalk.cyan('Agent Rules')}       Active for ${chalk.bold(configResult.selectedIdes.join(', '))}. Agents will auto-detect the graph.`,
+        );
+      }
+      console.log();
+      if (configResult.indexWorkspace) {
+        console.log(
+          chalk.dim(
+            'The causal stream is now active. Every file change will be tracked.',
+          ),
+        );
+      } else {
+        console.log(
+          chalk.dim(
+            'Minimal workspace initialized. Existing files were not indexed.',
+          ),
+        );
+      }
+    } catch (error) {
+      handleCliError(error);
     }
   });
 

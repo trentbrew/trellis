@@ -97,7 +97,7 @@ describe('BlobStore integration with engine', () => {
     writeFileSync(join(REPO_ROOT, 'foo.ts'), 'export const x = 1;');
 
     const engine = new TrellisVcsEngine({ rootPath: REPO_ROOT });
-    await engine.initRepo();
+    await engine.initRepo({ indexWorkspace: true });
 
     const blobStore = engine.getBlobStore();
     expect(blobStore).not.toBeNull();
@@ -119,7 +119,7 @@ describe('BlobStore integration with engine', () => {
     writeFileSync(join(REPO_ROOT, 'test.ts'), 'const a = 1;');
 
     const engine1 = new TrellisVcsEngine({ rootPath: REPO_ROOT });
-    await engine1.initRepo();
+    await engine1.initRepo({ indexWorkspace: true });
 
     // Re-open
     const engine2 = new TrellisVcsEngine({ rootPath: REPO_ROOT });
@@ -136,7 +136,7 @@ describe('BlobStore integration with engine', () => {
     writeFileSync(join(REPO_ROOT, 'x.ts'), 'x');
 
     const engine = new TrellisVcsEngine({ rootPath: REPO_ROOT });
-    await engine.initRepo();
+    await engine.initRepo({ indexWorkspace: true });
 
     expect(existsSync(join(REPO_ROOT, '.trellis', 'blobs'))).toBe(true);
   });

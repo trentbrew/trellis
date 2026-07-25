@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import type { Command } from 'commander';
 import { join } from 'path';
 import { BlobStore } from '../vcs/blob-store.js';
+import { BlobResolver } from '../vcs/blob-resolver.js';
 import { LaneOpLog, JsonOpLog } from '../vcs/op-log.js';
 import { listLaneIds, laneDir } from '../vcs/lane.js';
 import type { VcsOp } from '../vcs/types.js';
@@ -15,6 +16,8 @@ export interface BlobStorageStats {
   unreferencedBlobs: number;
   unreferencedBytes: number;
   missingReferencedBlobs: number;
+  gitResolvedBlobs: number;
+  gitResolvedBytes: number;
 }
 
 function collectHashesFromOp(op: VcsOp, into: Set<string>): void {
@@ -52,9 +55,10 @@ export function collectReferencedBlobHashes(rootPath: string): Set<string> {
   return hashes;
 }
 
-export function inspectBlobStorage(rootPath: string): BlobStorageStats {
+export function inspectBlobStorage(rootPath: string, blobResolver?: BlobResolver | null): BlobStorageStats {
   const trellisDir = join(rootPath, '.trellis');
-  const store = new BlobStore(trellisDir);
+  const store = blobResolver?.getBlobStore();
+  if (!store) return emptyStats();
   const existing = store.listHashes();
   const referenced = collectReferencedBlobHashes(rootPath);
 
@@ -63,6 +67,8 @@ export function inspectBlobStorage(rootPath: string): BlobStorageStats {
   let unreferencedBlobs = 0;
   let missingReferencedBlobs = 0;
   let referencedBlobs = 0;
+  let gitResolvedBlobs = 0;
+  let gitResolvedBytes = 0;
 
   const existingSet = new Set(existing);
   for (const hash of referenced) {
@@ -71,7 +77,12 @@ export function inspectBlobStorage(rootPath: string): BlobStorageStats {
       continue;
     }
     referencedBlobs += 1;
-    referencedBytes += store.size(hash) ?? 0;
+    const size = store.size(hash) ?? 0;
+    referencedBytes += size;
+    if (blobResolver && !blobResolver.hasLocal(hash)) {
+      gitResolvedBlobs += 1;
+      gitResolvedBytes += size;
+    }
   }
 
   for (const hash of existing) {
@@ -88,6 +99,18 @@ export function inspectBlobStorage(rootPath: string): BlobStorageStats {
     unreferencedBlobs,
     unreferencedBytes,
     missingReferencedBlobs,
+    gitResolvedBlobs,
+    gitResolvedBytes,
+  };
+}
+
+function emptyStats(): BlobStorageStats {
+  return {
+    totalBlobs: 0, totalBytes: 0,
+    referencedBlobs: 0, referencedBytes: 0,
+    unreferencedBlobs: 0, unreferencedBytes: 0,
+    missingReferencedBlobs: 0,
+    gitResolvedBlobs: 0, gitResolvedBytes: 0,
   };
 }
 
@@ -138,6 +161,9 @@ export function registerStorageCommand(program: Command): void {
       console.log(`  ${chalk.dim('Repo:')}               ${rootPath}`);
       console.log(`  ${chalk.dim('Total blobs:')}        ${before.totalBlobs}`);
       console.log(`  ${chalk.dim('Referenced:')}         ${before.referencedBlobs} (${formatBytes(before.referencedBytes)})`);
+      if (before.gitResolvedBlobs > 0) {
+        console.log(`  ${chalk.dim('Git-resolved:')}       ${before.gitResolvedBlobs} (${formatBytes(before.gitResolvedBytes)})`);
+      }
       console.log(`  ${chalk.dim('Unreferenced:')}       ${before.unreferencedBlobs} (${formatBytes(before.unreferencedBytes)})`);
       console.log(`  ${chalk.dim('Store size:')}         ${formatBytes(before.totalBytes)}`);
       if (before.missingReferencedBlobs > 0) {

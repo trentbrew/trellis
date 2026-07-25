@@ -15,7 +15,7 @@ import { execSync } from 'child_process';
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs';
 import { join, dirname } from 'path';
 import { TrellisVcsEngine } from '../engine.js';
-import { BlobStore } from '../vcs/blob-store.js';
+import { BlobResolver } from '../vcs/blob-resolver.js';
 import type { VcsOp } from '../vcs/types.js';
 import { PROVENANCE } from '../core/persist/canonical-op.js';
 
@@ -64,9 +64,9 @@ export async function exportToGit(opts: ExportOptions): Promise<ExportResult> {
   const engine = new TrellisVcsEngine({ rootPath: opts.from, provenance: PROVENANCE.migration });
   engine.open();
 
-  const blobStore = engine.getBlobStore();
-  if (!blobStore) {
-    throw new Error('Blob store not available. Re-open the repo first.');
+  const blobResolver = engine.getBlobResolver();
+  if (!blobResolver) {
+    throw new Error('Blob resolver not available. Re-open the repo first.');
   }
 
   // Get all milestones and ops
@@ -167,8 +167,8 @@ export async function exportToGit(opts: ExportOptions): Promise<ExportResult> {
         if (existsSync(absPath)) {
           unlinkSync(absPath);
         }
-      } else if (state.contentHash && blobStore) {
-        const content = blobStore.get(state.contentHash);
+      } else if (state.contentHash && blobResolver) {
+        const content = blobResolver.get(state.contentHash);
         if (content) {
           const dir = dirname(absPath);
           if (!existsSync(dir)) {
