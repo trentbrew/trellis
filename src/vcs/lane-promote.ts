@@ -3,7 +3,7 @@
  */
 
 import { EAVStore, type Atom, type Fact } from '../core/store/eav-store.js';
-import type { BlobStore } from './blob-store.js';
+import type { BlobResolver } from './blob-resolver.js';
 import { decompose } from './decompose.js';
 import { buildFileStateAtOp, type FileState } from './diff.js';
 import { threeWayTextMerge } from './merge.js';
@@ -65,7 +65,7 @@ export interface PlanLanePromoteParams {
   laneOps: VcsOp[];
   /** Parent lane journal when meta.forkKind === 'child' (ADR 0007). */
   parentLaneOps?: VcsOp[];
-  blobStore?: BlobStore | null;
+  blobResolver?: BlobResolver | null;
 }
 
 const SKIP_PROMOTE_KINDS = new Set<string>([
@@ -343,11 +343,11 @@ function detectEntityConflicts(
 }
 
 function blobText(
-  blobStore: BlobStore | null | undefined,
+  blobResolver: BlobResolver | null | undefined,
   hash?: string,
 ): string | undefined {
-  if (!hash || !blobStore) return undefined;
-  const content = blobStore.get(hash);
+  if (!hash || !blobResolver) return undefined;
+  const content = blobResolver?.get(hash);
   if (!content) return undefined;
   const text = content.toString('utf-8');
   return text.endsWith('\n') ? text.slice(0, -1) : text;
@@ -358,7 +358,7 @@ function mergeLaneFile(
   base: Map<string, FileState>,
   ours: Map<string, FileState>,
   theirs: Map<string, FileState>,
-  blobStore?: BlobStore | null,
+  blobResolver?: BlobResolver | null,
 ): { clean: boolean; merged?: string; conflictKind?: string } {
   const b = base.get(path);
   const o = ours.get(path);
@@ -371,13 +371,13 @@ function mergeLaneFile(
   if (oursHash === theirsHash) return { clean: true };
   if (theirsHash === baseHash && oursHash !== baseHash) return { clean: true };
   if (oursHash === baseHash && theirsHash !== baseHash) {
-    const theirsContent = blobText(blobStore, theirsHash);
+    const theirsContent = blobText(blobResolver, theirsHash);
     return { clean: true, merged: theirsContent };
   }
 
-  const baseContent = blobText(blobStore, baseHash) ?? '';
-  const oursContent = blobText(blobStore, oursHash);
-  const theirsContent = blobText(blobStore, theirsHash);
+  const baseContent = blobText(blobResolver, baseHash) ?? '';
+  const oursContent = blobText(blobResolver, oursHash);
+  const theirsContent = blobText(blobResolver, theirsHash);
 
   if (oursContent === undefined || theirsContent === undefined) {
     return { clean: false, conflictKind: 'modify-modify' };
@@ -397,7 +397,7 @@ function detectFileConflict(
   laneOpIndex: number,
   baseOpHash: string,
   snapshotHead: string,
-  blobStore?: BlobStore | null,
+  blobResolver?: BlobResolver | null,
 ): { conflict?: LaneConflict; mergedContent?: string } {
   const paths = filePathsFromOp(op);
   if (paths.length === 0) return {};
@@ -419,7 +419,7 @@ function detectFileConflict(
     if (headHash === baseHash && laneHash !== baseHash) continue;
     if (laneHash === baseHash && headHash !== baseHash) continue;
 
-    const mergeResult = mergeLaneFile(path, base, ours, theirs, blobStore);
+    const mergeResult = mergeLaneFile(path, base, ours, theirs, blobResolver);
     if (mergeResult.clean) {
       if (mergeResult.merged !== undefined) {
         return { mergedContent: mergeResult.merged };
@@ -460,7 +460,7 @@ export async function planLanePromote(
     integrationOps,
     laneOps,
     parentLaneOps,
-    blobStore,
+    blobResolver,
   } = params;
 
   const baseStore = buildStoreUpTo(integrationOps, meta.baseOpHash);
@@ -488,7 +488,7 @@ export async function planLanePromote(
         childOpOffset + i,
         meta.baseOpHash,
         snapshotHead,
-        blobStore,
+        blobResolver,
       );
       if (fileResult.conflict) {
         conflicts.push(fileResult.conflict);

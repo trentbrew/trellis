@@ -1,0 +1,89 @@
+<!--
+  HTML-adjacent TML flavor — Svelte-compiler-shaped.
+  Same AST as brace form (todo.tml) + IR (todo.html).
+  Assumes a Svelte-like compiler that compiles to HTML IR.
+-->
+
+<!-- ─── Shell Definition ──────────────────────────────────────────────── -->
+<!-- Shells are <shell> elements with attributes for kind/density.        -->
+<!-- Slots are <slot name="..."> with fallback content.                   -->
+<!-- Ops use on:op={verb(args)} — verb is generic, entity comes from bind. -->
+
+<shell id="todo.row" kind="todo" density="row">
+  <label data-entity={@todo.id}>
+    <slot name="done">
+      <input type="checkbox" checked={@todo.done} on:op={toggle(@todo.id)} />
+    </slot>
+    <slot name="title">
+      <span>{@todo.title}</span>
+    </slot>
+  </label>
+  <button type="button" on:op={remove(@todo.id)}>Remove</button>
+</shell>
+
+<!-- ─── Projection (Query + Each) ────────────────────────────────────── -->
+<!-- Projections bind a query to shells. The each directive iterates.     -->
+<!-- ref= exposes the live set for resolve / other projections.           -->
+
+<projection id="todo.list" live ref="todos" query="find ?e where type = 'Todo'">
+  <use shell="todo.row" each="todo of todos" />
+</projection>
+
+<!-- ─── Resolve ────────────────────────────────────────────────────────── -->
+<!-- Resolve is a projection that hydrates a single entity.               -->
+<!-- The bind directive pulls slots from the shell definition.            -->
+
+<resolve id="todo.detail" bind="todo">
+  <use shell="todo.row" />
+</resolve>
+
+<!-- ─── Conditional Example ──────────────────────────────────────────── -->
+<!-- {#if} is a compiler primitive — not a TML directive, but useful     -->
+<!-- for inline conditionals in shells. Compiles to IR with tml-if.      -->
+
+<shell id="todo.card" kind="todo" density="card">
+  <div data-entity={@todo.id}>
+    {#if @todo.done}
+      <span class="done">{@todo.title}</span>
+    {:else}
+      <span class="pending">{@todo.title}</span>
+    {/if}
+    <button type="button" on:op={remove(@todo.id)}>Remove</button>
+  </div>
+</shell>
+
+<!-- ─── Reactive Declaration ────────────────────────────────────────── -->
+<!-- $: is Svelte's reactive declaration. In TML, this becomes a        -->
+<!-- computed slot or derived value. Compiles to tml-computed in IR.     -->
+
+<shell id="todo.stats" kind="todo" density="pip">
+  $: doneCount = @todos.filter(t => t.done).length
+  $: totalCount = @todos.length
+
+  <div>
+    <span>{doneCount} / {totalCount} done</span>
+  </div>
+</shell>
+
+<!-- ─── Project with Reactive Summary ────────────────────────────────── -->
+<!-- A project can include reactive computed values inline.              -->
+
+<projection id="todo.board" live ref="todos" query="find ?e where type = 'Todo'">
+  $: done = @todos.filter(t => t.done)
+  $: pending = @todos.filter(t => !t.done)
+
+  <div class="board">
+    <section class="pending">
+      <h3>Pending ({pending.length})</h3>
+      {#each pending as todo (todo.id)}
+        <use shell="todo.row" bind={todo} />
+      {/each}
+    </section>
+    <section class="done">
+      <h3>Done ({done.length})</h3>
+      {#each done as todo (todo.id)}
+        <use shell="todo.row" bind={todo} />
+      {/each}
+    </section>
+  </div>
+</projection>

@@ -11,7 +11,7 @@
  */
 
 import type { VcsOp } from './types.js';
-import type { BlobStore } from './blob-store.js';
+import type { BlobResolver } from './blob-resolver.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,12 +49,12 @@ export interface FileState {
 
 /**
  * Compute file-level diffs between two file state snapshots.
- * Optionally produces unified text diffs when a blob store is provided.
+ * Optionally produces unified text diffs when a blob resolver is provided.
  */
 export function diffFileStates(
   stateA: Map<string, FileState>,
   stateB: Map<string, FileState>,
-  blobStore?: BlobStore | null,
+  blobResolver?: BlobResolver | null,
 ): DiffResult {
   const diffs: FileLevelDiff[] = [];
 
@@ -81,9 +81,9 @@ export function diffFileStates(
       };
 
       // Generate unified diff if blob store available
-      if (blobStore && aState.contentHash && bState.contentHash) {
-        const oldContent = blobStore.get(aState.contentHash);
-        const newContent = blobStore.get(bState.contentHash);
+      if (blobResolver && aState.contentHash && bState.contentHash) {
+        const oldContent = blobResolver.get(aState.contentHash);
+        const newContent = blobResolver.get(bState.contentHash);
         if (oldContent && newContent) {
           diff.unifiedDiff = generateUnifiedDiff(
             path,
@@ -171,11 +171,11 @@ export function diffOpRange(
   ops: VcsOp[],
   fromHash: string,
   toHash: string,
-  blobStore?: BlobStore | null,
+  blobResolver?: BlobResolver | null,
 ): DiffResult {
   const stateA = buildFileStateAtOp(ops, fromHash);
   const stateB = buildFileStateAtOp(ops, toHash);
-  return diffFileStates(stateA, stateB, blobStore);
+  return diffFileStates(stateA, stateB, blobResolver);
 }
 
 // ---------------------------------------------------------------------------

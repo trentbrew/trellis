@@ -11,7 +11,7 @@
  */
 
 import type { VcsOp } from './types.js';
-import type { BlobStore } from './blob-store.js';
+import type { BlobResolver } from './blob-resolver.js';
 import { buildFileStateAtOp, type FileState } from './diff.js';
 
 // ---------------------------------------------------------------------------
@@ -58,7 +58,7 @@ export function threeWayMerge(
   base: Map<string, FileState>,
   ours: Map<string, FileState>,
   theirs: Map<string, FileState>,
-  blobStore?: BlobStore | null,
+  blobResolver?: BlobResolver | null,
 ): MergeResult {
   const mergedFiles = new Map<string, string | null>();
   const conflicts: MergeConflict[] = [];
@@ -105,8 +105,8 @@ export function threeWayMerge(
     if (oursHash === baseHash && theirsHash !== baseHash) {
       if (!theirsExists) {
         mergedFiles.set(path, null); // they deleted
-      } else if (theirsHash && blobStore) {
-        const content = blobStore.get(theirsHash);
+      } else if (theirsHash && blobResolver) {
+        const content = blobResolver?.get(theirsHash);
         if (content) {
           mergedFiles.set(path, content.toString('utf-8'));
         }
@@ -121,8 +121,8 @@ export function threeWayMerge(
       if (oursHash === theirsHash) {
         continue; // identical add — no conflict
       }
-      const oursContent = oursHash && blobStore ? blobStore.get(oursHash)?.toString('utf-8') : undefined;
-      const theirsContent = theirsHash && blobStore ? blobStore.get(theirsHash)?.toString('utf-8') : undefined;
+      const oursContent = oursHash && blobResolver ? blobResolver?.get(oursHash)?.toString('utf-8') : undefined;
+      const theirsContent = theirsHash && blobResolver ? blobResolver?.get(theirsHash)?.toString('utf-8') : undefined;
 
       // Try text merge with empty base
       if (oursContent !== undefined && theirsContent !== undefined) {
@@ -149,7 +149,7 @@ export function threeWayMerge(
       conflicts.push({
         path,
         kind: 'modify-delete',
-        ours: oursHash && blobStore ? blobStore.get(oursHash)?.toString('utf-8') : undefined,
+        ours: oursHash && blobResolver ? blobResolver?.get(oursHash)?.toString('utf-8') : undefined,
       });
       continue;
     }
@@ -157,16 +157,16 @@ export function threeWayMerge(
       conflicts.push({
         path,
         kind: 'modify-delete',
-        theirs: theirsHash && blobStore ? blobStore.get(theirsHash)?.toString('utf-8') : undefined,
+        theirs: theirsHash && blobResolver ? blobResolver?.get(theirsHash)?.toString('utf-8') : undefined,
       });
       continue;
     }
 
     // Case: both modified (both exist, different hashes)
     if (oursExists && theirsExists && oursHash !== theirsHash) {
-      const baseContent = baseHash && blobStore ? blobStore.get(baseHash)?.toString('utf-8') : undefined;
-      const oursContent = oursHash && blobStore ? blobStore.get(oursHash)?.toString('utf-8') : undefined;
-      const theirsContent = theirsHash && blobStore ? blobStore.get(theirsHash)?.toString('utf-8') : undefined;
+      const baseContent = baseHash && blobResolver ? blobResolver?.get(baseHash)?.toString('utf-8') : undefined;
+      const oursContent = oursHash && blobResolver ? blobResolver?.get(oursHash)?.toString('utf-8') : undefined;
+      const theirsContent = theirsHash && blobResolver ? blobResolver?.get(theirsHash)?.toString('utf-8') : undefined;
 
       if (baseContent !== undefined && oursContent !== undefined && theirsContent !== undefined) {
         const textResult = threeWayTextMerge(baseContent, oursContent, theirsContent);

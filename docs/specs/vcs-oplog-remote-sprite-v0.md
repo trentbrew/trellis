@@ -35,6 +35,10 @@ the same tail hash.
 
 - Cloud owning primary write path
 - Remote running Trellis engine / `repair` on bytes
+- **Blob / file-content sync** — sprite holds op log only; byte restore depends
+  on local `.trellis/blobs/` + git checkout. See
+  [`git-backed-blob-tier-v0.md`](git-backed-blob-tier-v0.md) for the local byte
+  resolver and post-`install` materialize path.
 - Lane journal sync (integration only — same scope as `oplog-mirror.ts`)
 - Iroh mesh / multi-remote (L1)
 - Public ledger index / social layer (L2+)
@@ -78,6 +82,12 @@ Remote stores bytes only — **never** parses ops into engine.
 1. `pull` writes JSONL to `--to` path (validate line-by-line parse).
 2. `install` moves current `ops.json` → `.corrupted.<ts>`, pulled → `ops.json`.
 3. Refuse install if local tail is **newer** (hash compare) unless `--force`.
+
+**Byte dependency (v0):** `install` restores semantics only. For git repos,
+ensure a checkout exists (`git clone` / `git pull`) then `trellis open` —
+materialize resolves file bytes from git + local blobs per
+[`git-backed-blob-tier-v0.md`](git-backed-blob-tier-v0.md). Non-git trees still
+require local `.trellis/blobs/` or future blob remote (L1+).
 
 ### Repair gate (extends TRL-230)
 

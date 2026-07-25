@@ -34,6 +34,7 @@ import type { OpProvenance } from './core/persist/canonical-op.js';
 import type { VcsOp, TrellisVcsConfig } from './vcs/types.js';
 import { DEFAULT_CONFIG } from './vcs/types.js';
 import { BlobStore } from './vcs/blob-store.js';
+import { BlobResolver } from './vcs/blob-resolver.js';
 import type { EngineContext, ApplyOpOptions } from './vcs/engine-context.js';
 import * as branchMod from './vcs/branch.js';
 import * as milestoneMod from './vcs/milestone.js';
@@ -267,6 +268,7 @@ export class TrellisVcsEngine {
   private checkpointThreshold: number = 100;
   private _pendingAutoCheckpoint: boolean = false;
   private _blobStore: BlobStore | null = null;
+  private _blobResolver: BlobResolver | null = null;
   private activeLaneId?: string;
   private activeLaneLog: LaneOpLog | null = null;
   private integrationCache: IntegrationCache | null = null;
@@ -440,15 +442,17 @@ export class TrellisVcsEngine {
       message: `Scanning ${events.length} initial file operations…`,
     });
 
-    let opsCreated = 0;
-    for (const event of events) {
-      if (event.contentHash) {
-        try {
-          const absPath = join(this.config.rootPath, event.path);
-          const content = await readFile(absPath);
-          await this._blobStore.put(content);
-        } catch { }
-      }
+let opsCreated = 0;
+     for (const event of events) {
+       if (event.contentHash) {
+         try {
+           const absPath = join(this.config.rootPath, event.path);
+           const content = await readFile(absPath);
+           if (!this._blobResolver?.canSkipPut(event.path, event.contentHash)) {
+             await this._blobStore.put(content);
+           }
+         } catch { }
+       }
 
       const op = await createVcsOp('vcs:fileAdd', {
         agentId: this.agentId,
@@ -506,8 +510,9 @@ export class TrellisVcsEngine {
       mkdirSync(trellisDir, { recursive: true });
     }
 
-    // Initialize blob store
+    // Initialize blob store + resolver
     this._blobStore = new BlobStore(trellisDir);
+    this._blobResolver = new BlobResolver(this._blobStore, this.config.rootPath);
 
     // Write config
     this.writePersistedConfig();
@@ -566,9 +571,10 @@ export class TrellisVcsEngine {
   open(): { opsReplayed: number } {
     this.opLog.load();
 
-    // Initialize blob store
+    // Initialize blob store + resolver
     const trellisDir = join(this.config.rootPath, '.trellis');
     this._blobStore = new BlobStore(trellisDir);
+    this._blobResolver = new BlobResolver(this._blobStore, this.config.rootPath);
 
     // Load config
     const persisted = this.readPersistedConfig();
@@ -695,7 +701,9 @@ export class TrellisVcsEngine {
           try {
             const absPath = join(rootPath, event.path);
             const content = await readFile(absPath);
-            await this._blobStore.put(content);
+            if (!this._blobResolver?.canSkipPut(event.path, event.contentHash)) {
+              await this._blobStore.put(content);
+            }
           } catch { }
         }
         await this.ingestion!.process(event);
@@ -710,18 +718,20 @@ export class TrellisVcsEngine {
     this.watcher.scan().then(async (scanEvents) => {
       const trackedPaths = new Set(this.trackedFiles().map((f) => f.path));
 
-      for (const event of scanEvents) {
-        if (!trackedPaths.has(event.path)) {
-          if (event.contentHash && this._blobStore) {
-            try {
-              const absPath = join(rootPath, event.path);
-              const content = await readFile(absPath);
-              await this._blobStore.put(content);
-            } catch { }
-          }
-          await this.ingestion!.process(event);
-        }
-      }
+for (const event of scanEvents) {
+         if (!trackedPaths.has(event.path)) {
+           if (event.contentHash && this._blobStore) {
+             try {
+               const absPath = join(rootPath, event.path);
+               const content = await readFile(absPath);
+               if (!this._blobResolver?.canSkipPut(event.path, event.contentHash)) {
+                 await this._blobStore.put(content);
+               }
+             } catch { }
+           }
+           await this.ingestion!.process(event);
+         }
+       }
 
       this.watcher!.start();
     });
@@ -765,7 +775,7 @@ export class TrellisVcsEngine {
     if (
       !this.isWorktreeBindEnabled() ||
       !meta.worktreePath ||
-      !this._blobStore ||
+      !this._blobResolver ||
       !this.activeLaneLog
     ) {
       return;
@@ -785,7 +795,7 @@ export class TrellisVcsEngine {
     laneDiskMod.materializeToDisk(
       meta.worktreePath,
       fileStates,
-      this._blobStore,
+      this._blobResolver,
     );
   }
 
@@ -968,6 +978,13 @@ export class TrellisVcsEngine {
    */
   getBlobStore(): BlobStore | null {
     return this._blobStore;
+  }
+
+  /**
+   * Returns the blob resolver (wraps BlobStore with git fallback).
+   */
+  getBlobResolver(): BlobResolver | null {
+    return this._blobResolver;
   }
 
   /**
@@ -1277,7 +1294,7 @@ export class TrellisVcsEngine {
     /** When true, sync even if git.syncOnPromote is false. */
     force?: boolean;
   }): GitSyncResult {
-    if (!this._blobStore || !laneWorktreeMod.isGitRepo(this.config.rootPath)) {
+    if (!this._blobResolver || !laneWorktreeMod.isGitRepo(this.config.rootPath)) {
       return { committed: false, pushed: false, filesMaterialized: 0 };
     }
 
@@ -1315,7 +1332,7 @@ export class TrellisVcsEngine {
 
     return syncIntegrationToGit({
       rootPath: this.config.rootPath,
-      blobStore: this._blobStore,
+      blobResolver: this._blobResolver,
       integrationOps,
       headOpHash,
       branch,
@@ -1734,7 +1751,7 @@ export class TrellisVcsEngine {
       integrationOps: this.opLog.readAll(),
       laneOps,
       parentLaneOps,
-      blobStore: this._blobStore,
+      blobResolver: this._blobResolver,
     });
 
     if (opts?.dryRun || !plan.canPromote) {
@@ -1992,7 +2009,7 @@ export class TrellisVcsEngine {
     // (branch-scoped filtering comes later; for now, single linear stream)
     const stateA = diffMod.buildFileStateAtOp(ops);
     const stateB = diffMod.buildFileStateAtOp(ops);
-    return diffMod.diffFileStates(stateA, stateB, this._blobStore);
+    return diffMod.diffFileStates(stateA, stateB, this._blobResolver);
   }
 
   /**
@@ -2003,7 +2020,7 @@ export class TrellisVcsEngine {
       this.opLog.readAll(),
       fromHash,
       toHash,
-      this._blobStore,
+      this._blobResolver,
     );
   }
 
@@ -2014,7 +2031,7 @@ export class TrellisVcsEngine {
     const ops = this.opLog.readAll();
     const stateA = diffMod.buildFileStateAtOp(ops, opHash);
     const stateB = diffMod.buildFileStateAtOp(ops);
-    return diffMod.diffFileStates(stateA, stateB, this._blobStore);
+    return diffMod.diffFileStates(stateA, stateB, this._blobResolver);
   }
 
   /**
@@ -2038,7 +2055,7 @@ export class TrellisVcsEngine {
     const ours = diffMod.buildFileStateAtOp(ops); // current full state
     const theirs = diffMod.buildFileStateAtOp(ops); // same stream for now
 
-    return mergeMod.threeWayMerge(base, ours, theirs, this._blobStore);
+    return mergeMod.threeWayMerge(base, ours, theirs, this._blobResolver);
   }
 
   // -------------------------------------------------------------------------

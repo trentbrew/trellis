@@ -69,14 +69,23 @@ describe('TrellisVcsEngine', () => {
     );
   });
 
-  test('initRepo scans existing files and creates ops', async () => {
+  test('initRepo scans existing files when indexWorkspace is enabled', async () => {
     const engine = new TrellisVcsEngine({ rootPath: TEST_DIR });
-    const result = await engine.initRepo();
+    const result = await engine.initRepo({ indexWorkspace: true });
 
     // 1 branch op + 3 file ops (index.ts, utils.ts, README.md)
     expect(result.opsCreated).toBe(4);
     expect(result.filesIndexed).toBe(3);
     expect(result.indexWorkspace).toBe(true);
+  });
+
+  test('initRepo defaults to minimal metadata without indexing files', async () => {
+    const engine = new TrellisVcsEngine({ rootPath: TEST_DIR });
+    const result = await engine.initRepo();
+
+    expect(result.opsCreated).toBe(1);
+    expect(result.filesIndexed).toBe(0);
+    expect(result.indexWorkspace).toBe(false);
   });
 
   test('initRepo can create minimal metadata without indexing files', async () => {

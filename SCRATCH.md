@@ -1,3 +1,4 @@
+# TML
 
 ```html
 <!-- 1. Authored shell (desk owns structure) -->
@@ -35,6 +36,7 @@
 </div>
 ```
 
+# DSL
 
 ```tml
 shell issue.card
@@ -117,4 +119,31 @@ project todo.list
   live
   ref todos
   use todo.row
+```
+
+# LIT
+
+```lit-example.ts
+import {LitElement, css, html} from 'lit';
+import {customElement, property} from 'lit/decorators.js';
+
+@customElement('simple-greeting')
+export class SimpleGreeting extends LitElement {
+  // Define scoped styles right with your component, in plain CSS
+  static styles = css`
+    :host {
+      color: blue;
+    }
+  `;
+
+  // Declare reactive properties
+  @property()
+  name?: string = 'World';
+
+  // Render the UI as a function of component state
+  render() {
+    return html`<p>Hello, ${this.name}!</p>`;
+  }
+}
+
 ```

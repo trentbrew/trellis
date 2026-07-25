@@ -8,8 +8,9 @@
 import { execSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
-import type { BlobStore } from '../vcs/blob-store.js';
+import type { BlobResolver } from '../vcs/blob-resolver.js';
 import { buildFileStateAtOp } from '../vcs/diff.js';
+import { BlobStore } from '../vcs/blob-store.js';
 import { materializeToDisk } from '../vcs/lane-disk-materialize.js';
 import { isGitRepo } from '../vcs/lane-worktree.js';
 import type { LaneMeta } from '../vcs/lane.js';
@@ -17,7 +18,7 @@ import type { VcsOp } from '../vcs/types.js';
 
 export interface GitSyncOptions {
   rootPath: string;
-  blobStore: BlobStore;
+  blobResolver: BlobResolver;
   integrationOps: VcsOp[];
   /** Integration branch head op hash to materialize. */
   headOpHash: string;
@@ -160,7 +161,7 @@ export function syncIntegrationToGit(
   }
 
   const fileStates = buildFileStateAtOp(opts.integrationOps, opts.headOpHash);
-  materializeToDisk(opts.rootPath, fileStates, opts.blobStore);
+  materializeToDisk(opts.rootPath, fileStates, opts.blobResolver);
 
   git(opts.rootPath, 'add -A');
   const status = git(opts.rootPath, 'status --porcelain');
