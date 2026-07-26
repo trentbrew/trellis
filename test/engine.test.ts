@@ -129,6 +129,7 @@ describe('TrellisVcsEngine', () => {
     const messages: string[] = [];
 
     await engine.initRepo({
+      indexWorkspace: true,
       onProgress: (progress) => {
         phases.push(progress.phase);
         messages.push(progress.message);
@@ -146,7 +147,7 @@ describe('TrellisVcsEngine', () => {
 
   test('status reports correct counts after init', async () => {
     const engine = new TrellisVcsEngine({ rootPath: TEST_DIR });
-    await engine.initRepo();
+    await engine.initRepo({ indexWorkspace: true });
 
     // Re-open to verify persistence
     const engine2 = new TrellisVcsEngine({ rootPath: TEST_DIR });
@@ -160,7 +161,7 @@ describe('TrellisVcsEngine', () => {
 
   test('open replays ops into EAV store', async () => {
     const engine = new TrellisVcsEngine({ rootPath: TEST_DIR });
-    await engine.initRepo();
+    await engine.initRepo({ indexWorkspace: true });
 
     const engine2 = new TrellisVcsEngine({ rootPath: TEST_DIR });
     const { opsReplayed } = engine2.open();
@@ -190,7 +191,7 @@ describe('TrellisVcsEngine', () => {
 
   test('log returns ops in order', async () => {
     const engine = new TrellisVcsEngine({ rootPath: TEST_DIR });
-    await engine.initRepo();
+    await engine.initRepo({ indexWorkspace: true });
 
     const engine2 = new TrellisVcsEngine({ rootPath: TEST_DIR });
     engine2.open();
@@ -208,7 +209,7 @@ describe('TrellisVcsEngine', () => {
 
   test('log filters by file path', async () => {
     const engine = new TrellisVcsEngine({ rootPath: TEST_DIR });
-    await engine.initRepo();
+    await engine.initRepo({ indexWorkspace: true });
 
     const engine2 = new TrellisVcsEngine({ rootPath: TEST_DIR });
     engine2.open();
@@ -221,7 +222,7 @@ describe('TrellisVcsEngine', () => {
 
   test('log respects limit', async () => {
     const engine = new TrellisVcsEngine({ rootPath: TEST_DIR });
-    await engine.initRepo();
+    await engine.initRepo({ indexWorkspace: true });
 
     const engine2 = new TrellisVcsEngine({ rootPath: TEST_DIR });
     engine2.open();
@@ -270,7 +271,7 @@ describe('TrellisVcsEngine', () => {
 
   test('watch() reconciles scan against op log for untracked files', async () => {
     const engine = new TrellisVcsEngine({ rootPath: TEST_DIR });
-    await engine.initRepo();
+    await engine.initRepo({ indexWorkspace: true });
 
     // Verify initial state: 3 tracked files
     expect(engine.trackedFiles()).toHaveLength(3);
@@ -318,7 +319,7 @@ describe('TrellisVcsEngine', () => {
 
   test('watch() does NOT duplicate ops for already-tracked files', async () => {
     const engine = new TrellisVcsEngine({ rootPath: TEST_DIR });
-    await engine.initRepo();
+    await engine.initRepo({ indexWorkspace: true });
 
     const opsBefore = engine.getOpCount();
 
@@ -334,7 +335,7 @@ describe('TrellisVcsEngine', () => {
 
   test('EAV store contains directory entities with contains links', async () => {
     const engine = new TrellisVcsEngine({ rootPath: TEST_DIR });
-    await engine.initRepo();
+    await engine.initRepo({ indexWorkspace: true });
 
     const store = engine.getStore();
     const links = store.getLinksByAttribute('contains');
