@@ -3,6 +3,7 @@ import { execSync } from 'child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { TrellisVcsEngine } from '../../src/engine.js';
+import { BlobResolver } from '../../src/vcs/blob-resolver.js';
 import { loadLaneMeta } from '../../src/vcs/lane.js';
 import {
   buildPromoteCommitMessage,
@@ -71,9 +72,10 @@ describe('git-sync', () => {
 
     const head = engine.getBranchHeadOpHash('main')!;
     const blobStore = engine.getBlobStore()!;
+    const blobResolver = new BlobResolver(blobStore, TEST_ROOT);
     const result = syncIntegrationToGit({
       rootPath: TEST_ROOT,
-      blobStore,
+      blobResolver,
       integrationOps: engine.getOps(),
       headOpHash: head,
       message: 'TRL-1: test sync',
@@ -81,7 +83,9 @@ describe('git-sync', () => {
 
     expect(result.committed).toBe(true);
     expect(existsSync(join(TEST_ROOT, 'src/synced.ts'))).toBe(true);
-    expect(readFileSync(join(TEST_ROOT, 'src/synced.ts'), 'utf-8')).toBe('hello sync');
+    expect(readFileSync(join(TEST_ROOT, 'src/synced.ts'), 'utf-8')).toBe(
+      'hello sync',
+    );
     expect(git(TEST_ROOT, 'log -1 --oneline')).toContain('TRL-1');
   });
 });
@@ -118,6 +122,8 @@ describe('ensureSessionLane', () => {
     const a = await engine.ensureSessionLane({ sessionId: 'tab-a' });
     const b = await engine.ensureSessionLane({ sessionId: 'tab-b' });
     expect(a.id).not.toBe(b.id);
-    expect(loadLaneMeta(join(TEST_ROOT, '.trellis'), a.id)?.sessionId).toBe('tab-a');
+    expect(loadLaneMeta(join(TEST_ROOT, '.trellis'), a.id)?.sessionId).toBe(
+      'tab-a',
+    );
   });
 });

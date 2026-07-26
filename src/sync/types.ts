@@ -42,11 +42,13 @@ export type SyncMessage =
   | SyncAckMessage
   | SyncNackMessage
   | SyncSnapshotRequestMessage
-  | SyncSnapshotMessage;
+  | SyncSnapshotMessage
+  | SyncGraphSnapshotMessage
+  | SyncLaneJournalMessage
+  | SyncDecisionTraceMessage
+  | SyncEntityDeltaMessage;
 
-export type SyncMessageHandler = (
-  message: SyncMessage,
-) => void | Promise<void>;
+export type SyncMessageHandler = (message: SyncMessage) => void | Promise<void>;
 
 /**
  * Categorical reasons a receiver may reject ops sent over the wire.
@@ -62,7 +64,11 @@ export type NackReason =
   | 'hash-mismatch'
   | 'missing-dependency'
   | 'apply-failed'
-  | 'protocol-version';
+  | 'protocol-version'
+  | 'destructive-op'
+  | 'bulk-delete'
+  | 'system-modification'
+  | 'quarantine-required';
 
 /** Advertise which op hashes we have. */
 export interface SyncHaveMessage {
@@ -147,6 +153,82 @@ export interface SyncNackMessage {
   reason: NackReason;
   /** Optional human-readable detail for logs. */
   details?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Full-State Sync Messages (TRL-334)
+// ---------------------------------------------------------------------------
+
+/**
+ * SQLite database snapshot for full graph state sync.
+ * Contains the complete graph database as a binary snapshot.
+ */
+export interface SyncGraphSnapshotMessage {
+  version: number;
+  type: 'graph-snapshot';
+  peerId: string;
+  /** SHA-256 hash of the snapshot data. */
+  snapshotHash: string;
+  /** Base64-encoded SQLite database snapshot. */
+  snapshotData: string;
+  /** Total entity count in snapshot. */
+  entityCount: number;
+  /** Snapshot timestamp. */
+  timestamp: string;
+}
+
+/**
+ * Lane-specific op journal for multi-agent isolation.
+ * Syncs lane journals separately from integration ops.
+ */
+export interface SyncLaneJournalMessage {
+  version: number;
+  type: 'lane-journal';
+  peerId: string;
+  /** Lane ID (UUID). */
+  laneId: string;
+  /** Head hash of this lane's journal. */
+  headHash: string;
+  /** JSONL-encoded lane journal ops. */
+  journalData: string;
+  /** Total ops in this lane. */
+  opCount: number;
+}
+
+/**
+ * Decision trace history for audit trail sync.
+ * Syncs structured decision traces between environments.
+ */
+export interface SyncDecisionTraceMessage {
+  version: number;
+  type: 'decision-trace';
+  peerId: string;
+  /** Decision trace ID. */
+  traceId: string;
+  /** JSON-encoded decision trace data. */
+  traceData: string;
+  /** Associated issue/operation ID. */
+  relatedOpId?: string;
+}
+
+/**
+ * Incremental entity delta for efficient graph updates.
+ * Contains only changed entities (add/modify/delete).
+ */
+export interface SyncEntityDeltaMessage {
+  version: number;
+  type: 'entity-delta';
+  peerId: string;
+  /** Delta hash for deduplication. */
+  deltaHash: string;
+  /** Base snapshot hash this delta applies to. */
+  baseSnapshotHash: string;
+  /** JSON-encoded entity changes. */
+  entityData: string;
+  /** Number of entities in this delta. */
+  entityCount: number;
+  /** Change types present: add, modify, delete. */
+  changeTypes: ('add' | 'modify' | 'delete')[];
 }
 
 // ---------------------------------------------------------------------------

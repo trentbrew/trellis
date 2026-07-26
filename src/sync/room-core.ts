@@ -178,6 +178,13 @@ export class SyncRoomCore {
         // schedule deliveries in response. Consumers can observe nacks via
         // SyncEngine.onNackReceived on the peer-facing side.
         return [];
+      case 'graph-snapshot':
+      case 'lane-journal':
+      case 'decision-trace':
+      case 'entity-delta':
+        // Full-state sync messages (TRL-334) - not handled by room core
+        // These are handled by the sync daemon directly
+        return [];
     }
   }
 
@@ -372,10 +379,7 @@ export class SyncRoomCore {
     ];
   }
 
-  private broadcastOps(
-    fromPeerId: string,
-    ops: VcsOp[],
-  ): SyncRoomDelivery[] {
+  private broadcastOps(fromPeerId: string, ops: VcsOp[]): SyncRoomDelivery[] {
     const deliveries: SyncRoomDelivery[] = [];
     for (const peerId of this.peers.keys()) {
       if (peerId === fromPeerId) continue;

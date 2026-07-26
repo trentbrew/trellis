@@ -6,6 +6,7 @@ import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { TrellisVcsEngine } from '../../src/engine.js';
 import { BlobStore } from '../../src/vcs/blob-store.js';
+import { BlobResolver } from '../../src/vcs/blob-resolver.js';
 import { inspectBlobStorage } from '../../src/cli/storage.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -41,12 +42,12 @@ describe('trellis storage CLI', () => {
     root = mkdtempSync(join(tmpdir(), 'trellis-storage-cli-'));
     root = realpathSync(root);
     const eng = new TrellisVcsEngine({ rootPath: root });
-    await eng.initRepo();
+    await eng.initRepo({ indexWorkspace: true });
     writeFileSync(join(root, 'tracked.txt'), 'tracked content\n');
     await eng.indexWorkspace();
 
-    const store = new BlobStore(join(root, '.trellis'));
-    store.putSync(Buffer.from('orphaned payload\n'));
+    const blobStore = new BlobStore(join(root, '.trellis'));
+    blobStore.putSync(Buffer.from('orphaned payload\n'));
   });
 
   afterAll(() => {
@@ -56,7 +57,9 @@ describe('trellis storage CLI', () => {
   });
 
   it('reports unreferenced blob usage', () => {
-    const stats = inspectBlobStorage(root);
+    const blobStore = new BlobStore(join(root, '.trellis'));
+    const blobResolver = new BlobResolver(blobStore, root);
+    const stats = inspectBlobStorage(root, blobResolver);
     expect(stats.unreferencedBlobs).toBe(1);
 
     const out = run(['storage', '-p', root], root);
@@ -67,14 +70,16 @@ describe('trellis storage CLI', () => {
   });
 
   it('prunes unreferenced blobs without touching referenced ones', () => {
-    const before = inspectBlobStorage(root);
+    const blobStore = new BlobStore(join(root, '.trellis'));
+    const blobResolver = new BlobResolver(blobStore, root);
+    const before = inspectBlobStorage(root, blobResolver);
     expect(before.unreferencedBlobs).toBe(1);
 
     const out = run(['storage', '-p', root, '--prune'], root);
     expect(out.status).toBe(0);
     expect(out.stdout).toContain('Deleted 1 blob(s)');
 
-    const after = inspectBlobStorage(root);
+    const after = inspectBlobStorage(root, blobResolver);
     expect(after.unreferencedBlobs).toBe(0);
     expect(after.referencedBlobs).toBeGreaterThan(0);
   });
