@@ -345,4 +345,101 @@ describe('TrellisVcsEngine', () => {
     const srcLinks = links.filter((l) => l.e1 === 'dir:src');
     expect(srcLinks.length).toBeGreaterThanOrEqual(2);
   });
+
+  describe('worktree cleanup', () => {
+    test('pruneStaleWorktrees skips active lanes', async () => {
+      const engine = new TrellisVcsEngine({ rootPath: TEST_DIR });
+      await engine.initRepo();
+
+      // Create an active lane with a worktree
+      const lane = await engine.createLane({ name: 'test-lane' });
+      const meta = engine.getLaneMeta(lane.id);
+      if (!meta) throw new Error('Lane meta not found');
+
+      meta.status = 'active';
+      meta.worktreePath = join(TEST_DIR, '.trellis', 'worktrees', 'test');
+      meta.updatedAt = new Date().toISOString();
+
+      // Save the modified meta
+      const { saveLaneMeta } = await import('../src/vcs/lane.js');
+      saveLaneMeta(join(TEST_DIR, '.trellis'), meta);
+
+      const result = engine.pruneStaleWorktrees();
+      expect(result.pruned).toBe(0);
+      expect(result.skipped).toBeGreaterThan(0);
+    });
+
+    test('pruneStaleWorktrees skips lanes without worktrees', async () => {
+      const engine = new TrellisVcsEngine({ rootPath: TEST_DIR });
+      await engine.initRepo();
+
+      // Create a lane without a worktree
+      const lane = await engine.createLane({ name: 'test-lane' });
+      const meta = engine.getLaneMeta(lane.id);
+      if (!meta) throw new Error('Lane meta not found');
+
+      meta.status = 'promoted';
+      meta.worktreePath = undefined;
+      meta.updatedAt = new Date(
+        Date.now() - 30 * 24 * 60 * 60 * 1000,
+      ).toISOString(); // 30 days ago
+
+      // Save the modified meta
+      const { saveLaneMeta } = await import('../src/vcs/lane.js');
+      saveLaneMeta(join(TEST_DIR, '.trellis'), meta);
+
+      const result = engine.pruneStaleWorktrees();
+      expect(result.pruned).toBe(0);
+      expect(result.skipped).toBeGreaterThan(0);
+    });
+
+    test('pruneStaleWorktrees prunes lanes older than retention period', async () => {
+      const engine = new TrellisVcsEngine({ rootPath: TEST_DIR });
+      await engine.initRepo();
+
+      // Create a stale lane with a worktree
+      const lane = await engine.createLane({ name: 'test-lane' });
+      const meta = engine.getLaneMeta(lane.id);
+      if (!meta) throw new Error('Lane meta not found');
+
+      meta.status = 'promoted';
+      meta.worktreePath = join(TEST_DIR, '.trellis', 'worktrees', 'test');
+      meta.updatedAt = new Date(
+        Date.now() - 30 * 24 * 60 * 60 * 1000,
+      ).toISOString(); // 30 days ago
+
+      // Save the modified meta
+      const { saveLaneMeta } = await import('../src/vcs/lane.js');
+      saveLaneMeta(join(TEST_DIR, '.trellis'), meta);
+
+      const result = engine.pruneStaleWorktrees();
+      expect(result.pruned).toBeGreaterThan(0);
+    });
+
+    test('pruneStaleWorktrees respects custom retention period', async () => {
+      const engine = new TrellisVcsEngine({
+        rootPath: TEST_DIR,
+        lanes: { worktreeRetentionDays: 1 },
+      });
+      await engine.initRepo();
+
+      // Create a lane 2 days old
+      const lane = await engine.createLane({ name: 'test-lane' });
+      const meta = engine.getLaneMeta(lane.id);
+      if (!meta) throw new Error('Lane meta not found');
+
+      meta.status = 'promoted';
+      meta.worktreePath = join(TEST_DIR, '.trellis', 'worktrees', 'test');
+      meta.updatedAt = new Date(
+        Date.now() - 2 * 24 * 60 * 60 * 1000,
+      ).toISOString(); // 2 days ago
+
+      // Save the modified meta
+      const { saveLaneMeta } = await import('../src/vcs/lane.js');
+      saveLaneMeta(join(TEST_DIR, '.trellis'), meta);
+
+      const result = engine.pruneStaleWorktrees();
+      expect(result.pruned).toBeGreaterThan(0);
+    });
+  });
 });

@@ -87,6 +87,7 @@ import { registerStorageCommand } from './storage.js';
 import { registerRemoteCommands } from './remote-cli.js';
 import { registerLedgerSpriteCommands } from './ledger-sprite-cli.js';
 import { registerSyncCommands } from './sync-cli.js';
+import { registerRegistryCommands } from './registry-cli.js';
 
 export type IdeType =
   | 'cursor'
@@ -6491,6 +6492,7 @@ registerStorageCommand(program);
 registerRemoteCommands(program);
 registerLedgerSpriteCommands(program);
 registerSyncCommands(program);
+registerRegistryCommands(program);
 
 // ---------------------------------------------------------------------------
 // trellis who / trellis presence — ambient agent awareness (TRL stigmergy)

@@ -189,7 +189,12 @@ export interface VcsPayload {
   testRunOutput?: string;
   testRunExitCode?: number;
   testRunDurationMs?: number;
-  testRunTrigger?: 'manual' | 'watch' | 'pre-promote' | 'pre-close' | 'criterion';
+  testRunTrigger?:
+    | 'manual'
+    | 'watch'
+    | 'pre-promote'
+    | 'pre-close'
+    | 'criterion';
 
   // Remote ledger peer (TRL-235)
   remoteName?: string;
@@ -324,7 +329,11 @@ export function branchHeadEntity(
   principal?: string,
   defaultBranch = 'main',
 ): string {
-  if (!principal || branchName === defaultBranch || branchName === 'integration') {
+  if (
+    !principal ||
+    branchName === defaultBranch ||
+    branchName === 'integration'
+  ) {
     return `branch:${branchName}`;
   }
   return `branch:${branchName}@${principal}`;
@@ -398,6 +407,8 @@ export interface TrellisVcsConfig {
   lanes?: {
     /** Provision git worktrees per lane; default true on init. */
     worktreeBind?: boolean;
+    /** Auto-prune worktrees after N days of inactivity (default: 7). */
+    worktreeRetentionDays?: number;
   };
 
   /** Git mirror adapter — sync integration to main at promote/close. */

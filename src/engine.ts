@@ -11,12 +11,7 @@
  *   engine.stop();          // stop watcher
  */
 
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { readFile } from 'fs/promises';
 import { join, dirname } from 'path';
 import { EAVStore } from './core/store/eav-store.js';
@@ -416,7 +411,7 @@ export class TrellisVcsEngine {
       rootPath: this.config.rootPath,
       ignorePatterns: [...this.config.ignorePatterns, '.trellis'],
       debounceMs: this.config.debounceMs,
-      onEvent: () => { },
+      onEvent: () => {},
     });
     const scanEvents = await scanner.scan({
       onProgress: (progress: ScanProgress) => {
@@ -442,17 +437,17 @@ export class TrellisVcsEngine {
       message: `Scanning ${events.length} initial file operations…`,
     });
 
-let opsCreated = 0;
-     for (const event of events) {
-       if (event.contentHash) {
-         try {
-           const absPath = join(this.config.rootPath, event.path);
-           const content = await readFile(absPath);
-           if (!this._blobResolver?.canSkipPut(event.path, event.contentHash)) {
-             await this._blobStore.put(content);
-           }
-         } catch { }
-       }
+    let opsCreated = 0;
+    for (const event of events) {
+      if (event.contentHash) {
+        try {
+          const absPath = join(this.config.rootPath, event.path);
+          const content = await readFile(absPath);
+          if (!this._blobResolver?.canSkipPut(event.path, event.contentHash)) {
+            await this._blobStore.put(content);
+          }
+        } catch {}
+      }
 
       const op = await createVcsOp('vcs:fileAdd', {
         agentId: this.agentId,
@@ -512,7 +507,10 @@ let opsCreated = 0;
 
     // Initialize blob store + resolver
     this._blobStore = new BlobStore(trellisDir);
-    this._blobResolver = new BlobResolver(this._blobStore, this.config.rootPath);
+    this._blobResolver = new BlobResolver(
+      this._blobStore,
+      this.config.rootPath,
+    );
 
     // Write config
     this.writePersistedConfig();
@@ -574,7 +572,10 @@ let opsCreated = 0;
     // Initialize blob store + resolver
     const trellisDir = join(this.config.rootPath, '.trellis');
     this._blobStore = new BlobStore(trellisDir);
-    this._blobResolver = new BlobResolver(this._blobStore, this.config.rootPath);
+    this._blobResolver = new BlobResolver(
+      this._blobStore,
+      this.config.rootPath,
+    );
 
     // Load config
     const persisted = this.readPersistedConfig();
@@ -678,10 +679,7 @@ let opsCreated = 0;
     }
   }
 
-  private startWatcherAt(
-    rootPath: string,
-    reconcileExisting: boolean,
-  ): void {
+  private startWatcherAt(rootPath: string, reconcileExisting: boolean): void {
     this.ingestion = new Ingestion({
       agentId: this.agentId,
       lastOpHash: this.getActiveJournal().getLastOp()?.hash,
@@ -701,10 +699,12 @@ let opsCreated = 0;
           try {
             const absPath = join(rootPath, event.path);
             const content = await readFile(absPath);
-            if (!this._blobResolver?.canSkipPut(event.path, event.contentHash)) {
+            if (
+              !this._blobResolver?.canSkipPut(event.path, event.contentHash)
+            ) {
               await this._blobStore.put(content);
             }
-          } catch { }
+          } catch {}
         }
         await this.ingestion!.process(event);
       },
@@ -718,20 +718,22 @@ let opsCreated = 0;
     this.watcher.scan().then(async (scanEvents) => {
       const trackedPaths = new Set(this.trackedFiles().map((f) => f.path));
 
-for (const event of scanEvents) {
-         if (!trackedPaths.has(event.path)) {
-           if (event.contentHash && this._blobStore) {
-             try {
-               const absPath = join(rootPath, event.path);
-               const content = await readFile(absPath);
-               if (!this._blobResolver?.canSkipPut(event.path, event.contentHash)) {
-                 await this._blobStore.put(content);
-               }
-             } catch { }
-           }
-           await this.ingestion!.process(event);
-         }
-       }
+      for (const event of scanEvents) {
+        if (!trackedPaths.has(event.path)) {
+          if (event.contentHash && this._blobStore) {
+            try {
+              const absPath = join(rootPath, event.path);
+              const content = await readFile(absPath);
+              if (
+                !this._blobResolver?.canSkipPut(event.path, event.contentHash)
+              ) {
+                await this._blobStore.put(content);
+              }
+            } catch {}
+          }
+          await this.ingestion!.process(event);
+        }
+      }
 
       this.watcher!.start();
     });
@@ -839,9 +841,7 @@ for (const event of scanEvents) {
    * engine. The engine dedupes by hash, materializes each new op, and avoids
    * creating local branch-advance follow-up ops for remote history.
    */
-  async integrateOps(
-    ops: VcsOp[],
-  ): Promise<IntegrateOpsResult> {
+  async integrateOps(ops: VcsOp[]): Promise<IntegrateOpsResult> {
     if (this.activeLaneId) {
       throw new Error(
         'integrateOps() requires integration mode; leave the active lane first.',
@@ -1173,6 +1173,44 @@ for (const event of scanEvents) {
     return laneMod.loadLaneMeta(this.trellisDir(), laneId);
   }
 
+  /**
+   * Prune worktrees for lanes that haven't been updated in N days.
+   * Skips active lanes and lanes without worktrees.
+   */
+  pruneStaleWorktrees(): { pruned: number; skipped: number } {
+    const retentionDays = this.config.lanes?.worktreeRetentionDays ?? 7;
+    const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+    const lanes = this.listLanes();
+
+    let pruned = 0;
+    let skipped = 0;
+
+    for (const lane of lanes) {
+      // Skip active lanes
+      if (lane.status === 'active') {
+        skipped++;
+        continue;
+      }
+
+      // Skip lanes without worktrees
+      if (!lane.worktreePath) {
+        skipped++;
+        continue;
+      }
+
+      // Check if lane is stale
+      const updatedAt = new Date(lane.updatedAt).getTime();
+      if (updatedAt < cutoffMs) {
+        this.removeLaneWorktree(lane);
+        pruned++;
+      } else {
+        skipped++;
+      }
+    }
+
+    return { pruned, skipped };
+  }
+
   /** Active lane linked to an issue, if any. */
   findLaneForIssue(issueId: string): LaneMeta | undefined {
     const normalized = issueId.startsWith('issue:')
@@ -1294,7 +1332,10 @@ for (const event of scanEvents) {
     /** When true, sync even if git.syncOnPromote is false. */
     force?: boolean;
   }): GitSyncResult {
-    if (!this._blobResolver || !laneWorktreeMod.isGitRepo(this.config.rootPath)) {
+    if (
+      !this._blobResolver ||
+      !laneWorktreeMod.isGitRepo(this.config.rootPath)
+    ) {
       return { committed: false, pushed: false, filesMaterialized: 0 };
     }
 
@@ -1520,7 +1561,10 @@ for (const event of scanEvents) {
     );
     parentLog.load();
     const parentLaneOps = parentLog.readAll();
-    const parentHead = laneMod.resolveLaneHeadFromJournal(parent, parentLaneOps);
+    const parentHead = laneMod.resolveLaneHeadFromJournal(
+      parent,
+      parentLaneOps,
+    );
 
     if (forkKind === 'child') {
       const meta = laneMod.createLaneMeta(this.trellisDir(), {
@@ -1606,7 +1650,9 @@ for (const event of scanEvents) {
     }
 
     this.activeLaneId = laneId;
-    this.activeLaneLog = new LaneOpLog(laneMod.laneDir(this.trellisDir(), laneId));
+    this.activeLaneLog = new LaneOpLog(
+      laneMod.laneDir(this.trellisDir(), laneId),
+    );
     this.activeLaneLog.load();
 
     this.refreshMaterializedStore(
@@ -1779,8 +1825,10 @@ for (const event of scanEvents) {
       await this.applyOp(startOp, { skipBranchAdvance: true });
 
       const currentHead =
-        lanePromoteMod.resolveBranchHeadFromOps(this.opLog.readAll(), targetBranch) ??
-        branchMod.getBranchHeadOpHash(this._ctx(), targetBranch);
+        lanePromoteMod.resolveBranchHeadFromOps(
+          this.opLog.readAll(),
+          targetBranch,
+        ) ?? branchMod.getBranchHeadOpHash(this._ctx(), targetBranch);
       if (currentHead !== snapshotHead) {
         meta.status = 'active';
         meta.updatedAt = new Date().toISOString();
@@ -1804,7 +1852,10 @@ for (const event of scanEvents) {
       for (const action of plan.opsToReplay) {
         let opToApply: VcsOp;
 
-        if (action.mergedContent !== undefined && action.sourceOp.vcs?.filePath) {
+        if (
+          action.mergedContent !== undefined &&
+          action.sourceOp.vcs?.filePath
+        ) {
           const contentHash = await this._blobStore!.put(
             Buffer.from(action.mergedContent, 'utf-8'),
           );
@@ -1854,6 +1905,9 @@ for (const event of scanEvents) {
       meta.headOpHash = lastReplayedHash ?? meta.headOpHash;
       meta.updatedAt = new Date().toISOString();
       laneMod.saveLaneMeta(this.trellisDir(), meta);
+
+      // Clean up worktree after successful promotion
+      this.removeLaneWorktree(meta);
 
       this.invalidateIntegrationCache();
       this.refreshMaterializedStore(this.opLog.readAll());
@@ -1931,7 +1985,7 @@ for (const event of scanEvents) {
     if (opts?.noPromote) {
       throw new Error(
         `Lane ${lane.id} has ${plan.opsToReplay.length} unpromoted ops — promote boundary not met. ` +
-        `Run \`trellis lane promote ${lane.id}\` first, or omit --no-promote to auto-promote on close.`,
+          `Run \`trellis lane promote ${lane.id}\` first, or omit --no-promote to auto-promote on close.`,
       );
     }
 
@@ -2245,7 +2299,11 @@ for (const event of scanEvents) {
     if (opts?.lane !== false) {
       const issueKey = id.startsWith('issue:') ? id : `issue:${id}`;
       let lane = this.findLaneForIssue(id);
-      if (lane?.sessionId && opts?.sessionId && lane.sessionId !== opts.sessionId) {
+      if (
+        lane?.sessionId &&
+        opts?.sessionId &&
+        lane.sessionId !== opts.sessionId
+      ) {
         throw new Error(
           `Issue ${id} is active on lane ${lane.id} (session ${lane.sessionId}).`,
         );
@@ -2355,6 +2413,14 @@ for (const event of scanEvents) {
     const result = await issueMod.closeIssue(this._ctx(), id, opts);
     if (result.op) {
       await this.flushAutoCheckpoint();
+
+      // Clean up worktree for the issue's lane if it wasn't promoted
+      if (!promoteResult?.promoted) {
+        const lane = this.findLaneForIssue(id);
+        if (lane && lane.worktreePath) {
+          this.removeLaneWorktree(lane);
+        }
+      }
 
       const shouldPush =
         opts?.push === true || this.config.git?.pushOnClose === true;
@@ -2485,7 +2551,9 @@ for (const event of scanEvents) {
 
     const suiteIds =
       opts?.suiteIds ??
-      (manifest.defaultSuite ? [manifest.defaultSuite] : Object.keys(manifest.suites));
+      (manifest.defaultSuite
+        ? [manifest.defaultSuite]
+        : Object.keys(manifest.suites));
     if (suiteIds.length === 0) {
       throw new Error('No test suites defined in .trellis/tests.json');
     }
