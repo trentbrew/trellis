@@ -27,7 +27,7 @@ importers:
         specifier: ^1.3.5
         version: 1.15.13
       turtlecode:
-        specifier: ^0.3.59
+        specifier: 0.3.60
         version: 0.3.60
       uqr:
         specifier: ^0.1.3
