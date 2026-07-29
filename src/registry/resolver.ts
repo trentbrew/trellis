@@ -1,16 +1,18 @@
 import type { LockfileData } from './lockfile.js';
 import { computeContentHash } from './lockfile.js';
-import type { RegistryClient } from './client.js';
+import type { RegistryClient, PackageManifest, RegistryIndex } from './client.js';
+
+export interface ResolvedPackage {
+  name: string;
+  version: string;
+  content: string;
+  revision: string;
+  schemas: Array<{ '@id': string; version: string; content: string }>;
+}
 
 export interface ResolveResult {
   success: true;
-  packages: Array<{
-    name: string;
-    version: string;
-    content: string;
-    revision: string;
-    schemas: Array<{ '@id': string; version: string; content: string }>;
-  }>;
+  packages: ResolvedPackage[];
   lockfile: LockfileData;
 }
 
@@ -27,24 +29,24 @@ export interface ResolveError {
   conflicts: ResolveConflict[];
 }
 
+function compareVersions(a: string, b: string): number {
+  const pa = a.split('.').map(Number);
+  const pb = b.split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const na = pa[i] ?? 0;
+    const nb = pb[i] ?? 0;
+    if (na > nb) return 1;
+    if (na < nb) return -1;
+  }
+  return 0;
+}
+
 function satisfies(version: string, range: string): boolean {
   if (range === '*' || range === 'latest') return true;
-  if (range.startsWith('>=')) {
-    const min = range.slice(2);
-    return compareVersions(version, min) >= 0;
-  }
-  if (range.startsWith('>')) {
-    const min = range.slice(1);
-    return compareVersions(version, min) > 0;
-  }
-  if (range.startsWith('<=')) {
-    const max = range.slice(2);
-    return compareVersions(version, max) <= 0;
-  }
-  if (range.startsWith('<')) {
-    const max = range.slice(1);
-    return compareVersions(version, max) < 0;
-  }
+  if (range.startsWith('>=')) return compareVersions(version, range.slice(2)) >= 0;
+  if (range.startsWith('>')) return compareVersions(version, range.slice(1)) > 0;
+  if (range.startsWith('<=')) return compareVersions(version, range.slice(2)) <= 0;
+  if (range.startsWith('<')) return compareVersions(version, range.slice(1)) < 0;
   if (range.startsWith('^')) {
     const min = range.slice(1);
     const parts = min.split('.');
@@ -64,31 +66,7 @@ function satisfies(version: string, range: string): boolean {
     }
     return version === min;
   }
-  if (range.includes(' ')) {
-    const parts = range.split(/\s+/);
-    return parts.every((p) => satisfies(version, p));
-  }
-  if (range.includes('||')) {
-    const parts = range.split(/\s*\|\|\s*/);
-    return parts.some((p) => satisfies(version, p));
-  }
-  if (range.includes(' - ')) {
-    const [low, high] = range.split(' - ');
-    return compareVersions(version, low) >= 0 && compareVersions(version, high) <= 0;
-  }
   return version === range;
-}
-
-function compareVersions(a: string, b: string): number {
-  const pa = a.split('.').map(Number);
-  const pb = b.split('.').map(Number);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const na = pa[i] ?? 0;
-    const nb = pb[i] ?? 0;
-    if (na > nb) return 1;
-    if (na < nb) return -1;
-  }
-  return 0;
 }
 
 function latestSatisfying(versions: string[], range: string): string | null {
@@ -105,89 +83,89 @@ export async function resolvePackage(
   name: string,
   constraint?: string,
 ): Promise<ResolveResult | ResolveError> {
-  const resolved = new Map<string, { version: string; content: string; revision: string; schemas: Array<{ '@id': string; version: string; content: string }> }>();
+  const resolved = new Map<string, ResolvedPackage>();
   const conflicts: ResolveConflict[] = [];
+  const queue: Array<{ type: string; name: string; constraint: string; parent?: string }> = [];
+  const index = await client.fetchIndex();
 
-  try {
-    const index = await client.fetchIndex(type);
-    const constraintStr = constraint || `>=${index.latest}`;
-    const latest = latestSatisfying(Object.keys(index.versions), constraintStr);
+  queue.push({ type, name, constraint: constraint || 'latest' });
 
-    if (!latest) {
-      return {
-        success: false,
-        conflicts: [{
-          type: 'not_found',
-          message: `No version of ${name} in @trellis.computer/${type} satisfies ${constraintStr}`,
-        }],
-      };
+  while (queue.length > 0) {
+    const item = queue.shift()!;
+    const pkgKey = `${item.type}/${item.name}`;
+    if (resolved.has(pkgKey)) continue;
+
+    const pkgIndex = index.packages[item.type]?.[item.name];
+    if (!pkgIndex) {
+      conflicts.push({
+        type: 'not_found',
+        message: `${item.type}/${item.name} not found in registry`,
+        packageA: item.parent,
+        schema: pkgKey,
+      });
+      continue;
     }
 
-    const pkg = await client.fetchPackage(type, name, latest);
-    const schemas = pkg.schemas.map((s) => ({
+    const version = latestSatisfying(Object.keys(pkgIndex.versions), item.constraint);
+    if (!version) {
+      conflicts.push({
+        type: 'not_found',
+        message: `No version of ${item.type}/${item.name} satisfies ${item.constraint}`,
+        packageA: item.parent,
+        schema: pkgKey,
+      });
+      continue;
+    }
+
+    let manifest: PackageManifest;
+    try {
+      manifest = await client.fetchPackage(item.type, item.name, version);
+    } catch (err: any) {
+      conflicts.push({
+        type: 'not_found',
+        message: err.message || `Failed to fetch ${item.type}/${item.name}@${version}`,
+      });
+      continue;
+    }
+
+    const schemas = manifest.schemas.map((s) => ({
       '@id': s['@id'],
       version: s.version,
       content: computeContentHash(JSON.stringify(s)),
     }));
 
-    resolved.set(pkg.name, {
-      version: pkg.version,
-      content: pkg.content,
-      revision: `refs/tags/v${pkg.version}`,
+    resolved.set(pkgKey, {
+      name: manifest.name,
+      version: manifest.version,
+      content: manifest.content,
+      revision: `refs/tags/v${manifest.version}`,
       schemas,
     });
 
-    if (pkg.depends) {
-      for (const [depName, depRange] of Object.entries(pkg.depends)) {
-        const depType = depName.includes(':') ? 'ontologies' : type;
-        const depIndex = await client.fetchIndex(depType);
-        const depLatest = latestSatisfying(Object.keys(depIndex.versions), depRange);
-        if (!depLatest) {
-          conflicts.push({
-            type: 'missing_dependency',
-            message: `Cannot resolve ${depName}@${depRange} required by ${pkg.name}`,
-            packageA: pkg.name,
-            schema: depName,
-          });
-          continue;
+    if (manifest.depends) {
+      for (const [depRef, depRange] of Object.entries(manifest.depends)) {
+        if (depRef.includes(':')) continue;
+        let depType = type;
+        let depName = depRef;
+        if (depRef.startsWith('@trellis.computer/')) {
+          const parts = depRef.replace('@trellis.computer/', '').split('/');
+          depType = parts[0];
+          depName = parts.slice(1).join('/');
+        } else if (depRef.includes('/')) {
+          const parts = depRef.split('/');
+          depType = parts[0];
+          depName = parts.slice(1).join('/');
         }
-        const depPkg = await client.fetchPackage(depType, depName, depLatest);
-        const depSchemas = depPkg.schemas.map((s) => ({
-          '@id': s['@id'],
-          version: s.version,
-          content: computeContentHash(JSON.stringify(s)),
-        }));
-        if (!resolved.has(depPkg.name)) {
-          resolved.set(depPkg.name, {
-            version: depPkg.version,
-            content: depPkg.content,
-            revision: `refs/tags/v${depPkg.version}`,
-            schemas: depSchemas,
-          });
-        }
+        queue.push({ type: depType, name: depName, constraint: depRange, parent: pkgKey });
       }
     }
-  } catch (err: any) {
-    return {
-      success: false,
-      conflicts: [{
-        type: 'not_found',
-        message: err.message || `Failed to resolve ${name} from @trellis.computer/${type}`,
-      }],
-    };
   }
 
   if (conflicts.length > 0) {
     return { success: false, conflicts };
   }
 
-  const packages = Array.from(resolved.entries()).map(([name, pkg]) => ({
-    name,
-    version: pkg.version,
-    content: pkg.content,
-    revision: pkg.revision,
-    schemas: pkg.schemas,
-  }));
+  const packages = Array.from(resolved.values());
 
   const newLockfile: LockfileData = lockfile || {
     version: 1,
