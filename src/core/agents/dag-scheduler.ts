@@ -10,6 +10,9 @@
 import type { TrellisKernel } from '../kernel/trellis-kernel.js';
 import { PROVENANCE } from '../persist/canonical-op.js';
 import type { WorkerPool } from './worker-pool.js';
+import { evaluateEdge } from './edge-evaluator.js';
+import { evaluateGate } from './gate-keeper.js';
+import type { DAGGate } from './gate-keeper.js';
 
 const AGENT_CTX = { provenance: PROVENANCE.agent };
 
@@ -19,11 +22,18 @@ const AGENT_CTX = { provenance: PROVENANCE.agent };
 
 export type DAGStepStatus = 'pending' | 'ready' | 'running' | 'completed' | 'failed' | 'skipped';
 
+export interface DAGEdge {
+  targetStepId: string;
+  condition?: string;
+}
+
 export interface DAGStep {
   id: string;
   agentId: string;
   input: string;
   dependsOn?: string[];
+  edges?: DAGEdge[];
+  gate?: DAGGate;
 }
 
 export interface DAGWorkflow {
@@ -54,6 +64,10 @@ export interface DAGSchedulerConfig {
   failOnError?: boolean;
   /** Persist DAGRun state to the graph (survives restarts). Requires pool persistence. */
   persistToGraph?: boolean;
+  /** Enable conditional edge-based routing. Steps with edges are evaluated for conditional dependency satisfaction. */
+  enableEdgeRouting?: boolean;
+  /** Enable pre/post-execution gate checks (test, manual, ac_check, semantic_diff). */
+  enableGates?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -68,7 +82,7 @@ export class DAGScheduler {
 
   constructor(pool: WorkerPool, config?: DAGSchedulerConfig) {
     this.pool = pool;
-    this.config = { failOnError: true, persistToGraph: false, ...config };
+    this.config = { failOnError: true, persistToGraph: false, enableEdgeRouting: false, enableGates: false, ...config };
     this.boundHandler = (event) => this._onPoolEvent(event);
     this.pool.on(this.boundHandler);
   }
@@ -178,13 +192,27 @@ export class DAGScheduler {
 
     const stepById = new Map(run.steps.map((rs) => [rs.step.id, rs]));
 
+    const edgeIndex = this.config.enableEdgeRouting
+      ? this._buildEdgeIndex(run)
+      : null;
+
     for (const rs of run.steps) {
       if (rs.status !== 'pending') continue;
 
       const deps = rs.step.dependsOn ?? [];
       const allMet = deps.every((depId) => {
         const dep = stepById.get(depId);
-        return dep && dep.status === 'completed';
+        if (!dep || dep.status !== 'completed') return false;
+
+        if (edgeIndex) {
+          const condition = edgeIndex.get(depId)?.get(rs.step.id);
+          if (condition !== undefined) {
+            const result = evaluateEdge(dep, condition);
+            return result.passed;
+          }
+        }
+
+        return true;
       });
 
       if (allMet) {
@@ -209,7 +237,44 @@ export class DAGScheduler {
     }
   }
 
+  private _buildEdgeIndex(run: DAGRun): Map<string, Map<string, string | undefined>> {
+    const idx = new Map<string, Map<string, string | undefined>>();
+    for (const rs of run.steps) {
+      for (const edge of rs.step.edges ?? []) {
+        if (!idx.has(rs.step.id)) idx.set(rs.step.id, new Map());
+        idx.get(rs.step.id)!.set(edge.targetStepId, edge.condition);
+      }
+    }
+    return idx;
+  }
+
+  private _isPreGate(type: string): boolean {
+    return type === 'manual';
+  }
+
   private async _execute(run: DAGRun, step: DAGRunStep): Promise<void> {
+    if (this.config.enableGates && step.step.gate && this._isPreGate(step.step.gate.type)) {
+      const kernel = this.config.enableGates ? await this._ensureKernel().catch(() => undefined) : undefined;
+      const result = await evaluateGate(step.step.gate, step, kernel);
+      if (!result.passed) {
+        step.status = 'failed';
+        step.error = `Gate failed: ${result.message}`;
+        step.completedAt = new Date().toISOString();
+
+        if (result.action === 'retry' && result.retryStepId) {
+          const retryTarget = run.steps.find((rs) => rs.step.id === result.retryStepId);
+          if (retryTarget) {
+            retryTarget.status = 'pending';
+            retryTarget.error = undefined;
+            retryTarget.completedAt = undefined;
+          }
+        }
+
+        this._failWorkflow(run, step);
+        return;
+      }
+    }
+
     step.status = 'running';
     step.startedAt = new Date().toISOString();
 
@@ -235,6 +300,7 @@ export class DAGScheduler {
         if (event.type === 'task:completed' || event.type === 'task:cancelled') {
           rs.status = event.type === 'task:completed' ? 'completed' : 'failed';
           rs.error = event.type === 'task:cancelled' ? 'Cancelled' : undefined;
+          rs.result = event.result ?? event.output ?? rs.result;
           rs.completedAt = new Date().toISOString();
 
           if (rs.status === 'failed' && this.config.failOnError) {
@@ -243,11 +309,36 @@ export class DAGScheduler {
             return;
           }
 
+          if (this.config.enableGates && rs.step.gate && !this._isPreGate(rs.step.gate.type) && rs.status === 'completed') {
+            const kernel = this.config.enableGates ? await this._ensureKernel().catch(() => undefined) : undefined;
+            const result = await evaluateGate(rs.step.gate, rs, kernel);
+            if (!result.passed) {
+              rs.status = 'failed';
+              rs.error = `Post-gate failed: ${result.message}`;
+
+              if (result.action === 'retry' && result.retryStepId) {
+                const retryTarget = run.steps.find((s) => s.step.id === result.retryStepId);
+                if (retryTarget) {
+                  retryTarget.status = 'pending';
+                  retryTarget.error = undefined;
+                  retryTarget.completedAt = undefined;
+                }
+              }
+
+              if (this.config.failOnError) {
+                this._failWorkflow(run, rs);
+                await this._updateRun(run);
+                return;
+              }
+            }
+          }
+
           this._evaluate(run);
           this._checkCompletion(run);
         } else if (event.type === 'task:failed') {
           rs.status = 'failed';
           rs.error = event.error;
+          rs.result = event.result ?? event.output ?? rs.result;
           rs.completedAt = new Date().toISOString();
 
           if (this.config.failOnError) {
