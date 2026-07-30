@@ -30,7 +30,8 @@ export function scaffoldPackage(type: string, name: string, dir: string): string
     ],
   };
 
-  const canonical = JSON.stringify(body, Object.keys(body).sort(), 2);
+  const hashBody = { ...body };
+  const canonical = JSON.stringify(hashBody, Object.keys(hashBody).sort(), 2);
   body.content = computeContentHash(canonical);
 
   const filePath = join(pkgDir, `${body.version}.json`);
@@ -65,7 +66,8 @@ export function validatePackage(filePath: string): { valid: boolean; errors: str
     }
   }
 
-  const canonical = JSON.stringify(body, Object.keys(body).sort(), 2);
+  const hashBody = { ...body, content: '' };
+  const canonical = JSON.stringify(hashBody, Object.keys(hashBody).sort(), 2);
   const actualHash = computeContentHash(canonical);
   if (body.content && body.content !== actualHash) {
     errors.push(`Content hash mismatch: expected ${actualHash}, got ${body.content}`);
@@ -82,7 +84,8 @@ export function updatePackageVersion(filePath: string, newVersion: string): Pack
     s.version = newVersion;
   }
 
-  const canonical = JSON.stringify(body, Object.keys(body).sort(), 2);
+  const hashBody = { ...body, content: '' };
+  const canonical = JSON.stringify(hashBody, Object.keys(hashBody).sort(), 2);
   body.content = computeContentHash(canonical);
 
   writeFileSync(filePath, JSON.stringify(body, null, 2) + '\n');
