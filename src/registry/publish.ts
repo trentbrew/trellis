@@ -10,6 +10,15 @@ export interface PackageBody {
   content: string;
   schemas: RegistrySchemaEntry[];
   depends?: Record<string, string>;
+  agent?: {
+    model?: string;
+    provider?: string;
+    systemPrompt?: string;
+    tools?: string[];
+    capabilities?: string[];
+    temperature?: number;
+    maxTokens?: number;
+  };
 }
 
 export function scaffoldPackage(type: string, name: string, dir: string): string {
@@ -23,15 +32,25 @@ export function scaffoldPackage(type: string, name: string, dir: string): string
     version: '0.1.0',
     content: '',
     schemas: [
-      {
-        '@id': `trellis:${name}`,
-        '@type': 'trellis:Schema',
-        version: '0.1.0',
-      },
+      type === 'agent'
+        ? { '@id': `agent:${name}`, '@type': 'core:Agent', version: '0.1.0' }
+        : { '@id': `trellis:${name}`, '@type': 'trellis:Schema', version: '0.1.0' },
     ],
   };
 
-  const hashBody = { ...body };
+  if (type === 'agent') {
+    body.agent = {
+      model: '',
+      provider: '',
+      systemPrompt: '',
+      tools: [],
+      capabilities: [],
+      temperature: undefined,
+      maxTokens: undefined,
+    };
+  }
+
+  const hashBody = { ...body, content: '' };
   const canonical = JSON.stringify(hashBody, Object.keys(hashBody).sort(), 2);
   body.content = computeContentHash(canonical);
 

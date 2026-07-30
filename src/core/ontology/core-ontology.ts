@@ -454,8 +454,15 @@ const agent: SchemaDefinition = {
       selectOptions: ['active', 'inactive', 'deprecated'],
     }),
     f('capabilities', 'multi_select'),
+    f('provider', 'rich_text'),
+    f('systemPrompt', 'rich_text'),
+    f('temperature', 'number'),
+    f('maxTokens', 'number'),
     f('workflow', 'relation', {
       relation: { targetSchema: 'core:Workflow', cardinality: 'one' },
+    }),
+    f('tools', 'relation', {
+      relation: { targetSchema: 'core:Tool', cardinality: 'many' },
     }),
   ],
 };

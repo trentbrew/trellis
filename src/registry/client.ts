@@ -7,12 +7,23 @@ export interface RegistrySchemaEntry {
   depends?: Record<string, string>;
 }
 
+export interface AgentPackageConfig {
+  model?: string;
+  provider?: string;
+  systemPrompt?: string;
+  tools?: string[];
+  capabilities?: string[];
+  temperature?: number;
+  maxTokens?: number;
+}
+
 export interface PackageManifest {
   name: string;
   version: string;
   content: string;
   schemas: RegistrySchemaEntry[];
   depends?: Record<string, string>;
+  agent?: AgentPackageConfig;
 }
 
 export interface PackageVersionEntry {

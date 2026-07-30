@@ -9,6 +9,15 @@ export interface ResolvedPackage {
   content: string;
   revision: string;
   schemas: Array<{ '@id': string; version: string; content: string }>;
+  agent?: {
+    model?: string;
+    provider?: string;
+    systemPrompt?: string;
+    tools?: string[];
+    capabilities?: string[];
+    temperature?: number;
+    maxTokens?: number;
+  };
 }
 
 export interface ResolveResult {
@@ -106,6 +115,7 @@ export async function resolvePackage(
       content: manifest.content,
       revision: `refs/tags/v${manifest.version}`,
       schemas,
+      agent: manifest.agent,
     });
 
     if (manifest.depends) {

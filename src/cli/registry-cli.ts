@@ -6,6 +6,7 @@ import { RegistryClient } from '../registry/client.js';
 import { readLockfile, writeLockfile, createLockfile, removeFromLockfile, findDependents } from '../registry/lockfile.js';
 import { resolvePackage } from '../registry/resolver.js';
 import { TrellisKernel } from '../core/kernel/trellis-kernel.js';
+import type { Atom } from '../core/store/eav-store.js';
 import { join } from 'path';
 
 const REGISTRY_TYPES = ['workflow', 'agent', 'adapter', 'projection', 'theme', 'affordance', 'ui', 'ontology'] as const;
@@ -81,6 +82,28 @@ async function handleAdd(type: string, name: string, rootPath: string): Promise<
         } else {
           throw err;
         }
+      }
+    }
+
+    if (pkg.agent) {
+      const agentId = `agent:${name}`;
+      const attrs: Record<string, Atom> = {};
+      if (pkg.agent.model) attrs.model = pkg.agent.model;
+      if (pkg.agent.provider) attrs.provider = pkg.agent.provider;
+      if (pkg.agent.systemPrompt) attrs.systemPrompt = pkg.agent.systemPrompt;
+      if (pkg.agent.capabilities) attrs.capabilities = JSON.stringify(pkg.agent.capabilities);
+      if (pkg.agent.temperature !== undefined) attrs.temperature = pkg.agent.temperature;
+      if (pkg.agent.maxTokens !== undefined) attrs.maxTokens = pkg.agent.maxTokens;
+      attrs.name = name;
+      attrs.status = 'active';
+
+      const existing = kernel.getEntity(agentId);
+      if (existing) {
+        console.log(chalk.dim(`  Agent ${agentId} already exists, updating`));
+        await kernel.updateEntity(agentId, attrs);
+      } else {
+        await kernel.createEntity(agentId, 'core:Agent', attrs);
+        console.log(chalk.dim(`  Created agent entity ${agentId}`));
       }
     }
   }
