@@ -14,14 +14,14 @@ function createMockPool() {
   let enqueueCounter = 0;
 
   const pool = {
-    enqueue: vi.fn(async (agentId: string, _input: string) => {
-      const runId = `run:${agentId}:${++enqueueCounter}`;
+    enqueue: vi.fn(async (_agentId: string, _input: string, _opts?: any, runId?: string) => {
+      const resolvedRunId = runId ?? `run:${_agentId}:${++enqueueCounter}`;
       setTimeout(() => {
         for (const listener of pool._listeners) {
-          listener({ type: 'task:completed', task: { runId, agentId }, result: `output-${agentId}` });
+          listener({ type: 'task:completed', task: { runId: resolvedRunId, agentId: _agentId }, result: `output-${_agentId}` });
         }
       }, 0);
-      return runId;
+      return resolvedRunId;
     }),
     on: vi.fn((listener: (event: any) => void) => { pool._listeners.push(listener); }),
     off: vi.fn((listener: (event: any) => void) => {
@@ -226,18 +226,18 @@ describe('DAGScheduler with edge routing', () => {
   });
 
   it('routes to different targets based on condition', async () => {
-    mockPool.enqueue.mockImplementation(async (agentId: string) => {
-      const runId = `run:${agentId}:${Date.now()}`;
+    mockPool.enqueue.mockImplementation(async (agentId: string, _input: string, _opts?: any, runId?: string) => {
+      const resolvedRunId = runId ?? `run:${agentId}:${Date.now()}`;
       setTimeout(() => {
         for (const listener of mockPool._listeners) {
           if (agentId === 'agent:a') {
-            listener({ type: 'task:failed', task: { runId, agentId }, error: 'Failed', result: '' });
+            listener({ type: 'task:failed', task: { runId: resolvedRunId, agentId }, error: 'Failed', result: '' });
           } else {
-            listener({ type: 'task:completed', task: { runId, agentId }, result: `output-${agentId}` });
+            listener({ type: 'task:completed', task: { runId: resolvedRunId, agentId }, result: `output-${agentId}` });
           }
         }
       }, 0);
-      return runId;
+      return resolvedRunId;
     });
 
     const wf: DAGWorkflow = {

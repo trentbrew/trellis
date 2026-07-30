@@ -183,6 +183,21 @@ export class DAGScheduler {
     return [...this.runs.values()];
   }
 
+  /** Wait for a run to complete (terminal status). Returns the final run state. */
+  async waitForRun(runId: string, pollMs: number = 100): Promise<DAGRun> {
+    return new Promise((resolve) => {
+      const check = () => {
+        const run = this.runs.get(runId);
+        if (!run || run.status === 'completed' || run.status === 'failed' || run.status === 'cancelled') {
+          resolve(run ?? { workflowId: runId, status: 'failed', steps: [], startedAt: '' });
+        } else {
+          setTimeout(check, pollMs);
+        }
+      };
+      check();
+    });
+  }
+
   // ---------------------------------------------------------------------------
   // Internal
   // ---------------------------------------------------------------------------
@@ -279,7 +294,8 @@ export class DAGScheduler {
     step.startedAt = new Date().toISOString();
 
     try {
-      step.runId = await this.pool.enqueue(step.step.agentId, step.step.input);
+      step.runId = `step:${step.step.id}:${Date.now()}`;
+      await this.pool.enqueue(step.step.agentId, step.step.input, undefined, step.runId);
     } catch (err: any) {
       step.status = 'failed';
       step.error = err.message;
