@@ -4,6 +4,10 @@
  * See docs/specs/unified-theme-contract-phase-b.md
  * See docs/specs/unified-theme-contract-phase-c.md
  */
+@import './foundation.css';
+@import './semantic.css';
+@import './components.css';
+
 :root {
   --background-base: #101010;
   --background-weak: #1e1e1e;
@@ -33,8 +37,10 @@
   --ui-vantage: 8;
   /* default card detent; range 0–21; NOT deck present/edit mode */
 
-  --font-family-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-family-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-family-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --font-family-header: var(--font-family-sans);
 
   --radius-xs: 4px;
@@ -49,17 +55,57 @@
   --spacing-lg: 24px;
   --spacing-xl: 32px;
 
-  --tml-accent-glow: color-mix(in oklch, var(--text-interactive-base) 12%, transparent);
+  --tml-accent-glow: color-mix(
+    in oklch,
+    var(--text-interactive-base) 12%,
+    transparent
+  );
   --tml-kanban-body-inset: rgba(255, 255, 255, 0.02);
-  --tml-badge-success-bg: color-mix(in oklch, var(--surface-success-strong) 15%, transparent);
-  --tml-badge-success-border: color-mix(in oklch, var(--surface-success-strong) 30%, transparent);
-  --tml-badge-success-bg-strong: color-mix(in oklch, var(--surface-success-strong) 15%, transparent);
-  --tml-badge-warning-bg: color-mix(in oklch, var(--surface-warning-strong) 15%, transparent);
-  --tml-badge-warning-bg-subtle: color-mix(in oklch, var(--surface-warning-strong) 8%, transparent);
-  --tml-badge-warning-border: color-mix(in oklch, var(--surface-warning-strong) 25%, transparent);
-  --tml-badge-info-bg: color-mix(in oklch, var(--surface-info-strong) 15%, transparent);
-  --tml-badge-critical-bg: color-mix(in oklch, var(--surface-critical-strong) 15%, transparent);
-  --tml-badge-neutral-bg: color-mix(in oklch, var(--text-weak) 15%, transparent);
+  --tml-badge-success-bg: color-mix(
+    in oklch,
+    var(--surface-success-strong) 15%,
+    transparent
+  );
+  --tml-badge-success-border: color-mix(
+    in oklch,
+    var(--surface-success-strong) 30%,
+    transparent
+  );
+  --tml-badge-success-bg-strong: color-mix(
+    in oklch,
+    var(--surface-success-strong) 15%,
+    transparent
+  );
+  --tml-badge-warning-bg: color-mix(
+    in oklch,
+    var(--surface-warning-strong) 15%,
+    transparent
+  );
+  --tml-badge-warning-bg-subtle: color-mix(
+    in oklch,
+    var(--surface-warning-strong) 8%,
+    transparent
+  );
+  --tml-badge-warning-border: color-mix(
+    in oklch,
+    var(--surface-warning-strong) 25%,
+    transparent
+  );
+  --tml-badge-info-bg: color-mix(
+    in oklch,
+    var(--surface-info-strong) 15%,
+    transparent
+  );
+  --tml-badge-critical-bg: color-mix(
+    in oklch,
+    var(--surface-critical-strong) 15%,
+    transparent
+  );
+  --tml-badge-neutral-bg: color-mix(
+    in oklch,
+    var(--text-weak) 15%,
+    transparent
+  );
 
   --tml-glass-surface: rgba(22, 22, 22, 0.75);
   --tml-glass-border: rgba(255, 255, 255, 0.04);
@@ -99,7 +145,11 @@
   background: var(--surface-3);
   color: var(--text-strong);
   overflow: hidden;
-  transition: width 0.18s ease, height 0.18s ease, padding 0.18s ease, border-radius 0.18s ease;
+  transition:
+    width 0.18s ease,
+    height 0.18s ease,
+    padding 0.18s ease,
+    border-radius 0.18s ease;
 }
 
 .ui-thing .ui-thing-pip {
@@ -132,7 +182,7 @@
   color: var(--surface-success-strong);
 }
 
-.ui-thing[data-trellis-shell="node"] {
+.ui-thing[data-trellis-shell='node'] {
   width: 36px;
   height: 36px;
   border-radius: 999px;
@@ -143,14 +193,14 @@
   background: color-mix(in oklch, var(--entity-issue) 25%, var(--surface-3));
 }
 
-.ui-thing[data-trellis-shell="node"] .ui-thing-title,
-.ui-thing[data-trellis-shell="node"] .ui-thing-meta,
-.ui-thing[data-trellis-shell="node"] .ui-thing-body,
-.ui-thing[data-trellis-shell="node"] .ui-thing-badge {
+.ui-thing[data-trellis-shell='node'] .ui-thing-title,
+.ui-thing[data-trellis-shell='node'] .ui-thing-meta,
+.ui-thing[data-trellis-shell='node'] .ui-thing-body,
+.ui-thing[data-trellis-shell='node'] .ui-thing-badge {
   display: none;
 }
 
-.ui-thing[data-trellis-shell="row"] {
+.ui-thing[data-trellis-shell='row'] {
   width: min(420px, 100%);
   border-radius: var(--radius-md);
   padding: 10px 12px;
@@ -159,16 +209,16 @@
   gap: 10px;
 }
 
-.ui-thing[data-trellis-shell="row"] .ui-thing-title {
+.ui-thing[data-trellis-shell='row'] .ui-thing-title {
   flex: 1;
 }
 
-.ui-thing[data-trellis-shell="row"] .ui-thing-body,
-.ui-thing[data-trellis-shell="row"] .ui-thing-badge {
+.ui-thing[data-trellis-shell='row'] .ui-thing-body,
+.ui-thing[data-trellis-shell='row'] .ui-thing-badge {
   display: none;
 }
 
-.ui-thing[data-trellis-shell="card"] {
+.ui-thing[data-trellis-shell='card'] {
   width: min(320px, 100%);
   border-radius: var(--radius-lg);
   padding: 14px;
@@ -178,14 +228,14 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
-.ui-thing[data-trellis-shell="card"] .ui-thing-head {
+.ui-thing[data-trellis-shell='card'] .ui-thing-head {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
 }
 
-.ui-thing[data-trellis-shell="card"] .ui-thing-title {
+.ui-thing[data-trellis-shell='card'] .ui-thing-title {
   flex: 1;
 }
 
