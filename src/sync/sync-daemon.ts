@@ -15,6 +15,7 @@ import {
   QuarantineStore,
 } from '../vcs/sync-policy.js';
 import { SyncAuditTrail } from './audit-trail.js';
+import { RateLimiter } from './rate-limiter.js';
 
 export interface SyncDaemonOptions {
   /** WebSocket server URL. */
@@ -53,6 +54,7 @@ export class SyncDaemon {
   private transport: WebSocketTransport;
   private quarantine: QuarantineStore;
   private auditTrail: SyncAuditTrail;
+  private rateLimiter: RateLimiter;
   private interval: NodeJS.Timeout | null = null;
   private state: SyncDaemonState = {
     running: false,
@@ -91,12 +93,27 @@ export class SyncDaemon {
 
     this.quarantine = new QuarantineStore();
     this.auditTrail = new SyncAuditTrail(this.options.rootPath!);
+    this.rateLimiter = new RateLimiter();
 
     this.engine = new SyncEngine({
       localPeerId: this.options.localPeerId,
       transport: this.transport,
       getLocalOps: this.options.getLocalOps,
       onOpsReceived: async (ops) => {
+        const rateCheck = this.rateLimiter.check('remote');
+        if (!rateCheck.allowed) {
+          const id = this.quarantine.add({ type: 'ops', ops }, 'remote', 'rate_limited');
+          this.state.quarantineCount++;
+          this.auditTrail.logQuarantine('remote', 'rate_limited', ops.length);
+          console.warn(`Rate limit exceeded for remote (quarantined as ${id})`);
+          return {
+            rejections: ops.map((op) => ({
+              hash: op.hash,
+              reason: 'rate_limited',
+            })),
+          };
+        }
+
         const policy = getSyncPolicy();
         const message = { type: 'ops', ops };
         const block = shouldBlockMessage(message, policy);
