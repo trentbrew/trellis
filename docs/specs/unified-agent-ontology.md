@@ -1,529 +1,605 @@
 # Spec: Unified Agent & Workflow Ontology
 
-**Status:** draft · **Parent:** unified-agent-architecture.md · **Issues:** N/A
+**Status:** living · **Source of truth:** `src/core/ontology/core-ontology.ts`
 
 ## Context
 
-The agent infrastructure has three fragmented layers:
-
-1. **Workflow definitions** live as markdown files in `.devin/workflows/` and `.trellis/agents/workflows/`. They are prompt-level reference guides with no machine-readable format, no execution runtime, and no graph integration.
-
-2. **Agent role definitions** live in `.cursor/skills/trellis-agent-*.md` files. They are IDE-specific, not versionable as data, and not queryable via TQL.
-
-3. **Handoff protocol** is serialized as YAML footers in issue descriptions. The `HANDOFF_ROLES` and `HANDOFF_STATUSES` constants in `src/protocol/envelope.ts` are hardcoded, not schema-driven.
-
-Meanwhile, the graph kernel already has:
-- A mature ontology system (`core:Thing`, `core:Record`, etc.) with `@id`/`@type` JSON-LD patterns
-- An agent harness that loads agents from the graph (`src/core/agents/harness.ts`)
-- A `core:Workflow` schema that is defined but unused (only has `name`, `trigger`, `steps`, `active`)
-- Orchestration types (`Route`, `SupervisorConfig`, `Orchestrator`) that are skeletal
-
-The result: agents, workflows, and handoffs exist as **code and files** rather than **graph entities**. They cannot be queried, composed, versioned, or shared through the graph.
-
-## Goal
-
-Make agents, workflows, and handoffs **first-class graph entities** with formal ontologies, and establish `@trellis.computer` as the npm registry for community-published agent ecosystem packages.
-
-### Objectives
-
-1. **Workflow ontology** — Extend the existing `core:Workflow` pattern with structured step/edge/gate entities via a new `trellis:Pipeline` type. Workflows become queryable, composable, and executable.
-2. **Agent ontology** — Formalize `core:Agent`, `core:Tool`, and `core:Handoff` as graph entities with proper schemas.
-3. **Registry system** — Package workflows, agents, ontologies, and adapters as npm packages under `@trellis.computer`.
-4. **Pipeline-as-data** — Replace IDE-specific skill files with graph-stored agent and pipeline definitions.
-5. **Documentation strategy** — Bake doc gates, freshness checks, and ownership into the pipeline and CI.
-
-## Scope
-
-### In scope
-- New ontology schemas: `core:WorkflowStep`, `core:WorkflowEdge`, `core:WorkflowGate`, `core:Agent`, `core:Tool`, `core:Handoff`
-- New orchestration type: `trellis:Pipeline` (composes `core:Workflow` entities)
-- Schema registration via `defineType()` and `kernel.createOntology()`
-- CLI commands: `trellis workflow list/show/run`, `trellis add`, `trellis list`, `trellis remove`
-- npm registry packages under `@trellis.computer`
-- Migration of pipeline role definitions from `.cursor/skills/` to graph entities
-- TQL queries for agent/workflow/handoff lookups
-- Doc health infrastructure: link checking, freshness detection, ownership enforcement
-- `documentation` issue label with its own workflow
-
-### Out of scope
-- Runtime workflow execution engine (Phase 2, separate spec)
-- Full pipeline orchestration replacement (Phase 3, separate spec)
-- Affordance formalization (deferred — let the UI work drive the schema)
-- Governance policy for agent configurations
-- IDE adapter generation (covered by unified-agent-architecture.md)
+The agent ontology is implemented as `SchemaDefinition` records in the kernel's
+core ontology. All schemas below are registered at boot via `CORE_ONTOLOGY`
+(array in `core-ontology.ts:704`). The graph kernel provides the runtime, the
+agent harness (`src/core/agents/harness.ts`) loads agent entities from the graph,
+and the registry system (`src/registry/`) publishes/shared packages against these
+schemas.
 
 ## Design
 
+All schemas use the `SchemaDefinition` / `f()` helper pattern. Fields use
+`valueType` strings (`title`, `rich_text`, `select`, `multi_select`, `checkbox`,
+`number`, `date`, `url`, `json`, `relation`). Relations are defined inline via
+`relation: { targetSchema, cardinality }`.
+
 ### 1. Workflow Ontology
 
-Extend the existing `core:Workflow` schema (currently: `name`, `trigger`, `steps`, `active`) with structured step, edge, and gate entities. **Do not mutate `core:Workflow`.** Introduce a new `trellis:Pipeline` type that composes `core:Workflow` entities.
-
-#### `core:Workflow` (extended, unchanged existing fields)
+#### `core:Workflow` — automation / process definition
 
 ```typescript
-defineType('Workflow', {
-  name: z.string().min(1),
-  description: z.string().optional(),
-  trigger: z.string().optional(),
-  active: z.boolean().default(true),
-  turbo: z.enum(['none', 'partial', 'all']).default('none'),
-}, {
-  title: 'name',
-  label: 'Workflow',
+const workflow: SchemaDefinition = {
+  '@id': 'core:Workflow',
+  '@type': 'trellis:Schema',
+  version: '1.0.0',
   tier: 'core',
-  relations: {
-    steps: rel(() => WorkflowStep, 'many'),
-    edges: rel(() => WorkflowEdge, 'many'),
-    gates: rel(() => WorkflowGate, 'many'),
-  },
-})
+  subClassOf: 'core:Thing',
+  label: 'Workflow',
+  icon: 'lucide:git-branch',
+  fields: [
+    f('name', 'title', { required: true }),
+    f('trigger', 'rich_text'),
+    f('steps', 'multi_select'),         // string array, NOT a relation
+    f('active', 'checkbox'),
+  ],
+};
 ```
 
-The existing `steps: multi_select` field is replaced by the proper relation. Any existing data is migrated by the `trellis agent migrate` CLI command from the unified-agent-architecture spec.
+**Note:** `steps` is a `multi_select` string array (simple convention), not a
+relation to `WorkflowStep`. Workflow→Step/Edge/Gate relations are proposed but
+not implemented (see Open Questions).
 
-#### `core:WorkflowStep`
+#### `core:WorkflowStep` — individual step within a workflow
 
 ```typescript
-defineType('WorkflowStep', {
-  name: z.string().min(1),
-  description: z.string().optional(),
-  commands: z.array(z.string()).optional(),
-  turbo: z.boolean().default(false),
-  layer: z.enum(['pre_flight', 'setup', 'implement', 'review', 'closure']).optional(),
-}, {
-  title: 'name',
+const workflowStep: SchemaDefinition = {
+  '@id': 'core:WorkflowStep',
+  '@type': 'trellis:Schema',
+  version: '1.0.0',
+  tier: 'system',
+  subClassOf: 'core:Thing',
   label: 'Workflow Step',
-  tier: 'system',
-  relations: {
-    subworkflow: rel(() => Workflow, 'one').optional(),
-  },
-})
+  icon: 'lucide:list-checks',
+  fields: [
+    f('name', 'title', { required: true }),
+    f('description', 'rich_text'),
+    f('commands', 'json'),
+    f('turbo', 'checkbox'),
+    f('layer', 'select', {
+      selectOptions: ['pre_flight', 'setup', 'implement', 'review', 'closure'],
+    }),
+  ],
+};
 ```
 
-#### `core:WorkflowEdge`
+#### `core:WorkflowEdge` — routing rule between steps
 
 ```typescript
-defineType('WorkflowEdge', {
-  name: z.string().min(1),
-  condition: z.string().optional(),
-  status: z.enum(['HANDOFF', 'CLARIFY', 'REJECT', 'BLOCKED', 'DECISION']).default('HANDOFF'),
-}, {
-  title: 'name',
+const workflowEdge: SchemaDefinition = {
+  '@id': 'core:WorkflowEdge',
+  '@type': 'trellis:Schema',
+  version: '1.0.0',
+  tier: 'system',
+  subClassOf: 'core:Thing',
   label: 'Workflow Edge',
-  tier: 'system',
-  relations: {
-    from: rel(() => WorkflowStep, 'one'),
-    to: rel(() => WorkflowStep, 'one'),
-  },
-})
+  icon: 'lucide:arrow-right',
+  fields: [
+    f('name', 'title', { required: true }),
+    f('condition', 'rich_text'),
+    f('status', 'select', {
+      selectOptions: ['HANDOFF', 'CLARIFY', 'REJECT', 'BLOCKED', 'DECISION'],
+      defaultValue: 'HANDOFF',
+    }),
+    f('from', 'relation', {
+      relation: { targetSchema: 'core:WorkflowStep', cardinality: 'one' },
+    }),
+    f('to', 'relation', {
+      relation: { targetSchema: 'core:WorkflowStep', cardinality: 'one' },
+    }),
+  ],
+};
 ```
 
-#### `core:WorkflowGate`
+**Note:** Edge→Step relations exist (`from`/`to`), but there is no
+Workflow→edges or WorkflowStep→edges relation. Edges are standalone entities.
+
+#### `core:WorkflowGate` — quality gate between steps
 
 ```typescript
-defineType('WorkflowGate', {
-  name: z.string().min(1),
-  type: z.enum(['test', 'manual', 'ac_check', 'semantic_diff']),
-  criteria: z.string().optional(),
-  onFail: z.enum(['stop', 'retry', 'route_to']).default('stop'),
-}, {
-  title: 'name',
-  label: 'Workflow Gate',
+const workflowGate: SchemaDefinition = {
+  '@id': 'core:WorkflowGate',
+  '@type': 'trellis:Schema',
+  version: '1.0.0',
   tier: 'system',
-  relations: {
-    step: rel(() => WorkflowStep, 'one'),
-    retryStep: rel(() => WorkflowStep, 'one').optional(),
-    failRoute: rel(() => WorkflowEdge, 'one').optional(),
-  },
-})
+  subClassOf: 'core:Thing',
+  label: 'Workflow Gate',
+  icon: 'lucide:shield-check',
+  fields: [
+    f('name', 'title', { required: true }),
+    f('type', 'select', {
+      required: true,
+      selectOptions: ['test', 'manual', 'ac_check', 'semantic_diff'],
+    }),
+    f('criteria', 'rich_text'),
+    f('onFail', 'select', {
+      selectOptions: ['stop', 'retry', 'route_to'],
+      defaultValue: 'stop',
+    }),
+    f('step', 'relation', {
+      relation: { targetSchema: 'core:WorkflowStep', cardinality: 'one' },
+    }),
+    f('retryStep', 'relation', {
+      relation: { targetSchema: 'core:WorkflowStep', cardinality: 'one' },
+    }),
+    f('failRoute', 'relation', {
+      relation: { targetSchema: 'core:WorkflowEdge', cardinality: 'one' },
+    }),
+  ],
+};
+```
+
+**Note:** Gate→Step/Edge relations exist, but no inverse from Workflow.
+
+#### DAG Runtime schemas
+
+##### `trellis:DAGRun` — DAG workflow run tracking step-level execution state
+
+```typescript
+const dagRun: SchemaDefinition = {
+  '@id': 'trellis:DAGRun',
+  '@type': 'trellis:Schema',
+  version: '1.0.0',
+  tier: 'system',
+  subClassOf: 'core:Thing',
+  label: 'DAG Run',
+  icon: 'lucide:workflow',
+  fields: [
+    f('workflowId', 'title', { required: true }),
+    f('workflowName', 'title'),
+    f('status', 'select', {
+      required: true,
+      selectOptions: ['running', 'completed', 'failed', 'cancelled'],
+      defaultValue: 'running',
+    }),
+    f('steps', 'json'),
+    f('startedAt', 'date', { required: true }),
+    f('completedAt', 'date'),
+  ],
+};
+```
+
+##### `trellis:WorkerPoolTask` — queued or active task in a WorkerPool
+
+```typescript
+const workerPoolTask: SchemaDefinition = {
+  '@id': 'trellis:WorkerPoolTask',
+  '@type': 'trellis:Schema',
+  version: '1.0.0',
+  tier: 'system',
+  subClassOf: 'core:Thing',
+  label: 'WorkerPool Task',
+  icon: 'lucide:list-queue',
+  fields: [
+    f('agentId', 'title', { required: true }),
+    f('runId', 'title', { required: true }),
+    f('input', 'rich_text'),
+    f('status', 'select', {
+      required: true,
+      selectOptions: ['queued', 'running', 'paused', 'completed', 'failed', 'cancelled'],
+      defaultValue: 'queued',
+    }),
+    f('queuedAt', 'date', { required: true }),
+    f('startedAt', 'date'),
+    f('completedAt', 'date'),
+    f('error', 'rich_text'),
+  ],
+};
 ```
 
 ### 2. Pipeline Type
 
-`trellis:Pipeline` is a new orchestration type that composes `core:Workflow` entities into a coordinated agent sequence. Unlike `core:Workflow` (which defines a single agent's procedure), a `Pipeline` connects multiple workflows across agent roles.
+`trellis:Pipeline` composes `core:Workflow` entities into a coordinated agent
+sequence. Unlike `core:Workflow` (which defines a single agent's procedure), a
+Pipeline connects multiple workflows across agent roles.
+
+#### `trellis:Pipeline`
 
 ```typescript
-defineType('Pipeline', {
-  name: z.string().min(1),
-  description: z.string().optional(),
-  trigger: z.string().optional(),
-  active: z.boolean().default(true),
-}, {
-  title: 'name',
+const pipeline: SchemaDefinition = {
+  '@id': 'trellis:Pipeline',
+  '@type': 'trellis:Schema',
+  version: '1.0.0',
+  tier: 'system',
+  subClassOf: 'core:Thing',
   label: 'Pipeline',
-  tier: 'system',
-  relations: {
-    phases: rel(() => PipelinePhase, 'many'),
-    workflow: rel(() => Workflow, 'many'),
-  },
-})
-
-defineType('PipelinePhase', {
-  name: z.string().min(1),
-  description: z.string().optional(),
-  order: z.number(),
-  agentRole: z.enum([
-    'strategist', 'designer', 'architect', 'executor', 'reviewer',
-    'optimizer', 'synthesist', 'writer', 'human',
-  ]),
-  workflow: rel(() => Workflow, 'one'),
-}, {
-  title: 'name',
-  label: 'Pipeline Phase',
-  tier: 'system',
-})
+  icon: 'lucide:git-merge',
+  fields: [
+    f('name', 'title', { required: true }),
+    f('description', 'rich_text'),
+    f('trigger', 'rich_text'),
+    f('active', 'checkbox'),
+    f('phases', 'relation', {
+      relation: { targetSchema: 'trellis:PipelinePhase', cardinality: 'many' },
+    }),
+    f('workflow', 'relation', {
+      relation: { targetSchema: 'core:Workflow', cardinality: 'many' },
+    }),
+  ],
+};
 ```
 
-#### Pipeline → Workflow composition
+#### `trellis:PipelinePhase`
+
+```typescript
+const pipelinePhase: SchemaDefinition = {
+  '@id': 'trellis:PipelinePhase',
+  '@type': 'trellis:Schema',
+  version: '1.0.0',
+  tier: 'system',
+  subClassOf: 'core:Thing',
+  label: 'Pipeline Phase',
+  icon: 'lucide:step-forward',
+  fields: [
+    f('name', 'title', { required: true }),
+    f('description', 'rich_text'),
+    f('order', 'number'),
+    f('agentRole', 'select', {          // string enum, NOT a relation to Agent
+      required: true,
+      selectOptions: [
+        'strategist', 'designer', 'architect', 'executor', 'reviewer',
+        'optimizer', 'synthesist', 'writer', 'human',
+      ],
+    }),
+    f('workflow', 'relation', {
+      relation: { targetSchema: 'core:Workflow', cardinality: 'one' },
+    }),
+  ],
+};
+```
+
+#### Pipeline composition diagram
 
 ```
 trellis:Pipeline
-  ├── phases → core:PipelinePhase[] (ordered)
+  ├── phases → trellis:PipelinePhase[] (ordered)
   │              ├── agentRole: "strategist" → workflow: strategic-research
-  │              ├── agentRole: "architect" → workflow: design-to-spec
-  │              ├── agentRole: "executor" → workflow: feature-development
-  │              └── agentRole: "reviewer" → workflow: quality-gate
+  │              ├── agentRole: "architect"  → workflow: design-to-spec
+  │              ├── agentRole: "executor"   → workflow: feature-development
+  │              └── agentRole: "reviewer"   → workflow: quality-gate
   └── workflow → core:Workflow[] (referenced workflows)
 ```
 
-A pipeline defines **who does what, in what order, and how they hand off**. The edge/routing logic lives in the individual `core:Workflow` schemas. The pipeline is the coordination layer.
-
-#### Why not mutate `core:Workflow`?
-
-- `core:Workflow` currently has `steps: multi_select` (string array) — a simple convention. Replacing it with structured relations is a breaking change.
-- A pipeline is a **composition of workflows**, not a workflow itself. Conflating the two leads to schemas that try to be both a single-agent procedure and a multi-agent orchestration.
-- Existing `core:Workflow` entities (even if few) are preserved. The new type is additive.
-- The migration path is simpler: migrate `core:Workflow` relations, introduce `trellis:Pipeline` alongside it.
-
 ### 3. Agent Ontology
 
-Formalize agents, tools, and handoffs as graph entities. These map directly to the existing `AgentDef`, `ToolDef`, and `HandoffEnvelope` types in `src/core/agents/` and `src/protocol/envelope.ts`.
-
-#### `core:Agent`
+#### `core:Agent` — agent role definition
 
 ```typescript
-defineType('Agent', {
-  name: z.string().min(1),
-  description: z.string().optional(),
-  role: z.enum([
-    'strategist', 'designer', 'architect', 'executor', 'reviewer',
-    'optimizer', 'synthesist', 'writer', 'human'
-  ]),
-  inbox: z.string().optional(),         // TQL query for discovering work
-  model: z.string().optional(),          // LLM model for model policy
-  status: z.enum(['active', 'inactive', 'deprecated']).default('active'),
-  capabilities: z.array(z.string()).optional(),
-}, {
-  title: 'name',
+const agent: SchemaDefinition = {
+  '@id': 'core:Agent',
+  '@type': 'trellis:Schema',
+  version: '1.0.0',
+  tier: 'system',
+  subClassOf: 'core:Thing',
   label: 'Agent',
-  tier: 'system',
-  relations: {
-    workflow: rel(() => Workflow, 'one').optional(),
-    tools: rel(() => Tool, 'many'),
-  },
-})
+  icon: 'lucide:bot',
+  fields: [
+    f('name', 'title', { required: true }),
+    f('description', 'rich_text'),
+    f('role', 'select', {
+      required: true,
+      selectOptions: [
+        'strategist', 'designer', 'architect', 'executor', 'reviewer',
+        'optimizer', 'synthesist', 'writer', 'human',
+      ],
+    }),
+    f('inbox', 'rich_text'),
+    f('model', 'rich_text'),
+    f('status', 'select', {
+      defaultValue: 'active',
+      selectOptions: ['active', 'inactive', 'deprecated'],
+    }),
+    f('capabilities', 'multi_select'),
+    f('workflow', 'relation', {
+      relation: { targetSchema: 'core:Workflow', cardinality: 'one' },
+    }),
+  ],
+};
 ```
 
-#### `core:Tool`
+**Gap:** `AgentDef` (the runtime TS interface in `types.ts:21`) has additional
+fields not in the schema: `provider`, `systemPrompt`, `tools: string[]`,
+`temperature`, `maxTokens`. The schema also lacks a `tools` relation to
+`core:Tool`. These should be added to align the ontology with the runtime type.
+
+#### `core:Tool` — tool definition for agents
 
 ```typescript
-defineType('Tool', {
-  name: z.string().min(1),
-  description: z.string().optional(),
-  schema: z.string().optional(),        // JSON schema as string
-  endpoint: z.string().url().optional(), // HTTP endpoint
-}, {
-  title: 'name',
+const tool: SchemaDefinition = {
+  '@id': 'core:Tool',
+  '@type': 'trellis:Schema',
+  version: '1.0.0',
+  tier: 'system',
+  subClassOf: 'core:Thing',
   label: 'Tool',
-  tier: 'system',
-})
+  icon: 'lucide:wrench',
+  fields: [
+    f('name', 'title', { required: true }),
+    f('description', 'rich_text'),
+    f('schema', 'json'),
+    f('endpoint', 'url'),
+  ],
+};
 ```
 
-#### `core:Handoff`
+**Current state:** `core:Tool` is a standalone entity — no relations to Agent or
+any other schema. The `AgentDef.tools: string[]` is a list of tool IDs, not a
+graph relation. This means tools cannot be queried via TQL traversal from an
+agent.
+
+##### Tool ontology considerations
+
+1. **Bidirectional relation (proposed):** Add `tools` relation to `core:Agent`
+   (`relation: { targetSchema: 'core:Tool', cardinality: 'many' }`) and an
+   optional `usedBy` inverse on `core:Tool`. This makes `TQL.agent(id).tools`
+   work natively.
+
+2. **Tool schemas as package schemas:** Tools in the registry should carry their
+   JSON schema as the `schema` field. The `endpoint` field supports both HTTP
+   URLs and `package://` URIs for local MCP tools.
+
+3. **Tool categories:** Consider adding a `category` select field (e.g.,
+   `read`, `write, `search`, `execute`, `communicate`) for UI filtering, though
+   this can also be derived from the schema shape.
+
+4. **Versus MCP tools:** `core:Tool` entities represent tool *definitions*
+   (what the tool is, what schema it expects, where it lives). MCP tool
+   invocation records live in `trellis:DecisionTrace`.
+
+#### `core:Handoff` — structured agent handoff between roles
 
 ```typescript
-defineType('Handoff', {
-  name: z.string().min(1),
-  status: z.enum(['HANDOFF', 'CLARIFY', 'REJECT', 'BLOCKED', 'DECISION']),
-  body: z.string().optional(),
-  refs: z.array(z.string()).optional(),
-  timestamp: z.string().datetime().optional(),
-}, {
-  title: 'name',
-  label: 'Handoff',
+const handoff: SchemaDefinition = {
+  '@id': 'core:Handoff',
+  '@type': 'trellis:Schema',
+  version: '1.0.0',
   tier: 'system',
-  relations: {
-    from: rel(() => Agent, 'one'),
-    to: rel(() => Agent, 'one'),
-    re: rel(/* Issue or any entity */, 'one').optional(),
-  },
-})
+  subClassOf: 'core:Thing',
+  label: 'Handoff',
+  icon: 'lucide:arrow-left-right',
+  fields: [
+    f('name', 'title', { required: true }),
+    f('status', 'select', {
+      required: true,
+      selectOptions: ['HANDOFF', 'CLARIFY', 'REJECT', 'BLOCKED', 'DECISION'],
+    }),
+    f('body', 'rich_text'),
+    f('refs', 'multi_select'),
+    f('timestamp', 'date'),
+    f('from', 'relation', {
+      relation: { targetSchema: 'core:Agent', cardinality: 'one' },
+    }),
+    f('to', 'relation', {
+      relation: { targetSchema: 'core:Agent', cardinality: 'one' },
+    }),
+    f('re', 'relation', {
+      relation: { cardinality: 'one' },   // generic, any entity
+    }),
+  ],
+};
 ```
 
-#### Relationship to existing types
+### 4. Execution Trace Schemas
 
-| Existing type | Maps to | Notes |
-|---|---|---|
-| `AgentDef` (`src/core/agents/types.ts`) | `core:Agent` | 1:1 mapping — `AgentHarness` already loads from graph |
-| `ToolDef` (`src/core/agents/types.ts`) | `core:Tool` | 1:1 mapping |
-| `HandoffEnvelope` (`src/protocol/envelope.ts`) | `core:Handoff` | `from`/`to`/`re`/`status`/`body` map directly |
-| `HANDOFF_ROLES` constant | `Agent.role` selectOptions | 9 roles become schema field options |
-| `HANDOFF_STATUSES` constant | `Handoff.status` selectOptions | 5 statuses become schema field options |
-| `DecisionTrace` (`src/core/agents/types.ts`) | Already a graph entity | No change needed |
+#### `trellis:AgentRun` — single execution run of an agent
 
-### 4. Registry System
+```typescript
+const agentRun: SchemaDefinition = {
+  '@id': 'trellis:AgentRun',
+  '@type': 'trellis:Schema',
+  version: '1.0.0',
+  tier: 'system',
+  subClassOf: 'core:Thing',
+  label: 'AgentRun',
+  icon: 'lucide:play',
+  fields: [
+    f('startedAt', 'date', { required: true }),
+    f('completedAt', 'date'),
+    f('status', 'select', {
+      required: true,
+      selectOptions: ['running', 'plan_pending', 'paused', 'completed', 'failed', 'cancelled'],
+      defaultValue: 'running',
+    }),
+    f('input', 'rich_text'),
+    f('output', 'rich_text'),
+    f('totalTokens', 'number'),
+    f('promptTokens', 'number'),
+    f('completionTokens', 'number'),
+    f('maxRetries', 'number'),
+    f('timeoutMs', 'number'),
+    f('executedBy', 'relation', {
+      relation: { targetSchema: 'core:Agent', cardinality: 'one' },
+    }),
+    f('hasPlan', 'relation', {
+      relation: { cardinality: 'many' },  // generic, any entity
+    }),
+    f('usedTool', 'relation', {
+      relation: { targetSchema: 'core:Tool', cardinality: 'many' },
+    }),
+    f('handoffTo', 'relation', {
+      relation: { targetSchema: 'trellis:AgentRun', cardinality: 'many' },
+    }),
+    f('handoffFrom', 'relation', {
+      relation: { targetSchema: 'trellis:AgentRun', cardinality: 'one' },
+    }),
+  ],
+};
+```
 
-Package ecosystem artifacts as npm packages under `@trellis.computer`. The `trellis` CLI provides the entry point for discovery and installation.
+#### `trellis:DecisionTrace` — decision recorded during an agent run
 
-#### Registry packages
+```typescript
+const decisionTrace: SchemaDefinition = {
+  '@id': 'trellis:DecisionTrace',
+  '@type': 'trellis:Schema',
+  version: '1.0.0',
+  tier: 'system',
+  subClassOf: 'core:Thing',
+  label: 'DecisionTrace',
+  icon: 'lucide:git-branch',
+  fields: [
+    f('toolName', 'title', { required: true }),
+    f('timestamp', 'date', { required: true }),
+    f('input', 'json'),
+    f('output', 'rich_text'),
+    f('rationale', 'rich_text'),
+    f('alternatives', 'json'),
+    f('belongsToRun', 'relation', {
+      relation: { targetSchema: 'trellis:AgentRun', cardinality: 'one' },
+    }),
+    f('madeBy', 'relation', {
+      relation: { targetSchema: 'core:Agent', cardinality: 'one' },
+    }),
+    f('relatedTo', 'relation', {
+      relation: { cardinality: 'many' },  // generic, any entity
+    }),
+  ],
+};
+```
 
-| Package | Contents | Example |
-|---------|----------|---------|
-| `@trellis.computer/workflows` | Workflow definitions (JSON-LD) | `feature-development`, `bug-fix`, `release` |
-| `@trellis.computer/agents` | Agent role definitions | `strategist`, `executor`, `reviewer` |
-| `@trellis.computer/ontologies` | Schema definitions | `design-system`, `project-management` |
-| `@trellis.computer/adapters` | IDE adapter generators | `cursor`, `devin`, `claude` |
-| `@trellis.computer/projections` | Self-contained renderer definitions | `kanban`, `table`, `graph` |
-| `@trellis.computer/themes` | Visual contracts (fonts, colors, tokens) | `trellis-dark`, `trellis-light` |
-| `@trellis.computer/affordance` | Whole-app bundles (contracts + ontologies + projections) | `trellis-admin`, `trellis-studio` |
+### 5. Cross-Entity Relationship Diagram
 
-The three UI package categories are intentionally separate:
+```
+core:Workflow ── steps: multi_select (strings, NOT a relation)
+    ↑ workflow (Agent→Workflow)
+    │
+core:Agent ── tools: string[] (IDs, NOT a relation — proposed: relation to core:Tool)
+    │
+    ├── executedBy (AgentRun→Agent)
+    ├── madeBy (DecisionTrace→Agent)
+    ├── from (Handoff→Agent)
+    └── to (Handoff→Agent)
+    │
+core:Tool ── standalone (proposed: usedBy inverse from Agent)
+    ↑ usedTool (AgentRun→Tool)
 
-- **Themes** define the visual contract — fonts, colors, tokens, animations — shared by everything that renders
-- **Projections** define a rendering contract — what can project onto them, what field types they require — and let the theme dictate how they look and feel
-- **Affordances** define whole applications — they bundle their own contracts, ontologies, and projections; the user's theme still controls the visual layer
+core:Handoff ── from→Agent, to→Agent, re→any
 
-This separation ensures that changing a theme doesn't break a projection's rendering contract, and that projections from different sources can coexist under the same theme.
+trellis:Pipeline
+    ├── phases → trellis:PipelinePhase[]  (ordered)
+    │              └── agentRole: string enum, workflow→core:Workflow
+    └── workflow → core:Workflow[]        (referenced workflows)
+
+trellis:PipelinePhase ── agentRole: string enum (NOT a relation to Agent)
+
+trellis:AgentRun ── executedBy→Agent, usedTool→Tool, handoffTo→AgentRun, handoffFrom→AgentRun
+    ↑ belongsToRun (DecisionTrace→AgentRun)
+
+trellis:DecisionTrace ── belongsToRun→AgentRun, madeBy→Agent
+
+trellis:DAGRun ── standalone, tracks workflow execution state
+
+trellis:WorkerPoolTask ── standalone, tracks queued agent tasks
+```
+
+### 6. Registry System
 
 #### Package format
 
-Each package exports JSON-LD entities matching the ontology schemas:
+Registry packages are JSON-LD entities matching the ontology schemas above.
+The `PackageManifest` interface:
 
-```json
-{
-  "$schema": "https://trellis.computer/schemas/workflow-v1.json",
-  "@id": "workflow:feature-development",
-  "@type": "core:Workflow",
-  "name": "Feature Development",
-  "steps": [
-    {
-      "@id": "workflow:feature-development/pre-flight",
-      "@type": "core:WorkflowStep",
-      "name": "Pre-flight",
-      "commands": ["trellis status", "trellis garden search -k \"<keyword>\""],
-      "turbo": true,
-      "layer": "pre_flight"
-    }
-  ],
-  "edges": [...],
-  "gates": [...]
+```typescript
+interface PackageManifest {
+  name: string;           // e.g. "@trellis.computer/agents/strategist"
+  version: string;        // semver
+  content: string;        // content hash
+  schemas: RegistrySchemaEntry[];  // schema @id + @type + version
+  depends?: Record<string, string>;  // dependency constraints
 }
 ```
 
-#### CLI commands
+**Gap:** There is no agent-specific extension of `PackageManifest`. For agent
+packages, the manifest should carry optional fields: `model`, `provider`,
+`systemPrompt`, `tools` (list of package references), `capabilities`,
+`temperature`, `maxTokens`.
 
-```bash
-trellis add workflow feature-development   # install from @trellis.computer/workflows
-trellis add agent strategist               # install from @trellis.computer/agents
-trellis add ontology design-system         # install from @trellis.computer/ontologies
-trellis add adapter cursor                 # install from @trellis.computer/adapters
-trellis add projection kanban              # install from @trellis.computer/projections
-trellis add theme trellis-dark             # install from @trellis.computer/themes
-trellis add affordance trellis-admin       # install from @trellis.computer/affordance
+#### Current CLI surface
 
-trellis list workflows                     # list installed workflows
-trellis list agents                        # list installed agents
-trellis list ontologies                    # list installed ontologies
-trellis list themes                        # list installed themes
-trellis list projections                   # list installed projections
-trellis list affordances                   # list installed affordances
+| Command | Status | Notes |
+|---------|--------|-------|
+| `trellis add <type> <name>` | ✅ Implemented | Registers schemas; does NOT create entities |
+| `trellis list [type]` | ✅ Implemented | Reads lockfile |
+| `trellis remove <type> <name>` | ✅ Implemented | Unregisters schemas |
+| `trellis update [scope]` | ✅ Implemented | Re-resolves deps |
+| `trellis registry migrate [scope]` | ✅ Implemented | Schema version migrations |
 
-trellis remove workflow feature-development # uninstall
+#### Gaps
+
+1. **`handleAdd` never creates entities** — only registers schemas via
+   `kernel.createOntology()`. For `agent` type, it should create a `core:Agent`
+   entity with the package's agent config. For `workflow` type, a `core:Workflow`
+   entity. Etc.
+
+2. **No `trellis publish init <type> <name>`** — `scaffoldPackage` creates a
+   bare package body with a placeholder schema. No type-specific scaffolding
+   (e.g., `publish init agent` should populate `model`, `provider`,
+   `systemPrompt`, `tools`, `capabilities`).
+
+3. **No `trellis publish` command** — `publishPackage` exists but has no CLI
+   binding.
+
+#### Proposed agent package manifest
+
+```json
+{
+  "name": "@trellis.computer/agents/strategist",
+  "version": "0.1.0",
+  "agent": {
+    "model": "claude-sonnet-4-20250514",
+    "provider": "anthropic",
+    "systemPrompt": "You are a strategic planning agent...",
+    "tools": ["@trellis.computer/tools/research", "@trellis.computer/tools/plan"],
+    "capabilities": ["research", "planning", "decision-making"],
+    "temperature": 0.3,
+    "maxTokens": 4096
+  },
+  "schemas": [
+    {
+      "@id": "agent:strategist",
+      "@type": "core:Agent",
+      "version": "0.1.0"
+    }
+  ]
+}
 ```
 
-#### Installation flow
+On `trellis add agent strategist`:
+1. Resolve and download the package
+2. Register its schemas (current behavior)
+3. Create a `core:Agent` entity with fields from `agent` block
+4. Link any tool dependencies by resolving their packages
 
-1. `trellis add workflow feature-development`
-2. CLI resolves `@trellis.computer/workflows-feature-development` (or scoped subpath)
-3. Downloads package, extracts JSON-LD entities
-4. Registers entities in the local graph via entity creation
-5. Updates `.trellis/agent-manifest.json` (unified architecture manifest)
+### 7. Open Questions
 
-### 5. Documentation Strategy
+1. **Workflow→steps relation:** Should `core:Workflow.steps` be upgraded from
+   `multi_select` (string array) to a relation to `core:WorkflowStep`?
+   **Current thinking:** yes, but needs a migration path for existing workflows.
+   The `multi_select` convention works for simple cases; relations enable TQL
+   traversal.
 
-Documentation health is infrastructure, not a task-level check-in. It has its own lifecycle (draft → review → publish → freshness check) and should be enforced by the pipeline and CI.
+2. **Agent→tools relation:** Should `core:Agent` get a `tools` relation to
+   `core:Tool`? **Decision: yes** — this is the most impactful single change.
+   It enables `TQL.agent(id).tools` and makes the graph the source of truth for
+   agent capabilities. The current `AgentDef.tools: string[]` can be derived
+   from the relation.
 
-#### 5.1 Unify doc locations
+3. **PipelinePhase.agentRole as relation:** Currently an enum string. Should it
+   become a relation to `core:Agent`? This would enable reusing the same agent
+   definition across phases. On the other hand, a phase defines *what role to
+   run*, not *which specific agent instance* — the agent is resolved at
+   runtime. **Deferred** — revisit when pipeline execution needs dynamic agent
+   resolution.
 
-```
-docs/
-├── adr/               # all ADRs (move from .trellis/adr/)
-├── architecture/       # ARCHITECTURE.md, DESIGN.md, PILLARS.md
-├── workflows/          # feature-development.md, documentation-development.md
-├── agents/             # AGENTS.md, agent-context.json
-└── reference/          # generated API docs, CLI reference
-```
+4. **Schema tier:** `core:Agent` and `core:Handoff` are `system` tier
+   (configurable with releases), not `core` tier (kernel-locked). This allows
+   them to evolve without kernel changes.
 
-Delete duplicates. Symlink if tools need old paths (e.g., `.cursor/skills/` looking for `.trellis/adr/`).
-
-#### 5.2 Doc gates in the feature workflow
-
-Extend `.trellis/agents/workflows/feature-development.md` Phase 3:
-
-```markdown
-### Phase 3: Review
-
-10. Before requesting review, verify acceptance criteria:
-
-    ```bash
-    trellis issue check <issue-id>
-    ```
-
-11. **Check documentation health:**
-
-    ```bash
-    trellis doc check <issue-id>   # validates links, freshness, ownership
-    ```
-
-    Add `--ac "doc:trellis doc check <issue-id>"` to issue creation template.
-```
-
-#### 5.3 Automate freshness & link health
-
-Add a `pnpm doc:check` script that:
-- Validates all `[[wiki-links]]` resolve
-- Flags ADRs older than 6 months without `superseded-by` or `reviewed:` frontmatter
-- Runs markdown-link-check on all `.md`
-- Fails CI if broken
-
-#### 5.4 Generate, don't hand-write, reference docs
-
-- CLI reference → generate from `trellis --help` / command metadata
-- API surface → generate from TypeScript exports (TypeDoc or custom)
-- ADR index → generate from frontmatter (already partially done in `README.md`)
-
-#### 5.5 Ownership frontmatter
-
-Every doc file gets explicit ownership:
-
-```markdown
----
-owner: "@agent-architect"
-reviewer: "@agent-reviewer"
-review-cycle: "quarterly"
-supersedes: ["0001", "0002"]
-superseded-by: "0005"
----
-```
-
-The `owner` drafts and maintains; the `reviewer` owns freshness. This mirrors the pipeline's `author` → `reviewer` handoff pattern.
-
-#### 5.6 Documentation issue workflow
-
-Add a `documentation` issue label with its own workflow: `.trellis/agents/workflows/documentation-development.md`.
-
-```markdown
----
-description: Repeatable documentation procedure from draft to published.
----
-
-# Documentation Development Workflow
-
-## Steps
-
-1. Define audience (agent, human, or both)
-2. Link to related code/ADR/issue
-3. Write draft with ownership frontmatter
-4. Review for accuracy and freshness
-5. Publish to unified docs location
-6. Add freshness date (quarterly review cycle)
-```
-
-#### 5.7 Triage: detect stale docs at the triage gate
-
-In the feature development workflow's pre-flight phase, check if the issue has documentation-related acceptance criteria. If it does, the `doc:check` gate becomes mandatory before closure.
-
----
-
-## Implementation Plan
-
-### Phase 1: Ontology Schemas
-
-1. Extend `core:Workflow` with relations to `WorkflowStep`, `WorkflowEdge`, `WorkflowGate`
-2. Define `trellis:Pipeline` and `core:PipelinePhase` via `defineType()`
-3. Define `core:Agent`, `core:Tool`, `core:Handoff` via `defineType()`
-4. Register all schemas in kernel (`system` tier for Agent/Handoff/Workflow types, `core` tier for the base Workflow)
-5. Write TQL queries for common lookups
-6. Unit tests for schema validation
-
-**Dependencies:** None
-**Estimated:** 2-3 days
-
-### Phase 2: Workflow Runtime
-
-1. Implement `trellis workflow list/show/run` CLI
-2. Implement step execution (run commands, check gates)
-3. Implement edge routing (evaluate conditions, route to next step/agent)
-4. Wire to handoff envelope system
-5. Integration tests
-
-**Dependencies:** Phase 1
-**Estimated:** 3-5 days
-
-### Phase 3: Pipeline-as-Data
-
-1. Migrate pipeline role definitions from `.cursor/skills/` to graph entities
-2. Replace Cursor stop hook with kernel-native orchestration
-3. `trellis pipeline start` runs the full strategist → reviewer flow from graph data
-4. E2E tests
-
-**Dependencies:** Phase 2
-**Estimated:** 5-7 days
-
-### Phase 4: Registry System
-
-1. Set up `@trellis.computer` npm org packages
-2. Implement `trellis add/list/remove` CLI
-3. Create initial workflow/agent packages
-4. Documentation
-
-**Dependencies:** Phase 1
-**Estimated:** 3-5 days
-
-### Phase 5: Documentation Infrastructure
-
-1. `trellis doc check` CLI command
-2. `pnpm doc:check` script in CI
-3. `documentation` issue label and workflow file
-4. Doc location unification (moves, symlinks)
-5. Generated reference docs (CLI, API, ADR index)
-
-**Dependencies:** Phase 1 (for `trellis doc check` CLI)
-**Estimated:** 3-4 days
-
-## Open Questions
-
-1. **Schema tier:** Should `core:Agent` and `core:Handoff` be `core` tier (immutable, shipped with kernel) or `system` tier (versioned with releases, mutable)? **Decision: system** — they're configurable, not kernel-locked.
-
-2. **Registry naming:** `@trellis.computer/workflows` as a single package with all workflows, or per-workflow packages? **Decision: Single package** — per-workflow packages create npm sprawl.
-
-3. **`core:Workflow` vs new type:** The current `core:Workflow` has `steps: multi_select` (string array). Should we replace it with structured relations, or add `trellis:Pipeline` as a new type? **Decision: Add `trellis:Pipeline` as a new type.** Preserves backward compat, lets Pipeline compose Workflows.
-
-4. **Affordance formalization:** Should affordances get a formal `core:Affordance` schema, or remain a design-level concept? **Decision: Defer.** Let the UI work drive the formalization.
-
-5. **Themes/projections/affordances split:** Should these be separate `@trellis.computer` packages? **Decision: Yes** — `@trellis.computer/themes`, `@trellis.computer/projections`, `@trellis.computer/affordance` with the contract boundaries described in the registry design.
-
-## Success Criteria
-
-- [ ] All new schemas defined via `defineType()` and registered in kernel
-- [ ] `trellis:Pipeline` composes `core:Workflow` entities for multi-agent orchestration
-- [ ] Workflows are queryable via TQL
-- [ ] Agents are stored as graph entities with proper schemas
-- [ ] Handoffs are auditable graph entities
-- [ ] `trellis add` installs packages from `@trellis.computer`
-- [ ] Pipeline definitions live in the graph, not in IDE-specific files
-- [ ] `trellis doc check` validates links, freshness, and ownership
-- [ ] `pnpm doc:check` fails CI on broken links/stale ADRs
-- [ ] `documentation` issue label with its own workflow
-- [ ] No regression in existing agent functionality
-- [ ] Documentation updated with new ontology and registry workflow
+5. **Registry entity creation:** Should `trellis add agent` auto-create graph
+   entities, or should that be a separate step? **Decision: auto-create** —
+   the install should produce a usable agent, not just a schema registration.
+   The entity creation is idempotent (upsert by `@id`).
