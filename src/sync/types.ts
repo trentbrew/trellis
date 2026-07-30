@@ -267,4 +267,8 @@ export interface SyncTransport {
   onMessage(handler: SyncMessageHandler): void;
   /** List connected peers. */
   peers(): PeerId[];
+  /** Connect to the sync endpoint (no-op for always-on transports like Iroh). */
+  connect?(): Promise<void>;
+  /** Disconnect from the sync endpoint (no-op for always-on transports like Iroh). */
+  disconnect?(): Promise<void>;
 }

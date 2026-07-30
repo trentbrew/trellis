@@ -1,14 +1,16 @@
 /**
  * Sync Daemon for Background Realtime Sync (TRL-334)
  *
- * Background process that maintains persistent WebSocket connection
+ * Background process that maintains persistent sync connection
  * and auto-syncs full graph state between environments.
+ * Transport-agnostic — works with WebSocket, Iroh, or any SyncTransport.
  */
 
 import { SyncEngine } from './sync-engine.js';
 import { WebSocketTransport } from './websocket-transport.js';
-import type { VcsOp } from '../vcs/types.js';
+import type { SyncTransport } from './types.js';
 import type { SyncMessage } from './types.js';
+import type { VcsOp } from '../vcs/types.js';
 import {
   getSyncPolicy,
   shouldBlockMessage,
@@ -18,8 +20,10 @@ import { SyncAuditTrail } from './audit-trail.js';
 import { RateLimiter } from './rate-limiter.js';
 
 export interface SyncDaemonOptions {
-  /** WebSocket server URL. */
-  url: string;
+  /** WebSocket server URL (used when transport is not provided). */
+  url?: string;
+  /** Sync transport. Defaults to WebSocketTransport if not provided. */
+  transport?: SyncTransport;
   /** Local peer ID. */
   localPeerId: string;
   /** Function to get local ops. */
@@ -46,12 +50,12 @@ export interface SyncDaemonState {
 
 /**
  * Background sync daemon.
- * Maintains WebSocket connection and auto-syncs on interval.
+ * Maintains connection and auto-syncs on interval.
  */
 export class SyncDaemon {
   private options: SyncDaemonOptions;
   private engine: SyncEngine;
-  private transport: WebSocketTransport;
+  private transport: SyncTransport;
   private quarantine: QuarantineStore;
   private auditTrail: SyncAuditTrail;
   private rateLimiter: RateLimiter;
@@ -71,25 +75,30 @@ export class SyncDaemon {
       ...opts,
     };
 
-    // Load API key from .trellis-db.json if not provided
-    let authToken = this.options.authToken;
-    if (!authToken) {
-      try {
-        const { readFileSync } = require('node:fs');
-        const { join } = require('node:path');
-        const dbPath = join(this.options.rootPath!, '.trellis-db.json');
-        const db = JSON.parse(readFileSync(dbPath, 'utf-8'));
-        authToken = db.apiKey;
-      } catch {
-        // No API key available
+    if (opts.transport) {
+      this.transport = opts.transport;
+    } else if (opts.url) {
+      let authToken = this.options.authToken;
+      if (!authToken) {
+        try {
+          const { readFileSync } = require('node:fs');
+          const { join } = require('node:path');
+          const dbPath = join(this.options.rootPath!, '.trellis-db.json');
+          const db = JSON.parse(readFileSync(dbPath, 'utf-8'));
+          authToken = db.apiKey;
+        } catch {
+          // No API key available
+        }
       }
-    }
 
-    this.transport = new WebSocketTransport({
-      url: this.options.url,
-      localPeerId: this.options.localPeerId,
-      authToken,
-    });
+      this.transport = new WebSocketTransport({
+        url: opts.url,
+        localPeerId: this.options.localPeerId,
+        authToken,
+      });
+    } else {
+      throw new Error('SyncDaemon requires either url or transport option');
+    }
 
     this.quarantine = new QuarantineStore();
     this.auditTrail = new SyncAuditTrail(this.options.rootPath!);
@@ -115,7 +124,7 @@ export class SyncDaemon {
         }
 
         const policy = getSyncPolicy();
-        const message = { type: 'ops', ops };
+        const message = { type: 'ops', ops } as SyncMessage;
         const block = shouldBlockMessage(message, policy);
 
         if (block.blocked) {
@@ -152,7 +161,7 @@ export class SyncDaemon {
     }
 
     try {
-      await this.transport.connect();
+      await this.transport.connect?.();
       this.state.connected = true;
       this.state.running = true;
       this.auditTrail.logConnect(this.options.localPeerId, true);
@@ -211,7 +220,7 @@ export class SyncDaemon {
       this.interval = null;
     }
 
-    this.transport.disconnect();
+    this.transport.disconnect?.();
     this.state.running = false;
     this.state.connected = false;
     this.auditTrail.logDisconnect(this.options.localPeerId, true);
@@ -230,7 +239,6 @@ export class SyncDaemon {
    * Check remote state to determine if bootstrap is needed.
    */
   private async checkRemoteState(): Promise<{ opCount: number }> {
-    // Send have message to get remote op count
     const localOps = this.options.getLocalOps();
     await this.transport.send('server', {
       version: 1,
@@ -241,8 +249,6 @@ export class SyncDaemon {
       opCount: localOps.length,
     });
 
-    // Wait for have response (simplified - in production use proper async handshake)
-    // For now, return 0 to trigger bootstrap if enabled
     return { opCount: 0 };
   }
 
@@ -253,7 +259,6 @@ export class SyncDaemon {
     const localOps = this.options.getLocalOps();
     console.log(`Bootstrapping remote with ${localOps.length} ops...`);
 
-    // Send ops message with full local state
     await this.transport.send('server', {
       version: 1,
       type: 'ops',
@@ -269,9 +274,9 @@ export class SyncDaemon {
    * Public method to explicitly bootstrap remote.
    */
   async bootstrap(): Promise<void> {
-    await this.transport.connect();
+    await this.transport.connect?.();
     await this.bootstrapRemote();
-    this.transport.disconnect();
+    this.transport.disconnect?.();
   }
 
   /**
