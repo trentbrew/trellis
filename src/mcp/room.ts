@@ -40,6 +40,7 @@ import { scheduleRoomMcpAudit } from './room-audit.js';
 import { buildRoomGraphSummary } from './graph-summary.js';
 import type { MiddlewareContext } from '../core/kernel/middleware.js';
 import type { TrellisKernel } from '../core/kernel/trellis-kernel.js';
+import { registerAgentExecTools } from './agent-exec.js';
 
 // ---------------------------------------------------------------------------
 // Context
@@ -649,5 +650,6 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
     },
   );
 
+  registerAgentExecTools(server, ctx.pool);
   return server;
 }

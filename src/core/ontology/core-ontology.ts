@@ -480,6 +480,132 @@ const tool: SchemaDefinition = {
 };
 
 /**
+ * trellis:AgentRun — A single execution run of an agent.
+ */
+const agentRun: SchemaDefinition = {
+  '@id': 'trellis:AgentRun',
+  '@type': 'trellis:Schema',
+  version: VERSION,
+  tier: 'system',
+  subClassOf: 'core:Thing',
+  label: 'AgentRun',
+  icon: 'lucide:play',
+  fields: [
+    f('startedAt', 'date', { required: true }),
+    f('completedAt', 'date'),
+    f('status', 'select', {
+      required: true,
+      selectOptions: ['running', 'plan_pending', 'paused', 'completed', 'failed', 'cancelled'],
+      defaultValue: 'running',
+    }),
+    f('input', 'rich_text'),
+    f('output', 'rich_text'),
+    f('totalTokens', 'number'),
+    f('promptTokens', 'number'),
+    f('completionTokens', 'number'),
+    f('maxRetries', 'number'),
+    f('timeoutMs', 'number'),
+    f('executedBy', 'relation', {
+      relation: { targetSchema: 'core:Agent', cardinality: 'one' },
+    }),
+    f('hasPlan', 'relation', {
+      relation: { cardinality: 'many' },
+    }),
+    f('usedTool', 'relation', {
+      relation: { targetSchema: 'core:Tool', cardinality: 'many' },
+    }),
+    f('handoffTo', 'relation', {
+      relation: { targetSchema: 'trellis:AgentRun', cardinality: 'many' },
+    }),
+    f('handoffFrom', 'relation', {
+      relation: { targetSchema: 'trellis:AgentRun', cardinality: 'one' },
+    }),
+  ],
+};
+
+/**
+ * trellis:DecisionTrace — A decision recorded during an agent run.
+ */
+const decisionTrace: SchemaDefinition = {
+  '@id': 'trellis:DecisionTrace',
+  '@type': 'trellis:Schema',
+  version: VERSION,
+  tier: 'system',
+  subClassOf: 'core:Thing',
+  label: 'DecisionTrace',
+  icon: 'lucide:git-branch',
+  fields: [
+    f('toolName', 'title', { required: true }),
+    f('timestamp', 'date', { required: true }),
+    f('input', 'json'),
+    f('output', 'rich_text'),
+    f('rationale', 'rich_text'),
+    f('alternatives', 'json'),
+    f('belongsToRun', 'relation', {
+      relation: { targetSchema: 'trellis:AgentRun', cardinality: 'one' },
+    }),
+    f('madeBy', 'relation', {
+      relation: { targetSchema: 'core:Agent', cardinality: 'one' },
+    }),
+    f('relatedTo', 'relation', {
+      relation: { cardinality: 'many' },
+    }),
+  ],
+};
+
+/**
+ * trellis:WorkerPoolTask — A queued or active task in a WorkerPool.
+ */
+const workerPoolTask: SchemaDefinition = {
+  '@id': 'trellis:WorkerPoolTask',
+  '@type': 'trellis:Schema',
+  version: VERSION,
+  tier: 'system',
+  subClassOf: 'core:Thing',
+  label: 'WorkerPool Task',
+  icon: 'lucide:list-queue',
+  fields: [
+    f('agentId', 'title', { required: true }),
+    f('runId', 'title', { required: true }),
+    f('input', 'rich_text'),
+    f('status', 'select', {
+      required: true,
+      selectOptions: ['queued', 'running', 'paused', 'completed', 'failed', 'cancelled'],
+      defaultValue: 'queued',
+    }),
+    f('queuedAt', 'date', { required: true }),
+    f('startedAt', 'date'),
+    f('completedAt', 'date'),
+    f('error', 'rich_text'),
+  ],
+};
+
+/**
+ * trellis:DAGRun — A DAG workflow run, tracking step-level execution state.
+ */
+const dagRun: SchemaDefinition = {
+  '@id': 'trellis:DAGRun',
+  '@type': 'trellis:Schema',
+  version: VERSION,
+  tier: 'system',
+  subClassOf: 'core:Thing',
+  label: 'DAG Run',
+  icon: 'lucide:workflow',
+  fields: [
+    f('workflowId', 'title', { required: true }),
+    f('workflowName', 'title'),
+    f('status', 'select', {
+      required: true,
+      selectOptions: ['running', 'completed', 'failed', 'cancelled'],
+      defaultValue: 'running',
+    }),
+    f('steps', 'json'),
+    f('startedAt', 'date', { required: true }),
+    f('completedAt', 'date'),
+  ],
+};
+
+/**
  * core:Handoff — Structured agent handoff between roles.
  */
 const handoff: SchemaDefinition = {
@@ -588,6 +714,10 @@ export const CORE_ONTOLOGY: SchemaDefinition[] = [
   workflowGate,
   agent,
   tool,
+  agentRun,
+  decisionTrace,
+  workerPoolTask,
+  dagRun,
   handoff,
   pipeline,
   pipelinePhase,
