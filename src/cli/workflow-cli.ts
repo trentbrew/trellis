@@ -4,6 +4,24 @@ import { join } from 'path';
 import { resolveRepoRoot } from './repo-path.js';
 import { handleCliError } from './errors.js';
 import { TrellisKernel } from '../core/kernel/trellis-kernel.js';
+import { PROVENANCE } from '../core/persist/canonical-op.js';
+import { createKernelBackend } from '../core/persist/factory.js';
+import { attachStandardMiddleware } from '../core/kernel/boot-middleware.js';
+
+const AGENT_CTX = { provenance: PROVENANCE.cli };
+
+async function openKernel(path: string): Promise<{ kernel: TrellisKernel; close: () => void }> {
+  const rootPath = resolveRepoRoot(path);
+  const dbPath = join(rootPath, '.trellis', 'kernel.db');
+  const backend = await createKernelBackend(dbPath);
+  const kernel = new TrellisKernel({ backend, agentId: 'cli', provenance: PROVENANCE.cli });
+  kernel.boot();
+  attachStandardMiddleware(kernel);
+  return {
+    kernel,
+    close: () => kernel.close(),
+  };
+}
 
 function formatEntity(entity: { id: string; facts: { a: string; v: unknown }[] }): Record<string, unknown> {
   const obj: Record<string, unknown> = { id: entity.id };
@@ -41,15 +59,7 @@ export function registerWorkflowCommands(program: Command): void {
     .option('-p, --path <path>', 'Repository path', '.')
     .action(async (opts) => {
       try {
-        const rootPath = resolveRepoRoot(opts.path);
-        const dbPath = join(rootPath, '.trellis', 'kernel.db');
-        const { createKernelBackend } = await import('../core/persist/factory.js');
-        const { attachStandardMiddleware } = await import('../core/kernel/boot-middleware.js');
-        const { PROVENANCE } = await import('../core/persist/canonical-op.js');
-        const backend = await createKernelBackend(dbPath);
-        const kernel = new TrellisKernel({ backend, agentId: 'cli', provenance: PROVENANCE.cli });
-        kernel.boot();
-        attachStandardMiddleware(kernel);
+        const { kernel, close } = await openKernel(opts.path);
 
         const entities = kernel.listEntities('Workflow');
         let items = entities.map(formatEntity);
@@ -57,11 +67,13 @@ export function registerWorkflowCommands(program: Command): void {
 
         if (opts.json) {
           console.log(JSON.stringify(items, null, 2));
+          close();
           return;
         }
 
         if (items.length === 0) {
           console.log(chalk.dim('No workflows found.'));
+          close();
           return;
         }
 
@@ -76,7 +88,7 @@ export function registerWorkflowCommands(program: Command): void {
         }
         console.log();
 
-        kernel.close();
+        close();
       } catch (err) {
         handleCliError(err);
       }
@@ -88,19 +100,12 @@ export function registerWorkflowCommands(program: Command): void {
     .option('-p, --path <path>', 'Repository path', '.')
     .action(async (id, opts) => {
       try {
-        const rootPath = resolveRepoRoot(opts.path);
-        const dbPath = join(rootPath, '.trellis', 'kernel.db');
-        const { createKernelBackend } = await import('../core/persist/factory.js');
-        const { attachStandardMiddleware } = await import('../core/kernel/boot-middleware.js');
-        const { PROVENANCE } = await import('../core/persist/canonical-op.js');
-        const backend = await createKernelBackend(dbPath);
-        const kernel = new TrellisKernel({ backend, agentId: 'cli', provenance: PROVENANCE.cli });
-        kernel.boot();
-        attachStandardMiddleware(kernel);
+        const { kernel, close } = await openKernel(opts.path);
 
         const entity = kernel.getEntity(id);
         if (!entity) {
           console.error(chalk.red(`Workflow not found: ${id}`));
+          close();
           process.exit(1);
         }
 
@@ -120,7 +125,7 @@ export function registerWorkflowCommands(program: Command): void {
         }
 
         console.log();
-        kernel.close();
+        close();
       } catch (err) {
         handleCliError(err);
       }
@@ -134,19 +139,12 @@ export function registerWorkflowCommands(program: Command): void {
     .option('-p, --path <path>', 'Repository path', '.')
     .action(async (id, opts) => {
       try {
-        const rootPath = resolveRepoRoot(opts.path);
-        const dbPath = join(rootPath, '.trellis', 'kernel.db');
-        const { createKernelBackend } = await import('../core/persist/factory.js');
-        const { attachStandardMiddleware } = await import('../core/kernel/boot-middleware.js');
-        const { PROVENANCE } = await import('../core/persist/canonical-op.js');
-        const backend = await createKernelBackend(dbPath);
-        const kernel = new TrellisKernel({ backend, agentId: 'cli', provenance: PROVENANCE.cli });
-        kernel.boot();
-        attachStandardMiddleware(kernel);
+        const { kernel, close } = await openKernel(opts.path);
 
         const entity = kernel.getEntity(id);
         if (!entity) {
           console.error(chalk.red(`Workflow not found: ${id}`));
+          close();
           process.exit(1);
         }
 
@@ -154,6 +152,7 @@ export function registerWorkflowCommands(program: Command): void {
         const stepsList = Array.isArray(e.steps) ? e.steps as string[] : [];
         if (stepsList.length === 0) {
           console.error(chalk.red(`Workflow ${id} has no steps.`));
+          close();
           process.exit(1);
         }
 
@@ -183,7 +182,107 @@ export function registerWorkflowCommands(program: Command): void {
 
         scheduler.dispose();
         pool.stop();
-        kernel.close();
+        close();
+      } catch (err) {
+        handleCliError(err);
+      }
+    });
+
+  workflow
+    .command('create <id>')
+    .description('Create a new workflow')
+    .requiredOption('-n, --name <name>', 'Workflow name')
+    .option('-d, --description <desc>', 'Description')
+    .option('-s, --steps <steps>', 'Comma-separated step names', '')
+    .option('--active', 'Set as active (default: true)')
+    .option('-p, --path <path>', 'Repository path', '.')
+    .action(async (id, opts) => {
+      try {
+        const { kernel, close } = await openKernel(opts.path);
+
+        if (kernel.getEntity(id)) {
+          console.error(chalk.red(`Workflow already exists: ${id}`));
+          close();
+          process.exit(1);
+        }
+
+        const steps = opts.steps ? opts.steps.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+        await kernel.createEntity(id, 'Workflow', {
+          name: opts.name,
+          ...(opts.description ? { description: opts.description } : {}),
+          steps: JSON.stringify(steps),
+          active: opts.active !== false,
+        }, undefined, AGENT_CTX);
+
+        console.log(chalk.green(`✓ Workflow created: ${id}`));
+        close();
+      } catch (err) {
+        handleCliError(err);
+      }
+    });
+
+  workflow
+    .command('update <id>')
+    .description('Update an existing workflow')
+    .option('-n, --name <name>', 'New name')
+    .option('-d, --description <desc>', 'New description')
+    .option('-s, --steps <steps>', 'Comma-separated step names')
+    .option('--active <bool>', 'Set active status (true/false)')
+    .option('-p, --path <path>', 'Repository path', '.')
+    .action(async (id, opts) => {
+      try {
+        const { kernel, close } = await openKernel(opts.path);
+
+        const entity = kernel.getEntity(id);
+        if (!entity) {
+          console.error(chalk.red(`Workflow not found: ${id}`));
+          close();
+          process.exit(1);
+        }
+
+        const updates: Record<string, unknown> = {};
+        if (opts.name) updates.name = opts.name;
+        if (opts.description) updates.description = opts.description;
+        if (opts.steps !== undefined) {
+          updates.steps = JSON.stringify(opts.steps.split(',').map((s: string) => s.trim()).filter(Boolean));
+        }
+        if (opts.active !== undefined) updates.active = opts.active === 'true' || opts.active === true;
+
+        await kernel.updateEntity(id, updates, AGENT_CTX);
+        console.log(chalk.green(`✓ Workflow updated: ${id}`));
+        close();
+      } catch (err) {
+        handleCliError(err);
+      }
+    });
+
+  workflow
+    .command('delete <id>')
+    .description('Delete a workflow')
+    .option('--force', 'Skip confirmation')
+    .option('-p, --path <path>', 'Repository path', '.')
+    .action(async (id, opts) => {
+      try {
+        const { kernel, close } = await openKernel(opts.path);
+
+        const entity = kernel.getEntity(id);
+        if (!entity) {
+          console.error(chalk.red(`Workflow not found: ${id}`));
+          close();
+          process.exit(1);
+        }
+
+        if (!opts.force) {
+          const name = entity.facts.find((f) => f.a === 'name')?.v ?? id;
+          console.log(chalk.yellow(`About to delete workflow "${name}" (${id})`));
+          console.log(chalk.dim('Use --force to skip this confirmation.'));
+          close();
+          return;
+        }
+
+        await kernel.deleteEntity(id, AGENT_CTX);
+        console.log(chalk.green(`✓ Workflow deleted: ${id}`));
+        close();
       } catch (err) {
         handleCliError(err);
       }
