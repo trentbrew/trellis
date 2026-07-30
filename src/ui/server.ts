@@ -467,7 +467,10 @@ export async function startUIServer(opts: UIServerOptions): Promise<{
   port: number;
   stop: () => void;
 }> {
-  const engine = new TrellisVcsEngine({ rootPath: opts.rootPath, provenance: PROVENANCE.http });
+  const engine = new TrellisVcsEngine({
+    rootPath: opts.rootPath,
+    provenance: PROVENANCE.http,
+  });
   engine.open();
 
   // Resolve client.html — cwd (WebContainer/npx), import.meta (bundled), argv (bin).
@@ -504,7 +507,10 @@ export async function startUIServer(opts: UIServerOptions): Promise<{
       );
       let dir = argvDir;
       for (let i = 0; i < 6; i++) {
-        push(join(dir, 'dist', 'ui', 'client.html'), join(dir, 'ui', 'client.html'));
+        push(
+          join(dir, 'dist', 'ui', 'client.html'),
+          join(dir, 'ui', 'client.html'),
+        );
         dir = dirname(dir);
       }
     }
@@ -526,7 +532,7 @@ export async function startUIServer(opts: UIServerOptions): Promise<{
     }
     throw new Error(
       `Could not find client.html. cwd=${process.cwd()} argv=${argvEntry ?? '(none)'}\n` +
-      'Try reinstalling the package or running `npm run build`.',
+        'Try reinstalling the package or running `npm run build`.',
     );
   }
 
@@ -627,9 +633,7 @@ export async function startUIServer(opts: UIServerOptions): Promise<{
       try {
         const searchOpts: any = { limit };
         if (typeFilter) {
-          searchOpts.types = typeFilter
-            .split(',')
-            .map((t: string) => t.trim());
+          searchOpts.types = typeFilter.split(',').map((t: string) => t.trim());
         }
         const results = await mgr.search(query, searchOpts);
         return Response.json(
@@ -645,10 +649,7 @@ export async function startUIServer(opts: UIServerOptions): Promise<{
           { headers },
         );
       } catch (err: any) {
-        return Response.json(
-          { error: err.message },
-          { status: 500, headers },
-        );
+        return Response.json({ error: err.message }, { status: 500, headers });
       }
     }
 
@@ -668,10 +669,13 @@ export async function startUIServer(opts: UIServerOptions): Promise<{
     if (path === '/theme/runtime-theme.css') {
       const cssPath = resolveRuntimeThemeCss(opts.rootPath);
       if (!cssPath) {
-        return new Response('runtime-theme.css not found — run from trellis-node.', {
-          status: 404,
-          headers,
-        });
+        return new Response(
+          'runtime-theme.css not found — run from trellis-node.',
+          {
+            status: 404,
+            headers,
+          },
+        );
       }
       return new Response(readFileSync(cssPath, 'utf-8'), {
         headers: {
@@ -679,6 +683,56 @@ export async function startUIServer(opts: UIServerOptions): Promise<{
           'Content-Type': 'text/css; charset=utf-8',
           'Cache-Control': 'no-cache',
         },
+      });
+    }
+
+    // Serve admin UI at /admin route
+    if (path === '/admin' || path === '/admin.html') {
+      const adminHtmlPath = join(dirname(findClientHtml()), 'admin.html');
+      if (existsSync(adminHtmlPath)) {
+        return new Response(readFileSync(adminHtmlPath, 'utf-8'), {
+          headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8' },
+        });
+      }
+      return new Response('admin.html not found — run `npm run build` first.', {
+        status: 404,
+        headers,
+      });
+    }
+
+    // Serve admin-datatable.css
+    if (path === '/admin-datatable.css') {
+      const cssPath = join(dirname(findClientHtml()), 'admin-datatable.css');
+      if (existsSync(cssPath)) {
+        return new Response(readFileSync(cssPath, 'utf-8'), {
+          headers: {
+            ...headers,
+            'Content-Type': 'text/css; charset=utf-8',
+            'Cache-Control': 'no-cache',
+          },
+        });
+      }
+      return new Response('admin-datatable.css not found.', {
+        status: 404,
+        headers,
+      });
+    }
+
+    // Serve UI package files
+    if (path.startsWith('/ui/@trellis.computer/ui/dist/')) {
+      const uiPath = join(dirname(findClientHtml()), path.replace('/ui/', ''));
+      if (existsSync(uiPath)) {
+        return new Response(readFileSync(uiPath, 'utf-8'), {
+          headers: {
+            ...headers,
+            'Content-Type': 'application/javascript; charset=utf-8',
+            'Cache-Control': 'no-cache',
+          },
+        });
+      }
+      return new Response('UI file not found.', {
+        status: 404,
+        headers,
       });
     }
 
@@ -696,9 +750,9 @@ export async function startUIServer(opts: UIServerOptions): Promise<{
     fetch: fetchHandler,
     // UI server is HTTP-only — no WebSocket needed.
     websocket: {
-      open: () => { },
-      message: () => { },
-      close: () => { },
+      open: () => {},
+      message: () => {},
+      close: () => {},
     },
   });
 
@@ -709,7 +763,7 @@ export async function startUIServer(opts: UIServerOptions): Promise<{
       if (embeddingManager) {
         try {
           embeddingManager.close();
-        } catch { }
+        } catch {}
       }
     },
   };
