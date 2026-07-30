@@ -76,3 +76,4 @@ examples/**/node_modules/
 examples/**/dist/
 examples/**/.data/
 examples/graph-nav/.graph-nav-db/
+.trellis/
