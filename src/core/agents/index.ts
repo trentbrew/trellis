@@ -6,7 +6,7 @@
 
 export { AgentHarness } from './harness.js';
 export { WorkerPool } from './worker-pool.js';
-export { DAGScheduler } from './dag-scheduler.js';
+export { DAGScheduler, detectCycle } from './dag-scheduler.js';
 export { evaluateCondition, evaluateEdge } from './edge-evaluator.js';
 export { evaluateGate } from './gate-keeper.js';
 

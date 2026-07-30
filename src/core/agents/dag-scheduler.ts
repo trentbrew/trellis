@@ -17,6 +17,48 @@ import type { DAGGate } from './gate-keeper.js';
 const AGENT_CTX = { provenance: PROVENANCE.agent };
 
 // ---------------------------------------------------------------------------
+// Cycle detection
+// ---------------------------------------------------------------------------
+
+export function detectCycle(workflow: DAGWorkflow): string | null {
+  const visited = new Set<string>();
+  const inStack = new Set<string>();
+
+  const adjacency = new Map<string, string[]>();
+  for (const step of workflow.steps) {
+    adjacency.set(step.id, step.dependsOn ?? []);
+  }
+
+  function dfs(node: string): string | null {
+    visited.add(node);
+    inStack.add(node);
+
+    const deps = adjacency.get(node) ?? [];
+    for (const dep of deps) {
+      if (!adjacency.has(dep)) continue;
+      if (!visited.has(dep)) {
+        const cycle = dfs(dep);
+        if (cycle) return cycle;
+      } else if (inStack.has(dep)) {
+        return [...inStack].slice([...inStack].indexOf(dep)).concat(node).join(' → ');
+      }
+    }
+
+    inStack.delete(node);
+    return null;
+  }
+
+  for (const step of workflow.steps) {
+    if (!visited.has(step.id)) {
+      const cycle = dfs(step.id);
+      if (cycle) return cycle;
+    }
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -156,6 +198,11 @@ export class DAGScheduler {
   // ---------------------------------------------------------------------------
 
   async run(workflow: DAGWorkflow): Promise<string> {
+    const cycle = detectCycle(workflow);
+    if (cycle) {
+      throw new Error(`Workflow cycle detected: ${cycle}`);
+    }
+
     const runId = workflow.id;
     const steps: DAGRunStep[] = workflow.steps.map((s) => ({
       step: s,

@@ -4,11 +4,26 @@ import { join } from 'path';
 import { resolveRepoRoot } from './repo-path.js';
 import { handleCliError } from './errors.js';
 import { TrellisKernel } from '../core/kernel/trellis-kernel.js';
+import { PROVENANCE } from '../core/persist/canonical-op.js';
+import { createKernelBackend } from '../core/persist/factory.js';
+import { attachStandardMiddleware } from '../core/kernel/boot-middleware.js';
+
+const AGENT_CTX = { provenance: PROVENANCE.cli };
 
 function formatEntity(entity: { id: string; facts: { a: string; v: unknown }[] }): Record<string, unknown> {
   const obj: Record<string, unknown> = { id: entity.id };
   for (const f of entity.facts) obj[f.a] = f.v;
   return obj;
+}
+
+async function openKernel(path: string): Promise<{ kernel: TrellisKernel; close: () => void }> {
+  const rootPath = resolveRepoRoot(path);
+  const dbPath = join(rootPath, '.trellis', 'kernel.db');
+  const backend = await createKernelBackend(dbPath);
+  const kernel = new TrellisKernel({ backend, agentId: 'cli', provenance: PROVENANCE.cli });
+  kernel.boot();
+  attachStandardMiddleware(kernel);
+  return { kernel, close: () => kernel.close() };
 }
 
 export function registerPipelineCommands(program: Command): void {
@@ -24,15 +39,7 @@ export function registerPipelineCommands(program: Command): void {
     .option('-p, --path <path>', 'Repository path', '.')
     .action(async (opts) => {
       try {
-        const rootPath = resolveRepoRoot(opts.path);
-        const dbPath = join(rootPath, '.trellis', 'kernel.db');
-        const { createKernelBackend } = await import('../core/persist/factory.js');
-        const { attachStandardMiddleware } = await import('../core/kernel/boot-middleware.js');
-        const { PROVENANCE } = await import('../core/persist/canonical-op.js');
-        const backend = await createKernelBackend(dbPath);
-        const kernel = new TrellisKernel({ backend, agentId: 'cli', provenance: PROVENANCE.cli });
-        kernel.boot();
-        attachStandardMiddleware(kernel);
+        const { kernel, close } = await openKernel(opts.path);
 
         const entities = kernel.listEntities('Pipeline');
         let items = entities.map(formatEntity);
@@ -40,11 +47,13 @@ export function registerPipelineCommands(program: Command): void {
 
         if (opts.json) {
           console.log(JSON.stringify(items, null, 2));
+          close();
           return;
         }
 
         if (items.length === 0) {
           console.log(chalk.dim('No pipelines found.'));
+          close();
           return;
         }
 
@@ -58,7 +67,7 @@ export function registerPipelineCommands(program: Command): void {
         }
         console.log();
 
-        kernel.close();
+        close();
       } catch (err) {
         handleCliError(err);
       }
@@ -70,19 +79,12 @@ export function registerPipelineCommands(program: Command): void {
     .option('-p, --path <path>', 'Repository path', '.')
     .action(async (id, opts) => {
       try {
-        const rootPath = resolveRepoRoot(opts.path);
-        const dbPath = join(rootPath, '.trellis', 'kernel.db');
-        const { createKernelBackend } = await import('../core/persist/factory.js');
-        const { attachStandardMiddleware } = await import('../core/kernel/boot-middleware.js');
-        const { PROVENANCE } = await import('../core/persist/canonical-op.js');
-        const backend = await createKernelBackend(dbPath);
-        const kernel = new TrellisKernel({ backend, agentId: 'cli', provenance: PROVENANCE.cli });
-        kernel.boot();
-        attachStandardMiddleware(kernel);
+        const { kernel, close } = await openKernel(opts.path);
 
         const entity = kernel.getEntity(id);
         if (!entity) {
           console.error(chalk.red(`Pipeline not found: ${id}`));
+          close();
           process.exit(1);
         }
 
@@ -114,7 +116,7 @@ export function registerPipelineCommands(program: Command): void {
         }
 
         console.log();
-        kernel.close();
+        close();
       } catch (err) {
         handleCliError(err);
       }
@@ -127,19 +129,12 @@ export function registerPipelineCommands(program: Command): void {
     .option('-p, --path <path>', 'Repository path', '.')
     .action(async (id, opts) => {
       try {
-        const rootPath = resolveRepoRoot(opts.path);
-        const dbPath = join(rootPath, '.trellis', 'kernel.db');
-        const { createKernelBackend } = await import('../core/persist/factory.js');
-        const { attachStandardMiddleware } = await import('../core/kernel/boot-middleware.js');
-        const { PROVENANCE } = await import('../core/persist/canonical-op.js');
-        const backend = await createKernelBackend(dbPath);
-        const kernel = new TrellisKernel({ backend, agentId: 'cli', provenance: PROVENANCE.cli });
-        kernel.boot();
-        attachStandardMiddleware(kernel);
+        const { kernel, close } = await openKernel(opts.path);
 
         const entity = kernel.getEntity(id);
         if (!entity) {
           console.error(chalk.red(`Pipeline not found: ${id}`));
+          close();
           process.exit(1);
         }
 
@@ -153,6 +148,7 @@ export function registerPipelineCommands(program: Command): void {
 
         if (phases.length === 0) {
           console.error(chalk.red(`Pipeline ${id} has no phases.`));
+          close();
           process.exit(1);
         }
 
@@ -220,7 +216,179 @@ export function registerPipelineCommands(program: Command): void {
         }
         scheduler.dispose();
         pool.stop();
-        kernel.close();
+        close();
+      } catch (err) {
+        handleCliError(err);
+      }
+    });
+
+  pipeline
+    .command('create <id>')
+    .description('Create a new pipeline')
+    .requiredOption('-n, --name <name>', 'Pipeline name')
+    .option('-d, --description <desc>', 'Description')
+    .option('--active', 'Set as active (default: true)')
+    .option('-p, --path <path>', 'Repository path', '.')
+    .action(async (id, opts) => {
+      try {
+        const { kernel, close } = await openKernel(opts.path);
+
+        if (kernel.getEntity(id)) {
+          console.error(chalk.red(`Pipeline already exists: ${id}`));
+          close();
+          process.exit(1);
+        }
+
+        await kernel.createEntity(id, 'Pipeline', {
+          name: opts.name,
+          ...(opts.description ? { description: opts.description } : {}),
+          active: opts.active !== false,
+        }, undefined, AGENT_CTX);
+
+        console.log(chalk.green(`✓ Pipeline created: ${id}`));
+        close();
+      } catch (err) {
+        handleCliError(err);
+      }
+    });
+
+  pipeline
+    .command('update <id>')
+    .description('Update an existing pipeline')
+    .option('-n, --name <name>', 'New name')
+    .option('-d, --description <desc>', 'New description')
+    .option('--active <bool>', 'Set active status (true/false)')
+    .option('-p, --path <path>', 'Repository path', '.')
+    .action(async (id, opts) => {
+      try {
+        const { kernel, close } = await openKernel(opts.path);
+
+        const entity = kernel.getEntity(id);
+        if (!entity) {
+          console.error(chalk.red(`Pipeline not found: ${id}`));
+          close();
+          process.exit(1);
+        }
+
+        const updates: Record<string, unknown> = {};
+        if (opts.name) updates.name = opts.name;
+        if (opts.description) updates.description = opts.description;
+        if (opts.active !== undefined) updates.active = opts.active === 'true' || opts.active === true;
+
+        await kernel.updateEntity(id, updates, AGENT_CTX);
+        console.log(chalk.green(`✓ Pipeline updated: ${id}`));
+        close();
+      } catch (err) {
+        handleCliError(err);
+      }
+    });
+
+  pipeline
+    .command('delete <id>')
+    .description('Delete a pipeline')
+    .option('--force', 'Skip confirmation')
+    .option('-p, --path <path>', 'Repository path', '.')
+    .action(async (id, opts) => {
+      try {
+        const { kernel, close } = await openKernel(opts.path);
+
+        const entity = kernel.getEntity(id);
+        if (!entity) {
+          console.error(chalk.red(`Pipeline not found: ${id}`));
+          close();
+          process.exit(1);
+        }
+
+        if (!opts.force) {
+          const name = entity.facts.find((f) => f.a === 'name')?.v ?? id;
+          console.log(chalk.yellow(`About to delete pipeline "${name}" (${id})`));
+          console.log(chalk.dim('Use --force to skip this confirmation.'));
+          close();
+          return;
+        }
+
+        await kernel.deleteEntity(id, AGENT_CTX);
+        console.log(chalk.green(`✓ Pipeline deleted: ${id}`));
+        close();
+      } catch (err) {
+        handleCliError(err);
+      }
+    });
+
+  pipeline
+    .command('add-phase <pipelineId> <phaseId>')
+    .description('Link a phase to a pipeline')
+    .requiredOption('-o, --order <number>', 'Phase order (1-based)', '1')
+    .requiredOption('-r, --role <role>', 'Agent role for this phase')
+    .option('-n, --name <name>', 'Phase name')
+    .option('-w, --workflow <id>', 'Workflow ID to execute in this phase')
+    .option('-d, --description <desc>', 'Phase description')
+    .option('-p, --path <path>', 'Repository path', '.')
+    .action(async (pipelineId, phaseId, opts) => {
+      try {
+        const { kernel, close } = await openKernel(opts.path);
+
+        const pipeline = kernel.getEntity(pipelineId);
+        if (!pipeline) {
+          console.error(chalk.red(`Pipeline not found: ${pipelineId}`));
+          close();
+          process.exit(1);
+        }
+
+        if (kernel.getEntity(phaseId)) {
+          console.error(chalk.red(`Phase already exists: ${phaseId}`));
+          close();
+          process.exit(1);
+        }
+
+        await kernel.createEntity(phaseId, 'PipelinePhase', {
+          order: parseInt(opts.order, 10),
+          agentRole: opts.role,
+          ...(opts.name ? { name: opts.name } : {}),
+          ...(opts.workflow ? { workflow: opts.workflow } : {}),
+          ...(opts.description ? { description: opts.description } : {}),
+        }, [{ attribute: 'phases', targetEntityId: pipelineId }], AGENT_CTX);
+
+        console.log(chalk.green(`✓ Phase ${phaseId} added to ${pipelineId}`));
+        close();
+      } catch (err) {
+        handleCliError(err);
+      }
+    });
+
+  pipeline
+    .command('remove-phase <pipelineId> <phaseId>')
+    .description('Remove a phase from a pipeline')
+    .option('--force', 'Skip confirmation')
+    .option('-p, --path <path>', 'Repository path', '.')
+    .action(async (pipelineId, phaseId, opts) => {
+      try {
+        const { kernel, close } = await openKernel(opts.path);
+
+        const pipeline = kernel.getEntity(pipelineId);
+        if (!pipeline) {
+          console.error(chalk.red(`Pipeline not found: ${pipelineId}`));
+          close();
+          process.exit(1);
+        }
+
+        const phase = kernel.getEntity(phaseId);
+        if (!phase) {
+          console.error(chalk.red(`Phase not found: ${phaseId}`));
+          close();
+          process.exit(1);
+        }
+
+        if (!opts.force) {
+          console.log(chalk.yellow(`About to remove phase ${phaseId} from ${pipelineId}`));
+          console.log(chalk.dim('Use --force to skip this confirmation.'));
+          close();
+          return;
+        }
+
+        await kernel.deleteEntity(phaseId, AGENT_CTX);
+        console.log(chalk.green(`✓ Phase ${phaseId} removed from ${pipelineId}`));
+        close();
       } catch (err) {
         handleCliError(err);
       }
