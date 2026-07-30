@@ -122,7 +122,7 @@ function handleList(type: string | undefined, rootPath: string): void {
   }
 }
 
-function handleRemove(type: string, name: string, rootPath: string, force: boolean): void {
+async function handleRemove(type: string, name: string, rootPath: string, force: boolean): Promise<void> {
   const lockfile = readLockfile(rootPath);
 
   if (!lockfile) {
@@ -146,6 +146,33 @@ function handleRemove(type: string, name: string, rootPath: string, force: boole
     }
     console.error(chalk.dim('Use --force to override.'));
     process.exit(1);
+  }
+
+  // Unregister schemas from the graph
+  const pkg = lockfile.resolved[pkgName];
+  const schemaIds = Object.keys(pkg.schemas);
+  if (schemaIds.length > 0) {
+    const dbPath = join(rootPath, '.trellis', 'kernel.db');
+    const { createKernelBackend } = await import('../core/persist/factory.js');
+    const { attachStandardMiddleware } = await import('../core/kernel/boot-middleware.js');
+    const { PROVENANCE } = await import('../core/persist/canonical-op.js');
+    const backend = await createKernelBackend(dbPath);
+    const kernel = new TrellisKernel({
+      backend,
+      agentId: `agent:${process.env.USER ?? 'unknown'}`,
+      provenance: PROVENANCE.cli,
+    });
+    kernel.boot();
+    attachStandardMiddleware(kernel);
+
+    for (const schemaId of schemaIds) {
+      try {
+        kernel.deleteOntology(schemaId);
+        console.log(chalk.dim(`  Unregistered schema ${schemaId}`));
+      } catch (err: any) {
+        console.log(chalk.yellow(`  Could not unregister ${schemaId}: ${err.message}`));
+      }
+    }
   }
 
   removeFromLockfile(lockfile, pkgName);
@@ -408,9 +435,9 @@ export function registerRegistryCommands(program: Command): void {
     .argument('<name>', 'Package name')
     .option('-p, --path <path>', 'Repository path', '.')
     .option('-f, --force', 'Force removal even if dependents exist', false)
-    .action((type: string, name: string, opts: any) => {
+    .action(async (type: string, name: string, opts: any) => {
       try {
-        handleRemove(type, name, resolveRepoRoot(opts.path), opts.force);
+        await handleRemove(type, name, resolveRepoRoot(opts.path), opts.force);
       } catch (err) {
         handleCliError(err);
       }
@@ -464,9 +491,9 @@ export function registerRegistryCommands(program: Command): void {
     .argument('<name>', 'Package name')
     .option('-p, --path <path>', 'Repository path', '.')
     .option('-f, --force', 'Force removal', false)
-    .action((type: string, name: string, opts: any) => {
+    .action(async (type: string, name: string, opts: any) => {
       try {
-        handleRemove(type, name, resolveRepoRoot(opts.path), opts.force);
+        await handleRemove(type, name, resolveRepoRoot(opts.path), opts.force);
       } catch (err) {
         handleCliError(err);
       }

@@ -68,7 +68,8 @@ export type NackReason =
   | 'destructive-op'
   | 'bulk-delete'
   | 'system-modification'
-  | 'quarantine-required';
+  | 'quarantine-required'
+  | 'rate_limited';
 
 /** Advertise which op hashes we have. */
 export interface SyncHaveMessage {

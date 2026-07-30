@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from 'fs';
 import { join, dirname } from 'path';
 import { createHash } from 'crypto';
 
@@ -47,7 +47,9 @@ export function writeLockfile(rootPath: string, data: LockfileData): void {
   const filePath = join(rootPath, LOCKFILE_PATH);
   const dir = dirname(filePath);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n');
+  const tmpPath = filePath + '.tmp';
+  writeFileSync(tmpPath, JSON.stringify(data, null, 2) + '\n');
+  renameSync(tmpPath, filePath);
 }
 
 export function validateLockfile(data: unknown): asserts data is LockfileData {
@@ -98,11 +100,13 @@ export function removeFromLockfile(lockfile: LockfileData, name: string): boolea
 
 export function findDependents(lockfile: LockfileData, name: string): string[] {
   const dependents: string[] = [];
-  const shortName = name.includes('/') ? name.split('/').pop()! : name;
-  for (const [pkgName, pkg] of Object.entries(lockfile.resolved)) {
+  const pkg = lockfile.resolved[name];
+  if (!pkg) return dependents;
+  const schemaIds = new Set(Object.keys(pkg.schemas));
+  for (const [pkgName, otherPkg] of Object.entries(lockfile.resolved)) {
     if (pkgName === name) continue;
-    for (const schema of Object.values(pkg.schemas)) {
-      if (schema['@id'].includes(shortName) || schema['@id'].includes(name)) {
+    for (const schemaId of Object.keys(otherPkg.schemas)) {
+      if (schemaIds.has(schemaId)) {
         dependents.push(pkgName);
         break;
       }

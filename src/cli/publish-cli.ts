@@ -99,7 +99,7 @@ export function registerPublishCommands(program: Command): void {
     });
 
   const publishCmd = pub
-    .command('publish')
+    .command('push')
     .description('Publish a package to the registry')
     .argument('<file>', 'Path to package JSON file')
     .option('-r, --registry <path>', 'Path to local registry clone', '.')

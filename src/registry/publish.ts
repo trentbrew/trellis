@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { computeContentHash } from './lockfile.js';
+import { compareVersions } from './version-utils.js';
 import type { RegistryIndex, PackageManifest, RegistrySchemaEntry } from './client.js';
 
 export interface PackageBody {
@@ -135,18 +136,6 @@ export function generateIndex(registryDir: string): RegistryIndex {
     published: new Date().toISOString(),
     packages,
   };
-}
-
-function compareVersions(a: string, b: string): number {
-  const pa = a.split('.').map(Number);
-  const pb = b.split('.').map(Number);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const na = pa[i] ?? 0;
-    const nb = pb[i] ?? 0;
-    if (na > nb) return 1;
-    if (na < nb) return -1;
-  }
-  return 0;
 }
 
 export function writeIndex(registryDir: string): void {
