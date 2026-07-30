@@ -2,15 +2,12 @@
  * Iroh Sync Transport
  *
  * Implements SyncTransport over Iroh QUIC bidirectional streams.
- * Each message opens a new bi stream — stateless and simple.
- *
- * Usage:
- *   const transport = await IrohSyncTransport.create()
- *   const ticket = transport.ticket() // share this with peers
- *   await IrohSyncTransport.connect(transport, ticket)
+ * Each send opens its own connection (simple, reliable).
+ * Peers are auto-registered when accepting incoming connections,
+ * enabling true bidirectional communication.
  */
 
-import { Endpoint, EndpointTicket, type EndpointAddr } from '@number0/iroh';
+import { Endpoint, EndpointTicket, EndpointAddr, EndpointBuilder, presetMinimal } from '@number0/iroh';
 import type {
   SyncTransport,
   SyncMessage,
@@ -24,7 +21,7 @@ const TRELLIS_SYNC_ALPN = Array.from(
 );
 
 // ---------------------------------------------------------------------------
-// Wire framing: 4-byte length prefix + JSON payload
+// Wire framing: JSON payload
 // ---------------------------------------------------------------------------
 
 function encodeMessage(msg: SyncMessage): number[] {
@@ -51,6 +48,8 @@ export interface IrohSyncTransportOptions {
   endpoint?: Endpoint;
   /** Secret key bytes (for deterministic identity). */
   secretKey?: number[];
+  /** Disable relay (offline/test mode). */
+  disableRelay?: boolean;
 }
 
 export class IrohSyncTransport implements SyncTransport {
@@ -75,8 +74,17 @@ export class IrohSyncTransport implements SyncTransport {
     let endpoint: Endpoint;
     if (opts?.endpoint) {
       endpoint = opts.endpoint;
+    } else if (opts?.disableRelay) {
+      const builder = Endpoint.builder();
+      presetMinimal(builder);
+      builder.alpns([TRELLIS_SYNC_ALPN]);
+      if (opts.secretKey) builder.secretKey(opts.secretKey);
+      endpoint = await builder.bind();
     } else {
-      endpoint = await Endpoint.bind({ alpns: [TRELLIS_SYNC_ALPN] });
+      endpoint = await Endpoint.bind({
+        alpns: [TRELLIS_SYNC_ALPN],
+        secretKey: opts?.secretKey,
+      });
     }
     const transport = new IrohSyncTransport(endpoint);
     transport.startAcceptLoop();
@@ -85,7 +93,6 @@ export class IrohSyncTransport implements SyncTransport {
 
   /**
    * Get a ticket string to share with peers.
-   * The receiver pastes this into `connect()`.
    */
   ticket(): string {
     return EndpointTicket.fromAddr(this.endpoint.addr()).toString();
@@ -93,7 +100,6 @@ export class IrohSyncTransport implements SyncTransport {
 
   /**
    * Connect to a remote peer by ticket string.
-   * Registers the peer for future `send()` calls.
    */
   async connectToPeer(
     ticketStr: string,
@@ -133,13 +139,10 @@ export class IrohSyncTransport implements SyncTransport {
     const framed = encodeMessage(message);
     await bi.send.writeAll(framed);
     await bi.send.finish();
-    // Don't close the connection — let it close naturally or via timeout.
-    // The receiver reads from the stream; closing here would abort it.
   }
 
   onMessage(handler: SyncMessageHandler): void {
     this.handler = handler;
-    // Drain any messages that arrived before the handler was set
     for (const msg of this.pendingMessages) {
       handler(msg);
     }
@@ -148,13 +151,23 @@ export class IrohSyncTransport implements SyncTransport {
 
   peers(): PeerId[] {
     const result: PeerId[] = [];
-    for (const [id, _addr] of this.peerAddrs) {
+    for (const [id] of this.peerAddrs) {
       result.push({
         id,
         name: this.peerNames.get(id) ?? id,
       });
     }
     return result;
+  }
+
+  /** Connect (no-op — Iroh endpoint is always listening after create). */
+  async connect(): Promise<void> {
+    // already bound in create()
+  }
+
+  /** Disconnect (no-op — the endpoint stays open until close()). */
+  async disconnect(): Promise<void> {
+    // endpoint lifecycle managed by close()
   }
 
   /** Tear down the endpoint. */
@@ -175,10 +188,14 @@ export class IrohSyncTransport implements SyncTransport {
         try {
           const incoming = await this.endpoint.acceptNext();
           if (!incoming) break;
+
+          // Capture remote address before accepting (Incoming.remoteAddr()
+          // is only available before accept/refuse).
+          const remoteAddrInfo = await incoming.remoteAddr();
+
           const conn = await (await incoming.accept()).connect();
-          this.handleIncoming(conn).catch(() => {});
+          this.handleIncoming(conn, remoteAddrInfo).catch(() => {});
         } catch {
-          // endpoint closed or accept error — stop loop
           break;
         }
       }
@@ -188,12 +205,28 @@ export class IrohSyncTransport implements SyncTransport {
 
   private async handleIncoming(
     conn: Awaited<ReturnType<Endpoint['connect']>>,
+    remoteAddrInfo: { kind: string; addr?: string; endpointId?: string; description?: string },
   ): Promise<void> {
     try {
       const remoteId = conn.remoteId().toString();
-      // Auto-register peer from incoming connection
-      if (!this.peerAddrs.has(remoteId)) {
-        this.peerNames.set(remoteId, remoteId);
+      const remoteIdStr = remoteId;
+
+      // Auto-register peer if not already known
+      if (!this.peerAddrs.has(remoteIdStr)) {
+        this.peerNames.set(remoteIdStr, remoteIdStr);
+
+        // Try cache first
+        let addr = await this.endpoint.remoteAddr(conn.remoteId());
+
+        // If not cached, construct from the IncomingAddr
+        if (!addr) {
+          const directAddrs = remoteAddrInfo.addr ? [remoteAddrInfo.addr] : [];
+          addr = new EndpointAddr(conn.remoteId(), remoteAddrInfo.endpointId ?? null, directAddrs);
+        }
+
+        if (addr) {
+          this.peerAddrs.set(remoteIdStr, addr);
+        }
       }
 
       const bi = await conn.acceptBi();
@@ -202,7 +235,6 @@ export class IrohSyncTransport implements SyncTransport {
         if (this.handler) {
           await this.handler(msg);
         } else {
-          // Buffer the message until a handler is registered
           this.pendingMessages.push(msg);
         }
       }
