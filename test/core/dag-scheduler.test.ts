@@ -10,9 +10,10 @@ import type { DAGWorkflow } from '../../src/core/agents/dag-scheduler.js';
 // Mocks
 // ---------------------------------------------------------------------------
 
-function createMockPool() {
+function createMockPool(kernelRef?: { current: any }) {
   const listeners: Array<(event: any) => void> = [];
   let enqueueCounter = 0;
+  const _kernel = createPersistMockKernel();
 
   const pool = {
     enqueue: vi.fn(async (agentId: string, _input: string) => {
@@ -37,10 +38,35 @@ function createMockPool() {
       const idx = pool._listeners.indexOf(listener);
       if (idx !== -1) pool._listeners.splice(idx, 1);
     }),
+    ensureKernel: vi.fn(async () => kernelRef ? kernelRef.current : _kernel),
     _listeners: [] as Array<(event: any) => void>,
   };
 
   return pool;
+}
+
+function createPersistMockKernel() {
+  const store = new Map<string, Map<string, any>>();
+  return {
+    getEntity: vi.fn((id: string) => store.has(id) ? { id, facts: [...store.get(id)!.entries()].map(([a, v]) => ({ e: id, a, v })), links: [] } : null),
+    createEntity: vi.fn(async (id: string, type: string, attrs: Record<string, any>) => {
+      const m = new Map<string, any>([['type', type], ...Object.entries(attrs)]);
+      store.set(id, m);
+    }),
+    updateEntity: vi.fn(async (id: string, updates: Record<string, any>) => {
+      const m = store.get(id);
+      if (m) for (const [a, v] of Object.entries(updates)) m.set(a, v);
+    }),
+    listEntities: vi.fn((type?: string) => {
+      const results: any[] = [];
+      for (const [id, attrs] of store) {
+        if (!type || attrs.get('type') === type) {
+          results.push({ id, type: attrs.get('type') ?? type ?? '', facts: [...attrs.entries()].map(([a, v]) => ({ e: id, a, v })), links: [] });
+        }
+      }
+      return results;
+    }),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -262,5 +288,53 @@ describe('DAGScheduler', () => {
 
   it('should return undefined for unknown run', () => {
     expect(scheduler.getRun('nonexistent')).toBeUndefined();
+  });
+
+  // -----------------------------------------------------------------------
+  // Persistence
+  // -----------------------------------------------------------------------
+
+  describe('persistence', () => {
+    it('should create entity on run when persistToGraph is true', async () => {
+      const kernelRef: { current: any } = { current: createPersistMockKernel() };
+      const pool = createMockPool(kernelRef);
+      const s = new DAGScheduler(pool as any, { persistToGraph: true });
+      try {
+        await s.run(simpleWorkflow({ id: 'wf:persist-create' }));
+        expect(kernelRef.current.createEntity).toHaveBeenCalled();
+        const call = kernelRef.current.createEntity.mock.calls.find(
+          (c: any[]) => c[1] === 'DAGRun'
+        );
+        expect(call).toBeDefined();
+        expect(call[2].workflowId).toBe('wf:persist-create');
+      } finally {
+        s.dispose();
+      }
+    });
+
+    it('should restore DAGRun from graph', async () => {
+      const kernelRef: { current: any } = { current: createPersistMockKernel() };
+      const pool1 = createMockPool(kernelRef);
+      const s1 = new DAGScheduler(pool1 as any, { persistToGraph: true });
+      try {
+        await s1.run(simpleWorkflow({ id: 'wf:restore-test' }));
+        expect(s1.listRuns()).toHaveLength(1);
+
+        // Simulate crash/restart: create new scheduler with same kernel
+        const pool2 = createMockPool(kernelRef);
+        const s2 = new DAGScheduler(pool2 as any, { persistToGraph: true });
+        try {
+          await s2.restore();
+          const runs = s2.listRuns();
+          expect(runs).toHaveLength(1);
+          expect(runs[0].workflowId).toBe('wf:restore-test');
+          expect(runs[0].status).toBe('running');
+        } finally {
+          s2.dispose();
+        }
+      } finally {
+        s1.dispose();
+      }
+    });
   });
 });
