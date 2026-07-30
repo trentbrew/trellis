@@ -166,23 +166,23 @@ export function registerWorkflowCommands(program: Command): void {
 
         const { DAGScheduler, WorkerPool, AgentHarness } = await import('../core/agents/index.js');
         const harness = new AgentHarness(kernel);
-        const pool = new WorkerPool(harness, { concurrency: 1 });
+        const pool = new WorkerPool(kernel, harness, { concurrency: 1, simulate: true });
         const scheduler = new DAGScheduler(pool, { failOnError: false });
+        pool.start();
 
         console.log(chalk.dim(`Running workflow ${id} (${dagSteps.length} steps)...\n`));
         const runId = await scheduler.run({ id, name: String(e.name ?? id), steps: dagSteps });
+        const run = await scheduler.waitForRun(runId);
 
-        const run = scheduler.getRun(runId);
-        if (run) {
-          for (const step of run.steps) {
-            const status = step.status === 'completed' ? chalk.green('✓') : step.status === 'failed' ? chalk.red('✗') : chalk.yellow('…');
-            console.log(`  ${status} ${step.step.id}`);
-          }
-          const finalStatus = run.status === 'completed' ? chalk.green('completed') : chalk.red(run.status);
-          console.log(chalk.bold(`\n  Result: ${finalStatus}`));
+        for (const step of run.steps) {
+          const status = step.status === 'completed' ? chalk.green('✓') : step.status === 'failed' ? chalk.red('✗') : chalk.yellow('…');
+          console.log(`  ${status} ${step.step.id}`);
         }
+        const finalStatus = run.status === 'completed' ? chalk.green('completed') : chalk.red(run.status);
+        console.log(chalk.bold(`\n  Result: ${finalStatus}`));
 
         scheduler.dispose();
+        pool.stop();
         kernel.close();
       } catch (err) {
         handleCliError(err);

@@ -158,12 +158,17 @@ export function registerPipelineCommands(program: Command): void {
 
         const { DAGScheduler, WorkerPool, AgentHarness } = await import('../core/agents/index.js');
         const harness = new AgentHarness(kernel);
-        const pool = new WorkerPool(harness, { concurrency: 1 });
+        const pool = new WorkerPool(kernel, harness, { concurrency: 1, simulate: true });
         const scheduler = new DAGScheduler(pool, { failOnError: false });
+        pool.start();
 
         console.log(chalk.bold(`\nPipeline: ${entity.facts.find((f) => f.a === 'name')?.v ?? id}\n`));
 
+        let pipelineFailed = false;
+
         for (const phase of phases) {
+          if (pipelineFailed) break;
+
           const phaseName = String(phase.name ?? phase.agentRole ?? 'unknown');
           const wfId = phase.workflow ? String(phase.workflow) : null;
 
@@ -196,23 +201,25 @@ export function registerPipelineCommands(program: Command): void {
           }));
 
           const runId = await scheduler.run({ id: wfId, name: String(wf.name ?? wfId), steps: dagSteps });
-          const run = scheduler.getRun(runId);
-          if (run) {
-            for (const step of run.steps) {
-              const icon = step.status === 'completed' ? chalk.green('✓') : step.status === 'failed' ? chalk.red('✗') : chalk.yellow('…');
-              console.log(`    ${icon} ${step.step.id}`);
-            }
-            if (run.status === 'completed') {
-              console.log(`    ${chalk.green('  ✓ Phase complete')}`);
-            } else {
-              console.log(`    ${chalk.red(`  ✗ ${run.status}`)}`);
-              break;
-            }
+          const run = await scheduler.waitForRun(runId);
+
+          for (const step of run.steps) {
+            const icon = step.status === 'completed' ? chalk.green('✓') : step.status === 'failed' ? chalk.red('✗') : chalk.yellow('…');
+            console.log(`    ${icon} ${step.step.id}`);
+          }
+          if (run.status === 'completed') {
+            console.log(`    ${chalk.green('  ✓ Phase complete')}`);
+          } else {
+            console.log(`    ${chalk.red(`  ✗ ${run.status}`)}`);
+            pipelineFailed = true;
           }
         }
 
-        console.log(chalk.bold('\n  Pipeline complete.\n'));
+        if (!pipelineFailed) {
+          console.log(chalk.bold('\n  Pipeline complete.\n'));
+        }
         scheduler.dispose();
+        pool.stop();
         kernel.close();
       } catch (err) {
         handleCliError(err);

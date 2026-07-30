@@ -126,9 +126,9 @@ export class Orchestrator {
   }
 
   private async _executePipeline(run: PipelineRun): Promise<void> {
-    const harness = this.harness;
-    const pool = new WorkerPool(harness, { concurrency: this.config.concurrency });
+    const pool = new WorkerPool(this.kernel, this.harness, { concurrency: this.config.concurrency, simulate: true });
     const scheduler = new DAGScheduler(pool, { failOnError: this.config.failOnError });
+    pool.start();
 
     try {
       let previousOutput = run.input;
@@ -180,22 +180,20 @@ export class Orchestrator {
                   steps: dagSteps,
                 });
 
-                const dagRun = scheduler.getRun(phase.runId);
-                if (dagRun) {
-                  phase.output = dagRun.steps
-                    .filter((s) => s.status === 'completed')
-                    .map((s) => s.step.input)
-                    .join('\n');
-                  if (dagRun.status === 'failed') {
-                    phase.status = 'failed';
-                    phase.error = dagRun.steps.find((s) => s.error)?.error;
-                    if (this.config.failOnError) {
-                      run.status = 'failed';
-                      run.completedAt = now();
-                      return;
-                    }
-                    continue;
+                const dagRun = await scheduler.waitForRun(phase.runId);
+                phase.output = dagRun.steps
+                  .filter((s) => s.status === 'completed')
+                  .map((s) => s.step.input)
+                  .join('\n');
+                if (dagRun.status === 'failed') {
+                  phase.status = 'failed';
+                  phase.error = dagRun.steps.find((s) => s.error)?.error;
+                  if (this.config.failOnError) {
+                    run.status = 'failed';
+                    run.completedAt = now();
+                    return;
                   }
+                  continue;
                 }
               }
             }
@@ -226,6 +224,7 @@ export class Orchestrator {
         await this._saveRun(run);
       }
       scheduler.dispose();
+      pool.stop();
     }
   }
 

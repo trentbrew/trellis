@@ -36,6 +36,8 @@ export interface WorkerPoolConfig {
   pollIntervalMs: number;
   /** Persist queue state to the graph (survives restarts). */
   persistToGraph?: boolean;
+  /** Simulate execution — complete tasks without LLM. Useful for testing and external executors. */
+  simulate?: boolean;
 }
 
 export type WorkerPoolEvent =
@@ -163,13 +165,13 @@ export class WorkerPool {
   // Queue operations
   // ---------------------------------------------------------------------------
 
-  async enqueue(agentId: string, input: string, opts?: RunTaskOptions): Promise<string> {
-    const runId = `run:${agentId.replace('agent:', '')}:${Date.now()}`;
+  async enqueue(agentId: string, input: string, opts?: RunTaskOptions, runId?: string): Promise<string> {
+    const resolvedRunId = runId ?? `run:${agentId.replace('agent:', '')}:${Date.now()}`;
 
     const task: WorkerTask = {
-      id: `task:${runId}`,
+      id: `task:${resolvedRunId}`,
       agentId,
-      runId,
+      runId: resolvedRunId,
       input,
       status: 'queued',
       queuedAt: new Date().toISOString(),
@@ -178,7 +180,7 @@ export class WorkerPool {
     this.queue.push(task);
     await this._saveTask(task);
     this._emit({ type: 'task:queued', task });
-    return runId;
+    return resolvedRunId;
   }
 
   async cancel(runId: string): Promise<void> {
@@ -273,10 +275,15 @@ export class WorkerPool {
     this._emit({ type: 'task:started', task });
 
     try {
-      const h = await this._ensureHarness();
-      await h.runAgentTask(task.agentId, task.input);
-      task.status = 'completed';
-      this._emit({ type: 'task:completed', task });
+      if (this.config.simulate) {
+        task.status = 'completed';
+        this._emit({ type: 'task:completed', task });
+      } else {
+        const h = await this._ensureHarness();
+        await h.runAgentTask(task.agentId, task.input);
+        task.status = 'completed';
+        this._emit({ type: 'task:completed', task });
+      }
     } catch (err: any) {
       task.status = 'failed';
       task.error = err.message;

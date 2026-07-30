@@ -16,20 +16,20 @@ function createMockPool(kernelRef?: { current: any }) {
   const _kernel = createPersistMockKernel();
 
   const pool = {
-    enqueue: vi.fn(async (agentId: string, _input: string) => {
-      const runId = `run:${agentId}:${++enqueueCounter}`;
+    enqueue: vi.fn(async (agentId: string, _input: string, _opts?: any, runId?: string) => {
+      const resolvedRunId = runId ?? `run:${agentId}:${++enqueueCounter}`;
 
-      // Defer via macrotask so await continuations (step.runId=…) run first
+      // Defer via macrotask so the caller can finish its synchronous setup
       setTimeout(() => {
         for (const listener of pool._listeners) {
           listener({
             type: 'task:completed',
-            task: { runId, agentId },
+            task: { runId: resolvedRunId, agentId },
           });
         }
       }, 0);
 
-      return runId;
+      return resolvedRunId;
     }),
     on: vi.fn((listener: (event: any) => void) => {
       pool._listeners.push(listener);
@@ -151,19 +151,18 @@ describe('DAGScheduler', () => {
   // -----------------------------------------------------------------------
 
   it('should fail workflow when a step fails with failOnError=true', async () => {
-    mockPool.enqueue.mockImplementation(async (_agentId: string) => {
-      const runId = 'run:failed';
-      // Simulate failure
+    mockPool.enqueue.mockImplementation(async (_agentId: string, _input: string, _opts?: any, runId?: string) => {
+      const resolvedRunId = runId ?? 'run:failed';
       setTimeout(() => {
         for (const listener of mockPool._listeners) {
           listener({
             type: 'task:failed',
-            task: { runId, agentId: _agentId },
+            task: { runId: resolvedRunId, agentId: _agentId },
             error: 'Step failed',
           });
         }
       }, 0);
-      return runId;
+      return resolvedRunId;
     });
 
     const wf = simpleWorkflow();
@@ -178,18 +177,18 @@ describe('DAGScheduler', () => {
 
   it('should continue when a step fails with failOnError=false', async () => {
     const errorPool = createMockPool();
-    errorPool.enqueue.mockImplementation(async (_agentId: string) => {
-      const runId = 'run:step';
+    errorPool.enqueue.mockImplementation(async (_agentId: string, _input: string, _opts?: any, runId?: string) => {
+      const resolvedRunId = runId ?? 'run:step';
       setTimeout(() => {
         for (const listener of errorPool._listeners) {
           listener({
             type: 'task:failed',
-            task: { runId, agentId: _agentId },
+            task: { runId: resolvedRunId, agentId: _agentId },
             error: 'Step error',
           });
         }
       }, 0);
-      return runId;
+      return resolvedRunId;
     });
 
     const tolerant = new DAGScheduler(errorPool as any, { failOnError: false });
@@ -227,21 +226,21 @@ describe('DAGScheduler', () => {
     const errorPool = createMockPool();
     let failNext = true;
 
-    errorPool.enqueue.mockImplementation(async (agentId: string) => {
-      const runId = `run:${agentId}:${Date.now()}`;
+    errorPool.enqueue.mockImplementation(async (agentId: string, _input: string, _opts?: any, runId?: string) => {
+      const resolvedRunId = runId ?? `run:${agentId}:${Date.now()}`;
 
       setTimeout(() => {
         for (const listener of errorPool._listeners) {
           if (failNext) {
             failNext = false;
-            listener({ type: 'task:failed', task: { runId, agentId }, error: 'Failed' });
+            listener({ type: 'task:failed', task: { runId: resolvedRunId, agentId }, error: 'Failed' });
           } else {
-            listener({ type: 'task:completed', task: { runId, agentId } });
+            listener({ type: 'task:completed', task: { runId: resolvedRunId, agentId } });
           }
         }
       }, 0);
 
-      return runId;
+      return resolvedRunId;
     });
 
     const strict = new DAGScheduler(errorPool as any, { failOnError: true });
