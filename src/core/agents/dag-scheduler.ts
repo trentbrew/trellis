@@ -93,6 +93,11 @@ export class DAGScheduler {
           startedAt: String(get('startedAt') ?? new Date().toISOString()),
         });
       }
+      // Re-evaluate restored runs: re-enqueue 'ready' steps,
+      // and 'running' steps reconnect via their preserved runId.
+      for (const run of this.runs.values()) {
+        this._evaluate(run);
+      }
     } catch { /* swallow restore errors */ }
   }
 
