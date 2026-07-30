@@ -5,7 +5,7 @@ import { existsSync } from 'fs';
 import { scaffoldPackage, validatePackage, updatePackageVersion, publishPackage, writeIndex, generateIndex } from '../registry/publish.js';
 import { handleCliError } from './errors.js';
 
-const REGISTRY_TYPES = ['workflow', 'agent', 'ontology', 'adapter', 'projection', 'theme', 'affordance'] as const;
+const REGISTRY_TYPES = ['workflow', 'agent', 'ontology', 'adapter', 'projection', 'theme', 'affordance', 'ui'] as const;
 
 export function registerPublishCommands(program: Command): void {
   const pub = program
