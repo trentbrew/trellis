@@ -90,6 +90,8 @@ import { registerSyncCommands } from './sync-cli.js';
 import { registerRegistryCommands } from './registry-cli.js';
 import { registerPublishCommands } from './publish-cli.js';
 import { registerOpsCommands } from './ops-cli.js';
+import { registerWorkflowCommands } from './workflow-cli.js';
+import { registerPipelineCommands } from './pipeline-cli.js';
 
 export type IdeType =
   | 'cursor'
@@ -6497,6 +6499,8 @@ registerSyncCommands(program);
 registerRegistryCommands(program);
 registerPublishCommands(program);
 registerOpsCommands(program);
+registerWorkflowCommands(program);
+registerPipelineCommands(program);
 
 // ---------------------------------------------------------------------------
 // trellis who / trellis presence — ambient agent awareness (TRL stigmergy)
