@@ -7,6 +7,8 @@
 export { AgentHarness } from './harness.js';
 export { WorkerPool } from './worker-pool.js';
 export { DAGScheduler } from './dag-scheduler.js';
+export { evaluateCondition, evaluateEdge } from './edge-evaluator.js';
+export { evaluateGate } from './gate-keeper.js';
 
 export type {
   AgentDef,
@@ -35,4 +37,16 @@ export type {
   DAGRunStep,
   DAGRun,
   DAGSchedulerConfig,
+  DAGEdge,
 } from './dag-scheduler.js';
+
+export type {
+  GateType,
+  GateFailAction,
+  DAGGate,
+  GateResult,
+} from './gate-keeper.js';
+
+export type {
+  EdgeResult,
+} from './edge-evaluator.js';
