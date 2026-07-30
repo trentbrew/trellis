@@ -653,6 +653,12 @@ const pipeline: SchemaDefinition = {
     f('description', 'rich_text'),
     f('trigger', 'rich_text'),
     f('active', 'checkbox'),
+    f('phases', 'relation', {
+      relation: { targetSchema: 'trellis:PipelinePhase', cardinality: 'many' },
+    }),
+    f('workflow', 'relation', {
+      relation: { targetSchema: 'core:Workflow', cardinality: 'many' },
+    }),
   ],
 };
 
