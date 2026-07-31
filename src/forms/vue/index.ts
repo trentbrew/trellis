@@ -12,6 +12,7 @@
  */
 
 import { reactive } from 'vue';
+import { syncFromCore } from '../../headless/index.js';
 import type { AnyType } from '../../schema/define.js';
 import type { FormDescriptor } from '../types.js';
 import {
@@ -30,8 +31,8 @@ export interface UseFormReturnVue extends UseFormReturn {
 
 /**
  * Create a reactive Vue form from a schema. The core's state is mirrored
- * into a `reactive()` object via subscription; `field(name)` exposes
- * reactive getters for template bindings.
+ * into a `reactive()` object via the shared `syncFromCore` bridge;
+ * `field(name)` exposes reactive getters for template bindings.
  */
 export function useFormVue(
   schema: FormSchemaInput,
@@ -40,9 +41,7 @@ export function useFormVue(
   const core = createFormCore(formSchemaFrom(schema), initialValues ?? {});
   const state = reactive(core.state);
 
-  core.subscribe(() => {
-    Object.assign(state, core.state);
-  });
+  syncFromCore(state, core);
 
   const field = (name: string): FieldBinding => {
     return {
