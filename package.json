@@ -153,6 +153,122 @@
       "import": "./dist/forms/vanilla/index.js",
       "default": "./dist/forms/vanilla/index.js"
     },
+    "./headless": {
+      "types": "./dist/headless/index.d.ts",
+      "svelte": "./dist/headless/index.js",
+      "browser": "./dist/headless/index.js",
+      "bun": "./dist/headless/index.js",
+      "import": "./dist/headless/index.js",
+      "default": "./dist/headless/index.js"
+    },
+    "./palette": {
+      "types": "./dist/palette/index.d.ts",
+      "svelte": "./dist/palette/index.js",
+      "browser": "./dist/palette/index.js",
+      "bun": "./dist/palette/index.js",
+      "import": "./dist/palette/index.js",
+      "default": "./dist/palette/index.js"
+    },
+    "./palette/core": {
+      "types": "./dist/palette/core/index.d.ts",
+      "svelte": "./dist/palette/core/index.js",
+      "browser": "./dist/palette/core/index.js",
+      "import": "./dist/palette/core/index.js",
+      "default": "./dist/palette/core/index.js"
+    },
+    "./palette/react": {
+      "types": "./dist/palette/react/index.d.ts",
+      "import": "./dist/palette/react/index.js",
+      "default": "./dist/palette/react/index.js"
+    },
+    "./palette/vue": {
+      "types": "./dist/palette/vue/index.d.ts",
+      "import": "./dist/palette/vue/index.js",
+      "default": "./dist/palette/vue/index.js"
+    },
+    "./palette/svelte": {
+      "types": "./dist/palette/svelte/index.d.ts",
+      "svelte": "./dist/palette/svelte/index.js",
+      "import": "./dist/palette/svelte/index.js",
+      "default": "./dist/palette/svelte/index.js"
+    },
+    "./palette/vanilla": {
+      "types": "./dist/palette/vanilla/index.d.ts",
+      "import": "./dist/palette/vanilla/index.js",
+      "default": "./dist/palette/vanilla/index.js"
+    },
+    "./dialog": {
+      "types": "./dist/dialog/index.d.ts",
+      "svelte": "./dist/dialog/index.js",
+      "browser": "./dist/dialog/index.js",
+      "bun": "./dist/dialog/index.js",
+      "import": "./dist/dialog/index.js",
+      "default": "./dist/dialog/index.js"
+    },
+    "./dialog/core": {
+      "types": "./dist/dialog/core/index.d.ts",
+      "svelte": "./dist/dialog/core/index.js",
+      "browser": "./dist/dialog/core/index.js",
+      "import": "./dist/dialog/core/index.js",
+      "default": "./dist/dialog/core/index.js"
+    },
+    "./dialog/react": {
+      "types": "./dist/dialog/react/index.d.ts",
+      "import": "./dist/dialog/react/index.js",
+      "default": "./dist/dialog/react/index.js"
+    },
+    "./dialog/vue": {
+      "types": "./dist/dialog/vue/index.d.ts",
+      "import": "./dist/dialog/vue/index.js",
+      "default": "./dist/dialog/vue/index.js"
+    },
+    "./dialog/svelte": {
+      "types": "./dist/dialog/svelte/index.d.ts",
+      "svelte": "./dist/dialog/svelte/index.js",
+      "import": "./dist/dialog/svelte/index.js",
+      "default": "./dist/dialog/svelte/index.js"
+    },
+    "./dialog/vanilla": {
+      "types": "./dist/dialog/vanilla/index.d.ts",
+      "import": "./dist/dialog/vanilla/index.js",
+      "default": "./dist/dialog/vanilla/index.js"
+    },
+    "./timeline": {
+      "types": "./dist/timeline/index.d.ts",
+      "svelte": "./dist/timeline/index.js",
+      "browser": "./dist/timeline/index.js",
+      "bun": "./dist/timeline/index.js",
+      "import": "./dist/timeline/index.js",
+      "default": "./dist/timeline/index.js"
+    },
+    "./timeline/core": {
+      "types": "./dist/timeline/core/index.d.ts",
+      "svelte": "./dist/timeline/core/index.js",
+      "browser": "./dist/timeline/core/index.js",
+      "import": "./dist/timeline/core/index.js",
+      "default": "./dist/timeline/core/index.js"
+    },
+    "./timeline/react": {
+      "types": "./dist/timeline/react/index.d.ts",
+      "import": "./dist/timeline/react/index.js",
+      "default": "./dist/timeline/react/index.js"
+    },
+    "./timeline/vue": {
+      "types": "./dist/timeline/vue/index.d.ts",
+      "import": "./dist/timeline/vue/index.js",
+      "default": "./dist/timeline/vue/index.js"
+    },
+    "./timeline/svelte": {
+      "types": "./dist/timeline/svelte/index.d.ts",
+      "svelte": "./dist/timeline/svelte/index.js",
+      "import": "./dist/timeline/svelte/index.js",
+      "default": "./dist/timeline/svelte/index.js"
+    },
+    "./timeline/vanilla": {
+      "types": "./dist/timeline/vanilla/index.d.ts",
+      "import": "./dist/timeline/vanilla/index.js",
+      "default": "./dist/timeline/vanilla/index.js"
+    },
     "./react": {
       "types": "./dist/react/index.d.ts",
       "svelte": "./dist/react/index.js",
@@ -254,7 +370,7 @@
     "cli": "tsx src/cli/index.ts",
     "mcp": "tsx src/mcp/index.ts",
     "mcp:docs": "tsx src/mcp/docs.ts",
-    "build": "rm -rf dist && esbuild src/index.ts src/browser/index.ts src/core/index.ts src/vcs/index.ts src/sync/index.ts src/realtime/index.ts src/embeddings/index.ts src/links/index.ts src/decisions/index.ts src/server/index.ts src/server/deploy.ts src/mcp/gateway-serve.ts src/client/index.ts src/client/index.browser.ts src/client/sdk.ts src/client/sdk.browser.ts src/schema/index.ts src/forms/index.ts src/forms/core/index.ts src/forms/react/index.ts src/forms/vue/index.ts src/forms/svelte/index.ts src/forms/vanilla/index.ts src/react/index.ts src/react/realtime.ts src/react/schema-hooks.ts src/vue/index.ts src/vue/schema-hooks.ts src/svelte/index.ts src/svelte/schema-hooks.ts src/db/index.ts src/cli/index.ts src/cli/deploy-cli.ts src/cms/index.ts src/core/persist/sqljs-backend.ts src/core/persist/factory.ts src/server/node-adapter.ts src/plugins/plan-approval/index.ts src/plugins/proactive-watcher/index.ts src/plugins/idea-garden/index.ts src/plugins/agent-memory/index.ts src/plugins/cron/index.ts --bundle --outdir=dist --outbase=src --format=esm --splitting --platform=node --external:@xenova/transformers --external:@huggingface/transformers --external:react --external:vue --external:sql.js --external:ws --external:better-sqlite3 --external:bun:sqlite --external:commander --external:chalk --external:@inquirer/prompts --external:zod --external:uqr --external:@number0/iroh && npm run build:realtime-bundle && mkdir -p dist/ui && cp src/ui/client.html dist/ui/client.html && cp src/ui/lanes.html dist/ui/lanes.html && cp src/ui/admin.html dist/ui/admin.html && cp src/ui/admin-datatable.css dist/ui/admin-datatable.css && cp src/ui/logo.png dist/ui/logo.png && mkdir -p dist/ui/theme && cp src/ui/theme/runtime-theme.css dist/ui/theme/runtime-theme.css && cp src/ui/theme/foundation.css dist/ui/theme/foundation.css && cp src/ui/theme/semantic.css dist/ui/theme/semantic.css && cp src/ui/theme/components.css dist/ui/theme/components.css && cp src/ui/tml-lanes.html dist/ui/tml-lanes.html && mkdir -p dist/ui/@trellis.computer/ui/dist && cp node_modules/@trellis.computer/ui/dist/*.mjs dist/ui/@trellis.computer/ui/dist/ && cp node_modules/@trellis.computer/ui/dist/*.js dist/ui/@trellis.computer/ui/dist/ && tsc -p tsconfig.build.json --emitDeclarationOnly --noEmit false --noEmitOnError false && npm run build:inspector",
+    "build": "rm -rf dist && esbuild src/index.ts src/browser/index.ts src/core/index.ts src/vcs/index.ts src/sync/index.ts src/realtime/index.ts src/embeddings/index.ts src/links/index.ts src/decisions/index.ts src/server/index.ts src/server/deploy.ts src/mcp/gateway-serve.ts src/client/index.ts src/client/index.browser.ts src/client/sdk.ts src/client/sdk.browser.ts src/schema/index.ts src/forms/index.ts src/forms/core/index.ts src/forms/react/index.ts src/forms/vue/index.ts src/forms/svelte/index.ts src/forms/vanilla/index.ts src/headless/index.ts src/palette/index.ts src/palette/core/index.ts src/palette/react/index.ts src/palette/vue/index.ts src/palette/svelte/index.ts src/palette/vanilla/index.ts src/dialog/index.ts src/dialog/core/index.ts src/dialog/react/index.ts src/dialog/vue/index.ts src/dialog/svelte/index.ts src/dialog/vanilla/index.ts src/timeline/index.ts src/timeline/core/index.ts src/timeline/react/index.ts src/timeline/vue/index.ts src/timeline/svelte/index.ts src/timeline/vanilla/index.ts src/react/index.ts src/react/realtime.ts src/react/schema-hooks.ts src/vue/index.ts src/vue/schema-hooks.ts src/svelte/index.ts src/svelte/schema-hooks.ts src/db/index.ts src/cli/index.ts src/cli/deploy-cli.ts src/cms/index.ts src/core/persist/sqljs-backend.ts src/core/persist/factory.ts src/server/node-adapter.ts src/plugins/plan-approval/index.ts src/plugins/proactive-watcher/index.ts src/plugins/idea-garden/index.ts src/plugins/agent-memory/index.ts src/plugins/cron/index.ts --bundle --outdir=dist --outbase=src --format=esm --splitting --platform=node --external:@xenova/transformers --external:@huggingface/transformers --external:react --external:vue --external:sql.js --external:ws --external:better-sqlite3 --external:bun:sqlite --external:commander --external:chalk --external:@inquirer/prompts --external:zod --external:uqr --external:@number0/iroh && npm run build:realtime-bundle && mkdir -p dist/ui && cp src/ui/client.html dist/ui/client.html && cp src/ui/lanes.html dist/ui/lanes.html && cp src/ui/admin.html dist/ui/admin.html && cp src/ui/admin-datatable.css dist/ui/admin-datatable.css && cp src/ui/logo.png dist/ui/logo.png && mkdir -p dist/ui/theme && cp src/ui/theme/runtime-theme.css dist/ui/theme/runtime-theme.css && cp src/ui/theme/foundation.css dist/ui/theme/foundation.css && cp src/ui/theme/semantic.css dist/ui/theme/semantic.css && cp src/ui/theme/components.css dist/ui/theme/components.css && cp src/ui/tml-lanes.html dist/ui/tml-lanes.html && mkdir -p dist/ui/@trellis.computer/ui/dist && cp node_modules/@trellis.computer/ui/dist/*.mjs dist/ui/@trellis.computer/ui/dist/ && cp node_modules/@trellis.computer/ui/dist/*.js dist/ui/@trellis.computer/ui/dist/ && tsc -p tsconfig.build.json --emitDeclarationOnly --noEmit false --noEmitOnError false && npm run build:inspector",
     "build:realtime-bundle": "esbuild src/realtime/index.ts --bundle --format=esm --platform=browser --outfile=dist/realtime.bundle.js && esbuild src/realtime/relay-persistence.ts --bundle --format=esm --platform=node --outfile=dist/realtime/relay-persistence.js",
     "build:state-demo-bundle": "esbuild demo/state-demo/entry.ts --bundle --format=esm --platform=browser --outfile=dist/state-demo.bundle.js",
     "build:inspector": "vite build --config vite.inspector.config.ts",

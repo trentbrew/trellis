@@ -16,6 +16,7 @@
 
 import type { AnyType } from '../../schema/define.js';
 import type { FormDescriptor } from '../types.js';
+import { toSvelteStore } from '../../headless/index.js';
 import {
   createFormCore,
   formSchemaFrom,
@@ -39,15 +40,6 @@ export interface FormStore {
   core: UseFormReturn;
 }
 
-function readableFrom<T>(get: () => T, core: UseFormReturn): ReadableLike<T> {
-  return {
-    subscribe(run: (value: T) => void): () => void {
-      run(get());
-      return core.subscribe(() => run(get()));
-    },
-  };
-}
-
 /**
  * Create a store-contract form for a schema. `state` and `field(name)` are
  * svelte-store-compatible; actions mutate the shared core.
@@ -59,10 +51,17 @@ export function createFormStore(
   const core = createFormCore(formSchemaFrom(schema), initialValues ?? {});
 
   return {
-    state: readableFrom(() => core.state, core),
+    state: toSvelteStore(core),
     actions: core.actions,
     field: (name: string) =>
-      readableFrom(() => core.field(name), core),
+      toSvelteStore(core, (s) => ({
+        value: s.values[name],
+        error: s.errors[name],
+        dirty: s.dirty[name],
+        touched: s.touched[name],
+        onChange: (value: unknown) => core.actions.setValue(name, value),
+        onBlur: () => core.actions.setTouched(name, true),
+      })),
     core,
   };
 }

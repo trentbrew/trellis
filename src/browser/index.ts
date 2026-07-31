@@ -126,6 +126,51 @@ export type {
   ValidationResult,
 } from '../forms/index.js';
 
+// Headless UI convention (ADR 0034) — bridge contract + registry types
+export { syncFromCore, toSvelteStore } from '../headless/index.js';
+export type {
+  HeadlessComponentType,
+  HeadlessCore,
+  RegistryEntry,
+} from '../headless/index.js';
+
+// Headless command palette (ADR 0034 pilot) — core is browser-safe
+export { createPaletteCore, fuzzyMatch, fuzzyScore } from '../palette/index.js';
+export type {
+  PaletteActions,
+  PaletteConfig,
+  PaletteFilter,
+  PaletteGroup,
+  PaletteItem,
+  PaletteState,
+  UsePaletteReturn,
+} from '../palette/index.js';
+
+// Headless stacked-dialog manager (ADR 0034 wedge 2) — core is browser-safe
+export { createDialogCore } from '../dialog/index.js';
+export type {
+  DialogActions,
+  DialogButton,
+  DialogConfig,
+  DialogInstance,
+  DialogKind,
+  DialogResult,
+  DialogSpec,
+  DialogState,
+  UseDialogReturn,
+} from '../dialog/index.js';
+
+// Headless playhead engine (ADR 0034 wedge 3) — core is browser-safe
+export { createTimelineCore } from '../timeline/index.js';
+export type {
+  TimelineActions,
+  TimelineConfig,
+  TimelineMark,
+  TimelineRange,
+  TimelineState,
+  UseTimelineReturn,
+} from '../timeline/index.js';
+
 export {
   RealtimeRoom,
   MemoryHub,
