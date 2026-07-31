@@ -844,6 +844,37 @@ export function decompose(op: VcsOp): DecomposedOp {
       result.deleteLinks.push(...pickLinks(vcs.links));
       break;
     }
+
+    case 'vcs:repoAttest': {
+      // ADR 0032 §4 — owner-signed self-attestation that this ledger is
+      // `{owner}/{name}`. Recorded as facts on the ledger entity so discovery
+      // and clone verification can read ownership from the graph, not just the
+      // sprite's index.
+      if (vcs.repoId) {
+        const ledger = `ledger:${vcs.repoId}`;
+        result.addFacts.push(
+          { e: ledger, a: 'type', v: 'Ledger' },
+          { e: ledger, a: 'repoId', v: vcs.repoId },
+        );
+        if (vcs.repoOwner) {
+          result.addFacts.push({ e: ledger, a: 'owner', v: vcs.repoOwner });
+        }
+        if (vcs.repoName) {
+          result.addFacts.push({ e: ledger, a: 'name', v: vcs.repoName });
+        }
+        if (vcs.projectKind) {
+          result.addFacts.push({ e: ledger, a: 'kind', v: vcs.projectKind });
+        }
+        if (vcs.signedBy) {
+          result.addFacts.push({
+            e: ledger,
+            a: 'attestedBy',
+            v: vcs.signedBy,
+          });
+        }
+      }
+      break;
+    }
   }
 
   return result;
