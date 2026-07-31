@@ -45,7 +45,7 @@ Trellis remote = social layer on **causal op journals** (issues, lanes, graph).
 | `origin` | `default remote` → sprite URL in `.trellis/config.json` |
 | `git push` | `trellis remote push` / post-promote auto-push |
 | `git fetch` | `trellis remote pull` / tail compare |
-| clone | `trellis init --remote <url>` or import op chain |
+| `git clone` | `trellis clone <url> [dir]` (ADR 0031) |
 | GitHub.com | Room / org / public ledger index (later) |
 
 Backup is not a side feature — it is **peer #2**. The wipe incident is proof:
@@ -137,18 +137,20 @@ Sprite = default remote; object storage = archive; Iroh = optional extra peers l
 
 | Layer | What |
 | ----- | ---- |
-| **L0 (this seed)** | Default remote sprite; push/pull/status; two-peer truth |
+| **L0 (this seed)** | Default remote sprite; push/pull/status; clone from remote; two-peer truth |
 | **L1** | Named remotes (`upstream`, `backup`, org room) |
 | **L2** | Public ledger index — discover op chains / issues (read-only room) |
 | **L3** | Fork, promote-from-remote, agent lanes on shared remotes |
 
-## Acceptance sketch
+## Acceptance sketch (L0 complete)
 
-- [ ] `trellis init` (or first push) provisions default remote sprite
-- [ ] `trellis remote push` acks tail; remote retains checkpoints
-- [ ] Simulated local wipe + `pull` + `install` restores chain
-- [ ] `trellis repair` blocked without recent remote ack
-- [ ] Local bak ring ≥3; remote never runs repair
+- [x] `trellis init` (or first push) provisions default remote sprite
+- [x] `trellis remote push` acks tail; remote retains checkpoints
+- [x] Simulated local wipe + `pull` + `install` restores chain
+- [x] `trellis repair` blocked without recent remote ack
+- [x] Local bak ring ≥3; remote never runs repair
+- [x] `trellis clone <url>` restores a repo in one command (ADR 0031)
+- [x] `trellis project list <url>` discovers ledgers on a sprite
 
 ## Open questions
 
