@@ -46,6 +46,15 @@ import {
   entityRecordToPlain,
   hydrateBindings,
 } from '../schema/entity-projection.js';
+import { readFormOverrides } from '../forms/kernel.js';
+import {
+  listFormableTypes,
+  resolveFormDescriptor,
+} from '../forms/resolve.js';
+import {
+  FORM_MODES,
+  type FormMode,
+} from '../forms/types.js';
 import { jsonEntityFacts } from '../core/store/eav-store.js';
 import type { TrellisDbConfig } from '../client/config.js';
 import type { TenantPool } from './tenancy.js';
@@ -452,6 +461,16 @@ async function route(
   if (ontologyMatch && (method === 'PATCH' || method === 'PUT')) {
     const id = decodeURIComponent(ontologyMatch[1]!);
     return handleUpdateOntology(req, id, auth, tenantId, ctx);
+  }
+
+  // ── Forms (headless, schema-derived) ─────────────────────────────────────
+  if (method === 'GET' && path === '/forms') {
+    return handleListForms(auth, tenantId, ctx);
+  }
+  const formMatch = path.match(/^\/forms\/([^/]+)$/);
+  if (method === 'GET' && formMatch) {
+    const type = decodeURIComponent(formMatch[1]!);
+    return handleFormDescriptor(type, url, auth, tenantId, ctx);
   }
 
   // ── Files ─────────────────────────────────────────────────────────────────
@@ -916,6 +935,46 @@ async function handleUpdateOntology(
 
   const updated = kernel.getOntology(id);
   return json(updated ?? { id, updated: true });
+}
+
+// ---------------------------------------------------------------------------
+// Handler: Forms (headless, schema-derived)
+// ---------------------------------------------------------------------------
+
+async function handleListForms(
+  auth: import('./auth.js').AuthContext,
+  tenantId: string | null,
+  ctx: RouteCtx,
+): Promise<Response> {
+  ctx.permissions?.assert(auth, '*', 'read');
+  const kernel = await ctx.pool.preload(tenantId);
+  return json(listFormableTypes(kernel.listOntologies()));
+}
+
+async function handleFormDescriptor(
+  type: string,
+  url: URL,
+  auth: import('./auth.js').AuthContext,
+  tenantId: string | null,
+  ctx: RouteCtx,
+): Promise<Response> {
+  const mode = (url.searchParams.get('mode') ?? 'create') as FormMode;
+  if (!FORM_MODES.includes(mode)) {
+    return json({ error: `mode must be one of ${FORM_MODES.join(', ')}` }, 400);
+  }
+
+  ctx.permissions?.assert(auth, type, 'read');
+  const kernel = await ctx.pool.preload(tenantId);
+  const overrides = readFormOverrides(kernel);
+  const form = resolveFormDescriptor(kernel.listOntologies(), type, {
+    mode,
+    overrides,
+  });
+  if (!form) {
+    return json({ error: `No schema registered for entity type "${type}"` }, 404);
+  }
+  recordGraphIo(ctx, tenantId);
+  return json(form);
 }
 
 // ---------------------------------------------------------------------------
