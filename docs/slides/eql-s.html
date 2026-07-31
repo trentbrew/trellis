@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trellis Slides — EQL-S Query Language</title>
+  <link rel="stylesheet" href="trellis.css">
+  <script src="trellis-slides.js" defer></script>
+</head>
+<body>
+  <div class="slides">
+
+    <!-- Title -->
+    <section class="slide title-slide">
+      <div class="slide-content">
+        <h1>EQL-S: Entity <span class="accent">Query</span> Language</h1>
+        <p class="subtitle">A structured, Datalog-inspired pattern-matching query language for the EAV graph</p>
+        <div class="deck-meta">
+          <p>Source: <code>src/core/query/engine.ts</code> · <code>src/core/query/parser.ts</code> · <code>src/core/query/datalog.ts</code></p>
+        </div>
+      </div>
+      <div class="nav-overlay"></div>
+    </section>
+
+    <!-- What is EQL-S -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>What Is EQL-S?</h2>
+        <p class="lead">EQL-S (Entity Query Language — Structured) is a declarative DSL for querying the EAV store. It is inspired by Datalog and tuple-relational calculus.</p>
+
+        <div class="columns">
+          <div>
+            <h3>Core philosophy</h3>
+            <ul>
+              <li><strong>Pattern matching</strong>: describe what you want, not how to find it</li>
+              <li><strong>Variables</strong>: bind entities and values in the result set</li>
+              <li><strong>Composition</strong>: patterns chain as conjunctions; filters and aggregates compose on top</li>
+              <li><strong>Recursion</strong>: Datalog rules enable transitive closure</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Syntax overview</h3>
+            <pre><code>SELECT ?e ?name
+WHERE {
+  [?e "type" "Project"]
+  [?e "name" ?name]
+  (?e "memberOf" ?org)
+}
+FILTER ?name != "archived"
+ORDER BY ?name ASC
+LIMIT 10</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Query AST -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>Query AST</h2>
+        <p>A query is a structured object — parsed from the DSL but also constructible programmatically:</p>
+
+        <pre><code>export interface Query {
+  select:   string[];      // variables to project
+  where:    Pattern[];      // conjunction of patterns
+  filters:  Filter[];       // post-match predicates
+  aggregates: Aggregate[];   // count, sum, avg, min, max, collect
+  orderBy:  OrderBy[];      // sort specification
+  limit:    number;         // max results (0 = unlimited)
+  offset:   number;         // skip N results
+}
+
+export type Pattern =
+  | FactPattern    // [?e "attr" ?v]
+  | LinkPattern    // (?src "rel" ?tgt)
+  | NotPattern     // NOT [pattern]
+  | OrPattern      // OR { } { }
+  | RuleApplication // ruleName(?x, ?y)</code></pre>
+      </div>
+    </section>
+
+    <!-- Pattern Types -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>Pattern Types</h2>
+        <p>Five pattern kinds cover the core query primitives:</p>
+
+        <table>
+          <thead>
+            <tr><th>Pattern</th><th>DSL</th><th>Matches</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>FactPattern</code></td><td><code>[?e "attr" ?v]</code></td><td>Triple <code>(e, a, v)</code></td></tr>
+            <tr><td><code>LinkPattern</code></td><td><code>(?src "rel" ?tgt)</code></td><td>Link <code>(e1, a, e2)</code></td></tr>
+            <tr><td><code>NotPattern</code></td><td><code>NOT […]</code></td><td>Zero matches for inner</td></tr>
+            <tr><td><code>OrPattern</code></td><td><code>OR {…} {…}</code></td><td>Any branch matches</td></tr>
+            <tr><td><code>RuleApplication</code></td><td><code>ancestor(?x, ?y)</code></td><td>Registered Datalog rule</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Execution Model -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>Execution Model</h2>
+        <p>The <code>QueryEngine</code> evaluates patterns by matching fact/link patterns against the store, binding variables, then applying filters, aggregates, and ordering.</p>
+
+        <pre><code>execute(query):
+  1. results = evaluatePatterns(query.where, [{}])
+     // Start with one empty binding,
+     // each pattern refines the set
+  2. apply filters   → filter rows
+  3. apply aggregates → group + reduce (count, sum, …)
+  4. apply ordering   → sort by variables
+  5. apply offset/limit → paginate
+  6. project select   → shape output columns</code></pre>
+
+        <ul style="margin-top: 1rem;">
+          <li>Three indexes (EAV, AEV, AVE) make each pattern evaluation a hash lookup, not a scan</li>
+          <li>Link indexes work the same way for graph traversal</li>
+          <li>Results are deduplicated by variable signature</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Datalog Rules -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>Datalog Rules &amp; Recursion</h2>
+        <p><code>DatalogRuntime</code> wraps the <code>QueryEngine</code> and adds rule registration. Rules enable transitive closure — the killer feature for graph queries.</p>
+
+        <pre><code>// "Find all ancestors" in one rule call:
+SELECT ?ancestor
+WHERE { ancestor(?x, ?y) [?y "name" ?ancestor] }</code></pre>
+
+        <p>Three built-in rule constructors are provided:</p>
+        <ul>
+          <li><code>transitiveClosureRules(name, attr)</code> — forward reach</li>
+          <li><code>reverseReachabilityRules(name, attr)</code> — backward reach</li>
+          <li><code>siblingRules(name, attr)</code> — shared-parent siblings</li>
+        </ul>
+
+        <pre><code>// Rule: ancestor(x, y) :- [?x "parent" ?y], ancestor(?y, ?z)
+{
+  name: 'ancestor',
+  params: ['x', 'y'],
+  body: [
+    { kind: 'fact',
+      entity: variable('x'),
+      attribute: literal('parent'),
+      value: variable('y') },
+    { kind: 'rule', name: 'ancestor',
+      args: [variable('y'), variable('z')] }
+  ],
+  filters: []
+}</code></pre>
+
+        <p style="color: var(--text-dim); font-size: 0.9rem;">Max recursion depth: 32 (prevents infinite loops).</p>
+      </div>
+    </section>
+
+    <!-- Simple Query Helper -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>The <code>parseSimple()</code> Helper</h2>
+        <p>For quick interactive queries, <code>parseSimple()</code> converts a friendly shorthand into full EQL-S:</p>
+
+        <pre><code>Input:
+  find ?e where type = "Project"
+
+Output:
+  SELECT ?e
+  WHERE {
+    [?e "type" "Project"]
+  }</code></pre>
+
+        <pre><code>Input:
+  find ?e ?title where status != "archived" and name contains "auth"
+
+Output:
+  SELECT ?e ?title
+  WHERE {
+    [?e "status" ?_status]
+    [?e "name" ?title]
+  }
+  FILTER ?_status != "archived"
+  FILTER ?title contains "auth"</code></pre>
+      </div>
+    </section>
+
+    <!-- Integration with VCS -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>EQL-S in the VCS Context</h2>
+        <p>Because everything in Trellis is a graph entity, VCS primitives are queried the same way as any other data:</p>
+
+        <pre><code>-- Find all milestones by Alice on the main branch
+SELECT ?m ?msg
+WHERE {
+  [?m "type"       "Milestone"]
+  [?m "createdBy"  "identity:alice"]
+  [?m "message"    ?msg]
+}
+ORDER BY ?createdAt DESC
+
+-- Find milestones that touched a specific file
+SELECT ?m ?msg
+WHERE {
+  [?m "type"      "Milestone"]
+  [?m "message"   ?msg]
+  [?m "affectsFile" "src/auth/provider.ts"]
+}
+
+-- Trace all decisions affecting an entity
+SELECT ?d ?rationale
+WHERE {
+  [?d "type"      "Decision"]
+  [?d "context"   ?ctx]
+  (ctx "about" ?e)
+  [?e "entityId"  "src/auth.ts"]
+}</code></pre>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <section class="slide">
+      <div class="slide-content" style="text-align: center;">
+        <h1>Questions?</h1>
+        <p style="margin-top: 2rem;">Full source: <code>src/core/query/</code></p>
+        <p style="margin-top: 3rem; font-size: 0.9rem; color: var(--text-dim);">
+          <span class="badge badge-query">EQL-S</span> ·
+          <a href="pillars.html" style="color: var(--accent-2);">Pillars</a> ·
+          <a href="eav-kernel.html" style="color: var(--accent-2);">EAV Kernel</a> ·
+          <a href="semantic-patching.html" style="color: var(--accent-2);">Semantic Patching</a> ·
+          <a href="index.html" style="color: var(--text-dim);">← All decks</a>
+        </p>
+      </div>
+    </section>
+
+  </div>
+  <div class="nav-overlay"></div>
+</body>
+</html>

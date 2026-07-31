@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slide Deck — Narrative Milestones</title>
+  <link rel="stylesheet" href="trellis.css">
+</head>
+<body>
+  <div class="slides">
+
+    <!-- Title -->
+    <div class="slide title-slide">
+      <div class="slide-content">
+        <h1>Narrative <span class="accent">Milestones</span></h1>
+        <p class="subtitle">Human-curated checkpoints that give meaning to the raw op stream</p>
+        <div class="deck-meta">
+          <p>Source: <code>src/vcs/milestone.ts</code> · <code>docs/DESIGN.md §3</code> · <code>docs/AGENTS.md</code></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agenda -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Today's Deck</h2>
+        <ol>
+          <li>Milestones vs. commits</li>
+          <li>The three-tier history model</li>
+          <li>Milestone entity structure</li>
+          <li>Auto-proposed milestones</li>
+          <li>Milestone queries</li>
+          <li>CLI workflow</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Milestones vs Commits -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Milestones vs. Commits</h2>
+        <p class="lead">In Git, a commit is a snapshot of the <em>entire repo</em>. In Trellis, a milestone is a <strong>narrative span</strong> over a <em>range of ops</em> — it references, it doesn't duplicate.</p>
+        <div class="columns">
+          <div>
+            <h3>Git commits</h3>
+            <pre><code>[snap1] ← [snap2] ← [snap3] ← HEAD
+  │         │         │
+  │         │         └── commit "fix: null auth"
+  │         └──────────── commit "feat: add OAuth"
+  └────────────────────── commit "init"</code></pre>
+            <p style="color: var(--text-dim); font-size: 0.9rem; margin-top: 1rem;">Each snapshot stores a full copy of the tree.</p>
+          </div>
+          <div>
+            <h3>Trellis milestones</h3>
+            <pre><code>        Milestones (narrative)
+        ┌────────┐   ┌────────┐   ┌────────┐
+        │ "init" │───│"feature"│───│ "bugfix" │
+        └────────┘   └────────┘   └────────┘
+             │            │            │
+  Ops:  [op1][op2][op3][op4][op5][op6][op7]
+         │         │         │         │
+         1-3       4         5         6-7
+</code></pre>
+            <p style="color: var(--text-dim); font-size: 0.9rem; margin-top: 1rem;">Ops are immutable facts; milestones are ranges over them.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Three-Tier Model -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>The Three-Tier History Model</h2>
+<pre style="font-size: 0.8em;"><code>┌──────────────────────────────────────────────────────┐
+│  NARRATIVE LAYER  (human-curated)                      │
+│  ┌───────────┐  ┌───────────┐  ┌───────────┐           │
+│  │ Milestone │──│ Milestone │──│ Milestone │           │
+│  │  "init"   │  │ "feature"  │  │ "bugfix"  │           │
+│  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘           │
+│        │              │              │                 │
+│  ──────┼──────────────┼──────────────┼─────────────   │
+│  STABILITY LAYER  (auto-generated)                    │
+│   [ckpt]   [ckpt]  [ckpt]   [ckpt]                    │
+│        │              │              │                 │
+│  ──────┼──────────────┼──────────────┼─────────────   │
+│  CAUSAL LAYER  (continuous)                           │
+│  [op1][op2][op3][op4][op5][op6][op7][op8][op9][op10]  │
+└──────────────────────────────────────────────────────┘
+</code></pre>
+        <table style="margin-top: 1rem; font-size: 0.9rem;">
+          <thead><tr><th>Layer</th><th>Unit</th><th>Created By</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Causal</strong></td><td><code>VcsOp</code></td><td>System (watcher)</td><td>Immutable record of everything</td></tr>
+            <tr><td><strong>Stability</strong></td><td><code>Checkpoint</code></td><td>System (green build, interval)</td><td>Fast restore, bisection</td></tr>
+            <tr><td><strong>Narrative</strong></td><td><code>Milestone</code></td><td>Human (guided by system)</td><td>Collaboration, review, deployment</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Milestone Entity -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Milestone Entity Structure</h2>
+        <p>A milestone is stored as an entity in the EAV store — queryable via EQL-S:</p>
+<pre><code>Entity: milestone:def456
+  ├─ type:        "Milestone"
+  ├─ message:     "fix: handle null auth tokens"
+  ├─ fromOpHash:  "trellis:op:abc…"   ← start of op range
+  ├─ toOpHash:    "trellis:op:xyz…"  ← end of op range
+  ├─ createdAt:   "2026-06-15T12:00:00Z"
+  ├─ createdBy:   "identity:alice"
+  ├─ affectedFile: "src/auth.ts"     (multi-valued)
+  ├─ affectedFile: "src/types.ts"
+  └─ parent:       "milestone:prev…"  (optional, forms DAG)</code></pre>
+        <p style="margin-top: 1rem; color: var(--text-dim);">The <code>fromOpHash</code> / <code>toOpHash</code> range lets you replay exactly the ops covered by this milestone. <code>affectedFiles</code> is computed by scanning the ops in the range.</p>
+      </div>
+    </div>
+
+    <!-- Auto-Proposed Milestones -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Auto-Proposed Milestones</h2>
+        <p>The system can <strong>propose</strong> milestones by detecting logical boundaries in the causal stream:</p>
+<pre><code>interface MilestoneProposal {
+  fromOpHash: string;
+  toOpHash: string;
+  suggestedMessage: string;  // AI-drafted from semantic patches
+  confidence: number;        // 0-1
+  reason: string;            // e.g. "Tests passed after 12 patches"
+  affectedFiles: string[];
+}</code></pre>
+        <p style="margin-top: 1rem;">Built-in detection strategies:</p>
+        <ul>
+          <li><strong>Green-build boundary</strong> — propose after tests pass following changes</li>
+          <li><strong>Context-switch detector</strong> — user starts editing a different module</li>
+          <li><strong>Time-based</strong> — after N minutes of continuous work</li>
+          <li><strong>Size-based</strong> — after N ops accumulate without a milestone</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Milestone Queries -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Milestone Queries</h2>
+        <p>Because milestones are graph entities, they're fully queryable via EQL-S:</p>
+<pre style="font-size: 0.85em;"><code>-- "Find all milestones by Alice"
+SELECT ?m ?msg ?created
+WHERE {
+  [?m "type"       "Milestone"]
+  [?m "createdBy"  "identity:alice"]
+  [?m "message"    ?msg]
+  [?m "createdAt"  ?created]
+}
+ORDER BY ?created DESC
+
+-- "Find milestones touching a specific file"
+SELECT ?m ?msg ?author
+WHERE {
+  [?m "type"       "Milestone"]
+  [?m "message"    ?msg]
+  [?m "createdBy"  ?author]
+  [?m "affectsFile" "src/auth/provider.ts"]
+}
+
+-- "What ops are between two milestones?"
+SELECT ?op ?kind ?timestamp
+WHERE {
+  [?m1 "toOpHash"   ?from]
+  [?m2 "fromOpHash" ?to]
+  (?m1 "parent" ?m2)
+  [?op "hash" ?h]
+  FILTER ?h >= ?from AND ?h <= ?to
+}
+ORDER BY ?timestamp</code></pre>
+      </div>
+    </div>
+
+    <!-- CLI Workflow -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>CLI Workflow</h2>
+<pre style="font-size: 0.9em;"><code># Work, work, work... (causal stream records everything)
+
+# See what's happened since last milestone
+$ trellis status
+  12 ops since last milestone (feature/auth-refactor)
+  • src/auth.ts: symbolRename(encrypt → generateHash)
+  • src/types.ts: signatureChange(AuthConfig)
+
+# See un-milestoned ops
+$ trellis log --since-last-milestone
+  op5  vcs:symbolRename   encrypt → generateHash
+  op6  vcs:fileModify     src/types.ts
+  op7  vcs:symbolModify   AuthConfig interface
+
+# Create a milestone from recent work
+$ trellis milestone create -m "refactor: rename encrypt to generateHash"
+
+# Milestone spans ops 5–7, covers 2 files
+# A new branch pointer (or agent lane) advances too
+</code></pre>
+      </div>
+    </div>
+
+    <!-- Milestones vs Commits -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Key Diff: Milestones vs. Commits</h2>
+        <table>
+          <thead><tr><th>Concept</th><th>Git</th><th>Trellis</th></tr></thead>
+          <tbody>
+            <tr><td>Granularity</td><td>Coarse snapshots</td><td>Fine-grained ops + narrative spans</td></tr>
+            <tr><td>Mutability</td><td>Rebase/reword possible</td><td>Ops are immutable; milestones are additive</td></tr>
+            <tr><td>Content</td><td>Full tree (implicit diff)</td><td>Reference to op range + AI-drafted message</td></tr>
+            <tr><td>Queryability</td><td><code>git log</code> (text only)</td><td>EQL-S over graph entities</td></tr>
+            <tr><td>Attestation</td><td>Optional GPG/GH checks</td><td>Crypto signatures + CI attestation links</td></tr>
+            <tr><td>Auto-proposal</td><td>No</td><td>Yes — green-build, context-switch, time, size</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="slide">
+      <div class="slide-content" style="text-align: center;">
+        <h1>Questions?</h1>
+        <p style="margin-top: 2rem;">Source: <code>src/vcs/milestone.ts</code> · <code>docs/DESIGN.md §5</code></p>
+        <p style="margin-top: 3rem; font-size: 0.9rem; color: var(--text-dim);">
+          <span class="badge badge-vcs">VCS</span> ·
+          <a href="01-five-pillars.html" style="color: var(--accent-2);">Pillars</a> ·
+          <a href="04-sqlite-op-log.html" style="color: var(--accent-2);">Op-Log</a> ·
+          <a href="08-idea-garden.html" style="color: var(--accent-2);">Idea Garden</a> ·
+          <a href="09-vcs-decompose.html" style="color: var(--accent-2);">VCS Ops</a> ·
+          <a href="index.html" style="color: var(--text-dim);">← All decks</a>
+        </p>
+      </div>
+    </div>
+
+  </div>
+  <script src="trellis-slides.js"></script>
+  <div class="nav-overlay"></div>
+  <div class="slide-footer"><span class="deck-title">Narrative Milestones</span><span class="page" id="page-indicator"></span></div>
+</body>
+</html>

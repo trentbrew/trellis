@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trellis Slides — EAV Kernel</title>
+  <link rel="stylesheet" href="trellis.css">
+  <script src="trellis-slides.js" defer></script>
+</head>
+<body>
+  <div class="slides">
+
+    <!-- Title -->
+    <section class="slide title-slide">
+      <div class="slide-content">
+        <h1>The <span class="accent">EAV Kernel</span></h1>
+        <p class="subtitle">Entity-Attribute-Value graph store — the foundation of everything in Trellis</p>
+        <div class="deck-meta">
+          <p>Source: <code>src/core/store/eav-store.ts</code> · <code>src/core/query/engine.ts</code></p>
+        </div>
+      </div>
+      <div class="nav-overlay"></div>
+    </section>
+
+    <!-- Problem with Relational -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>Why Not Relational Tables?</h2>
+        <p class="lead">The fragmentation of personal and collaborative computing is a data model problem. Tasks, notes, files, people, projects, decisions, and agent actions should not live in disconnected apps.</p>
+
+        <div class="columns">
+          <div>
+            <h3>Relational limitations</h3>
+            <ul>
+              <li>Fixed schema — adding an attribute requires a migration</li>
+              <li>Joins are expensive and require predetermined relationships</li>
+              <li>No natural representation of links with semantics</li>
+              <li>Hard to model heterogeneous entities (files, tasks, decisions)</li>
+            </ul>
+          </div>
+          <div>
+            <h3>EAV advantages</h3>
+            <ul>
+              <li>Schema-agnostic — any entity can have any attributes</li>
+              <li>Bidirectional link traversal is native</li>
+              <li>Entities are identified by stable IDs, not table positions</li>
+              <li>Perfect for graphs, not tabular records</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EAV Data Model -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>The EAV Triad</h2>
+        <p>All data in Trellis is represented as two kinds of triples:</p>
+
+        <div class="columns">
+          <div>
+            <h3>Fact <code>{e, a, v}</code></h3>
+            <p>Entity <strong>e</strong> has <strong>attribute a</strong> with <strong>value v</strong>. Values are atoms: strings, numbers, booleans, dates, or entity references.</p>
+            <pre><code>// Entity: alice
+{ e: 'identity:alice',
+  a: 'displayName',
+  v: 'Alice Chen' }
+{ e: 'identity:alice',
+  a: 'did',
+  v: 'did:key:z6Mk…' }</code></pre>
+          </div>
+          <div>
+            <h3>Link <code>{e1, a, e2}</code></h3>
+            <p>Entity <strong>e1</strong> is related to entity <strong>e2</strong> via relationship <strong>a</strong>. Links create the graph structure.</p>
+            <pre><code>// Alice authored a milestone
+{ e1: 'identity:alice',
+  a: 'authored',
+  e2: 'milestone:def456' }</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Store Structure -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>EAVStore — In-Memory Triple Store</h2>
+        <p>The <code>EAVStore</code> maintains <strong>six indexes</strong> for fast lookups in any direction:</p>
+
+        <table>
+          <thead>
+            <tr><th>Index</th><th>Key</th><th>Lookup</th><th>Used By</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>EAV</code></td><td>entity→attr</td><td>facts by entity+attr</td><td><code>getFactsByEntity()</code></td></tr>
+            <tr><td><code>AEV</code></td><td>attr→entity</td><td>facts by attr+entity</td><td><code>getFactsByAttribute()</code></td></tr>
+            <tr><td><code>AVE</code></td><td>attr→value</td><td>facts by attr+value</td><td><code>getFactsByValue()</code></td></tr>
+            <tr><td>link fwd</td><td>e1→a→e2</td><td>outgoing links</td><td><code>getLinksByEntity()</code></td></tr>
+            <tr><td>link rev</td><td>e2→a→e1</td><td>incoming links</td><td><code>getLinksByEntity()</code></td></tr>
+            <tr><td>link attr</td><td>a→(e1,e2)</td><td>links by relationship</td><td><code>getLinksByAttribute()</code></td></tr>
+          </tbody>
+        </table>
+
+        <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-dim);">A <code>catalog</code> auto-infers attribute types, cardinality, distinct counts, and numeric ranges from observed data.</p>
+      </div>
+    </section>
+
+    <!-- Entity Types -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>Entity Types — Thing Hierarchy</h2>
+        <p>The core ontology defines a base hierarchy. Apps extend these types; they do not replace them.</p>
+
+        <pre><code>Thing (core:Thing)
+  ↳ Record (core:Record) — { title, description, status }
+        ↳ Document (core:Document) — { content, mimeType, fileUrl }
+        ↳ Event (core:Event) — { startDate, endDate }
+  ↳ Collection (core:Collection) — container metadata
+  ↳ Tag (core:Tag) — classification</code></pre>
+
+        <h3 style="margin-top: 1.5rem;">VCS Entity Types</h3>
+        <p>Beyond the core ontology, the VCS layer defines repository-specific entity types:</p>
+        <pre><code>Repository → Branch → Milestone → Checkpoint
+      ↳ FileNode → DirectoryNode
+      ↳ Identity
+      ↳ [AST entities: ModuleDef, FunctionDef, ClassDef, …]</code></pre>
+      </div>
+    </section>
+
+    <!-- Fact Structure with Provenance -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>Facts with Value-Level Provenance</h2>
+        <p>Every <code>Fact</code> can carry <code>FactMeta</code> — provenance that rides inside the hash preimage (tamper-evident for free):</p>
+
+        <pre><code>export interface Fact {
+  e: string;              // entity
+  a: string;              // attribute (JSONPath-style)
+  v: Atom;                // value
+  meta?: FactMeta;        // optional provenance
+}
+
+export interface FactMeta {
+  confidence?: number;    // [0, 1] — SemType-aligned
+  dataTypeId?: string;    // SemType value-node
+  sources?: Source[];     // where it came from
+}
+
+export interface Source {
+  authors?: string[];
+  location?: { uri: string };
+  loadedAt?: string;
+  firstPublished?: string;
+  lastUpdated?: string;
+}</code></pre>
+
+        <p style="margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem;">Actor provenance (<code>actorType</code>, <code>createdById</code>) is NOT in the fact — it belongs to the op that asserted it.</p>
+      </div>
+    </section>
+
+    <!-- Path-Aware Flattening -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>Path-Aware Ingestion</h2>
+        <p><code>jsonEntityFacts()</code> converts nested JSON objects into flat EAV facts using dot-notation attributes. Arrays become multiple values for the same (entity, attribute) pair.</p>
+
+        <pre><code>Input:
+{
+  name: "Project X",
+  config: {
+    timeout: 30,
+    retries: 3
+  }
+}
+
+Output:
+Fact { e, a: "name",          v: "Project X" }
+Fact { e, a: "config.timeout", v: 30 }
+Fact { e, a: "config.retries", v: 3 }</code></pre>
+
+        <p style="margin-top: 1rem; color: var(--text-dim);">This is what lets the EAV store ingest file metadata, AST node properties, schema definitions — anything representable as JSON.</p>
+      </div>
+    </section>
+
+    <!-- Time Travel -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>Time-Travel Queries</h2>
+        <p><code>timeTravel(opHash)</code> reconstructs the store state at any point in history by replaying ops up to (and including) a specific hash. This enables "what did the graph look like at commit X?" questions without a separate checkout.</p>
+
+        <pre><code>class TrellisKernel {
+  // Read all persisted ops
+  readAllOps(): KernelOp[]
+
+  // Time-travel: reconstruct EAVStore at a specific op
+  timeTravel(opHash: string): EAVStore
+}</code></pre>
+
+        <p style="color: var(--text-dim); margin-top: 1rem;">This is the read-side of the causal stream — ops are the write-side (see <a href="op-log.html" style="color: var(--accent-2);">SQLite Op-Log deck</a>).</p>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <section class="slide">
+      <div class="slide-content" style="text-align: center;">
+        <h1>Questions?</h1>
+        <p style="margin-top: 2rem;">The EAV kernel is <code>src/core/store/eav-store.ts</code></p>
+        <p style="margin-top: 3rem; font-size: 0.9rem; color: var(--text-dim);">
+          <span class="badge badge-vcs">5 Pillars</span> ·
+          <a href="pillars.html" style="color: var(--accent-2);">Pillars</a> ·
+          <a href="eql-s.html" style="color: var(--accent-2);">EQL-S Query</a> ·
+          <a href="op-log.html" style="color: var(--accent-2);">SQLite Op-Log</a> ·
+          <a href="index.html" style="color: var(--text-dim);">← All decks</a>
+        </p>
+      </div>
+    </section>
+
+  </div>
+  <div class="nav-overlay"></div>
+</body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slide Deck — Five Pillars of TrellisVCS</title>
+  <link rel="stylesheet" href="trellis.css">
+</head>
+<body>
+  <div class="slides">
+
+    <!-- Title -->
+    <div class="slide title-slide">
+      <div class="slide-content">
+        <h1>The Five <span class="accent">Pillars</span> of TrellisVCS</h1>
+        <p class="subtitle">The architectural foundation of the agentic state engine</p>
+        <div class="deck-meta">
+          <p>A <span class="badge badge-vcs">VCS</span> <span class="badge badge-kernel">Kernel</span> <span class="badge badge-semantic">Semantic</span> <span class="badge badge-sync">Sync</span> presentation</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agenda -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Today's Deck</h2>
+        <ol>
+          <li>The Causal Stream</li>
+          <li>Semantic Patching</li>
+          <li>Narrative Milestones</li>
+          <li>The Governance Subgraph</li>
+          <li>The Idea Garden</li>
+        </ol>
+        <p style="margin-top: 2rem; color: var(--text-dim);">Each pillar is also covered in depth in its own deck.</p>
+      </div>
+    </div>
+
+    <!-- Intro -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>What Are the Five Pillars?</h2>
+        <p>TrellisVCS is organized around five core architectural principles. Together, they transform version control from a file-tracking tool into a <strong>semantic, auditable, collaborative state engine</strong>.</p>
+        <table style="margin-top: 2rem;">
+          <thead>
+            <tr><th>#</th><th>Pillar</th><th>Core Promise</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>Causal Stream</td><td>Every change is an immutable, content-addressed op in a causal chain.</td></tr>
+            <tr><td>2</td><td>Semantic Patching</td><td>Code changes are understood as AST-level semantic diffs, not line patches.</td></tr>
+            <tr><td>3</td><td>Narrative Milestones</td><td>Human-curated checkpoints give meaning to the raw op stream.</td></tr>
+            <tr><td>4</td><td>Governance Subgraph</td><td>Identity, signing, and authorization live in the data itself.</td></tr>
+            <tr><td>5</td><td>Idea Garden</td><td>Abandoned exploration is never lost — it's a searchable asset.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pillar 1 -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>1. The Causal Stream</h2>
+        <h3 style="color: var(--teal); margin-bottom: 1rem;"><span class="badge badge-vcs">VCS</span> Immutable audit log</h3>
+        <p>A fine-grained, immutable ledger of every semantic change. Think of it as the "flight recorder" — every save, every file change, every branch operation is recorded as an op.</p>
+        <pre><code>op1 ← op2 ← op3 ← op4 ← op5
+ │       │       │       │       │
+ ↓       ↓       ↓       ↓       ↓
+SHA-256 SHA-256 SHA-256 SHA-256 SHA-256
+ │       │       │       │       │
+previousHash links to the prior op's hash
+</code></pre>
+        <p style="margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem;"><strong>Key property:</strong> Each op's hash covers its content <em>and</em> its causal link to the previous op. Rewriting any op invalidates every successor.</p>
+      </div>
+    </div>
+
+    <!-- Pillar 2 -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>2. Semantic Patching</h2>
+        <h3 style="color: var(--accent);"><span class="badge badge-semantic">Semantic</span> AST-level diffs</h3>
+        <p>Instead of line-level diffs, Trellis understands code as a tree. A variable rename across 47 lines is <strong>one</strong> <code>symbolRename</code> op, not 47 text edits.</p>
+        <table style="margin-top: 1.5rem;">
+          <thead>
+            <tr><th>Patch Type</th><th>What It Means</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>symbolAdd</code></td><td>A new declaration was introduced.</td></tr>
+            <tr><td><code>symbolRemove</code></td><td>A declaration was deleted.</td></tr>
+            <tr><td><code>symbolModify</code></td><td>A declaration's body changed.</td></tr>
+            <tr><td><code>symbolRename</code></td><td>A symbol was renamed (identity preserved).</td></tr>
+            <tr><td><code>symbolMove</code></td><td>A declaration moved to another file.</td></tr>
+            <tr><td><code>importAdd</code></td><td>A new import relationship was added.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pillar 3 -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>3. Narrative Milestones</h2>
+        <h3 style="color: var(--yellow);"><span class="badge badge-vcs">VCS</span> Human-curated checkpoints</h3>
+        <p>History has three layers of meaning. The raw ops are always there, but milestones give them narrative shape.</p>
+<pre><code>┌──────────────────────────────────────────────────────┐
+│  NARRATIVE LAYER  (human-curated)                      │
+│  ┌───────────┐  ┌───────────┐  ┌───────────┐         │
+│  │ Milestone │──│ Milestone │──│ Milestone │         │
+│  │  "init"   │  │ "feature" │  │ "bugfix"  │         │
+│  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘         │
+│        │              │              │               │
+│  ──────┼──────────────┼──────────────┼───────────── │
+│  STABILITY LAYER  (auto-generated)                   │
+│   [ckpt]   [ckpt]  [ckpt]   [ckpt]                  │
+│        │              │              │               │
+│  ──────┼──────────────┼──────────────┼───────────── │
+│  CAUSAL LAYER  (continuous)                           │
+│  [op][op][op][op][op][op][op][op][op][op][op][op]   │
+└──────────────────────────────────────────────────────┘
+</code></pre>
+      </div>
+    </div>
+
+    <!-- Pillar 4 -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>4. The Governance Subgraph</h2>
+        <h3 style="color: var(--blue);"><span class="badge badge-kernel">Kernel</span> Identity & authorization</h3>
+        <p>Identity and permissions are built into the data structure — not a third-party server.</p>
+        <div class="columns">
+          <div>
+            <h4>Identity Entity</h4>
+            <pre><code>entity: identity:alice
+  ├─ type: "Identity"
+  ├─ publicKey: Ed25519...
+  └─ did: did:key:z6Mk...
+</code></pre>
+            <p style="margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem;">The private key is <em>never</em> synced. Only the public key and DID are graph entities.</p>
+          </div>
+          <div>
+            <h4>Policy Entity</h4>
+            <pre><code>entity: policy:protect-main
+  ├─ type: "Policy"
+  ├─ target: "branch"
+  ├─ targetPattern: "main"
+  ├─ action: "push"
+  ├─ minSignatures: 2
+  ├─ requiredSigner: identity:alice
+  └─ requiredSigner: identity:bob
+</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pillar 5 -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>5. The Idea Garden</h2>
+        <h3 style="color: var(--teal);"><span class="badge badge-semantic">Semantic</span> Searchable exploration archive</h3>
+        <p>In Git, abandoned work is invisible. In Trellis, the causal stream is immutable — every op survives. The Idea Garden is a <strong>query layer</strong> over un-milestoned ops.</p>
+        <pre><code>$ trellis garden list
+
+CLUSTER         INTENT                    FILES         STATUS
+cl-8f3a…        "cache auth tokens"       3 files       abandoned
+cl-2b1c…        "extract error handler"   1 file        draft
+cl-9e7d…        "retry oauth flow"        2 files       abandoned
+</code></pre>
+        <p style="margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem;">Each cluster gets an AI-drafted intent summary, stored as a graph fact and vector-indexed for semantic search.</p>
+      </div>
+    </div>
+
+    <!-- Layer Cake -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>How the Pillars Fit Together</h2>
+<pre style="font-size: 0.8rem;"><code>┌─────────────────────────────────────────────────────────┐
+│  ┌─────────────────────────────────────────────────────┐│
+│  │  CLIENT SURFACES                                    ││
+│  │  CLI · MCP · SDK · Tauri · Browser                  ││
+│  └──────────────┬──────────────────────────────────────┘│
+│                 │                                        │
+│  ┌──────────────▼─────────────────────────────────────┐│
+│  │  TRELLIS KERNEL                                     ││
+│  │  • EAV Store  ◄──┐  (Pillar 1: Causal Stream)       ││
+│  │  • Query Engine │                                   ││
+│  │  • SQLite Backend│                                   ││
+│  └──────────────┬─────────────────────────────────────┘│
+│                 │                                        │
+│  ┌──────────────▼─────────────────────────────────────┐│
+│  │  VCS LAYER  (TrellisVcsEngine)                       ││
+│  │  • Op-log + decompose  (Pillars 1, 3)                ││
+│  │  • Semantic patching   (Pillar 2)                     ││
+│  │  • Governance          (Pillar 4)                     ││
+│  │  • Idea Garden         (Pillar 5)                     ││
+│  └──────────────┬─────────────────────────────────────┘│
+│                 │                                        │
+│  ┌──────────────▼─────────────────────────────────────┐│
+│  │  SYNC LAYER  (Iroh P2P + CRDT reconciler)            ││
+│  │  • Transport-independent replication                ││
+│  └─────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────┘
+</code></pre>
+      </div>
+    </div>
+
+    <!-- Design Invariants -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Architectural Invariants</h2>
+        <p>Trellis adheres to five non-negotiable constraints that preserve local-first ownership and agentic inspectability:</p>
+        <ul style="margin-top: 1rem;">
+          <li><strong>No cloud server required.</strong> Works fully offline; relays are optional.</li>
+          <li><strong>Local state is primary.</strong> Every node owns its graph; sync is replication, not ownership transfer.</li>
+          <li><strong>Every mutation is a durable op.</strong> No staging area — changes become inspectable ops automatically.</li>
+          <li><strong>Peers validate through identity + signatures + causal history.</strong> No trusted relay.</li>
+          <li><strong>Browser compatibility without compromise.</strong> Local ownership is preserved even in browser shells.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- What's Next -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Deep-Dive Decks</h2>
+        <p>Each pillar has its own detailed slide deck:</p>
+        <table>
+          <tr><td>1.</td><td><strong>EAV Kernel</strong> — Entity-Attribute-Value graph store</td></tr>
+          <tr><td>2.</td><td><strong>EQL-S</strong> — Entity Query Language (Structured)</td></tr>
+          <tr><td>3.</td><td><strong>SQLite Op-Log</strong> — The causal stream persistence layer</td></tr>
+          <tr><td>4.</td><td><strong>Iroh Peer Sync</strong> — P2P CRDT replication</td></tr>
+          <tr><td>5.</td><td><strong>Semantic Patching</strong> — AST-level diffs</td></tr>
+          <tr><td>6.</td><td><strong>Narrative Milestones</strong> — Human-curated checkpoints</td></tr>
+          <tr><td>7.</td><td><strong>Governance Subgraph</strong> — Identity, signing, policies</td></tr>
+          <tr><td>8.</td><td><strong>Idea Garden</strong> — Abandoned work discovery</td></tr>
+          <tr><td>9.</td><td><strong>VCS Ops &amp; Decomposition</strong> — How ops become graph facts</td></tr>
+        </table>
+        <p style="margin-top: 2rem; text-align: center; color: var(--text-dim);">← Arrow keys to navigate · Click left/right half to go back/forward</p>
+      </div>
+    </div>
+
+  </div>
+  <script src="trellis-slides.js"></script>
+  <div class="nav-overlay"></div>
+  <div class="slide-footer"><span class="deck-title">Five Pillars Overview</span><span class="page" id="page-indicator"></span></div>
+</body>
+</html>

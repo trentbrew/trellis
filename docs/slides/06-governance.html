@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slide Deck — Governance Subgraph</title>
+  <link rel="stylesheet" href="trellis.css">
+</head>
+<body>
+  <div class="slides">
+
+    <!-- Title -->
+    <div class="slide title-slide">
+      <div class="slide-content">
+        <h1>The Governance <span class="accent">Subgraph</span></h1>
+        <p class="subtitle">Identity, signing, and authorization built into the data structure</p>
+        <div class="deck-meta">
+          <p>Source: <code>docs/DESIGN.md §4</code> · <code>src/core/kernel/security-middleware.ts</code> · <code>src/vcs/types.ts</code></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agenda -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Today's Deck</h2>
+        <ol>
+          <li>Identity as graph entities</li>
+          <li>Op signing (Ed25519)</li>
+          <li>Signature verification middleware</li>
+          <li>Policy entities</li>
+          <li>Governance middleware</li>
+          <li>Zone capability model</li>
+          <li>Comparison: Git vs. Trellis</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Identity as Graph Entities -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Identity as Graph Entities</h2>
+        <p>Every actor — human, CI runner, bot — is an <code>Identity</code> entity in the graph, not a third-party auth server.</p>
+<pre><code>Entity: identity:alice
+  ├─ type:        "Identity"
+  ├─ displayName: "Alice Chen"
+  ├─ publicKey:   Ed25519:x5mJ2…bQ1kP
+  ├─ did:          "did:key:z6Mk…"
+  ├─ createdAt:    "2026-05-15T…"
+  └── memberOf:   org:acme     (link)
+
+Entity: identity:ci-bot
+  ├─ type:        "Identity"
+  ├─ displayName: "CI Bot"
+  ├─ publicKey:   Ed25519:aP9qR…vW3kL
+  └─ did:          "did:key:z6Mi…"</code></pre>
+        <p style="margin-top: 1rem; color: var(--text-dim);">The private key is stored <strong>never</strong> synced — only local. The public key and DID are graph entities replicated to peers for verification.</p>
+      </div>
+    </div>
+
+    <!-- Op Signing -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Op Signing</h2>
+        <p class="lead">Every operation carries an Ed25519 signature over its hash. This provides non-repudiation and auditability.</p>
+<pre><code>// In VcsOp.vcs payload (inside the hashed preimage):
+{
+  signature: "ed25519:MEUCIQD9…",  // signature over op.hash
+  signedBy:  "identity:alice",      // who signed
+  signedWith: "device:laptop",      // which device held the key
+}
+
+// Creating a signed op:
+const op = await createVcsOp('vcs:fileAdd', {
+  agentId: 'identity:alice',
+  vcs: {
+    filePath: 'src/auth.ts',
+    contentHash: 'sha256:abc…',
+    signedBy: 'identity:alice',
+    signature: await sign(op.hash, alicePrivateKey),
+    signedWith: 'device:laptop',
+  },
+})</code></pre>
+        <p style="color: var(--text-dim); font-size: 0.9rem;">Unsigned ops use the self-asserted <code>agentId</code> — honest for local repos and tests, inadequate for multi-peer sync.</p>
+      </div>
+    </div>
+
+    <!-- Signature Verification -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Signature Verification Middleware</h2>
+        <p>A <code>SecurityMiddleware</code> intercepts incoming remote ops and verifies signatures before they reach the store:</p>
+<pre style="font-size: 0.85em;"><code>class SignatureVerificationMiddleware
+  implements KernelMiddleware {
+
+  name = 'signature-verification'
+
+  async handleOp(op, ctx, next) {
+    // Skip verification for local ops (signed on creation)
+    if (!ctx.remote) return next(op, ctx)
+
+    const vcsOp = op as VcsOp
+    if (vcsOp.vcs?.signature && vcsOp.vcs?.signedBy) {
+      // Look up identity → public key
+      const identity = resolveIdentity(vcsOp.vcs.signedBy)
+      // Verify Ed25519 signature over the op hash
+      const valid = verify(
+        vcsOp.hash,
+        vcsOp.vcs.signature,
+        identity.publicKey,
+      )
+      if (!valid) {
+        // Op is rejected — its hash is invalid
+        throw new Error(
+          `Invalid signature on op ${op.hash}`
+        )
+      }
+    }
+
+    return next(op, ctx)
+  }
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- Policy Entities -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Policy Entities in the Graph</h2>
+        <p>Branch protection and governance rules are expressed as <strong>Policy</strong> entities — stored as EAV facts, queryable via EQL-S.</p>
+<pre><code>Entity: policy:protect-main
+  ├─ type:           "Policy"
+  ├─ target:         "branch"
+  ├─ targetPattern:  "main"
+  ├─ action:         "push"
+  ├─ minSignatures:  2
+  ├─ requiredSigner: "identity:alice"   (multi-valued)
+  ├─ requiredSigner: "identity:bob"
+  └─ requireAttestation: { type: "test-pass", from: "identity:ci-runner" }</code></pre>
+        <p style="margin-top: 1rem; color: var(--text-dim);">This is how Trellis makes governance declarative: policies are data, not code. You can query, version, and branch them like anything else.</p>
+      </div>
+    </div>
+
+    <!-- Governance Middleware -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Governance Middleware Flow</h2>
+        <pre style="font-size: 0.9em;"><code>┌─────────────────────────────────────────────────────┐
+│  Middleware Chain (kernel level)                     │
+│                                                      │
+│  ┌─ SignatureVerificationMiddleware                 │
+│  │  • Verify Ed25519 signatures                       │
+│  │  • Reject forged ops                               │
+│  └─►                                                 │
+│     ├─ GovernanceMiddleware                           │
+│     │  • Find applicable policies                     │
+│     │  • Check signature requirements                 │
+│     │  • Check attestation requirements               │
+│     │  • Reject unauthorized ops                      │
+│     └─►                                               │
+│        ├─ SchemaValidationMiddleware                 │
+│        │  • Enforce ontology schemas                   │
+│        └─►                                             │
+│           ┌─ DecompositionMiddleware                 │
+│           │  • VcsOp → EAV primitives                   │
+│           └─►                                           │
+│              └─ EAVStore + Backend (apply)             │
+└─────────────────────────────────────────────────────┘</code></pre>
+        <p style="color: var(--text-dim); margin-top: 1rem;">The <code>KernelMiddleware</code> interface uses <code>(op, ctx, next)</code> chaining — each middleware can accept, reject, or transform an op before it reaches the store.</p>
+      </div>
+    </div>
+
+    <!-- Zone Capability Model -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Zone Capability Model (ADR 0022)</h2>
+        <p>Zones are authority-bearing containers with capability levels. Grants are stored as facts with bounded domains (Reader|Member|Owner) so they can be exhaustively enumerated.</p>
+<pre><code>// Zone entity (authority is in the ID, derived not asserted):
+Entity: zone:turtle://did:key:z6Mk…/zone/abc123
+  ├─ type:              "Zone"
+  ├─ zoneId:            "turtle://…/zone/abc123"
+  ├─ alias:             "my-zone"
+  ├─ parentZone:        "turtle://…/zone/parent"  (inherits grants)
+  ├─ defaultVisibility: 0  (Reader = public)
+  ├─ grant:identity:alice: 3   (Owner)
+  ├─ grant:identity:bob:   2   (Member)
+  └─ grant:identity:carol: 1   (Reader)
+  // Levels: None(0)=absent, Reader(1), Member(2), Owner(3)</code></pre>
+        <p style="color: var(--text-dim); font-size: 0.9rem;">Grant changes are always delete-then-add over the bounded domain — no stale values linger. Revocation removes the fact rather than writing None.</p>
+      </div>
+    </div>
+
+    <!-- Git vs Trellis -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Governance: Git vs. Trellis</h2>
+        <table>
+          <thead>
+            <tr><th>Concern</th><th>Git</th><th>Trellis</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Identity</td><td>GPG key + GitHub account</td><td>Ed25519 <code>Identity</code> entity in graph</td></tr>
+            <tr><td>Signatures</td><td>Optional (GPG commit/tag)</td><td>Built-in (every op signed)</td></tr>
+            <tr><td>Branch protection</td><td>GitHub/GitLab server-side</td><td><code>Policy</code> entities in the graph</td></tr>
+            <tr><td>Merge gates</td><td>CI webhook + server config</td><td>Attestation links on milestone entities</td></tr>
+            <tr><td>Audit trail</td><td>Commit history (mutable by rebase)</td><td>Immutable op log, tamper-evident</td></tr>
+            <tr><td>Policy as code</td><td>External YAML</td><td>Queryable graph facts</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="slide">
+      <div class="slide-content" style="text-align: center;">
+        <h1>Questions?</h1>
+        <p style="margin-top: 2rem;">Docs: <code>docs/DESIGN.md §6</code> · ADR 0022 (zones)</p>
+        <p style="margin-top: 3rem; font-size: 0.9rem; color: var(--text-dim);">
+          <span class="badge badge-kernel">Kernel</span> ·
+          <a href="01-five-pillars.html" style="color: var(--accent-2);">Pillars</a> ·
+          <a href="03-iroh-sync.html" style="color: var(--accent-2);">Iroh Sync</a> ·
+          <a href="08-idea-garden.html" style="color: var(--accent-2);">Idea Garden</a> ·
+          <a href="index.html" style="color: var(--text-dim);">← All decks</a>
+        </p>
+      </div>
+    </div>
+
+  </div>
+  <script src="trellis-slides.js"></script>
+  <div class="nav-overlay"></div>
+  <div class="slide-footer"><span class="deck-title">Governance Subgraph</span><span class="page" id="page-indicator"></span></div>
+</body>
+</html>

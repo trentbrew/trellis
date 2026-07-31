@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slide Deck — The Idea Garden</title>
+  <link rel="stylesheet" href="trellis.css">
+</head>
+<body>
+  <div class="slides">
+
+    <!-- Title -->
+    <div class="slide title-slide">
+      <div class="slide-content">
+        <h1>The <span class="accent">Idea</span> Garden</h1>
+        <p class="subtitle">A permanent, searchable archive of all exploration — abandoned work is a reusable asset</p>
+        <div class="deck-meta">
+          <p>Based on <code>docs/DESIGN.md §5</code> · <code>docs/PILLARS.md</code> · <code>docs/AGENTS.md</code></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agenda -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Today's Deck</h2>
+        <ol>
+          <li>The problem: lost context in Git</li>
+          <li>Idea clusters explained</li>
+          <li>Cluster detection heuristics</li>
+          <li>Intent summarization</li>
+          <li>Searching the garden</li>
+          <li>Reviving abandoned work</li>
+          <li>Retention policy</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- The Problem -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>The Problem: Lost Context</h2>
+        <p class="lead">In Git, abandoned work is invisible. Stale branches get pruned, stashes expire, lost commits become unrecoverable.</p>
+        <div class="columns">
+          <div>
+            <h3>Git reality</h3>
+            <ul>
+              <li>Stale branch: <code>git branch -D</code> — gone forever</li>
+              <li>Stash entry: expires after 90 days</li>
+              <li>Lost commit: requires reflog arcana to recover</li>
+              <li>No way to search "what did I try last time?"</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Trellis reality</h3>
+            <ul style="color: var(--teal);">
+              <li>Every op survives — immutable causal stream</li>
+              <li>Abandoned work stays queryable</li>
+              <li>AI-drafted intent summaries</li>
+              <li>Keyword <em>and</em> semantic vector search</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Idea Clusters -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Idea Clusters</h2>
+        <p>An <strong>Idea Cluster</strong> is a contiguous sequence of ops in the causal stream that were never incorporated into a milestone and were later diverged from.</p>
+<pre><code>interface IdeaCluster {
+  id: string;            // cl-8f3a…
+  ops: VcsOp[];
+  firstOp: string;       // hash of first op
+  lastOp: string;        // hash of last op
+  affectedFiles: string[];
+  affectedSymbols: string[];  // Tier 2
+  estimatedIntent: string;    // AI summary (stored as fact)
+  intentEmbedding?: number[];  // vector for search
+  createdAt: string;     // timestamp of first op
+  abandonedAt: string;   // when user diverged
+  status: 'abandoned'
+       | 'draft'
+       | 'revived';
+}</code></pre>
+        <p style="color: var(--text-dim); font-size: 0.9rem; margin-top: 1rem;">The cluster is <em>derived</em> from the op stream — it is a query view, not a stored entity. The <code>estimatedIntent</code> is materialized as a graph fact for fast search.</p>
+      </div>
+    </div>
+
+    <!-- Detection Heuristics -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Detection Heuristics</h2>
+        <p>The system identifies idea clusters by analyzing the causal stream:</p>
+<pre style="font-size: 0.9em;"><code>┌─────────────────────────────────────────┐
+│  Context-switch detection                 │
+│  Files shift: src/auth/* → src/ui/*       │
+│  → preceding un-milestoned ops = cluster   │
+├─────────────────────────────────────────┤
+│  Branch abandonment                       │
+│  No new ops on a branch for N days        │
+│  → un-milestoned ops = cluster            │
+├─────────────────────────────────────────┤
+│  Revert detection                         │
+│  File content hash returns to prior value │
+│  → reverted ops = cluster                 │
+└─────────────────────────────────────────┘</code></pre>
+        <pre style="font-size: 0.85em; margin-top: 1rem;"><code>interface ClusterDetector {
+  name: string;
+  detect(
+    stream: VcsOp[],
+    milestones: Milestone[]
+  ): IdeaCluster[];
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- Intent Summarization -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Intent Summarization</h2>
+        <p><span class="yellow"><code>estimatedIntent</code></span> is materialized as a graph fact, not computed on the fly. A background job handles generation:</p>
+<pre style="font-size: 0.9em;"><code>1. Detection trigger:
+   ClusterDetector finds a new cluster
+   → queues summarization job
+
+2. LLM call:
+   "Summarize this cluster in one sentence"
+   Context: semantic patches + affected files
+
+3. Storage:
+   Fact { e: 'cluster:cl-8f3a',
+          a: 'estimatedIntent',
+          v: 'Cache auth tokens to avoid re-fetch' }
+   Fact { e: 'cluster:cl-8f3a',
+          a: 'intentEmbedding',
+          v: [0.23, -0.45, 1.02, …] }  // 768-dim vector
+
+4. Recomputation:
+   Only when cluster ops change (rare)</code></pre>
+        <p style="color: var(--text-dim);">Both keyword <code>CONTAINS</code> and vector similarity search work against materialized facts.</p>
+      </div>
+    </div>
+
+    <!-- Searching the Garden -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Searching the Garden</h2>
+        <p>Because clusters are derived from graph entities, they're fully queryable:</p>
+<pre style="font-size: 0.8em;"><code>-- "Did I ever try caching in the auth module?"
+SELECT ?intent ?created ?files
+WHERE {
+  [?c "type"            "IdeaCluster"]
+  [?c "status"          "abandoned"]
+  [?c "estimatedIntent" ?intent]
+  [?c "affectedFile"    ?f]
+  [?c "createdAt"       ?created]
+  FILTER contains(?f, "auth")
+}
+ORDER BY ?created DESC</code></pre>
+        <p style="margin-top: 1rem;">For deeper semantic search, the AI interop layer accepts natural language:</p>
+<pre style="font-size: 0.85em;"><code>// NL query → search across idea clusters
+const results = await kernel.queryNatural(
+  'find abandoned attempts at recursive tree traversal',
+  { provider: nlProvider }
+);</code></pre>
+      </div>
+    </div>
+
+    <!-- Reviving Ideas -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Reviving an Idea</h2>
+        <p>Turning abandoned work back into active development:</p>
+<pre><code># List all idea clusters
+$ trellis garden list
+
+CLUSTER        INTENT                   FILES    STATUS
+cl-8f3a        "cache auth tokens"      3        abandoned
+cl-2b1c        "extract error handler"   1        draft
+cl-9e7d        "retry oauth flow"       2        abandoned
+
+# Show details of a cluster
+$ trellis garden show cl-8f3a
+
+# Revive — replay cluster ops onto current head
+$ trellis garden revive cl-8f3a \
+    --branch "retry-token-cache"
+</code></pre>
+        <p style="margin-top: 1rem; color: var(--text-dim);">Reviving replays the cluster's ops onto the current branch head, using the semantic merge engine to handle conflicts with intervening changes.</p>
+      </div>
+    </div>
+
+    <!-- Retention Policy -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Retention Policy</h2>
+        <p>Unlike Git's aggressive garbage collection, Trellis retains all ops by default:</p>
+<pre><code>interface RetentionPolicy {
+  archiveAfterDays?: number;   // auto-archive after N days
+  compressArchived?: boolean;  // store only summary + entry point
+  neverPurge: boolean;         // default: true
+}
+
+// Unlike Git where:
+//   git gc  → prunes unreachable objects
+//   git stash drop → gone forever
+//
+// Trellis keeps everything. Archived clusters are compressed —
+// summary + diff kept, details available on demand.
+</code></pre>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="slide">
+      <div class="slide-content" style="text-align: center;">
+        <h1>Questions?</h1>
+        <p style="margin-top: 2rem;">Docs: <code>docs/DESIGN.md §5</code> · <code>docs/PILLARS.md</code> · <code>docs/AGENTS.md</code></p>
+        <p style="margin-top: 3rem; font-size: 0.9rem; color: var(--text-dim);">
+          <span class="badge badge-semantic">Idea Garden</span> ·
+          <a href="01-five-pillars.html" style="color: var(--accent-2);">Pillars</a> ·
+          <a href="06-governance.html" style="color: var(--accent-2);">Governance</a> ·
+          <a href="07-narrative-milestones.html" style="color: var(--accent-2);">Milestones</a> ·
+          <a href="index.html" style="color: var(--text-dim);">← All decks</a>
+        </p>
+      </div>
+    </div>
+
+  </div>
+  <script src="trellis-slides.js"></script>
+  <div class="nav-overlay"></div>
+  <div class="slide-footer"><span class="deck-title">The Idea Garden</span><span class="page" id="page-indicator"></span></div>
+</body>
+</html>

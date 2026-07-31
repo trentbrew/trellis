@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slide Deck — Semantic Patching</title>
+  <link rel="stylesheet" href="trellis.css">
+</head>
+<body>
+  <div class="slides">
+
+    <!-- Title -->
+    <div class="slide title-slide">
+      <div class="slide-content">
+        <h1>Semantic <span class="accent">Patching</span></h1>
+        <p class="subtitle">AST-level diffs — understanding code as a tree, not lines</p>
+        <div class="deck-meta">
+          <p>Source: <code>src/semantic/types.ts</code> · <code>src/semantic/ts-parser.ts</code> · <code>src/semantic/semantic-merge.ts</code> · <code>docs/DESIGN.md §4</code></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agenda -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Today's Deck</h2>
+        <ol>
+          <li>Line diffs vs. semantic patches</li>
+          <li>Parser adapter interface</li>
+          <li>AST entity model</li>
+          <li>Patch types</li>
+          <li>Patch commutativity & conflict detection</li>
+          <li>Structured merge conflicts</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Line Diffs vs Semantic Patches -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Line Diffs vs. Semantic Patches</h2>
+        <p class="lead">Git tracks changes as line-by-line text diffs. Trellis records <strong>what structurally happened</strong> to the code.</p>
+<pre style="font-size: 0.85em;"><code>A variable rename across 47 lines:
+
+Git line diff (12 lines of changes):
+- function calculatePrice(base, tax) {
++ function calculateTotal(base, tax) {
+-   return base * (1 + tax);
++   return base * (1 + tax);
+  ... (40 more lines where
+       "calculatePrice" → "calculateTotal")
+
+Trellis semantic patch (1 op):
+{ kind: 'symbolRename',
+  entityId: 'FunctionDef:auth.ts:calculatePrice',
+  oldName: 'calculatePrice',
+  newName: 'calculateTotal' }
+</code></pre>
+      </div>
+    </div>
+
+    <!-- Parser Adapter -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Parser Adapter Interface</h2>
+        <p>Trellis supports pluggable language parsers. The TypeScript adapter is a Tier 1 regex-based implementation; tree-sitter can be swapped in for full Tier 2 accuracy.</p>
+<pre><code>export interface ParserAdapter {
+  languages: string[];           // ['typescript', 'javascript', …]
+
+  parse(content: string, filePath: string):
+    ParseResult                  // AST → graph entities
+
+  diff(oldResult: ParseResult, newResult: ParseResult):
+    SemanticPatch[]              // old → new patches
+}
+
+export interface ParseResult {
+  fileEntityId: string;
+  filePath: string;
+  language: string;
+  declarations: ASTEntity[];    // functions, classes, interfaces, …
+  imports: ImportRelation[];    // import statements
+  exports: ExportRelation[];    // export statements
+}
+</code></pre>
+      </div>
+    </div>
+
+    <!-- AST Entity Model -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>AST Entity Model</h2>
+        <p>Top-level declarations become graph entities with stable IDs derived from structural position — not line numbers — so identity survives reformatting.</p>
+<pre><code>export interface ASTEntity {
+  id: string;            // FunctionDef:auth.ts:calculatePrice
+  kind: ASTEntityKind;     // FunctionDef | ClassDef | InterfaceDef |
+                          //  TypeAlias | EnumDef | VariableDecl |
+                          //  MethodDef | PropertyDef | Constructor
+  name: string;            // "calculatePrice"
+  scopePath: string;       // "MyClass.calculatePrice"
+  span: [number, number];  // byte offsets (for roundtrip)
+  rawText: string;         // exact source
+  signature: string;       // normalized (no comments/whitespace)
+  children: ASTEntity[];   // nested declarations
+}
+
+// Import/Export
+interface ImportRelation {
+  source: string;        // module path
+  specifiers: string[];  // ['default', '{ Named }']
+  isDefault: boolean;
+  isNamespace: boolean;
+  rawText: string;
+  span: [number, number];
+}
+</code></pre>
+      </div>
+    </div>
+
+    <!-- Patch Types -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Semantic Patch Types</h2>
+        <p>Eight patch kinds cover all code-level changes:</p>
+<pre style="font-size: 0.85em;"><code>export type SemanticPatch =
+  | { kind: 'symbolAdd';
+      entity: ASTEntity }
+
+  | { kind: 'symbolRemove';
+      entityId: string;
+      entityName: string }
+
+  | { kind: 'symbolModify';
+      entityId: string;
+      oldSignature: string;
+      newSignature: string;
+      oldRawText: string;
+      newRawText: string }
+
+  | { kind: 'symbolRename';
+      entityId: string;
+      oldName: string;
+      newName: string }
+
+  | { kind: 'symbolMove';
+      entityId: string;
+      oldFile: string;
+      newFile: string }
+
+  | { kind: 'importAdd' | 'importRemove' | 'importModify';
+      fileId: string; source: string; specifiers: string[] }
+
+  | { kind: 'exportAdd' | 'exportRemove';
+      fileId: string; name: string }</code></pre>
+        <p style="margin-top: 1rem; color: var(--text-dim);">A single file save typically produces <strong>both</strong> a <code>vcs:fileModify</code> (Tier 0) and a set of semantic patches (Tier 2) — making the same change queryable at both levels.</p>
+      </div>
+    </div>
+
+    <!-- Patch Commutativity -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Patch Commutativity</h2>
+        <p>Two patches <strong>commute</strong> when they can be applied in either order with the same result. This table is the merge engine's decision table:</p>
+        <table>
+          <thead><tr><th>Patch A</th><th>Patch B</th><th>Commute?</th></tr></thead>
+          <tbody>
+            <tr><td><code>symbolModify(f1)</code></td><td><code>symbolModify(f2)</code></td><td style="color: var(--green);">Yes</td></tr>
+            <tr><td><code>symbolModify(f1)</code></td><td><code>symbolModify(f1)</code></td><td style="color: var(--red);">No — structural conflict</td></tr>
+            <tr><td><code>symbolRename(f1)</code></td><td><code>symbolModify(f1)</code></td><td style="color: var(--red);">No — auto-resolvable</td></tr>
+            <tr><td><code>symbolMove(f1)</code></td><td><code>symbolModify(f1)</code></td><td style="color: var(--green);">Yes</td></tr>
+            <tr><td><code>symbolRemove(f1)</code></td><td><code>symbolModify(f1)</code></td><td style="color: var(--red);">No — delete/edit conflict</td></tr>
+            <tr><td><code>importAdd(file)</code></td><td><code>importAdd(file)</code></td><td style="color: var(--green);">Yes — idempotent</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top: 1rem; color: var(--text-dim);">The merge engine checks entity-ID overlap to decide. No overlap = commute.</p>
+      </div>
+    </div>
+
+    <!-- Merge Conflicts -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Structured Merge Conflicts</h2>
+        <p>When patches don't commute, Trellis produces a <strong>structured conflict</strong> — not <code>&lt;&lt;&lt;&lt;&lt;</code> text markers.</p>
+<pre><code>export interface SemanticMergeConflict {
+  entityId: string;          // "FunctionDef:auth.ts:encrypt"
+  entityName: string;        // "encrypt"
+  entityKind: string;        // "FunctionDef"
+  filePath: string;          // "src/auth.ts"
+  ours: SemanticPatch;       // the local patch
+  theirs: SemanticPatch;     // the remote patch
+  suggestion?:              // auto-merge hint
+    | 'accept-ours'
+    | 'accept-theirs'
+    | 'combine'
+}
+
+export interface SemanticMergeResult {
+  clean: boolean;
+  patches: SemanticPatch[];
+  conflicts: SemanticMergeConflict[];
+}</code></pre>
+        <p style="margin-top: 1rem; color: var(--text-dim);">The conflict <em>names the entities and operations involved</em> — a developer can understand and resolve it programmatically, or build a UI that shows both sides of the same symbol.</p>
+      </div>
+    </div>
+
+    <!-- Diff Engine -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Graph-Native Diff Engine</h2>
+        <p>The diff engine compares two graph states (by op hash or branch head) and produces a list of semantic patches:</p>
+<pre><code>interface DiffResult {
+  patches: SemanticPatch[];     // what changed structurally
+  filesChanged: string[];        // which files were affected
+  stats: {
+    added: number;
+    modified: number;
+    removed: number;
+    renamed: number;
+    moved: number;
+  };
+}
+
+// Tier 0 fallback (before AST parsing):
+interface FileLevelDiff {
+  kind: 'fileAdded' | 'fileModified'
+      | 'fileDeleted' | 'fileRenamed';
+  path: string;
+  oldContentHash?: string;
+  newContentHash?: string;
+  unifiedDiff?: string;  // classic unified diff
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- How Patches Flow -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>How Patches Flow Through Trellis</h2>
+        <pre style="font-size: 0.9em;"><code>┌──────────┐    save     ┌─────────────┐    parse     ┌────────────┐
+│  Editor   │ ─────────→ │ File Watcher  │ ─────────→ │ TS Parser  │
+└──────────┘             └─────────────┘              └────────────┘
+                                          │                        │
+                                          ▼                        ▼
+                        ┌──────────────────────────────────────────────────┐
+                        │  Semantic Diff Engine                            │
+                        │  oldResult → newResult → SemanticPatch[]         │
+                        └────────────────────┬─────────────────────────────┘
+                                             │
+                          ┌──────────────────┼──────────────────┐
+                          ▼                  ▼                  ▼
+                   vcs:fileModify    vcs:symbolRename   vcs:importAdd
+                  (Tier 0)          (Tier 2)           (Tier 2)
+                          │                  │                  │
+                          ▼                  ▼                  ▼
+                        ┌──────────────────────────────────────────────────┐
+                        │  VCS Op Logger (JSONL op-log)                     │
+                        └──────────────────────────────────────────────────┘
+</code></pre>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="slide">
+      <div class="slide-content" style="text-align: center;">
+        <h1>Questions?</h1>
+        <p style="margin-top: 2rem;">Source: <code>src/semantic/</code> · <code>docs/DESIGN.md §4</code></p>
+        <p style="margin-top: 3rem; font-size: 0.9rem; color: var(--text-dim);">
+          <span class="badge badge-semantic">Semantic</span> ·
+          <a href="01-five-pillars.html" style="color: var(--accent-2);">Pillars</a> ·
+          <a href="02-eav-kernel.html" style="color: var(--accent-2);">EAV Kernel</a> ·
+          <a href="02-eql-s.html" style="color: var(--accent-2);">EQL-S</a> ·
+          <a href="index.html" style="color: var(--text-dim);">← All decks</a>
+        </p>
+      </div>
+    </div>
+
+  </div>
+  <script src="trellis-slides.js"></script>
+  <div class="nav-overlay"></div>
+  <div class="slide-footer"><span class="deck-title">Semantic Patching</span><span class="page" id="page-indicator"></span></div>
+</body>
+</html>
