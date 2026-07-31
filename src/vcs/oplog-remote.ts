@@ -12,6 +12,11 @@ import {
 } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import type { VcsOp } from './types.js';
+import {
+  parseCheckpointOps,
+  verifyAttestation,
+  type AttestationTarget,
+} from './project.js';
 
 export interface JournalMeta {
   format: 'jsonl';
@@ -23,6 +28,10 @@ export interface JournalMeta {
 /** One ledger hosted by a remote sprite (discovery / clone target). */
 export interface RemoteRepoInfo {
   repoId: string;
+  /** Owner entity id (`identity:<did>`) — ADR 0032 identity-addressed discovery. */
+  owner?: string;
+  /** Repo slug scoped under the owner (`{peer}/{repo}`). */
+  name?: string;
   slug?: string;
   tailHash?: string;
   byteLength?: number;
@@ -36,6 +45,9 @@ export interface RemotePeerConfig {
   name?: string;
   lastAckHash?: string;
   lastAckAt?: string;
+  /** Owner entity id + repo slug (ADR 0032) — pushed so the sprite indexes identity. */
+  owner?: string;
+  repo?: string;
 }
 
 export interface RemoteConfigFile {
@@ -328,6 +340,8 @@ export async function pushRemoteLedger(
     format: local.format,
     byteLength: local.byteLength,
     lineCount: local.lineCount,
+    owner: peer.owner,
+    name: peer.repo,
     checkpoint: raw,
   };
 
@@ -449,15 +463,38 @@ export function installPulledOps(
   return { installed: true, from, backup };
 }
 
+/** Read the persisted `project` metadata block (owner/name/kind) from config. */
+export function readPersistedProject(
+  rootPath: string,
+): { owner?: string; name?: string; kind?: string } {
+  const p = configPathForRoot(rootPath);
+  if (!existsSync(p)) return {};
+  try {
+    const raw = JSON.parse(readFileSync(p, 'utf-8')) as {
+      project?: { owner?: string; name?: string; kind?: string };
+    };
+    return raw.project ?? {};
+  } catch {
+    return {};
+  }
+}
+
 export function addRemote(
   rootPath: string,
   url: string,
-  opts?: { name?: string; repoId?: string; apiKey?: string },
+  opts?: { name?: string; repoId?: string; apiKey?: string; owner?: string; repo?: string },
 ): RemotePeerConfig {
   const name = opts?.name ?? 'default';
+  const project = readPersistedProject(rootPath);
   const repoId =
     opts?.repoId ?? readPersistedRepoId(rootPath) ?? repoKeyFromRoot(rootPath);
-  const peer: RemotePeerConfig = { url, repoId, name };
+  const peer: RemotePeerConfig = {
+    url,
+    repoId,
+    name,
+    owner: opts?.owner ?? project.owner,
+    repo: opts?.repo ?? project.name,
+  };
   const remote = readRemoteConfig(rootPath);
   if (name === 'default') remote.default = peer;
   else remote[name] = peer;
@@ -476,6 +513,12 @@ export interface CloneOptions {
   gitUrl?: string;
   /** Skip worktree materialization — chain + config only. */
   opsOnly?: boolean;
+  /**
+   * Identity-addressed clone (ADR 0032): when set, the ledger's repo
+   * attestation is verified against the person's public key before the
+   * checkpoint is accepted, and the owner/name are persisted to config.
+   */
+  expected?: AttestationTarget;
 }
 
 export interface CloneResult {
@@ -484,6 +527,9 @@ export interface CloneResult {
   lineCount: number;
   opsPath: string;
   materialized: boolean;
+  /** Owner entity id + repo slug, when attested/known. */
+  owner?: string;
+  name?: string;
 }
 
 /** Fresh local `.trellis/` initialized from a remote sprite's latest checkpoint (ADR 0031). */
@@ -552,6 +598,17 @@ export async function cloneRemoteLedger(
   }
   validateJsonl(content);
 
+  // 3.5 Identity-addressed clone (ADR 0032 §4): verify the owner's
+  //     attestation is in the chain and signed by the person's public key
+  //     before accepting the checkpoint. Trust the person, not the URL.
+  if (opts.expected) {
+    const ops = parseCheckpointOps(content);
+    const attestationError = await verifyAttestation(ops, opts.expected);
+    if (attestationError) {
+      throw new Error(attestationError);
+    }
+  }
+
   // 4. Bytes first: git checkout (byte tier B) must run while dest is empty.
   let materialized = false;
   if (opts.gitUrl && !opts.opsOnly) {
@@ -579,6 +636,8 @@ export async function cloneRemoteLedger(
   writeFileSync(opsPath, content.endsWith('\n') ? content : `${content}\n`);
 
   const now = new Date().toISOString();
+  const owner = opts.expected?.owner;
+  const name = opts.expected?.repoName;
   writeFileSync(
     configPathForRoot(root),
     JSON.stringify(
@@ -591,10 +650,13 @@ export async function cloneRemoteLedger(
         repoId,
         agentId: `agent:${process.env.USER ?? 'unknown'}`,
         createdAt: now,
+        project: owner || name ? { owner, name } : undefined,
         remote: {
           default: {
             url,
             repoId,
+            owner,
+            repo: name,
             lastAckHash: tail.tailHash,
             lastAckAt: now,
           },
@@ -622,6 +684,8 @@ export async function cloneRemoteLedger(
     lineCount: tail.lineCount,
     opsPath,
     materialized,
+    owner,
+    name,
   };
 }
 
@@ -683,6 +747,7 @@ export function assertRecentRemoteAckForRepair(
 export class MemoryRemoteSprite implements HttpTransport {
   private tips = new Map<string, JournalMeta>();
   private checkpoints = new Map<string, string>();
+  private projectMeta = new Map<string, { owner?: string; name?: string }>();
 
   get(url: string): Promise<HttpResponse> {
     const u = new URL(url, 'http://sprite.test');
@@ -696,6 +761,7 @@ export class MemoryRemoteSprite implements HttpTransport {
       const repos: RemoteRepoInfo[] = [...this.tips.entries()].map(
         ([repoId, meta]) => ({
           repoId,
+          ...(this.projectMeta.get(repoId) ?? {}),
           tailHash: meta.tailHash,
           byteLength: meta.byteLength,
           lineCount: meta.lineCount,
@@ -726,6 +792,8 @@ export class MemoryRemoteSprite implements HttpTransport {
       byteLength: number;
       lineCount: number;
       checkpoint: string;
+      owner?: string;
+      name?: string;
     };
     const existing = this.tips.get(payload.repoId);
     if (
@@ -743,6 +811,12 @@ export class MemoryRemoteSprite implements HttpTransport {
     };
     this.tips.set(payload.repoId, meta);
     this.checkpoints.set(payload.tailHash, payload.checkpoint);
+    if (payload.owner || payload.name) {
+      this.projectMeta.set(payload.repoId, {
+        owner: payload.owner,
+        name: payload.name,
+      });
+    }
     return Promise.resolve({ status: 200, body: JSON.stringify({ ok: true }) });
   }
 

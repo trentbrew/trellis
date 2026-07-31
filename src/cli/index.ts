@@ -30,6 +30,7 @@ import {
 import { buildRAGContext } from '../embeddings/auto-embed.js';
 import { buildView, STATUS_ORDER, type IssueGroup } from './views.js';
 import type { IssueInfo } from '../vcs/issue.js';
+import type { IdentityConfig } from '../identity/identity.js';
 import { VectorStore } from '../embeddings/store.js';
 import { embed } from '../embeddings/model.js';
 import { EmbeddingManager } from '../embeddings/search.js';
@@ -42,6 +43,9 @@ import {
   loadIdentity,
   hasIdentity,
   toPublicIdentity,
+  savePersonIdentity,
+  loadPersonIdentity,
+  hasPersonIdentity,
   pairStart,
   pairJoin,
   pairApprove,
@@ -3126,19 +3130,25 @@ decisionCmd
 program
   .command('identity')
   .description('Manage local identity (Ed25519 key pair)')
-  .argument('[action]', '"init" or "show" (default: show)')
+  .argument('[action]', '"init", "show", "export", or "import" (default: show)')
   .option('-p, --path <path>', 'Repository path', '.')
   .option('--name <name>', 'Display name for new identity')
   .option('--email <email>', 'Email for new identity')
-  .action((action, opts) => {
+  .option('--json <json>', 'Identity JSON for import')
+  .option('--local', 'Write/read the legacy per-repo identity, not the person key')
+  .action(async (action, opts) => {
     const rootPath = resolve(opts.path);
     const trellisDir = join(rootPath, '.trellis');
+    const usePerson = !opts.local;
 
     if (action === 'init') {
-      if (hasIdentity(trellisDir)) {
+      const exists = usePerson
+        ? hasPersonIdentity()
+        : hasIdentity(trellisDir);
+      if (exists) {
         console.error(
           chalk.yellow(
-            'Identity already exists. Use `trellis identity` to view it.',
+            `Identity already exists (${usePerson ? 'person scope ~/.trellis' : 'repo scope'}). Use \`trellis identity\` to view it.`,
           ),
         );
         process.exit(1);
@@ -3148,9 +3158,13 @@ program
       const email = opts.email;
 
       const identity = createIdentity({ displayName: name, email });
-      saveIdentity(trellisDir, identity);
+      if (usePerson) savePersonIdentity(identity);
+      else saveIdentity(trellisDir, identity);
 
       console.log(chalk.green('✓ Identity created'));
+      console.log(
+        `  ${chalk.dim('Scope:')}  ${usePerson ? 'person (~/.trellis/identity.json)' : 'repo (.trellis/identity.json)'}`,
+      );
       console.log(`  ${chalk.dim('Name:')}  ${identity.displayName}`);
       if (identity.email) {
         console.log(`  ${chalk.dim('Email:')} ${identity.email}`);
@@ -3160,8 +3174,49 @@ program
       return;
     }
 
+    if (action === 'export') {
+      const identity = usePerson
+        ? loadPersonIdentity()
+        : loadIdentity(trellisDir);
+      if (!identity) {
+        console.error(
+          chalk.yellow(
+            'No identity configured. Run `trellis identity init --name "Your Name"`.',
+          ),
+        );
+        process.exit(1);
+      }
+      // Private key is included on purpose — export is the cross-VM path
+      // (ADR 0032 §3): the same person key on every VM.
+      console.log(JSON.stringify(identity, null, 2));
+      return;
+    }
+
+    if (action === 'import') {
+      const raw = opts.json ?? (await readStdin());
+      let parsed: IdentityConfig;
+      try {
+        parsed = JSON.parse(raw) as IdentityConfig;
+      } catch {
+        console.error(chalk.red('Failed to parse identity JSON.'));
+        process.exit(1);
+      }
+      if (!parsed.privateKey || !parsed.publicKey || !parsed.did) {
+        console.error(
+          chalk.red('Identity JSON must include publicKey, privateKey, and did.'),
+        );
+        process.exit(1);
+      }
+      if (usePerson) savePersonIdentity(parsed);
+      else saveIdentity(trellisDir, parsed);
+      console.log(chalk.green('✓ Identity imported'));
+      console.log(`  ${chalk.dim('Scope:')}  ${usePerson ? 'person (~/.trellis/identity.json)' : 'repo (.trellis/identity.json)'}`);
+      console.log(`  ${chalk.dim('DID:')}   ${parsed.did}`);
+      return;
+    }
+
     // Show (default)
-    const identity = loadIdentity(trellisDir);
+    const identity = usePerson ? loadPersonIdentity() : loadIdentity(trellisDir);
     if (!identity) {
       console.log(
         chalk.dim(
@@ -3173,6 +3228,9 @@ program
 
     const pub = toPublicIdentity(identity);
     console.log(chalk.bold('Identity\n'));
+    console.log(
+      `  ${chalk.dim('Scope:')}       ${usePerson ? 'person (~/.trellis/identity.json)' : 'repo (.trellis/identity.json)'}`,
+    );
     console.log(`  ${chalk.dim('Name:')}       ${pub.displayName}`);
     if (pub.email) {
       console.log(`  ${chalk.dim('Email:')}      ${pub.email}`);
@@ -6327,7 +6385,7 @@ program
 
 program
   .command('skills')
-  .description('Install Trellis agent skills using the skills CLI (npx skills)')
+  .description('Install Trellis agent pipeline skills from trentbrew/trellis-skills')
   .argument('[args...]', 'Additional arguments to pass to the skills CLI')
   .allowUnknownOption()
   .action(async () => {
@@ -6337,7 +6395,7 @@ program
 
     const { spawnSync } = await import('child_process');
 
-    const skillsArgs = ['skills', 'add', 'trentbrew/trellis', ...extraArgs];
+    const skillsArgs = ['skills', 'add', 'trentbrew/trellis-skills', '--agent', 'opencode', ...extraArgs];
     console.log(chalk.cyan('  Installing Trellis agent skills...'));
     console.log(chalk.dim(`  Running: npx ${skillsArgs.join(' ')}\n`));
 
@@ -6503,6 +6561,15 @@ registerPublishCommands(program);
 registerOpsCommands(program);
 registerWorkflowCommands(program);
 registerPipelineCommands(program);
+
+/** Read all of stdin as a string (used by `identity import`). */
+async function readStdin(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks).toString('utf-8');
+}
 
 // ---------------------------------------------------------------------------
 // trellis who / trellis presence — ambient agent awareness (TRL stigmergy)

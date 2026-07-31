@@ -24,6 +24,10 @@ export interface LedgerPushPayload {
   byteLength: number;
   lineCount: number;
   checkpoint: string;
+  /** Owner entity id (`identity:<did>`) — ADR 0032. */
+  owner?: string;
+  /** Repo slug scoped under the owner. */
+  name?: string;
 }
 
 export type LedgerPushResult =
@@ -96,6 +100,7 @@ export class LedgerStore {
         ) as JournalMeta;
         repos.push({
           repoId,
+          ...this.readProjectMeta(repoId),
           tailHash: meta.tailHash,
           byteLength: meta.byteLength,
           lineCount: meta.lineCount,
@@ -106,6 +111,34 @@ export class LedgerStore {
       }
     }
     return repos;
+  }
+
+  private readProjectMeta(
+    repoId: string,
+  ): { owner?: string; name?: string } {
+    const path = join(this.dataRoot, repoId, 'project.json');
+    if (!existsSync(path)) return {};
+    try {
+      const raw = JSON.parse(readFileSync(path, 'utf-8')) as {
+        owner?: string;
+        name?: string;
+      };
+      return { owner: raw.owner, name: raw.name };
+    } catch {
+      return {};
+    }
+  }
+
+  private writeProjectMeta(
+    repoId: string,
+    meta: { owner?: string; name?: string },
+  ): void {
+    if (!meta.owner && !meta.name) return;
+    const dir = this.repoRoot(repoId);
+    writeFileSync(
+      join(dir, 'project.json'),
+      JSON.stringify({ owner: meta.owner, name: meta.name }, null, 2),
+    );
   }
 
   push(payload: LedgerPushPayload): LedgerPushResult {
@@ -138,6 +171,10 @@ export class LedgerStore {
       lineCount: payload.lineCount,
     };
     writeFileSync(join(repoDir, 'tip.json'), JSON.stringify(meta, null, 2));
+    this.writeProjectMeta(payload.repoId, {
+      owner: payload.owner,
+      name: payload.name,
+    });
     this.trimCheckpoints(payload.repoId);
     return { ok: true, meta };
   }

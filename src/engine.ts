@@ -23,7 +23,7 @@ import { decompose } from './vcs/decompose.js';
 import { createVcsOp, isVcsOpKind, verifyVcsOpHash } from './vcs/ops.js';
 import { enforceIngestAuthorization } from './identity/capability.js';
 import { pairingResolver, ROOT_DEVICE_ID } from './identity/pairing.js';
-import { loadIdentity } from './identity/identity.js';
+import { resolveRepoIdentity } from './identity/identity.js';
 import type { IdentityResolver } from './identity/signing-middleware.js';
 import { PROVENANCE } from './core/persist/canonical-op.js';
 import type { OpProvenance } from './core/persist/canonical-op.js';
@@ -41,6 +41,7 @@ import * as issueMod from './vcs/issue.js';
 import * as testRunnerMod from './vcs/test-runner.js';
 import { ensureDefaultTestManifest } from './vcs/test-manifest.js';
 import * as storeMod from './vcs/store.js';
+import { createProjectAttestation } from './vcs/project.js';
 import type { Atom } from './core/store/eav-store.js';
 import type { EntityRecord } from './core/kernel/trellis-kernel.js';
 import * as decisionMod from './decisions/index.js';
@@ -167,6 +168,7 @@ interface PersistedConfig {
   lanes?: TrellisVcsConfig['lanes'];
   git?: TrellisVcsConfig['git'];
   repoId?: string;
+  project?: TrellisVcsConfig['project'];
   agentId: string;
   createdAt: string;
 }
@@ -351,9 +353,10 @@ export class TrellisVcsEngine {
     // `pairingResolver` already reads the same directory. Wiring them here
     // turns the envelope check into a key check, and makes locally-granted
     // capability replicable. A repo with no identity keeps both undefined and
-    // is unchanged.
+    // is unchanged. ADR 0032 §3 — the *person* key (~/.trellis/identity.json)
+    // is authoritative; the legacy per-repo key is the fallback.
     if (!this.signingMaterial) {
-      const identity = loadIdentity(this.trellisDir());
+      const identity = resolveRepoIdentity(this.trellisDir());
       if (identity) {
         this.signingMaterial = {
           privateKey: identity.privateKey,
@@ -394,6 +397,7 @@ export class TrellisVcsEngine {
       lanes: this.config.lanes,
       git: this.config.git,
       repoId: this.config.repoId ?? existing?.repoId,
+      project: this.config.project ?? existing?.project,
       agentId: this.agentId,
       createdAt: createdAt ?? existing?.createdAt ?? new Date().toISOString(),
     };
@@ -606,6 +610,9 @@ export class TrellisVcsEngine {
       }
       if (persisted.repoId) {
         this.config.repoId = persisted.repoId;
+      }
+      if (persisted.project) {
+        this.config.project = persisted.project;
       }
     }
 
@@ -2754,6 +2761,59 @@ export class TrellisVcsEngine {
       },
     });
     await this.applyOp(op, { allowIntegrationWrite: true });
+    await this.flushAutoCheckpoint();
+    return op;
+  }
+
+  // -------------------------------------------------------------------------
+  // Project identity (ADR 0032 §2/§4)
+  // -------------------------------------------------------------------------
+
+  /** Set (or update) the project's owner/name/kind metadata and persist it. */
+  setProjectMetadata(meta: NonNullable<TrellisVcsConfig['project']>): void {
+    this.config.project = { ...this.config.project, ...meta };
+    this.writePersistedConfig();
+  }
+
+  /** The stable ledger repoId (persisted, or the in-memory config value). */
+  getPersistedRepoId(): string {
+    if (this.config.repoId) return this.config.repoId;
+    const existing = this.readPersistedConfig();
+    if (existing?.repoId) {
+      this.config.repoId = existing.repoId;
+      return existing.repoId;
+    }
+    throw new Error('No repoId available — run initRepo first.');
+  }
+
+  getProjectMetadata(): NonNullable<TrellisVcsConfig['project']> {
+    return this.config.project ?? {};
+  }
+
+  /**
+   * Mint + apply the owner-signed `vcs:repoAttest` op (ADR 0032 §4).
+   * Returns the applied op. The attestation is chained to the current tail.
+   */
+  async attestProject(input: {
+    owner: string;
+    repoName: string;
+    repoId: string;
+    kind?: string;
+    privateKey: string;
+  }): Promise<VcsOp> {
+    const op = await createProjectAttestation({
+      owner: input.owner,
+      repoName: input.repoName,
+      repoId: input.repoId,
+      kind: input.kind,
+      privateKey: input.privateKey,
+      agentId: this.agentId,
+      previousHash: this.opLog.getLastOp()?.hash,
+    });
+    await this.applyOp(op, {
+      allowIntegrationWrite: true,
+      skipOwnershipCheck: true,
+    });
     await this.flushAutoCheckpoint();
     return op;
   }

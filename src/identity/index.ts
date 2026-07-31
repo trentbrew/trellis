@@ -10,6 +10,13 @@ export {
   loadIdentity,
   hasIdentity,
   toPublicIdentity,
+  personIdentityDir,
+  personIdentityPath,
+  savePersonIdentity,
+  loadPersonIdentity,
+  hasPersonIdentity,
+  ensurePersonIdentity,
+  resolveRepoIdentity,
 } from './identity.js';
 
 export type { IdentityConfig, PublicIdentity } from './identity.js';

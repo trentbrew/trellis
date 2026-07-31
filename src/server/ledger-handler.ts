@@ -86,6 +86,8 @@ export function createLedgerFetchHandler(
           typeof payload.lineCount === 'number'
             ? payload.lineCount
             : checkpoint.split('\n').filter((l) => l.trim()).length,
+        owner: typeof payload.owner === 'string' ? payload.owner : undefined,
+        name: typeof payload.name === 'string' ? payload.name : undefined,
         checkpoint,
       });
       if (!result.ok) {

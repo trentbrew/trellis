@@ -68,6 +68,9 @@ export type VcsOpKind =
   // Remote ledger peer (TRL-235)
   | 'vcs:remotePush'
   | 'vcs:remotePull'
+  // Project attestation (ADR 0032 §4) — owner-signed self-attestation that
+  // this ledger is `{owner}/{name}` with repoId.
+  | 'vcs:repoAttest'
   // EAV store (CMS / knowledge graph)
   | 'vcs:storeAssert'
   | 'vcs:storeRetract'
@@ -201,6 +204,16 @@ export interface VcsPayload {
   remoteRepoId?: string;
   remoteTailHash?: string;
   remoteByteLength?: number;
+
+  // Project attestation (ADR 0032 §4)
+  /** Owner entity id (`identity:<did>`) self-attesting the ledger. */
+  repoOwner?: string;
+  /** Repo slug scoped under the owner (`{peer}/{repo}`). */
+  repoName?: string;
+  /** The ledger repoId the attestation covers. */
+  repoId?: string;
+  /** Project kind (code, knowledge-base, notes, data, media, other). */
+  projectKind?: string;
 
   // Agent lanes
   laneId?: string;
@@ -405,6 +418,16 @@ export interface TrellisVcsConfig {
 
   /** Stable ledger identity (ADR 0031) — independent of checkout path. */
   repoId?: string;
+
+  /** Project metadata (ADR 0032 §2/§5) — owner identity + slug + kind. */
+  project?: {
+    /** Owner entity id (`identity:<did>`) — the person who created it. */
+    owner?: string;
+    /** Repo slug scoped under the owner (`{peer}/{repo}`). */
+    name?: string;
+    /** Project kind (code, knowledge-base, notes, data, media, other). */
+    kind?: string;
+  };
 
   /** Agent lane filesystem bind (ADR 0014 Phase 2). */
   lanes?: {
