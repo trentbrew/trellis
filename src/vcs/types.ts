@@ -403,6 +403,9 @@ export interface TrellisVcsConfig {
   /** Whether init/watch should reconcile existing workspace files by default. */
   indexWorkspace: boolean;
 
+  /** Stable ledger identity (ADR 0031) — independent of checkout path. */
+  repoId?: string;
+
   /** Agent lane filesystem bind (ADR 0014 Phase 2). */
   lanes?: {
     /** Provision git worktrees per lane; default true on init. */

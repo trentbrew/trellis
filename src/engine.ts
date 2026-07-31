@@ -13,6 +13,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { readFile } from 'fs/promises';
+import { randomBytes } from 'crypto';
 import { join, dirname } from 'path';
 import { EAVStore } from './core/store/eav-store.js';
 import type { Fact, Link } from './core/store/eav-store.js';
@@ -165,6 +166,7 @@ interface PersistedConfig {
   indexWorkspace?: boolean;
   lanes?: TrellisVcsConfig['lanes'];
   git?: TrellisVcsConfig['git'];
+  repoId?: string;
   agentId: string;
   createdAt: string;
 }
@@ -391,6 +393,7 @@ export class TrellisVcsEngine {
       indexWorkspace: this.config.indexWorkspace,
       lanes: this.config.lanes,
       git: this.config.git,
+      repoId: this.config.repoId ?? existing?.repoId,
       agentId: this.agentId,
       createdAt: createdAt ?? existing?.createdAt ?? new Date().toISOString(),
     };
@@ -500,6 +503,11 @@ export class TrellisVcsEngine {
       ...this.config.git,
     };
 
+    // Stable ledger identity — generated once at init, never from checkout path.
+    this.config.repoId =
+      this.config.repoId ??
+      `repo:${randomBytes(16).toString('hex')}`;
+
     const trellisDir = join(this.config.rootPath, '.trellis');
     if (!existsSync(trellisDir)) {
       mkdirSync(trellisDir, { recursive: true });
@@ -595,6 +603,9 @@ export class TrellisVcsEngine {
       }
       if (persisted.git) {
         this.config.git = persisted.git;
+      }
+      if (persisted.repoId) {
+        this.config.repoId = persisted.repoId;
       }
     }
 
