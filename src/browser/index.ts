@@ -171,6 +171,17 @@ export type {
   UseTimelineReturn,
 } from '../timeline/index.js';
 
+// Headless combobox (ADR 0034 wedge 2) — core is browser-safe
+export { createComboboxCore } from '../combobox/index.js';
+export type {
+  ComboboxActions,
+  ComboboxConfig,
+  ComboboxFilter,
+  ComboboxItem,
+  ComboboxState,
+  UseComboboxReturn,
+} from '../combobox/index.js';
+
 export {
   RealtimeRoom,
   MemoryHub,
