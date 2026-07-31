@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slide Deck — Iroh Peer Sync</title>
+  <link rel="stylesheet" href="trellis.css">
+</head>
+<body>
+  <div class="slides">
+
+    <!-- Title -->
+    <div class="slide title-slide">
+      <div class="slide-content">
+        <h1>Iroh Peer-to-Peer <span class="accent">Sync</span></h1>
+        <p class="subtitle">Transport-independent replication with CRDT-style reconciliation</p>
+        <div class="deck-meta">
+          <p>Source: <code>src/sync/iroh-transport.ts</code> · <code>src/sync/sync-engine.ts</code> · <code>src/sync/reconciler.ts</code> · <code>src/sync/types.ts</code></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agenda -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Today's Deck</h2>
+        <ol>
+          <li>Sync philosophy: replication, not ownership transfer</li>
+          <li>Transport abstraction</li>
+          <li>The have/want/ops/ack/nack protocol</li>
+          <li>Iroh QUIC transport</li>
+          <li>CRDT-style reconciliation</li>
+          <li>Branch concurrency modes</li>
+          <li>Full-state sync extensions</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Sync Philosophy -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Sync Philosophy</h2>
+        <p class="lead">Sync is <strong>replication, not ownership transfer</strong>. A relay may help peers connect, but it should not become the primary owner of state.</p>
+        <div class="columns">
+          <div>
+            <h3>Local-first</h3>
+            <ul>
+              <li>Every peer owns its graph locally</li>
+              <li>Signs all ops with Ed25519 identity</li>
+              <li>Validates incoming ops before applying</li>
+              <li>Works fully offline — sync is additive</li>
+            </ul>
+          </div>
+          <div>
+            <h3>P2P replication</h3>
+            <ul>
+              <li>Iroh QUIC — direct peer-to-peer</li>
+              <li>WebSocket / PartyKit — browser-compatible adapter</li>
+              <li>Memory transport — test-only</li>
+              <li>All transports implement the same interface</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transport Abstraction -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Transport Abstraction</h2>
+        <p>All sync transports implement the <code>SyncTransport</code> interface:</p>
+<pre><code>export interface SyncTransport {
+  send(peerId: string, message: SyncMessage): Promise<void>
+  onMessage(handler: SyncMessageHandler): void
+  peers(): PeerId[]
+  connect?():  Promise<void>
+  disconnect?(): Promise<void>
+}
+
+// Implementations:
+IrohSyncTransport     // QUIC (north star)
+WsTransport           // WebSocket
+PartyKitTransport     // PartyKit relay
+MemoryTransport       // in-process (tests)</code></pre>
+        <p style="margin-top: 1rem; color: var(--text-dim);">The <code>SyncEngine</code> is transport-agnostic — it only knows about <code>SyncMessage</code> objects, not bytes.</p>
+      </div>
+    </div>
+
+    <!-- Wire Protocol -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Wire Protocol — have / want / ops / ack</h2>
+        <p>The sync protocol exchanges versioned messages between peers:</p>
+<pre style="font-size: 0.85em;"><code>peer A           peer B
+  |    have(heads: {main: op4})    |
+  | ─────────────────────────────→ |
+  |                                |
+  |    want(afterHash: op4)        |
+  | ←────────────────────────────── |
+  |                                |
+  |    ops([op5, op6, op7])        |
+  | ─────────────────────────────→ |
+  |                                |
+  |    ack(integrated: [op5…])     |
+  | ←────────────────────────────── |
+  |                                |
+  |    nack(refs, reason)           |  ← if any op fails validation</code></pre>
+        <table style="margin-top: 1rem; font-size: 0.9rem;">
+          <thead><tr><th>Message</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>have</code></td><td>Advertise our head op hashes + count</td></tr>
+            <tr><td><code>want</code></td><td>Request ops we're missing</td></tr>
+            <tr><td><code>ops</code></td><td>Send a batch of ops</td></tr>
+            <tr><td><code>ack</code></td><td>Confirm integration of received ops</td></tr>
+            <tr><td><code>nack</code></td><td>Reject ops for specific reasons</td></tr>
+            <tr><td><code>snapshot</code></td><td>Tail catch-up for late joiners</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Nack Reasons -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Rejection Reasons (Nack)</h2>
+        <p>When a peer rejects ops, it sends a <code>nack</code> with a categorical reason:</p>
+<pre><code>type NackReason =
+  | 'invalid-kind'          // unknown op kind
+  | 'hash-mismatch'         // content hash doesn't match
+  | 'missing-dependency'    // previousHash not in local log
+  | 'apply-failed'          // decomposition/store error
+  | 'protocol-version'      // unsupported wire version
+  | 'destructive-op'        // safety gate violation
+  | 'bulk-delete'           // bulk delete blocked
+  | 'system-modification'   // system file modification
+  | 'quarantine-required'   // suspicious change
+  | 'rate_limited'          // rate limiter tripped</code></pre>
+        <p style="margin-top: 1rem; color: var(--text-dim);">Rejection reasons are grouped — multiple rejected hashes for the same reason produce a single nack.</p>
+      </div>
+    </div>
+
+    <!-- Iroh Transport -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Iroh QUIC Transport</h2>
+        <p><span class="teal">Iroh is the north-star P2P transport.</span> It uses QUIC for multiplexed bidirectional streams with ALPN-based protocol selection.</p>
+<pre style="font-size: 0.85em;"><code>const transport = await IrohSyncTransport.create({
+  alpns: ['trellis-sync/1'],  // protocol identifier
+  secretKey: […],             // deterministic identity (optional)
+})
+
+// Share this ticket with peers:
+const ticket = transport.ticket()
+// "trellis-sync/1@10.0.0.5:4001#…"
+
+// Connect to a peer:
+await transport.connectToPeer(ticketStr, 'peer-id', 'Alice')
+
+// Send a message:
+await transport.send('peer-id', {
+  version: 1,
+  type: 'ops',
+  peerId: localId,
+  ops: [op1, op2, op3],
+})
+</code></pre>
+        <p style="margin-top: 1rem; color: var(--text-dim);">Each send opens its own QUIC connection. Peers are auto-registered on incoming connections — true bidirectional communication without manual peer discovery.</p>
+      </div>
+    </div>
+
+    <!-- CRDT Reconciliation -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>CRDT-Style Reconciliation</h2>
+        <p>When two peers diverge (both have unique ops after a common ancestor), the <code>reconciler</code> merges them:</p>
+<pre><code>Algorithm:
+  1. Find the fork point (last common op hash)
+  2. Split each stream into: shared prefix + unique suffix
+  3. Detect conflicts in unique portions
+  4. Interleave unique ops by timestamp (causal order)
+  5. Feed unique ops to the integrator
+
+reconcile(opsA, opsB) → ReconcileResult {
+  merged:       [...shared, ...interleaved],
+  uniqueToA:    [...],
+  uniqueToB:    [...],
+  forkPoint:    "trellis:op:abc…",
+  clean:        true/false,
+  conflicts:    [ReconcileConflict, …]
+}</code></pre>
+        <p style="color: var(--text-dim); font-size: 0.9rem;">Conflict detection: two ops conflict when they both mutate the same file in non-commutable ways (e.g. both <code>fileModify</code> the same path).</p>
+      </div>
+    </section>
+
+    <!-- Branch Concurrency -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Branch Concurrency Modes</h2>
+        <p>Each branch carries a <code>linear</code> flag that controls how the sync engine reconciles divergent streams:</p>
+        <table>
+          <thead><tr><th>Mode</th><th>Behavior</th><th>Use Case</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>linear: true</code> <span class="badge badge-vcs">default</span></td>
+              <td>Fast-forward only. Push rejected if remote has diverged.</td>
+              <td><code>main</code>, release branches, CI-gated</td>
+            </tr>
+            <tr>
+              <td><code>linear: false</code></td>
+              <td>CRDT-style concurrent appends. Reconciler merges divergent sub-chains.</td>
+              <td>Feature branches, multi-device editing</td>
+            </tr>
+          </tbody>
+        </table>
+<pre style="margin-top: 1rem; font-size: 0.9em;"><code>// In sync-engine.ts
+if (branchPolicy.linear) {
+  // Pre-filter dupes, hand new ops to integrator
+  const newOps = msg.ops.filter(o => !localHashes.has(o.hash))
+  onOpsReceived(newOps)
+} else {
+  // Reconcile divergent streams, hand uniqueToB to integrator
+  const { uniqueToB } = reconcile(localOps, msg.ops)
+  onOpsReceived(uniqueToB)
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- Full-State Sync -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Full-State Sync Extensions</h2>
+        <p>Beyond op-stream replication, Trellis supports full-state sync for cross-environment sync (3.4.1+):</p>
+        <table>
+          <thead><tr><th>Message</th><th>Payload</th><th>Use Case</th></tr></thead>
+          <tbody>
+            <tr><td><code>graph-snapshot</code></td><td>SQLite DB binary</td><td>Late-joiner full catch-up</td></tr>
+            <tr><td><code>lane-journal</code></td><td>JSONL ops</td><td>Agent lane state</td></tr>
+            <tr><td><code>decision-trace</code></td><td>JSON audit trail</td><td>Reasoning provenance</td></tr>
+            <tr><td><code>entity-delta</code></td><td>Incremental changes</td><td>Efficient graph updates</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top: 1rem; color: var(--text-dim);">An environment variable <code>TRELLIS_SYNC_ENV</code> controls sync policy — production environments enforce safety gates (block destructive ops, bulk deletes, system modifications). Suspicious changes go to quarantine for manual review.</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="slide">
+      <div class="slide-content" style="text-align: center;">
+        <h1>Questions?</h1>
+        <p style="margin-top: 2rem;">Source: <code>src/sync/</code></p>
+        <p style="margin-top: 3rem; font-size: 0.9rem; color: var(--text-dim);">
+          <span class="badge badge-sync">Sync</span> ·
+          <a href="01-five-pillars.html" style="color: var(--accent-2);">Pillars</a> ·
+          <a href="04-sqlite-op-log.html" style="color: var(--accent-2);">Op-Log</a> ·
+          <a href="05-semantic-patching.html" style="color: var(--accent-2);">Semantic Patching</a> ·
+          <a href="07-governance.html" style="color: var(--accent-2);">Governance</a> ·
+          <a href="index.html" style="color: var(--text-dim);">← All decks</a>
+        </p>
+      </div>
+    </div>
+
+  </div>
+  <script src="trellis-slides.js"></script>
+  <div class="nav-overlay"></div>
+  <div class="slide-footer"><span class="deck-title">Iroh Peer Sync</span><span class="page" id="page-indicator"></span></div>
+</body>
+</html>
