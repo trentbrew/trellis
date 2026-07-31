@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
-import type { JournalMeta } from '../vcs/oplog-remote.js';
+import type { JournalMeta, RemoteRepoInfo } from '../vcs/oplog-remote.js';
 
 export const CHECKPOINT_RETENTION = 8;
 
@@ -81,6 +81,31 @@ export class LedgerStore {
       if (body) return body;
     }
     return null;
+  }
+
+  /** List hosted ledgers for discovery / clone (`GET /v0/ledger/repos`). */
+  listRepos(): RemoteRepoInfo[] {
+    if (!existsSync(this.dataRoot)) return [];
+    const repos: RemoteRepoInfo[] = [];
+    for (const repoId of readdirSync(this.dataRoot)) {
+      const tipPath = join(this.dataRoot, repoId, 'tip.json');
+      if (!existsSync(tipPath)) continue;
+      try {
+        const meta = JSON.parse(
+          readFileSync(tipPath, 'utf-8'),
+        ) as JournalMeta;
+        repos.push({
+          repoId,
+          tailHash: meta.tailHash,
+          byteLength: meta.byteLength,
+          lineCount: meta.lineCount,
+          updatedAt: statSync(tipPath).mtime.toISOString(),
+        });
+      } catch {
+        /* unreadable tip — skip */
+      }
+    }
+    return repos;
   }
 
   push(payload: LedgerPushPayload): LedgerPushResult {

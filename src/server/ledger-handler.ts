@@ -55,6 +55,10 @@ export function createLedgerFetchHandler(
       return json(tip);
     }
 
+    if (url.pathname === '/v0/ledger/repos' && req.method === 'GET') {
+      return json(store.listRepos());
+    }
+
     if (url.pathname === '/v0/ledger/push' && req.method === 'POST') {
       let payload: Record<string, unknown>;
       try {

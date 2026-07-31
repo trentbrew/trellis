@@ -20,6 +20,16 @@ export interface JournalMeta {
   lineCount: number;
 }
 
+/** One ledger hosted by a remote sprite (discovery / clone target). */
+export interface RemoteRepoInfo {
+  repoId: string;
+  slug?: string;
+  tailHash?: string;
+  byteLength?: number;
+  lineCount?: number;
+  updatedAt?: string;
+}
+
 export interface RemotePeerConfig {
   url: string;
   repoId: string;
@@ -134,6 +144,18 @@ export function readRemoteConfig(rootPath: string): RemoteConfigFile {
   }
 }
 
+/** Stable ledger identity persisted in `.trellis/config.json` (ADR 0031). */
+export function readPersistedRepoId(rootPath: string): string | null {
+  const p = configPathForRoot(rootPath);
+  if (!existsSync(p)) return null;
+  try {
+    const raw = JSON.parse(readFileSync(p, 'utf-8')) as { repoId?: string };
+    return raw.repoId?.trim() ? raw.repoId! : null;
+  } catch {
+    return null;
+  }
+}
+
 export function writeRemoteConfig(
   rootPath: string,
   remote: RemoteConfigFile,
@@ -211,6 +233,25 @@ export async function fetchRemoteTail(
   }
   const body = JSON.parse(res.body) as JournalMeta;
   return body;
+}
+
+export async function listRemoteRepos(
+  peer: RemotePeerConfig,
+  transport: HttpTransport = defaultFetchTransport(),
+  headers: Record<string, string> = {},
+): Promise<RemoteRepoInfo[]> {
+  const url = joinUrl(peer.url, '/v0/ledger/repos');
+  const res = await transport.get(url, headers);
+  if (res.status === 404) return [];
+  if (res.status >= 400) {
+    throw new Error(
+      `Remote repo list failed (${res.status}): ${res.body.slice(0, 200)}`,
+    );
+  }
+  const body = JSON.parse(res.body) as
+    | RemoteRepoInfo[]
+    | { repos?: RemoteRepoInfo[] };
+  return Array.isArray(body) ? body : (body.repos ?? []);
 }
 
 export async function remoteStatus(
@@ -414,7 +455,8 @@ export function addRemote(
   opts?: { name?: string; repoId?: string; apiKey?: string },
 ): RemotePeerConfig {
   const name = opts?.name ?? 'default';
-  const repoId = opts?.repoId ?? repoKeyFromRoot(rootPath);
+  const repoId =
+    opts?.repoId ?? readPersistedRepoId(rootPath) ?? repoKeyFromRoot(rootPath);
   const peer: RemotePeerConfig = { url, repoId, name };
   const remote = readRemoteConfig(rootPath);
   if (name === 'default') remote.default = peer;
@@ -425,6 +467,180 @@ export function addRemote(
   }
   return peer;
 }
+
+export interface CloneOptions {
+  /** Override repo discovery — must match a ledger hosted by the remote. */
+  repoId?: string;
+  apiKey?: string;
+  /** Git URL for the byte tier; cloned into `destDir` before materialize. */
+  gitUrl?: string;
+  /** Skip worktree materialization — chain + config only. */
+  opsOnly?: boolean;
+}
+
+export interface CloneResult {
+  repoId: string;
+  tailHash: string;
+  lineCount: number;
+  opsPath: string;
+  materialized: boolean;
+}
+
+/** Fresh local `.trellis/` initialized from a remote sprite's latest checkpoint (ADR 0031). */
+export async function cloneRemoteLedger(
+  url: string,
+  destDir: string,
+  opts: CloneOptions = {},
+  transport: HttpTransport = defaultFetchTransport(),
+): Promise<CloneResult> {
+  const headers: Record<string, string> = opts.apiKey
+    ? { authorization: `Bearer ${opts.apiKey}` }
+    : {};
+  const peer = { url, repoId: opts.repoId ?? '' };
+  const root = resolve(destDir);
+
+  // 1. Discover repoId when not provided.
+  let repoId = opts.repoId;
+  if (!repoId) {
+    const repos = await listRemoteRepos(peer, transport, headers);
+    if (repos.length === 0) {
+      throw new Error(
+        `Remote ${url} hosts no ledgers. Pass --repo <repoId> to disambiguate.`,
+      );
+    }
+    if (repos.length > 1) {
+      throw new Error(
+        `Remote ${url} hosts ${repos.length} ledgers (${repos
+          .map((r) => r.repoId)
+          .join(', ')}). Pass --repo <repoId>.`,
+      );
+    }
+    const single = repos[0];
+    if (single) repoId = single.repoId;
+  }
+  if (!repoId) {
+    throw new Error(
+      `Remote ${url} hosts no ledgers. Pass --repo <repoId> to disambiguate.`,
+    );
+  }
+
+  const target = { url, repoId };
+
+  // 2. Fetch remote tail (latest checkpoint hash).
+  const tail = await fetchRemoteTail(target, transport, headers);
+  if (!tail?.tailHash) {
+    throw new Error(`Remote ledger ${repoId} has no checkpoint to clone.`);
+  }
+
+  // 3. Fetch latest checkpoint bytes.
+  const checkpointUrl = joinUrl(
+    url,
+    `/v0/ledger/checkpoints/${encodeURIComponent(tail.tailHash)}`,
+  );
+  const res = await transport.get(checkpointUrl, headers);
+  if (res.status >= 400) {
+    throw new Error(
+      `Clone checkpoint fetch failed (${res.status}): ${res.body.slice(0, 200)}`,
+    );
+  }
+  let content = res.body;
+  try {
+    const parsed = JSON.parse(res.body) as { checkpoint?: string };
+    if (typeof parsed.checkpoint === 'string') content = parsed.checkpoint;
+  } catch {
+    /* raw jsonl body */
+  }
+  validateJsonl(content);
+
+  // 4. Bytes first: git checkout (byte tier B) must run while dest is empty.
+  let materialized = false;
+  if (opts.gitUrl && !opts.opsOnly) {
+    const { execSync } = await import('node:child_process');
+    try {
+      execSync(`git clone "${opts.gitUrl}" "${root}"`, {
+        stdio: 'pipe',
+      });
+    } catch (err) {
+      const stderr =
+        err instanceof Error && err.message.includes('\n')
+          ? err.message.split('\n')[0]
+          : err instanceof Error
+            ? err.message
+            : String(err);
+      throw new Error(`git clone failed: ${stderr}`);
+    }
+    materialized = true;
+  }
+
+  // 5. Init fresh .trellis at destDir (full persisted config — engine.open()
+  //    spreads ignorePatterns etc., so `remote` alone is not enough).
+  mkdirSync(trellisDir(root), { recursive: true });
+  const opsPath = opsPathForRoot(root);
+  writeFileSync(opsPath, content.endsWith('\n') ? content : `${content}\n`);
+
+  const now = new Date().toISOString();
+  writeFileSync(
+    configPathForRoot(root),
+    JSON.stringify(
+      {
+        rootPath: root,
+        ignorePatterns: DEFAULT_IGNORE_PATTERNS,
+        debounceMs: 300,
+        defaultBranch: 'main',
+        indexWorkspace: false,
+        repoId,
+        agentId: `agent:${process.env.USER ?? 'unknown'}`,
+        createdAt: now,
+        remote: {
+          default: {
+            url,
+            repoId,
+            lastAckHash: tail.tailHash,
+            lastAckAt: now,
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+  if (opts.apiKey) {
+    writeRemoteSecrets(root, { apiKey: opts.apiKey });
+  }
+
+  // 6. Verify the installed chain tail matches the remote tail.
+  const installed = readJournalMeta(opsPath);
+  if (!installed || installed.tailHash !== tail.tailHash) {
+    throw new Error(
+      'Cloned ledger failed tail verification — refusing to leave partial repo.',
+    );
+  }
+
+  return {
+    repoId,
+    tailHash: tail.tailHash,
+    lineCount: tail.lineCount,
+    opsPath,
+    materialized,
+  };
+}
+
+const DEFAULT_IGNORE_PATTERNS = [
+  'node_modules',
+  '.git',
+  '.trellis',
+  'dist',
+  'build',
+  '.DS_Store',
+  '*.log',
+  '.vercel',
+  '.next',
+  'coverage',
+  'target/',
+  '*.sqlite',
+  '.turbo',
+  '.output',
+];
 
 function repoKeyFromRoot(rootPath: string): string {
   return createHash('sha256').update(resolve(rootPath)).digest('hex').slice(0, 16);
@@ -475,6 +691,17 @@ export class MemoryRemoteSprite implements HttpTransport {
       const tip = this.tips.get(repoId);
       if (!tip) return Promise.resolve({ status: 404, body: '{}' });
       return Promise.resolve({ status: 200, body: JSON.stringify(tip) });
+    }
+    if (u.pathname === '/v0/ledger/repos') {
+      const repos: RemoteRepoInfo[] = [...this.tips.entries()].map(
+        ([repoId, meta]) => ({
+          repoId,
+          tailHash: meta.tailHash,
+          byteLength: meta.byteLength,
+          lineCount: meta.lineCount,
+        }),
+      );
+      return Promise.resolve({ status: 200, body: JSON.stringify(repos) });
     }
     const m = u.pathname.match(/^\/v0\/ledger\/checkpoints\/(.+)$/);
     if (m) {
