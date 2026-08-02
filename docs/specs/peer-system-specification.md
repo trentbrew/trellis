@@ -1,3 +1,10 @@
+---
+description: Trellis uses locally-scoped peer handles as social identifiers rather than global usernames.
+created: 2026-07-31
+updated: 2026-07-31
+title: Trellis Peer System Documentation
+status: draft
+---
 # Trellis Peer System Documentation
 
 **Status:** Current Implementation (Needs Formalization)  
@@ -80,12 +87,32 @@ interface PeerRecord {
   publicKey: string;              // Ed25519 public key
   spriteUrls: string[];          // Sprite endpoints
   displayName?: string;           // Human-readable name
+  revokedKeys?: string[];         // ADR 0036 — keys that must never resolve
 }
 
 interface PeersFile {
   [peerName: string]: PeerRecord;
 }
 ```
+
+### Resolver Contract (ADR 0036)
+
+The peer graph is the **trust data for signature verification**. `peerKeyResolver(trellisDir)`
+(`src/identity/peer-key-resolver.ts`) is the canonical `IdentityResolver`
+construction — local identity/device keys ∪ peer records:
+
+- A `signedBy` identity resolves when it matches a local identity or a peer
+  record (`entityId`/`did`); the record's `publicKey` becomes resolvable.
+- **Revocation:** a key in `revokedKeys` never resolves. If a record's own
+  `publicKey` is listed, the record resolves to **no keys** — the identity is
+  effectively unknown and signature verification fails (safe by default).
+- **Fail-closed:** an unknown `signedBy` (no local identity, no peer record)
+  resolves to nothing — there is no global directory to appeal to. A stale or
+  wrong peer record (e.g. pre-rotation key) fails verification the same way.
+- **Key rotation** therefore requires updating the peer record; until then the
+  peer's new ops quarantine at the gate (ADR 0035 §5).
+- Revocation is a **local trust fact** — it lives beside the handle that
+  trusts it and propagates socially, not via a directory.
 
 ### CLI Commands
 

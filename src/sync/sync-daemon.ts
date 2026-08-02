@@ -18,6 +18,9 @@ import {
 } from '../vcs/sync-policy.js';
 import { SyncAuditTrail } from './audit-trail.js';
 import { RateLimiter } from './rate-limiter.js';
+import { join } from 'node:path';
+import { markDeviceSeen, revokeDevice } from '../identity/pairing.js';
+import type { SyncDeviceRevokedMessage } from './types.js';
 
 export interface SyncDaemonOptions {
   /** WebSocket server URL (used when transport is not provided). */
@@ -108,6 +111,7 @@ export class SyncDaemon {
       localPeerId: this.options.localPeerId,
       transport: this.transport,
       getLocalOps: this.options.getLocalOps,
+      onDeviceRevoked: (msg) => this.handleDeviceRevoked(msg),
       onOpsReceived: async (ops) => {
         const rateCheck = this.rateLimiter.check('remote');
         if (!rateCheck.allowed) {
@@ -177,6 +181,7 @@ export class SyncDaemon {
 
       // Initial sync
       await this.engine.pullAllFrom('server');
+      this.markSeen('idle');
 
       // Periodic sync
       this.interval = setInterval(async () => {
@@ -186,8 +191,10 @@ export class SyncDaemon {
             await this.engine.pullFrom('server');
             this.state.syncCount++;
             this.state.lastSyncTime = new Date().toISOString();
+            this.markSeen('idle');
           } catch (err) {
             console.error('Sync failed:', err);
+            this.markSeen('offline');
             this.auditTrail.logSend(
               this.options.localPeerId,
               0,
@@ -233,6 +240,41 @@ export class SyncDaemon {
    */
   getState(): SyncDaemonState {
     return { ...this.state };
+  }
+
+  /**
+   * Slice C — stamp this machine's device state after a sync cycle. No-op for
+   * machines without a paired device key (`markDeviceSeen` returns false).
+   */
+  private markSeen(syncState: 'idle' | 'offline'): void {
+    try {
+      markDeviceSeen(join(this.options.rootPath ?? '.', '.trellis'), {
+        syncState,
+        lastSyncOpHash: this.options.getLocalOps().at(-1)?.hash,
+      });
+    } catch {
+      /* best-effort — device state is advisory */
+    }
+  }
+
+  /**
+   * Slice D — a peer revoked one of this identity's devices: update the local
+   * person registry so the resolver fails closed on the revoked key.
+   */
+  private handleDeviceRevoked(msg: SyncDeviceRevokedMessage): void {
+    const trellisDir = join(this.options.rootPath ?? '.', '.trellis');
+    const ok = revokeDevice(trellisDir, msg.deviceId);
+    if (ok) {
+      console.log(
+        `Device revoked via sync: ${msg.deviceId} (by ${msg.revokedBy})`,
+      );
+      this.auditTrail.logReceive(
+        msg.peerId,
+        0,
+        JSON.stringify(msg).length,
+        true,
+      );
+    }
   }
 
   /**

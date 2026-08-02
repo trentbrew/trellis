@@ -61,13 +61,13 @@ import {
   loadProfile,
   saveProfile,
   hasProfile,
-  promptForProfile,
   updateProfile,
   inferProjectContext,
   writeAgentScaffold,
   writeIdeScaffold,
   seedContext,
 } from '../scaffold/index.js';
+import { onboardFirstRun } from './onboarding.js';
 import { cliVersion, findRepoRoot, resolveRepoRoot } from './repo-path.js';
 import { handleCliError } from './errors.js';
 import { applyInitIndexGate } from '../vcs/init-storage-guard.js';
@@ -140,6 +140,7 @@ async function runInit(
     plugins?: string[];
     indexWorkspace?: boolean;
     explicitIndexWorkspace?: boolean;
+    identity?: 'new' | 'existing' | 'skip';
   } = {},
 ): Promise<{
   selectedIdes: string[];
@@ -166,22 +167,10 @@ async function runInit(
   }
 
   if (!hasProfile()) {
-    const identity = hasIdentity(rootPath)
-      ? loadIdentity(join(rootPath, '.trellis'))
-      : null;
-
-    if (isInteractive) {
-      console.log(chalk.cyan("\n  Welcome to Trellis! Let's get you set up."));
-      const newProfile = await promptForProfile({
-        name: identity?.displayName,
-      });
-      saveProfile(newProfile);
-      console.log(
-        chalk.green('  ✓ Profile saved to ~/.trellis/profile.json\n'),
-      );
-    } else {
-      updateProfile({ name: identity?.displayName || 'Unknown' });
-    }
+    await onboardFirstRun({
+      interactive: isInteractive,
+      identityFlag: opts.identity,
+    });
   }
 
   const preInfer = await inferProjectContext(rootPath);
@@ -494,6 +483,10 @@ program
   )
   .option('--no-index', 'Skip indexing existing workspace files during init')
   .option('--no-interactive', 'Skip interactive prompts')
+  .option(
+    '--identity <identity>',
+    'First-run onboarding: new (create identity), existing (pair a device), skip (stay anonymous)',
+  )
   .action(async (opts) => {
     try {
       const rootPath = resolve(opts.path);
@@ -561,6 +554,7 @@ program
         footprint,
         indexWorkspace: indexWorkspace ?? false,
         explicitIndexWorkspace: opts.indexWorkspace === true,
+        identity: opts.identity,
       });
 
       console.log(chalk.green('✓ Initialized Trellis repository'));
@@ -3242,25 +3236,56 @@ program
   });
 
 // ---------------------------------------------------------------------------
-// trellis pair (ADR 0020 Phase 0)
+// trellis pair
 // ---------------------------------------------------------------------------
+
+function relativeTime(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
+
+function stateColor(state: string, _label: string): string {
+  switch (state) {
+    case 'syncing':
+      return chalk.cyan(state);
+    case 'behind':
+      return chalk.yellow(state);
+    case 'diverged':
+    case 'offline':
+      return chalk.red(state);
+    case 'revoked':
+      return chalk.red(chalk.strikethrough(state));
+    default:
+      return chalk.green(state);
+  }
+}
 
 program
   .command('pair')
   .description(
-    'Device pairing under local Ed25519 identity (ADR 0020). Subcommands: start, join, approve, accept, list, revoke',
+    'Device pairing under local Ed25519 identity (ADR 0020). Subcommands: start, join, approve, accept, list, show, revoke',
   )
-  .argument('<action>', 'start | join | approve | accept | list | revoke')
+  .argument('<action>', 'start | join | approve | accept | list | show | revoke')
   .argument(
     '[payload]',
     'Challenge / join / auth payload (or deviceId for revoke)',
   )
   .option('-p, --path <path>', 'Repository path', '.')
   .option('--label <label>', 'Device label (join)')
+  .option('--kind <kind>', 'Device kind (join): desktop, cli, cloud-sprite')
+  .option('--transport <transport>', 'Device transport (join): ws, http, iroh')
+  .option('--push <url>', 'Notify a peer via WS after revoke (device-revoked signal)')
   .option('--yes', 'Confirm approve after reviewing fingerprint')
   .option('--qr', 'Force terminal QR for OOB payloads (even when not a TTY)')
   .option('--no-qr', 'Skip terminal QR')
-  .action((action, payload, opts) => {
+  .action(async (action, payload, opts) => {
     const rootPath = resolve(opts.path);
     const trellisDir = join(rootPath, '.trellis');
     const showQr =
@@ -3308,6 +3333,8 @@ program
         }
         const { payload: out, local } = pairJoin(trellisDir, payload, {
           deviceLabel: opts.label,
+          kind: opts.kind as any,
+          transport: opts.transport as any,
         });
         console.log(
           chalk.green('✓ Join response ready — send to approving device'),
@@ -3388,18 +3415,67 @@ program
           console.log(chalk.dim('No paired devices in local registry.'));
           return;
         }
-        console.log(chalk.bold('Paired devices (local registry)\n'));
+        console.log(chalk.bold('Paired devices (person-scoped registry)\n'));
         for (const d of devices) {
+          const kind = d.kind ?? 'cli';
+          const transport = d.transport ?? '';
+          const state = d.syncState ?? (d.revokedAt ? 'revoked' : 'idle');
+          const seen = d.lastSeenAt
+            ? relativeTime(d.lastSeenAt)
+            : chalk.dim('never');
           console.log(
-            `  ${d.deviceId}  ${chalk.dim(d.deviceLabel ?? '')}  fp=${deviceFingerprint(d.devicePublicKey)}`,
+            `  ${d.deviceId}  ${chalk.dim(d.deviceLabel ?? '')} ${chalk.dim(kind)}${transport ? chalk.dim(`/${transport}`) : ''} ${stateColor(state, state)}  ${chalk.dim('seen ' + seen)}  fp=${deviceFingerprint(d.devicePublicKey)}`,
           );
         }
         return;
       }
 
+      if (action === 'show') {
+        if (!payload) {
+          console.error(chalk.red('Usage: trellis pair show <deviceId>'));
+          process.exit(1);
+        }
+        const devices = listDevices(trellisDir);
+        const rec = devices.find((d) => d.deviceId === payload);
+        if (!rec) {
+          console.error(
+            chalk.red(`Device not found in registry: ${payload}`),
+          );
+          process.exit(1);
+        }
+        console.log(chalk.bold('Device\n'));
+        console.log(`  ${chalk.dim('ID:')}          ${rec.deviceId}`);
+        console.log(
+          `  ${chalk.dim('Label:')}       ${rec.deviceLabel ?? chalk.dim('-')}`,
+        );
+        console.log(
+          `  ${chalk.dim('Kind:')}        ${rec.kind ?? 'cli'}`,
+        );
+        console.log(
+          `  ${chalk.dim('Transport:')}   ${rec.transport ?? chalk.dim('-')}`,
+        );
+        console.log(`  ${chalk.dim('Authorized:')}  ${rec.authorizedAt}`);
+        console.log(
+          `  ${chalk.dim('Last seen:')}   ${rec.lastSeenAt ?? chalk.dim('never')}`,
+        );
+        console.log(
+          `  ${chalk.dim('Sync state:')}  ${stateColor(rec.syncState ?? 'idle', rec.syncState ?? 'idle')}`,
+        );
+        console.log(
+          `  ${chalk.dim('Last sync op:')} ${rec.lastSyncOpHash ?? chalk.dim('-')}`,
+        );
+        console.log(
+          `  ${chalk.dim('Revoked:')}     ${rec.revokedAt ?? chalk.dim('no')}`,
+        );
+        console.log(
+          `  ${chalk.dim('Fingerprint:')} ${deviceFingerprint(rec.devicePublicKey)}`,
+        );
+        return;
+      }
+
       if (action === 'revoke') {
         if (!payload) {
-          console.error(chalk.red('Usage: trellis pair revoke <deviceId>'));
+          console.error(chalk.red('Usage: trellis pair revoke <deviceId> [--push <ws-url>]'));
           process.exit(1);
         }
         const ok = revokeDevice(trellisDir, payload);
@@ -3409,7 +3485,45 @@ program
           );
           process.exit(1);
         }
-        console.log(chalk.green(`✓ Revoked ${payload} (local registry only)`));
+        console.log(
+          chalk.green(`✓ Revoked ${payload} ${opts.push ? '(local + pushed)' : '(local registry only — use --push <ws-url> to notify peers)'}`),
+        );
+
+        // Slice D — revocation signal: notify connected peers so their
+        // registries update and their resolvers fail closed on the key.
+        if (opts.push) {
+          try {
+            const { WebSocketTransport } = await import(
+              '../sync/websocket-transport.js'
+            );
+            const { getSigningMaterial } = await import(
+              '../identity/pairing.js'
+            );
+            const transport = new WebSocketTransport({
+              url: opts.push,
+              localPeerId: `revoke-${payload}`,
+            });
+            await transport.connect();
+            const material = getSigningMaterial(trellisDir);
+            await transport.send('server', {
+              version: 1,
+              type: 'device-revoked',
+              peerId: `revoke-${payload}`,
+              deviceId: payload,
+              identityEntityId: material?.identityEntityId ?? '',
+              revokedBy: material?.signedWith ?? 'root',
+              timestamp: new Date().toISOString(),
+            });
+            await transport.disconnect();
+            console.log(chalk.green(`  ✓ Sent revocation signal to ${opts.push}`));
+          } catch (err: any) {
+            console.error(
+              chalk.yellow(
+                `  ⚠ Revoked locally, but failed to notify peers: ${err.message}`,
+              ),
+            );
+          }
+        }
         return;
       }
 
@@ -5236,6 +5350,33 @@ vmProgram
         apiKey: result.apiKey,
       });
 
+      // Slice D — the sprite is a paired device: mint a cloud-sprite device
+      // key under the person identity, register it locally, install it on the
+      // sprite. Best-effort: without an identity this is skipped with a
+      // warning, not fatal.
+      try {
+        const { provisionSpriteDeviceKey } =
+          await import('../identity/sprite-device.js');
+        const { installSpriteDeviceKey } = await import('../server/deploy.js');
+        const { local, record } = provisionSpriteDeviceKey(
+          join(process.cwd(), '.trellis'),
+          { name },
+        );
+        await installSpriteDeviceKey(name, local, (msg) =>
+          console.log(chalk.dim(`  ${msg}`)),
+        );
+        console.log(
+          chalk.green(`✓ Sprite paired as device: ${chalk.bold(record.deviceId)}`),
+        );
+        console.log(chalk.dim(`  Kind: cloud-sprite · transport: ws`));
+      } catch (err: any) {
+        console.log(
+          chalk.yellow(
+            `  ⚠ Sprite not paired as a device (${err.message}). Run \`trellis identity init\` to onboard, then re-pair.`,
+          ),
+        );
+      }
+
       console.log('');
       console.log(
         chalk.green(`✓ Sprite ${name} created and Trellis DB deployed`),
@@ -6385,7 +6526,7 @@ program
 
 program
   .command('skills')
-  .description('Install Trellis agent pipeline skills from trentbrew/trellis-skills')
+  .description('Install Trellis agent skills using the skills CLI (npx skills)')
   .argument('[args...]', 'Additional arguments to pass to the skills CLI')
   .allowUnknownOption()
   .action(async () => {
@@ -6395,7 +6536,7 @@ program
 
     const { spawnSync } = await import('child_process');
 
-    const skillsArgs = ['skills', 'add', 'trentbrew/trellis-skills', '--agent', 'opencode', ...extraArgs];
+    const skillsArgs = ['skills', 'add', 'trentbrew/trellis', ...extraArgs];
     console.log(chalk.cyan('  Installing Trellis agent skills...'));
     console.log(chalk.dim(`  Running: npx ${skillsArgs.join(' ')}\n`));
 

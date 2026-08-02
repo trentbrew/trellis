@@ -11,9 +11,13 @@
  *   engine.stop();          // stop watcher
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'fs';
 import { readFile } from 'fs/promises';
-import { randomBytes } from 'crypto';
 import { join, dirname } from 'path';
 import { EAVStore } from './core/store/eav-store.js';
 import type { Fact, Link } from './core/store/eav-store.js';
@@ -22,8 +26,8 @@ import { Ingestion } from './watcher/ingestion.js';
 import { decompose } from './vcs/decompose.js';
 import { createVcsOp, isVcsOpKind, verifyVcsOpHash } from './vcs/ops.js';
 import { enforceIngestAuthorization } from './identity/capability.js';
-import { pairingResolver, ROOT_DEVICE_ID } from './identity/pairing.js';
-import { resolveRepoIdentity } from './identity/identity.js';
+import { getSigningMaterial } from './identity/pairing.js';
+import { peerKeyResolver } from './identity/peer-key-resolver.js';
 import type { IdentityResolver } from './identity/signing-middleware.js';
 import { PROVENANCE } from './core/persist/canonical-op.js';
 import type { OpProvenance } from './core/persist/canonical-op.js';
@@ -349,25 +353,18 @@ export class TrellisVcsEngine {
     // was just as bad — local auth ops minted unsigned, so a peer's gate
     // rejected them and legitimate grants could never replicate.
     //
-    // `identity.json` already holds the private key and entity id, and
-    // `pairingResolver` already reads the same directory. Wiring them here
-    // turns the envelope check into a key check, and makes locally-granted
-    // capability replicable. A repo with no identity keeps both undefined and
-    // is unchanged. ADR 0032 §3 — the *person* key (~/.trellis/identity.json)
-    // is authoritative; the legacy per-repo key is the fallback.
+    // `pairingResolver` semantics live inside `peerKeyResolver`, which already
+    // reads the same directory (ADR 0036: local identity ∪ peer graph).
+    // Signing material resolves device-first (paired device signs as the
+    // identity, ADR 0020), falling back to the identity root (ADR 0032 §3 —
+    // person `~/.trellis/identity.json` authoritative, legacy per-repo key
+    // fallback). A repo with no identity keeps both undefined and is unchanged.
     if (!this.signingMaterial) {
-      const identity = resolveRepoIdentity(this.trellisDir());
-      if (identity) {
-        this.signingMaterial = {
-          privateKey: identity.privateKey,
-          identityEntityId: identity.entityId,
-          signedWith: ROOT_DEVICE_ID,
-        };
-      }
+      const material = getSigningMaterial(this.trellisDir());
+      if (material) this.signingMaterial = material;
     }
     if (!this.identityResolver) {
-      const resolver = pairingResolver(this.trellisDir());
-      if (resolver) this.identityResolver = resolver;
+      this.identityResolver = peerKeyResolver(this.trellisDir());
     }
     this.store = new EAVStore();
     this.opLog =
@@ -396,8 +393,6 @@ export class TrellisVcsEngine {
       indexWorkspace: this.config.indexWorkspace,
       lanes: this.config.lanes,
       git: this.config.git,
-      repoId: this.config.repoId ?? existing?.repoId,
-      project: this.config.project ?? existing?.project,
       agentId: this.agentId,
       createdAt: createdAt ?? existing?.createdAt ?? new Date().toISOString(),
     };
@@ -418,7 +413,7 @@ export class TrellisVcsEngine {
       rootPath: this.config.rootPath,
       ignorePatterns: [...this.config.ignorePatterns, '.trellis'],
       debounceMs: this.config.debounceMs,
-      onEvent: () => {},
+      onEvent: () => { },
     });
     const scanEvents = await scanner.scan({
       onProgress: (progress: ScanProgress) => {
@@ -444,17 +439,17 @@ export class TrellisVcsEngine {
       message: `Scanning ${events.length} initial file operations…`,
     });
 
-    let opsCreated = 0;
-    for (const event of events) {
-      if (event.contentHash) {
-        try {
-          const absPath = join(this.config.rootPath, event.path);
-          const content = await readFile(absPath);
-          if (!this._blobResolver?.canSkipPut(event.path, event.contentHash)) {
-            await this._blobStore.put(content);
-          }
-        } catch {}
-      }
+let opsCreated = 0;
+     for (const event of events) {
+       if (event.contentHash) {
+         try {
+           const absPath = join(this.config.rootPath, event.path);
+           const content = await readFile(absPath);
+           if (!this._blobResolver?.canSkipPut(event.path, event.contentHash)) {
+             await this._blobStore.put(content);
+           }
+         } catch { }
+       }
 
       const op = await createVcsOp('vcs:fileAdd', {
         agentId: this.agentId,
@@ -507,11 +502,6 @@ export class TrellisVcsEngine {
       ...this.config.git,
     };
 
-    // Stable ledger identity — generated once at init, never from checkout path.
-    this.config.repoId =
-      this.config.repoId ??
-      `repo:${randomBytes(16).toString('hex')}`;
-
     const trellisDir = join(this.config.rootPath, '.trellis');
     if (!existsSync(trellisDir)) {
       mkdirSync(trellisDir, { recursive: true });
@@ -519,10 +509,7 @@ export class TrellisVcsEngine {
 
     // Initialize blob store + resolver
     this._blobStore = new BlobStore(trellisDir);
-    this._blobResolver = new BlobResolver(
-      this._blobStore,
-      this.config.rootPath,
-    );
+    this._blobResolver = new BlobResolver(this._blobStore, this.config.rootPath);
 
     // Write config
     this.writePersistedConfig();
@@ -584,10 +571,7 @@ export class TrellisVcsEngine {
     // Initialize blob store + resolver
     const trellisDir = join(this.config.rootPath, '.trellis');
     this._blobStore = new BlobStore(trellisDir);
-    this._blobResolver = new BlobResolver(
-      this._blobStore,
-      this.config.rootPath,
-    );
+    this._blobResolver = new BlobResolver(this._blobStore, this.config.rootPath);
 
     // Load config
     const persisted = this.readPersistedConfig();
@@ -697,7 +681,10 @@ export class TrellisVcsEngine {
     }
   }
 
-  private startWatcherAt(rootPath: string, reconcileExisting: boolean): void {
+  private startWatcherAt(
+    rootPath: string,
+    reconcileExisting: boolean,
+  ): void {
     this.ingestion = new Ingestion({
       agentId: this.agentId,
       lastOpHash: this.getActiveJournal().getLastOp()?.hash,
@@ -717,12 +704,10 @@ export class TrellisVcsEngine {
           try {
             const absPath = join(rootPath, event.path);
             const content = await readFile(absPath);
-            if (
-              !this._blobResolver?.canSkipPut(event.path, event.contentHash)
-            ) {
+            if (!this._blobResolver?.canSkipPut(event.path, event.contentHash)) {
               await this._blobStore.put(content);
             }
-          } catch {}
+          } catch { }
         }
         await this.ingestion!.process(event);
       },
@@ -736,22 +721,20 @@ export class TrellisVcsEngine {
     this.watcher.scan().then(async (scanEvents) => {
       const trackedPaths = new Set(this.trackedFiles().map((f) => f.path));
 
-      for (const event of scanEvents) {
-        if (!trackedPaths.has(event.path)) {
-          if (event.contentHash && this._blobStore) {
-            try {
-              const absPath = join(rootPath, event.path);
-              const content = await readFile(absPath);
-              if (
-                !this._blobResolver?.canSkipPut(event.path, event.contentHash)
-              ) {
-                await this._blobStore.put(content);
-              }
-            } catch {}
-          }
-          await this.ingestion!.process(event);
-        }
-      }
+for (const event of scanEvents) {
+         if (!trackedPaths.has(event.path)) {
+           if (event.contentHash && this._blobStore) {
+             try {
+               const absPath = join(rootPath, event.path);
+               const content = await readFile(absPath);
+               if (!this._blobResolver?.canSkipPut(event.path, event.contentHash)) {
+                 await this._blobStore.put(content);
+               }
+             } catch { }
+           }
+           await this.ingestion!.process(event);
+         }
+       }
 
       this.watcher!.start();
     });
@@ -859,7 +842,9 @@ export class TrellisVcsEngine {
    * engine. The engine dedupes by hash, materializes each new op, and avoids
    * creating local branch-advance follow-up ops for remote history.
    */
-  async integrateOps(ops: VcsOp[]): Promise<IntegrateOpsResult> {
+  async integrateOps(
+    ops: VcsOp[],
+  ): Promise<IntegrateOpsResult> {
     if (this.activeLaneId) {
       throw new Error(
         'integrateOps() requires integration mode; leave the active lane first.',
@@ -1350,10 +1335,7 @@ export class TrellisVcsEngine {
     /** When true, sync even if git.syncOnPromote is false. */
     force?: boolean;
   }): GitSyncResult {
-    if (
-      !this._blobResolver ||
-      !laneWorktreeMod.isGitRepo(this.config.rootPath)
-    ) {
+    if (!this._blobResolver || !laneWorktreeMod.isGitRepo(this.config.rootPath)) {
       return { committed: false, pushed: false, filesMaterialized: 0 };
     }
 
@@ -1579,10 +1561,7 @@ export class TrellisVcsEngine {
     );
     parentLog.load();
     const parentLaneOps = parentLog.readAll();
-    const parentHead = laneMod.resolveLaneHeadFromJournal(
-      parent,
-      parentLaneOps,
-    );
+    const parentHead = laneMod.resolveLaneHeadFromJournal(parent, parentLaneOps);
 
     if (forkKind === 'child') {
       const meta = laneMod.createLaneMeta(this.trellisDir(), {
@@ -1668,9 +1647,7 @@ export class TrellisVcsEngine {
     }
 
     this.activeLaneId = laneId;
-    this.activeLaneLog = new LaneOpLog(
-      laneMod.laneDir(this.trellisDir(), laneId),
-    );
+    this.activeLaneLog = new LaneOpLog(laneMod.laneDir(this.trellisDir(), laneId));
     this.activeLaneLog.load();
 
     this.refreshMaterializedStore(
@@ -1857,10 +1834,8 @@ export class TrellisVcsEngine {
       await this.applyOp(startOp, { skipBranchAdvance: true });
 
       const currentHead =
-        lanePromoteMod.resolveBranchHeadFromOps(
-          this.opLog.readAll(),
-          targetBranch,
-        ) ?? branchMod.getBranchHeadOpHash(this._ctx(), targetBranch);
+        lanePromoteMod.resolveBranchHeadFromOps(this.opLog.readAll(), targetBranch) ??
+        branchMod.getBranchHeadOpHash(this._ctx(), targetBranch);
       if (currentHead !== snapshotHead) {
         meta.status = 'active';
         meta.updatedAt = new Date().toISOString();
@@ -1884,10 +1859,7 @@ export class TrellisVcsEngine {
       for (const action of plan.opsToReplay) {
         let opToApply: VcsOp;
 
-        if (
-          action.mergedContent !== undefined &&
-          action.sourceOp.vcs?.filePath
-        ) {
+        if (action.mergedContent !== undefined && action.sourceOp.vcs?.filePath) {
           const contentHash = await this._blobStore!.put(
             Buffer.from(action.mergedContent, 'utf-8'),
           );
@@ -2017,7 +1989,7 @@ export class TrellisVcsEngine {
     if (opts?.noPromote) {
       throw new Error(
         `Lane ${lane.id} has ${plan.opsToReplay.length} unpromoted ops — promote boundary not met. ` +
-          `Run \`trellis lane promote ${lane.id}\` first, or omit --no-promote to auto-promote on close.`,
+        `Run \`trellis lane promote ${lane.id}\` first, or omit --no-promote to auto-promote on close.`,
       );
     }
 
@@ -2331,11 +2303,7 @@ export class TrellisVcsEngine {
     if (opts?.lane !== false) {
       const issueKey = id.startsWith('issue:') ? id : `issue:${id}`;
       let lane = this.findLaneForIssue(id);
-      if (
-        lane?.sessionId &&
-        opts?.sessionId &&
-        lane.sessionId !== opts.sessionId
-      ) {
+      if (lane?.sessionId && opts?.sessionId && lane.sessionId !== opts.sessionId) {
         throw new Error(
           `Issue ${id} is active on lane ${lane.id} (session ${lane.sessionId}).`,
         );
@@ -2583,9 +2551,7 @@ export class TrellisVcsEngine {
 
     const suiteIds =
       opts?.suiteIds ??
-      (manifest.defaultSuite
-        ? [manifest.defaultSuite]
-        : Object.keys(manifest.suites));
+      (manifest.defaultSuite ? [manifest.defaultSuite] : Object.keys(manifest.suites));
     if (suiteIds.length === 0) {
       throw new Error('No test suites defined in .trellis/tests.json');
     }

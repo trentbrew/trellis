@@ -182,8 +182,9 @@ export class SyncRoomCore {
       case 'lane-journal':
       case 'decision-trace':
       case 'entity-delta':
-        // Full-state sync messages (TRL-334) - not handled by room core
-        // These are handled by the sync daemon directly
+      case 'device-revoked':
+        // Full-state / identity messages (TRL-334, Slice D) - not handled by
+        // room core. These are handled by the sync daemon / engine peer side.
         return [];
     }
   }

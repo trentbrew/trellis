@@ -1,0 +1,68 @@
+/**
+ * Component tokens — scoped design tokens for specific UI components.
+ * All values reference semantic tokens (no hardcoded values).
+ * @module @trellis.computer/tokens
+ */
+:root {
+  /* Sidebar */
+  --sidebar-bg: var(--surface-bg);
+  --sidebar-border: var(--border);
+  --sidebar-item-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-item-active: color-mix(in oklch, var(--text-interactive) 12%, transparent);
+  --sidebar-rail-w: 56px;
+  --sidebar-expanded-w: 200px;
+  --sidebar-min-w: 140px;
+  --sidebar-max-w: 360px;
+
+  /* Header */
+  --header-bg: var(--glass-surface);
+  --header-border: var(--border);
+  --header-height: 56px;
+
+  /* Secondary sidebar */
+  --secondary-bg: var(--surface-inset);
+  --secondary-w: 224px;
+  --secondary-rail-w: 48px;
+  --secondary-min-w: 160px;
+  --secondary-max-w: 360px;
+
+  /* Oplog */
+  --oplog-bg: var(--surface-inset);
+  --oplog-border: var(--border);
+  --oplog-w: 280px;
+  --oplog-min-w: 200px;
+  --oplog-max-w: 560px;
+
+  /* Toolbar */
+  --toolbar-track: #1e1e1e;
+  --toolbar-active: #1c1c1c;
+  --toolbar-control-h: 34px;
+
+  /* Cards */
+  --card-bg: var(--surface-raised);
+  --card-border: var(--border);
+  --card-radius: 10px;
+
+  /* Kanban */
+  --kanban-col-w: 300px;
+  --kanban-gap: 16px;
+
+  /* Search */
+  --search-bg: var(--surface-raised);
+  --search-border: var(--border);
+
+  /* Toast */
+  --toast-bg: var(--surface-raised);
+  --toast-border: var(--border);
+
+  /* Dialog */
+  --dialog-bg: var(--surface-raised);
+  --dialog-border: var(--border);
+  --dialog-radius: 14px;
+
+  /* Resize handle */
+  --resize-hover: color-mix(in oklch, var(--text-interactive) 35%, transparent);
+
+  /* Progress spin */
+  --progress-color: var(--green);
+}

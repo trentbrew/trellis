@@ -1,6 +1,7 @@
-import { describe, test, expect, beforeEach, afterEach } from 'vitest';
-import { mkdirSync, rmSync, existsSync } from 'fs';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
+import { mkdirSync, rmSync, existsSync, mkdtempSync } from 'fs';
 import { join } from 'path';
+import { tmpdir } from 'os';
 import { TrellisVcsEngine } from '../../src/engine.js';
 import { createVcsOp } from '../../src/vcs/ops.js';
 import {
@@ -16,7 +17,9 @@ import {
 import {
   getSigningMaterial,
   pairingResolver,
+  personDevicesDir,
 } from '../../src/identity/pairing.js';
+import { signOp } from '../../src/identity/signing-middleware.js';
 import { TrellisVcsSyncPeer } from '../../src/sync/vcs-sync-peer.js';
 import { MemoryTransport } from '../../src/sync/memory-transport.js';
 import { MemorySyncRoom } from '../../src/sync/memory-room.js';
@@ -65,14 +68,32 @@ function seedKnownSigner(peerRootPath: string, signer: {
     rootPublicKey: signer.publicKey,
     devices: [],
   };
-  mkdirSync(join(trellisDirOf(peerRootPath), 'devices'), { recursive: true });
+  // Slice B: device registries are person-scoped (~/.trellis/devices) —
+  // the peer's resolver reads person scope first.
+  const personDir = personDevicesDir();
+  mkdirSync(personDir, { recursive: true });
   require('fs').writeFileSync(
-    join(trellisDirOf(peerRootPath), 'devices', 'registry.json'),
+    join(personDir, 'registry.json'),
     JSON.stringify(reg, null, 2),
   );
 }
 
 const TEST_ROOT = '/tmp/trellis-p7-vcs-op-sync-prototype';
+
+// File-scope HOME sandbox: signing + registries resolve person-first (Slice A/B).
+const originalHome = process.env.HOME;
+let home: string;
+
+beforeEach(() => {
+  home = mkdtempSync(join(tmpdir(), 'p7-home-'));
+  process.env.HOME = home;
+});
+
+afterEach(() => {
+  rmSync(home, { recursive: true, force: true });
+  if (originalHome === undefined) delete process.env.HOME;
+  else process.env.HOME = originalHome;
+});
 
 function sorted<T>(items: T[], key: (item: T) => string): T[] {
   return [...items].sort((a, b) => key(a).localeCompare(key(b)));
@@ -540,17 +561,39 @@ describe('ingest authorization gate (ADR 0022 Phase 3)', () => {
   }
 
   test('owner-signed grant integrates; store reflects the grant', async () => {
+    // ADR 0036 fail-closed: a claimed owner signature must verify against a
+    // known key. Build a real owner identity, seed its key into the peer's
+    // person-scoped registry (as after pairing), and sign the grant for real.
+    const ownerId = createIdentity({ displayName: 'Owner' });
+    const ownerDid = ownerId.did;
+    const zone = makeZoneId(ownerDid, 'z1');
+    seedKnownSigner(TEST_ROOT, {
+      entityId: ownerId.entityId,
+      did: ownerDid,
+      publicKey: ownerId.publicKey,
+    });
+
     const engine = await initPeer('gate-a');
     await defineZone(engine.capabilityContext(), {
-      zoneId: ZONE,
+      zoneId: zone,
       alias: 'Workshop',
       defaultVisibility: CapabilityLevel.None,
     });
 
-    const res = await engine.integrateOps([await grantOp('agent:gate-a', OWNER)]);
+    const op = await createVcsOp('vcs:grantSet', {
+      agentId: 'agent:gate-a',
+      vcs: {
+        zoneId: zone,
+        grantPrincipal: MEMBER,
+        grantLevel: CapabilityLevel.Member,
+      },
+    });
+    await signOp(op, ownerId.privateKey, ownerId.entityId, 'root');
+
+    const res = await engine.integrateOps([op]);
     expect(res.rejected).toHaveLength(0);
     expect(res.applied).toBe(1);
-    expect(resolveCapability(engine.getEavStore(), MEMBER, ZONE)).toBe(
+    expect(resolveCapability(engine.getEavStore(), MEMBER, zone)).toBe(
       CapabilityLevel.Member,
     );
   });

@@ -19,6 +19,13 @@ export interface PeerRecord {
   spriteUrls: string[];
   /** Optional human name for display. */
   displayName?: string;
+  /**
+   * Keys that must never resolve for this peer (ADR 0036 §2). A key here is
+   * filtered out of every resolution path; if `publicKey` itself is listed,
+   * the record resolves to no keys — the identity is effectively unknown.
+   * Local-scoped trust fact: propagates socially, not via a directory.
+   */
+  revokedKeys?: string[];
 }
 
 export type PeersFile = Record<string, PeerRecord>;
