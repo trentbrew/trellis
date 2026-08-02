@@ -4,7 +4,7 @@
  * @module trellis/inspector/types
  */
 
-import type { HeadlessComponentType, HeadlessCore } from '../headless/core.js';
+import type { HeadlessComponentType, HeadlessCore } from '../../headless/core.js';
 
 export interface InspectorState {
   core: HeadlessCore<any> | null;

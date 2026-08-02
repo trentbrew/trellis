@@ -185,7 +185,7 @@ export class DAGScheduler {
         steps: JSON.stringify(run.steps),
       };
       if (run.completedAt) updates.completedAt = run.completedAt;
-      await k.updateEntity(run.workflowId, updates, AGENT_CTX);
+      await k.updateEntity(run.workflowId, updates as any, AGENT_CTX);
     } catch { /* swallow */ }
   }
 

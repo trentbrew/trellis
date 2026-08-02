@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import type { HeadlessCore } from '../../headless/core.js';
+import type { HeadlessCore } from '../../../headless/core.js';
 import type { InspectorState } from '../types.js';
 
 export interface UseInspectorStateOptions {

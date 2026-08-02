@@ -49,8 +49,8 @@ export function createTimelineStore(input: TimelineInput = {}): TimelineStore {
 
   return {
     state: toSvelteStore(core),
-    position: toSvelteStore(core, (s) => s.position),
-    marks: toSvelteStore(core, (s) => s.marks),
+    position: toSvelteStore(core, (s: any) => s.position),
+    marks: toSvelteStore(core, (s: any) => s.marks),
     actions: core.actions,
     core,
   };

@@ -48,10 +48,9 @@ export function createComboboxCore(
     items,
     loading: false,
     selectedId: value,
-    activeIndex: 0,
   };
 
-  let state = deriveState({ ...baseState, results: items, highlight: [] });
+  let state = deriveState({ ...baseState, results: items, activeIndex: 0 });
   const subscribers = new Set<() => void>();
   const notify = () => subscribers.forEach((fn) => fn());
 
