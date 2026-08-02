@@ -8,13 +8,13 @@
  * @module trellis/inspector/registry
  */
 
-import type { HeadlessComponentType, HeadlessCore } from '../headless/core.js';
+import type { HeadlessComponentType, HeadlessCore } from '../../headless/core.js';
 
 export interface VisualRenderer {
   /** Framework identifier */
   framework: 'react' | 'vue' | 'svelte' | 'vanilla';
   /** Function that creates a visual component for the given core and descriptor */
-  render(core: HeadlessCore<any>, descriptor: any): JSX.Element;
+  render(core: HeadlessCore<any>, descriptor: any): any;
 }
 
 export interface RegisteredComponent {

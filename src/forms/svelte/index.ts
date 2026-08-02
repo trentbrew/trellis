@@ -54,7 +54,7 @@ export function createFormStore(
     state: toSvelteStore(core),
     actions: core.actions,
     field: (name: string) =>
-      toSvelteStore(core, (s) => ({
+      toSvelteStore(core, (s: any) => ({
         value: s.values[name],
         error: s.errors[name],
         dirty: s.dirty[name],
