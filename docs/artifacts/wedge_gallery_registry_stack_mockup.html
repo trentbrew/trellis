@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en" data-theme="default">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Trellis — Wedge gallery registry stack (TRL-420 design mock)</title>
+<style>
+/* ===== theme tokens (normative — mirror docs/trellis-ui/theme-contract.md) ===== */
+:root {
+  --bg: #0c0e12;
+  --panel: #14171d;
+  --panel-2: #1a1e26;
+  --line: #262b35;
+  --text: #e6e9ef;
+  --dim: #8b93a3;
+  --accent: #6ea8ff;
+  --green: #4ade80;
+  --red: #f87171;
+  --amber: #fbbf24;
+
+  /* theme-owned, never hardcoded by components */
+  --icon-pack: lucide;
+  --motion-duration-fast: 120ms;
+  --motion-duration-normal: 200ms;
+  --motion-duration-slow: 350ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-ease-emphasized: cubic-bezier(0.3, 0, 0.2, 1);
+  --motion-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --motion-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --prose-size: 1em;
+  --prose-leading: 1.75;
+  --prose-flow: 1.25em;
+  --prose-font-body: var(--font-sans);
+  --prose-font-heading: var(--font-display, var(--font-sans));
+  --prose-font-mono: var(--font-mono);
+  --prose-measure: 65ch;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: var(--font-sans);
+}
+
+[data-theme="dark"] {
+  --bg: oklch(0.15 0.01 260);
+  --panel: oklch(0.2 0.015 260);
+  --panel-2: oklch(0.25 0.02 260);
+  --line: oklch(0.35 0.025 260);
+  --text: oklch(0.92 0.01 260);
+  --dim: oklch(0.6 0.015 260);
+  --accent: oklch(0.7 0.15 240);
+  --icon-pack: lucide;
+}
+
+[data-theme="uithing"] {
+  --bg: oklch(0.985 0.002 260);
+  --panel: oklch(0.97 0.004 260);
+  --panel-2: oklch(0.95 0.006 260);
+  --line: oklch(0.88 0.008 260);
+  --text: oklch(0.15 0.01 260);
+  --dim: oklch(0.5 0.015 260);
+  --accent: oklch(0.55 0.18 265);
+  --icon-pack: lucide;
+  --motion-duration-normal: 240ms;
+  --motion-duration-slow: 400ms;
+  --motion-ease-standard: cubic-bezier(0.3, 0, 0.2, 1);
+  --prose-leading: 1.7;
+  --prose-flow: 1.35em;
+}
+
+[data-theme="minimal"] {
+  --icon-pack: tabler;
+  --accent: oklch(0.6 0.15 180);
+}
+
+/* ===== gallery chrome ===== */
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 var(--font-sans);
+  height: 100vh;
+  display: flex;
+  transition: background var(--motion-duration-normal) var(--motion-ease-standard);
+}
+
+/* ---- nav (collapsible) ---- */
+#nav {
+  position: fixed; top: 0; left: 0; bottom: 0; width: 220px;
+  border-right: 1px solid var(--line);
+  background: var(--panel);
+  padding: 20px 14px;
+  overflow-y: auto;
+  z-index: 10;
+  transition:
+    transform var(--motion-duration-normal) var(--motion-ease-standard),
+    opacity var(--motion-duration-fast) var(--motion-ease-out);
+}
+body.nav-collapsed #nav {
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+.nav-head {
+  display: flex; align-items: baseline; gap: 6px;
+  color: var(--dim); font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin: 0 4px 10px;
+}
+.nav-count { color: var(--accent); font-size: 10.5px; }
+.nav-search { width: 100%; margin-bottom: 10px; }
+
+#nav-list { display: flex; flex-direction: column; gap: 2px; }
+.nav-item {
+  display: block; width: 100%; text-align: left; margin-bottom: 0;
+  font-size: 12.5px;
+  gap: 6px;
+}
+.nav-item.active { background: var(--panel-2); border-color: var(--accent); color: var(--accent); }
+
+/* icon slot inside nav items — placeholder for <trellis-icon> */
+.icon-slot {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; margin-right: 6px;
+  border-radius: 3px;
+  background: var(--accent);
+  opacity: 0.5;
+  font-size: 10px; color: var(--text);
+}
+[data-theme="minimal"] .icon-slot {
+  border-radius: 2px;
+  border: 1px solid var(--accent);
+  background: transparent;
+  opacity: 0.8;
+}
+
+/* ---- main ---- */
+#main {
+  flex: 1; min-width: 0;
+  margin-left: 220px;
+  display: flex; flex-direction: column; overflow: hidden;
+  transition: margin-left var(--motion-duration-normal) var(--motion-ease-standard);
+}
+body.nav-collapsed #main { margin-left: 0; }
+
+/* ---- toolbar ---- */
+#toolbar {
+  padding: 10px 16px; border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  display: flex; align-items: center; gap: 10px;
+}
+#toolbar-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+button, select {
+  background: var(--panel-2); border: 1px solid var(--line);
+  color: var(--text); border-radius: 6px; padding: 5px 12px;
+  font: inherit; cursor: pointer;
+  transition: border-color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button.mini { padding: 2px 8px; font-size: 12px; }
+button.active { border-color: var(--accent); color: var(--accent); }
+input, select {
+  background: var(--panel-2); border: 1px solid var(--line);
+  color: var(--text); border-radius: 6px; padding: 5px 9px;
+  font: inherit; outline: none;
+}
+#theme-select {
+  padding: 4px 8px; font-size: 12px;
+  border-radius: 6px;
+}
+#toolbar-type {
+  background: var(--panel-2); border: 1px solid var(--line);
+  color: var(--accent); border-radius: 999px;
+  padding: 2px 9px; font-size: 11.5px;
+}
+
+/* ---- content area ---- */
+#content-area { flex: 1; display: flex; overflow: hidden; }
+#canvas {
+  flex: 1; overflow: auto; padding: 40px;
+  background: var(--bg);
+  display: flex; justify-content: center; align-items: center;
+}
+
+#component-canvas {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 32px;
+  min-height: 400px; min-width: 400px; max-width: 100%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  transition: border-radius var(--motion-duration-normal) var(--motion-ease-standard);
+}
+
+/* ---- controls panel ---- */
+#controls-panel {
+  width: 320px; border-left: 1px solid var(--line);
+  background: var(--panel); overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+.panel-section { padding: 16px; border-bottom: 1px solid var(--line); }
+.panel-head {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--dim); margin: 0 0 12px; font-weight: 600;
+}
+.badge-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.chip {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--dim); font-size: 11.5px;
+}
+.comp-desc { color: var(--dim); font-size: 13px; margin: 6px 0 0; }
+.json {
+  margin: 0; padding: 10px; background: var(--panel-2); border-radius: 6px;
+  font: 11.5px/1.5 var(--font-mono); color: var(--dim);
+  overflow-x: auto; max-height: 260px; overflow-y: auto;
+}
+.actions-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.reset { border-color: var(--amber); color: var(--amber); }
+
+/* ---- fullscreen ---- */
+body.fullscreen #nav { display: none; }
+body.fullscreen #controls-panel { display: none; }
+body.fullscreen #main { margin-left: 0; }
+body.fullscreen #canvas { padding: 16px; }
+body.fullscreen #component-canvas {
+  min-height: 0; width: 100%; height: 100%; border-radius: 0;
+}
+
+/* ---- reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0ms !important;
+  }
+}
+
+/* ---- design annotations ---- */
+[data-design-note] {
+  outline: 1px dashed var(--amber);
+  outline-offset: 2px;
+  position: relative;
+}
+[data-design-note]::after {
+  content: attr(data-design-note);
+  position: absolute; top: -22px; left: 0;
+  font-size: 10px; color: var(--amber); white-space: nowrap;
+  pointer-events: none;
+}
+</style>
+</head>
+<body>
+  <!-- ===== NAV ===== -->
+  <div id="nav">
+    <p class="nav-head">components <span class="nav-count">11</span></p>
+    <input class="nav-search" type="text" placeholder="filter…" aria-label="Filter components" />
+    <div id="nav-list">
+      <button class="nav-item active"> <span class="icon-slot" data-design-note="trellis-icon entity-issue">I</span> Color picker</button>
+      <button class="nav-item"> <span class="icon-slot">C</span> Combobox</button>
+      <button class="nav-item"> <span class="icon-slot">D</span> Dialog</button>
+      <button class="nav-item"> <span class="icon-slot">E</span> Editor</button>
+      <button class="nav-item"> <span class="icon-slot">F</span> Form</button>
+      <button class="nav-item"> <span class="icon-slot">K</span> Kanban</button>
+      <button class="nav-item"> <span class="icon-slot">P</span> Palette</button>
+      <button class="nav-item"> <span class="icon-slot">T</span> Table</button>
+      <button class="nav-item"> <span class="icon-slot">⏱</span> Timeline</button>
+      <button class="nav-item"> <span class="icon-slot">↩</span> Undo history</button>
+      <button class="nav-item"> <span class="icon-slot">⬆</span> Upload</button>
+    </div>
+  </div>
+
+  <!-- ===== MAIN ===== -->
+  <div id="main">
+    <div id="toolbar">
+      <button id="btn-nav-toggle" class="mini" title="Toggle sidebar (⌘B)" aria-label="Toggle sidebar">◧</button>
+      <button class="mini" title="Previous (←)" aria-label="Previous component">‹</button>
+      <span id="toolbar-title" style="font-weight:600;font-size:13px">Color picker</span>
+      <code id="toolbar-type">colorpicker</code>
+      <button class="mini" title="Next (→)" aria-label="Next component">›</button>
+
+      <div id="toolbar-actions">
+        <label style="font-size:11px;color:var(--dim)">theme</label>
+        <select id="theme-select" aria-label="Theme switcher" onchange="document.documentElement.setAttribute('data-theme', this.value)">
+          <option value="default">default</option>
+          <option value="dark">dark</option>
+          <option value="uithing">uithing</option>
+          <option value="minimal">minimal</option>
+        </select>
+        <button id="btn-fullscreen" class="mini" title="Fullscreen (⛶)" aria-label="Toggle fullscreen" data-design-note="Toggle body.fullscreen">⛶</button>
+      </div>
+    </div>
+
+    <div id="content-area">
+      <div id="canvas">
+        <div id="component-canvas">
+          <p style="color:var(--dim);font-size:13px;text-align:center;margin:80px 0 0">
+            ↓ Component renders here via <code>&lt;trellis-icon&gt;</code> + headless vanilla renderer ↓
+          </p>
+          <div style="margin-top:20px;text-align:center">
+            <span class="icon-slot" style="display:inline-flex;width:30px;height:30px;font-size:16px" title="trellis-icon name=entity-issue (alias→lucide)">★</span>
+            <span class="icon-slot" style="display:inline-flex;width:30px;height:30px;font-size:16px" title="trellis-icon name=core-search (alias→lucide)">⌕</span>
+            <span class="icon-slot" style="display:inline-flex;width:30px;height:30px;font-size:16px" title="trellis-icon name=status-in-progress (alias→lucide)">◉</span>
+            <span class="icon-slot" style="display:inline-flex;width:30px;height:30px;font-size:16px" title="trellis-icon name=home (bare→--icon-pack)">⌂</span>
+          </div>
+          <p style="color:var(--dim);font-size:11px;text-align:center;margin:8px 0 0">
+            icon pack: <code id="current-pack" style="color:var(--accent)">—</code>
+          </p>
+        </div>
+      </div>
+
+      <div id="controls-panel">
+        <div class="panel-section">
+          <p class="panel-head">About</p>
+          <p class="comp-desc">Headless color core — parse/normalize hex·rgb·hsl, swatch draft + commit/cancel, recents ring, and live WCAG contrast checks.</p>
+          <div class="badge-row">
+            <span class="chip">vanilla</span>
+            <span class="chip" style="border-color:var(--green);color:var(--green)">react</span>
+            <span class="chip">vue</span>
+            <span class="chip">svelte</span>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <p class="panel-head">State</p>
+          <pre class="json">{ "value": "#3366ff", "format": "hex", … }</pre>
+        </div>
+
+        <div class="panel-section">
+          <p class="panel-head">Actions</p>
+          <div class="actions-row">
+            <button>Open</button>
+            <button disabled>Cancel</button>
+            <button>Set draft "#ffcc00"</button>
+            <button class="reset">↺ reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== theme-pack indicator (proves --icon-pack re-render) ===== -->
+  <script>
+    const packEl = document.getElementById('current-pack');
+    const icons = document.querySelectorAll('.icon-slot');
+    function updatePack() {
+      const pack = getComputedStyle(document.documentElement).getPropertyValue('--icon-pack').trim();
+      packEl.textContent = pack;
+      // simulate <trellis-icon> icon swap: rotate icon placeholders per pack
+      const symbols = { lucide: ['★','⌕','◉','⌂'], tabler: ['◆','○','●','□'] };
+      const set = symbols[pack] || symbols.lucide;
+      icons.forEach((el, i) => { if (i < set.length) el.textContent = set[i]; });
+    }
+    updatePack();
+    new MutationObserver(updatePack).observe(document.documentElement, {
+      attributes: true, attributeFilter: ['data-theme', 'style'],
+    });
+  </script>
+</body>
+</html>

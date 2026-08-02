@@ -1,20 +1,21 @@
 /**
- * Headless component inspector — isolated preview playground for headless UI components.
+ * Headless component inspector — component index + isolated preview
+ * playground for headless UI components (ADR 0034).
  *
- * The inspector showcases headless components in isolation, with state controls and
- * framework-specific renderers. It enables visual regression testing, documentation,
- * and interactive exploration of component behavior without full application context.
+ * The registry indexes every headless component (metadata, core factory,
+ * action specs, per-framework renderers). The browser gallery
+ * (`demo/wedge-smoke`) and Studio tooling consume it to render any
+ * component in isolation with a common inspect wrapper around it — state
+ * JSON, action buttons, and a live view — for exploration without a full
+ * application context.
  *
  * @module trellis/inspector
  */
 
-export { Inspector } from './inspector.js';
-export { useInspectorState } from './hooks/use-inspector-state.js';
 export { inspectorRegistry } from './registry/inspector-registry.js';
 export type {
-  InspectorConfig,
-  InspectorState,
-  InspectorControls,
-  Framework,
-  Story,
-} from './types.js';
+  GalleryAction,
+  HeadlessFramework,
+  RegisteredComponent,
+  VisualRenderer,
+} from './registry/inspector-registry.js';

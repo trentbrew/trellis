@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>trellis — graph composer</title>
+  <style>
+    :root {
+      --bg: #0c0e12;
+      --panel: #14171d;
+      --panel-2: #1a1e26;
+      --line: #262b35;
+      --text: #e6e9ef;
+      --dim: #8b93a3;
+      --accent: #6ea8ff;
+      --green: #4ade80;
+      --red: #f87171;
+      --amber: #fbbf24;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      padding: 32px 40px 80px;
+    }
+    h1 { font-size: 18px; letter-spacing: -0.01em; margin: 0 0 4px; }
+    .sub { color: var(--dim); margin: 0 0 8px; max-width: 720px; }
+    .sub code { color: var(--accent); }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; margin-top: 20px; }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 20px 22px;
+    }
+    section h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dim); margin: 0 0 14px; }
+    .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+    button {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 5px 12px;
+      font: inherit;
+      cursor: pointer;
+    }
+    button:hover:not(:disabled) { border-color: var(--accent); }
+    button:disabled { opacity: 0.4; cursor: default; }
+    button.mini { padding: 2px 8px; font-size: 12px; }
+    input[type="text"], select {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 5px 9px;
+      font: inherit;
+      outline: none;
+    }
+    input[type="text"]:focus { border-color: var(--accent); }
+    table.grid { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    .grid th {
+      text-align: left; color: var(--dim); font-weight: 500;
+      padding: 6px 8px; border-bottom: 1px solid var(--line);
+      cursor: pointer; user-select: none; white-space: nowrap;
+    }
+    .grid th .marker { color: var(--accent); }
+    .grid td { padding: 6px 8px; border-bottom: 1px solid var(--line); }
+    .grid tr:last-child td { border-bottom: none; }
+    .grid td.editable:hover { background: var(--panel-2); }
+    .cell-input { width: 100%; }
+    .status-line { color: var(--dim); margin-top: 10px; font-size: 12.5px; }
+    .chip {
+      display: inline-block; padding: 2px 8px; border-radius: 999px;
+      border: 1px solid var(--line); color: var(--dim); font-size: 11.5px; margin-right: 6px;
+    }
+    .chip.op-kind { color: var(--accent); border-color: var(--accent); }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+    kbd { color: var(--dim); font-size: 11.5px; }
+
+    /* op-log panel */
+    #op-panel { position: sticky; top: 20px; max-height: calc(100vh - 40px); display: flex; flex-direction: column; }
+    #op-list { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .op {
+      border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+      cursor: pointer; background: var(--bg);
+    }
+    .op:hover { border-color: var(--accent); }
+    .op.travel { border-color: var(--amber); }
+    .op-head { display: flex; justify-content: space-between; align-items: center; }
+    .op-hash { color: var(--dim); font-family: ui-monospace, Menlo, monospace; font-size: 11px; }
+    .op-meta { color: var(--dim); font-size: 11.5px; margin-top: 3px; }
+    #delta {
+      border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+      background: var(--bg); margin-top: 10px;
+    }
+    .delta-line { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--amber); margin-top: 4px; }
+
+    /* time-travel overlay */
+    #travel-overlay {
+      display: none; position: fixed; inset: 0; z-index: 50;
+      background: rgba(5, 7, 10, 0.78); padding: 60px 40px; overflow-y: auto;
+    }
+    #travel-box {
+      background: var(--panel); border: 1px solid var(--amber); border-radius: 12px;
+      max-width: 720px; margin: 0 auto; padding: 20px 24px;
+    }
+    #travel-label { color: var(--amber); font-size: 12.5px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <h1>trellis — graph composer</h1>
+  <p class="sub">
+    Table-core bound to the semantic graph: <b>dbl-click a cell, commit — and one
+    EQL-S-grade op joins the causal chain</b> (canonically hashed, hash-linked,
+    replayable). The op-log panel shows the live delta; click an op to time-travel,
+    or undo at the op level.
+  </p>
+  <p class="sub" id="schema-line"></p>
+
+  <div class="layout">
+    <section id="table-sec">
+      <h2>tasks — table-core over the graph</h2>
+      <div class="toolbar">
+        <input id="filter" type="text" placeholder="Filter…" spellcheck="false" />
+        <span style="flex:1"></span>
+        <button id="undo-op" title="Invert and re-apply the last op">↶ undo last op (graph)</button>
+        <button id="reset">↺ reset</button>
+      </div>
+      <div id="table-root"></div>
+      <div class="status-line" id="table-status"></div>
+      <kbd>dbl-click a cell to edit · Enter commits (one op) · Esc cancels (no op)</kbd>
+    </section>
+
+    <section id="op-panel">
+      <h2>op-log delta — <span id="op-count">0</span> ops · head <code id="op-head-hash" style="color:var(--accent)"></code></h2>
+      <div id="op-list"></div>
+      <div id="delta"></div>
+    </section>
+  </div>
+
+  <div id="travel-overlay">
+    <div id="travel-box">
+      <div id="travel-label"></div>
+      <div id="travel-rows"></div>
+      <div class="row">
+        <button id="back-to-current">← back to current</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./composer.js"></script>
+</body>
+</html>

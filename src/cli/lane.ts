@@ -145,9 +145,7 @@ export function registerLaneCommands(program: Command): void {
 
         console.log(chalk.green(`✓ Lane forked: ${chalk.bold(meta.id)}`));
         console.log(`  ${chalk.dim('Parent:')}   ${parentId}`);
-        console.log(
-          `  ${chalk.dim('Base:')}     ${meta.baseBranch} @ ${meta.baseOpHash.slice(0, 20)}…`,
-        );
+        console.log(`  ${chalk.dim('Base:')}     ${meta.baseBranch} @ ${meta.baseOpHash.slice(0, 20)}…`);
         if (meta.issueId) {
           console.log(`  ${chalk.dim('Issue:')}    ${meta.issueId}`);
         }
@@ -163,9 +161,7 @@ export function registerLaneCommands(program: Command): void {
           );
         }
         console.log(
-          chalk.dim(
-            `  Enter: trellis lane enter ${meta.id}  |  export TRELLIS_LANE_ID=${meta.id}`,
-          ),
+          chalk.dim(`  Enter: trellis lane enter ${meta.id}  |  export TRELLIS_LANE_ID=${meta.id}`),
         );
       } catch (err: unknown) {
         console.error(chalk.red((err as Error).message));
@@ -200,13 +196,13 @@ export function registerLaneCommands(program: Command): void {
         if (splitFrom) {
           console.log(`  ${chalk.dim('From:')}     ${splitFrom}`);
         }
-        console.log(
-          `  ${chalk.dim('Base:')}     ${meta.baseBranch} @ ${meta.baseOpHash.slice(0, 20)}…`,
-        );
+        console.log(`  ${chalk.dim('Base:')}     ${meta.baseBranch} @ ${meta.baseOpHash.slice(0, 20)}…`);
         if (meta.worktreePath) {
           console.log(`  ${chalk.dim('Worktree:')} ${meta.worktreePath}`);
         }
-        console.log(chalk.dim(`  export TRELLIS_LANE_ID=${meta.id}`));
+        console.log(
+          chalk.dim(`  export TRELLIS_LANE_ID=${meta.id}`),
+        );
         console.log(
           chalk.dim(
             '  Convention: when the topic jumps, split — do not continue in a catch-all lane.',
@@ -242,9 +238,7 @@ export function registerLaneCommands(program: Command): void {
         });
 
         console.log(chalk.green(`✓ Lane created: ${chalk.bold(meta.id)}`));
-        console.log(
-          `  ${chalk.dim('Base:')}     ${meta.baseBranch} @ ${meta.baseOpHash.slice(0, 20)}…`,
-        );
+        console.log(`  ${chalk.dim('Base:')}     ${meta.baseBranch} @ ${meta.baseOpHash.slice(0, 20)}…`);
         console.log(`  ${chalk.dim('Target:')}   ${meta.targetBranch}`);
         if (meta.worktreePath) {
           console.log(`  ${chalk.dim('Worktree:')} ${meta.worktreePath}`);
@@ -256,9 +250,7 @@ export function registerLaneCommands(program: Command): void {
           console.log(`  ${chalk.dim('Session:')}  ${meta.sessionId}`);
         }
         console.log(
-          chalk.dim(
-            `  Enter: trellis lane enter ${meta.id}  |  export TRELLIS_LANE_ID=${meta.id}`,
-          ),
+          chalk.dim(`  Enter: trellis lane enter ${meta.id}  |  export TRELLIS_LANE_ID=${meta.id}`),
         );
         if (!meta.worktreePath) {
           console.log(
@@ -295,7 +287,9 @@ export function registerLaneCommands(program: Command): void {
         if (meta.worktreePath) {
           console.log(`  ${chalk.dim('Worktree:')} ${meta.worktreePath}`);
         }
-        console.log(chalk.dim(`  export TRELLIS_LANE_ID=${meta.id}`));
+        console.log(
+          chalk.dim(`  export TRELLIS_LANE_ID=${meta.id}`),
+        );
       } catch (err: unknown) {
         console.error(chalk.red((err as Error).message));
         process.exit(1);
@@ -374,25 +368,15 @@ export function registerLaneCommands(program: Command): void {
       const { meta, ops, filePaths, integrationHead, coherence } = summary;
       const active = engine.getActiveLaneId() === laneId;
 
-      console.log(
-        chalk.bold(
-          `Lane ${meta.id}${active ? chalk.green(' (active)') : ''}\n`,
-        ),
-      );
-      console.log(
-        `  ${chalk.dim('Status:')}      ${formatLaneStatus(meta.status)}`,
-      );
+      console.log(chalk.bold(`Lane ${meta.id}${active ? chalk.green(' (active)') : ''}\n`));
+      console.log(`  ${chalk.dim('Status:')}      ${formatLaneStatus(meta.status)}`);
       if (meta.name) {
         console.log(`  ${chalk.dim('Name:')}        ${meta.name}`);
       }
-      console.log(
-        `  ${chalk.dim('Base:')}        ${meta.baseBranch} @ ${meta.baseOpHash}`,
-      );
+      console.log(`  ${chalk.dim('Base:')}        ${meta.baseBranch} @ ${meta.baseOpHash}`);
       console.log(`  ${chalk.dim('Target:')}      ${meta.targetBranch}`);
       console.log(`  ${chalk.dim('Head:')}        ${meta.headOpHash ?? '—'}`);
-      console.log(
-        `  ${chalk.dim('Ops:')}         ${ops.length} in lane journal`,
-      );
+      console.log(`  ${chalk.dim('Ops:')}         ${ops.length} in lane journal`);
       console.log(
         `  ${chalk.dim('Integration:')} ${integrationHead ?? '—'} (${meta.targetBranch} head)`,
       );
@@ -420,9 +404,7 @@ export function registerLaneCommands(program: Command): void {
         console.log(`  ${chalk.dim('Worktree:')}   ${meta.worktreePath}`);
       }
       if (filePaths.length > 0) {
-        console.log(
-          `  ${chalk.dim('Files:')}       ${filePaths.length} touched`,
-        );
+        console.log(`  ${chalk.dim('Files:')}       ${filePaths.length} touched`);
       }
 
       const domainLabels =
@@ -465,8 +447,7 @@ export function registerLaneCommands(program: Command): void {
       const engine = await openEngine(rootPath);
 
       try {
-        const { meta, ops, filePaths, integrationHead } =
-          engine.summarizeLane(id);
+        const { meta, ops, filePaths, integrationHead } = engine.summarizeLane(id);
         const target = opts.to ?? meta.targetBranch;
 
         console.log(chalk.bold(`Lane diff: ${id}\n`));
@@ -475,9 +456,7 @@ export function registerLaneCommands(program: Command): void {
           `  ${chalk.dim('Integration head:')} ${integrationHead ?? '—'} (${target})`,
         );
         console.log(`  ${chalk.dim('Lane ops:')}        ${ops.length}`);
-        console.log(
-          `  ${chalk.dim('Kinds:')}          ${summarizeOpKinds(ops)}`,
-        );
+        console.log(`  ${chalk.dim('Kinds:')}          ${summarizeOpKinds(ops)}`);
 
         if (filePaths.length > 0) {
           console.log(`\n  ${chalk.bold('Touched files')}`);
@@ -489,7 +468,9 @@ export function registerLaneCommands(program: Command): void {
           }
         }
 
-        console.log(chalk.dim(`\n  Promote: trellis lane promote ${id}`));
+        console.log(
+          chalk.dim(`\n  Promote: trellis lane promote ${id}`),
+        );
       } catch (err: unknown) {
         console.error(chalk.red((err as Error).message));
         process.exit(1);
@@ -501,19 +482,13 @@ export function registerLaneCommands(program: Command): void {
     .description(
       'Promote lane ops onto integration and create a milestone (promote == milestone)',
     )
-    .option(
-      '-m, --message <message>',
-      'Milestone narrative (auto-drafted if omitted)',
-    )
+    .option('-m, --message <message>', 'Milestone narrative (auto-drafted if omitted)')
     .option('--no-milestone', 'Promote without creating a milestone')
     .option('--to <branch>', 'Target branch (default: lane target)')
     .option('--dry-run', 'Run conflict detection only; no writes')
     .option('--explain', 'Human-readable conflict report')
     .option('--require-test', 'Run promote.require suites before promoting')
-    .option(
-      '--force-lock',
-      'Clear promote lock and proceed (use when lock is stale)',
-    )
+    .option('--force-lock', 'Clear promote lock and proceed (use when lock is stale)')
     .option('-p, --path <path>', 'Repository path', '.')
     .action(async (id, opts, command) => {
       const rootPath = resolveLaneRepoPath(opts, command);
@@ -550,9 +525,7 @@ export function registerLaneCommands(program: Command): void {
               `  ${chalk.dim('Git:')}      committed ${result.gitSync.commitHash?.slice(0, 12) ?? ''}`,
             );
           } else if (result.gitSync && !result.gitSync.committed) {
-            console.log(
-              chalk.dim('  Git:      working tree already matches integration'),
-            );
+            console.log(chalk.dim('  Git:      working tree already matches integration'));
           }
         } else if (!opts.dryRun && !result.canPromote) {
           process.exit(1);
@@ -635,10 +608,7 @@ export function registerLaneCommands(program: Command): void {
     .option('--port <port>', 'HTTP port', '3939')
     .option('--poll <ms>', 'Snapshot poll interval (ms)', '1000')
     .option('--no-open', 'Do not auto-open browser')
-    .option(
-      '--dev',
-      'UI dev mode: esbuild watch + SSE live reload (or TRELLIS_UI_DEV=1)',
-    )
+    .option('--dev', 'UI dev mode: esbuild watch + SSE live reload (or TRELLIS_UI_DEV=1)')
     .action(async (opts, command) => {
       const rootPath = resolveLaneRepoPath(opts, command);
       const port = parseInt(opts.port, 10) || 3939;
@@ -647,21 +617,12 @@ export function registerLaneCommands(program: Command): void {
       const { startLanesDashboard } = await import('../ui/lanes-dashboard.js');
 
       try {
-        const handle = await startLanesDashboard({
-          rootPath,
-          port,
-          pollMs,
-          dev: !!opts.dev,
-        });
+        const handle = await startLanesDashboard({ rootPath, port, pollMs, dev: !!opts.dev });
         const url = `http://localhost:${handle.port}/`;
 
         console.log(chalk.green(`✓ Lane dashboard → ${chalk.bold(url)}`));
         if (opts.dev) {
-          console.log(
-            chalk.dim(
-              '  UI dev: esbuild watch → .trellis/ui-dev/ · SSE /__dev/reload',
-            ),
-          );
+          console.log(chalk.dim('  UI dev: esbuild watch → .trellis/ui-dev/ · SSE /__dev/reload'));
         }
         console.log(chalk.dim('  SSE stream: /api/lanes/stream'));
         console.log(chalk.dim('  Press Ctrl+C to stop\n'));
@@ -712,9 +673,7 @@ export function registerLaneCommands(program: Command): void {
             `Stale lock: lane ${rec.laneId} · pid ${rec.pid} · since ${rec.acquiredAt}`,
           ),
         );
-        console.log(
-          chalk.dim('  Use trellis lane promote <id> --force-lock to clear'),
-        );
+        console.log(chalk.dim('  Use trellis lane promote <id> --force-lock to clear'));
       }
     });
 
@@ -741,47 +700,6 @@ export function registerLaneCommands(program: Command): void {
         console.error(chalk.red((err as Error).message));
         process.exit(1);
       }
-    });
-
-  laneCmd
-    .command('prune-worktrees')
-    .description('Prune stale worktrees (older than retention period)')
-    .option('-p, --path <path>', 'Repository path', '.')
-    .option('--dry-run', 'Show what would be pruned without deleting')
-    .action(async (opts, command) => {
-      const rootPath = resolveLaneRepoPath(opts, command);
-      const engine = await openEngine(rootPath);
-
-      if (opts.dryRun) {
-        const lanes = engine.listLanes();
-        const retentionDays = 7; // Default since config is private
-        const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
-
-        let wouldPrune = 0;
-        console.log(`Dry run: worktrees older than ${retentionDays} days\n`);
-
-        for (const lane of lanes) {
-          if (lane.status === 'active' || !lane.worktreePath) continue;
-
-          const updatedAt = new Date(lane.updatedAt).getTime();
-          if (updatedAt < cutoffMs) {
-            const ageDays = Math.floor(
-              (Date.now() - updatedAt) / (24 * 60 * 60 * 1000),
-            );
-            console.log(
-              `  Would prune: ${lane.id.slice(0, 13)}… (${lane.name || 'unnamed'}) - ${ageDays} days old`,
-            );
-            wouldPrune++;
-          }
-        }
-
-        console.log(`\nWould prune ${wouldPrune} worktree(s)`);
-        return;
-      }
-
-      const result = engine.pruneStaleWorktrees();
-      console.log(`Pruned ${result.pruned} stale worktree(s)`);
-      console.log(`Skipped ${result.skipped} (active or recent)`);
     });
 }
 

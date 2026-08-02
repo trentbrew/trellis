@@ -1,0 +1,95 @@
+/**
+ * Semantic tokens — intent-based aliases that map to foundation values.
+ * These change per theme (dark/light/high-contrast).
+ * @module @trellis.computer/tokens
+ */
+:root {
+  /* Surfaces */
+  --surface-bg: var(--color-gray-950);
+  --surface-raised: var(--color-gray-800);
+  --surface-inset: var(--color-gray-900);
+  --surface-overlay: var(--color-gray-700);
+
+  /* Text */
+  --text: var(--color-gray-50);
+  --text-secondary: var(--color-gray-300);
+  --text-tertiary: var(--color-gray-400);
+  --text-interactive: var(--color-blue-400);
+
+  /* Borders */
+  --border: rgba(255, 255, 255, 0.195);
+  --border-strong: rgba(255, 255, 255, 0.266);
+  --border-focus: var(--color-blue-500);
+
+  /* State */
+  --green: var(--color-green-500);
+  --yellow: var(--color-yellow-500);
+  --red: var(--color-red-500);
+  --blue: var(--color-purple-400);
+
+  /* Entity types */
+  --entity-file: #00ceb9;
+  --entity-milestone: #2090f5;
+  --entity-issue: #edb2f1;
+  --entity-branch: #fcd53a;
+  --entity-default: var(--text-secondary);
+
+  /* Glass / inset */
+  --glass-surface: rgba(22, 22, 22, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.04);
+  --kanban-body-inset: rgba(255, 255, 255, 0.02);
+
+  /* Badge backgrounds */
+  --badge-success-bg: color-mix(in oklch, var(--green) 15%, transparent);
+  --badge-success-border: color-mix(in oklch, var(--green) 30%, transparent);
+  --badge-warning-bg: color-mix(in oklch, var(--yellow) 15%, transparent);
+  --badge-warning-border: color-mix(in oklch, var(--yellow) 25%, transparent);
+  --badge-critical-bg: color-mix(in oklch, var(--red) 15%, transparent);
+  --badge-neutral-bg: color-mix(in oklch, var(--text-tertiary) 15%, transparent);
+  --accent-glow: color-mix(in oklch, var(--text-interactive) 12%, transparent);
+
+  /* Inset ladder */
+  --surface-1: color-mix(in oklch, var(--surface-raised) 25%, var(--surface-bg));
+  --surface-2: color-mix(in oklch, var(--surface-raised) 50%, var(--surface-bg));
+  --surface-3: var(--surface-raised);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px rgb(0 0 0 / 0.15);
+
+  /* Legacy aliases (deprecated — use canonical names above) */
+  --bg: var(--surface-bg);
+  --bg2: var(--color-gray-900);
+  --surface: var(--surface-raised);
+  --surface2: var(--surface-inset);
+  --accent: var(--text-interactive);
+  --accent2: color-mix(in oklch, var(--text-interactive) 85%, white);
+  --accent-glow: var(--accent-glow);
+  --blue: var(--color-purple-400);
+  --glass: var(--glass-surface);
+  --glass-border: var(--glass-border);
+}
+
+[data-theme="dark"] {
+  --surface-bg: var(--color-gray-950);
+  --surface-raised: var(--color-gray-800);
+  --surface-inset: var(--color-gray-900);
+  --surface-overlay: var(--color-gray-700);
+
+  --text: var(--color-gray-50);
+  --text-secondary: var(--color-gray-300);
+  --text-tertiary: var(--color-gray-400);
+  --text-interactive: var(--color-blue-400);
+
+  --border: rgba(255, 255, 255, 0.195);
+  --border-strong: rgba(255, 255, 255, 0.266);
+}
+
+[data-theme="high-contrast"] {
+  --surface-bg: oklch(1 0 0);
+  --surface-raised: oklch(0.97 0.005 260);
+  --text: oklch(0 0 0);
+  --text-secondary: oklch(0.2 0.01 260);
+  --border: oklch(0.4 0.02 260);
+}

@@ -4,8 +4,8 @@
 **Date:** 2026-07-16\
 **Proposal:** TRL-147 · **Spec issue:** TRL-148\
 **Amends:** [`tml-v0.md`](./tml-v0.md)\
-**Test bed:** `src/ui/tml-lanes.html` on `/tml-lanes` (sterile; production
-`/` untouched)
+**Test bed:** `src/ui/tml-lanes.html` on `/tml-lanes` (sterile; production `/`
+untouched)
 
 ---
 
@@ -19,7 +19,7 @@ production.
 Two deliverables:
 
 1. **Spec sync** — make `tml-v0.md` match the landed runtime.
-2. **Kanban in TML** — three columns, same status collapse as `ISSUE_COLUMNS`.†
+2. **Kanban in TML** — three columns, same status collapse as `ISSUE_COLUMNS`.
 
 ---
 
@@ -27,14 +27,14 @@ Two deliverables:
 
 Executor updates `docs/specs/tml-v0.md` so it no longer contradicts the code:
 
-| Stale claim in v0                                | Landed reality                                                                                    | Edit                                                                                                 |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Stale claim in v0                                | Landed reality                                                                                    | Edit                                                                                                     |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | Expressions: "no operators / no string literals" | `resolveExpr` allows `+` concat and quoted literals (`lane.opCount + ' / ' + lane.fileCount`)     | §3.2: allow `+` concatenation of paths and string literals only. Still no function calls, no arithmetic. |
-| "No build step" / plain ES module                | `lanes-dashboard.ts` **esbuild-bundles** `/tml-runtime.js` so PeerDriver can import kernel pieces | §2 principle 4 + §6.1: "dev server bundles runtime via esbuild; no app framework."                   |
-| Only `WebDriver`                                 | `PeerDriver` exists (EAV + real `QueryEngine`); WebDriver remains default on the test page        | New §4.3 documenting `PeerDriver`; §4.1 stays the default for `/tml-lanes`.                          |
-| §8 "kanban … stay in lanes.html for v0"          | This wedge                                                                                        | Move Kanban to **in scope for v0.1**; keep table/stats/op-log out.                                   |
-| Test path `test/tml-runtime.test.ts`             | `test/ui/tml-runtime.test.ts`                                                                     | Fix §9 + §7.                                                                                         |
-| Status "Proposed (plan)"                         | Grid landed; Kanban is this wedge                                                                 | Status → **Accepted (v0 grid) / Active (v0.1 Kanban)**.                                              |
+| "No build step" / plain ES module                | `lanes-dashboard.ts` **esbuild-bundles** `/tml-runtime.js` so PeerDriver can import kernel pieces | §2 principle 4 + §6.1: "dev server bundles runtime via esbuild; no app framework."                       |
+| Only `WebDriver`                                 | `PeerDriver` exists (EAV + real `QueryEngine`); WebDriver remains default on the test page        | New §4.3 documenting `PeerDriver`; §4.1 stays the default for `/tml-lanes`.                              |
+| §8 "kanban … stay in lanes.html for v0"          | This wedge                                                                                        | Move Kanban to **in scope for v0.1**; keep table/stats/op-log out.                                       |
+| Test path `test/tml-runtime.test.ts`             | `test/ui/tml-runtime.test.ts`                                                                     | Fix §9 + §7.                                                                                             |
+| Status "Proposed (plan)"                         | Grid landed; Kanban is this wedge                                                                 | Status → **Accepted (v0 grid) / Active (v0.1 Kanban)**.                                                  |
 
 Do **not** rewrite the attribute vocabulary. v0.1 adds no new `tml-*`
 attributes.

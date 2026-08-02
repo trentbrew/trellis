@@ -1,7 +1,7 @@
 {
   "name": "trellis",
   "version": "3.4.2",
-  "description": "Agentic State Engine — event-sourced causal graph with branching, decision traces, and realtime sync for AI-native applications",
+  "description": "Agentic State Engine \u2014 event-sourced causal graph with branching, decision traces, and realtime sync for AI-native applications",
   "type": "module",
   "main": "./dist/index.js",
   "author": "Trent Brew <tbrew@turtle.tech>",
@@ -416,7 +416,8 @@
     "test:ship": "vitest run test/vcs/init-config-defaults.test.ts test/vcs/phase2-coordination.test.ts test/git/git-sync.test.ts test/ui/lanes-snapshot.test.ts test/engine.test.ts",
     "test:all": "vitest run",
     "test:wc": "node test/webcontainer/server.mjs",
-    "prepublishOnly": "npm run test && npm run build"
+    "prepublishOnly": "npm run test && npm run build",
+    "smoke:wedge": "esbuild demo/wedge-smoke/gallery.ts --bundle --format=esm --outfile=demo/wedge-smoke/gallery.js --target=es2022"
   },
   "dependencies": {
     "@inquirer/prompts": "^8.2.2",
