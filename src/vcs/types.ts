@@ -62,6 +62,7 @@ export type VcsOpKind =
   // Agent lanes (ADR 0001, ADR 0005)
   | 'vcs:laneCreate'
   | 'vcs:laneDrop'
+  | 'vcs:laneGc'
   | 'vcs:lanePromoteStart'
   | 'vcs:lanePromoteComplete'
   | 'vcs:lanePromoteAbort'
@@ -218,6 +219,8 @@ export interface VcsPayload {
   // Agent lanes
   laneId?: string;
   laneStatus?: 'active' | 'promoting' | 'promoted' | 'dropped';
+  gcDisposition?: string;
+  gcReason?: string;
   targetBranch?: string;
   parentLaneId?: string;
   forkKind?: 'sibling' | 'child';

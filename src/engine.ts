@@ -1741,6 +1741,20 @@ export class TrellisVcsEngine {
     await this.applyOp(op);
     this.removeLaneWorktree(meta);
   }
+  async recordLaneGc(entries: { laneId: string; disposition: string; reason: string }[]): Promise<void> {
+    if (entries.length === 0) return;
+    const last = entries.at(-1)!;
+    const op = await createVcsOp('vcs:laneGc', {
+      agentId: this.agentId,
+      previousHash: this.opLog.getLastOp()?.hash,
+      vcs: {
+        laneId: last.laneId,
+        gcDisposition: last.disposition,
+        gcReason: last.reason,
+      },
+    });
+    await this.applyOp(op, { allowIntegrationWrite: true });
+  }
   async promoteLane(
     laneId: string,
     opts?: {

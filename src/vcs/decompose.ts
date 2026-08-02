@@ -738,6 +738,10 @@ export function decompose(op: VcsOp): DecomposedOp {
       break;
     }
 
+    case 'vcs:laneGc': {
+      break;
+    }
+
     case 'vcs:lanePromoteComplete': {
       if (!vcs.laneId) break;
       const lid = laneEntityId(vcs.laneId);
