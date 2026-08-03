@@ -59,6 +59,10 @@ export type VcsOpKind =
   | 'vcs:issueUnblock'
   // Decision traces
   | 'vcs:decisionRecord'
+  // Harness chat transcripts (gated by `transcripts.enabled`, local-only by
+  // default — see src/vcs/transcript.ts). Privacy is the default; sync is
+  // the decision.
+  | 'vcs:chatMessage'
   // Agent lanes (ADR 0001, ADR 0005)
   | 'vcs:laneCreate'
   | 'vcs:laneDrop'
@@ -175,6 +179,16 @@ export interface VcsPayload {
   decisionToolName?: string;
   decisionToolInput?: string;
   decisionToolOutput?: string;
+
+  // Harness chat transcripts (vcs:chatMessage)
+  chatMessageId?: string;
+  chatSessionId?: string;
+  chatLaneId?: string;
+  chatRole?: 'user' | 'assistant' | 'tool' | 'system';
+  chatText?: string;
+  chatToolName?: string;
+  /** Token usage carried on the message (input+output), for per-session/lane rollups. */
+  chatTokens?: number;
 
   // Acceptance criteria
   criterionId?: string;

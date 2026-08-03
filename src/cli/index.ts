@@ -128,7 +128,7 @@ const program = new Command();
 program
   .name('trellis')
   .description('TrellisVCS — graph-native, code-first version control')
-  .version(cliVersion());
+  .version(cliVersion(), '-v, --version');
 
 async function runInit(
   rootPath: string,
@@ -1115,11 +1115,23 @@ gitCmd
     });
     engine.open();
 
-    const result = engine.syncGitIntegration({
+    const result = await engine.syncGitIntegration({
       message: opts.message,
       push: opts.push,
       force: true,
     });
+
+    if (result.refused) {
+      console.error(
+        chalk.red(`✗ Git sync refused: ${result.reason ?? 'working tree out of sync'}`),
+      );
+      console.error(
+        chalk.dim(
+          'The working tree could not be reconciled with the op-log — nothing was materialized or committed.',
+        ),
+      );
+      process.exit(1);
+    }
 
     if (result.committed) {
       console.log(
@@ -1308,10 +1320,18 @@ program
             ),
           );
         } else {
-          const sync = engine.syncGitIntegration({
+          const sync = await engine.syncGitIntegration({
             message: opts.message,
             force: true,
           });
+          if (sync.refused) {
+            console.error(
+              chalk.red(
+                `✗ Git sync refused: ${sync.reason ?? 'working tree out of sync'}`,
+              ),
+            );
+            process.exit(1);
+          }
           if (sync.committed) {
             console.log(
               chalk.green(
