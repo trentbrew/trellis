@@ -39,10 +39,6 @@ export interface GitSyncResult {
   commitHash?: string;
   pushed: boolean;
   filesMaterialized: number;
-  /** True when the sync was refused because the working tree could not be reconciled with the op-log. */
-  refused?: boolean;
-  /** Human-readable reason for the refusal. */
-  reason?: string;
 }
 
 export interface PromoteCommitMessageParams {

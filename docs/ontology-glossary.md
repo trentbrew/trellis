@@ -20,27 +20,6 @@ these; they do not replace them.
 
 **Hierarchy (simplified):** `Thing` → `Record` → (`Document` \| `Event` \| *user types*).
 
-## Agent / Workflow / Pipeline (`tier: system`)
-
-Shipped with the kernel but versioned — not immutable like `core` tier types.
-Defined in the same `core-ontology.ts`.
-
-| Term | `@id` | Meaning |
-|------|-------|---------|
-| **Workflow** | `core:Workflow` | Automation/process definition. Fields: `name`, `trigger`, `steps` (multi_select string array), `active`. Not yet connected via relations to WorkflowStep/Edge/Gate. |
-| **Workflow Step** | `core:WorkflowStep` | Individual step within a workflow. Has optional `commands` (JSON array), `turbo` flag, and `layer` (pre_flight, setup, implement, review, closure). |
-| **Workflow Edge** | `core:WorkflowEdge` | Routing rule with `condition`, `status` (HANDOFF/CLARIFY/REJECT/BLOCKED/DECISION), and `from`/`to` relations to WorkflowStep. |
-| **Workflow Gate** | `core:WorkflowGate` | Quality gate with `type` (test/manual/ac_check/semantic_diff), `onFail` (stop/retry/route_to), and relations to Step, retryStep, failRoute (Edge). |
-| **Agent** | `core:Agent` | Agent role definition. Fields: `name`, `description`, `role` (enum), `inbox` (TQL query), `model`, `status`, `capabilities` (multi_select), `workflow` (relation). **Gap:** lacks `provider`, `systemPrompt`, `tools` (relation), `temperature`, `maxTokens` present in `AgentDef` interface. |
-| **Tool** | `core:Tool` | Tool definition for agents. Fields: `name`, `description`, `schema` (JSON), `endpoint` (URL). Standalone — no relation to Agent yet. `AgentRun.usedTool` points here. |
-| **Handoff** | `core:Handoff` | Structured agent handoff. Fields: `name`, `status` (enum), `body`, `refs`, `timestamp`, `from`/`to` (relations to Agent), `re` (generic relation). |
-| **Pipeline** | `trellis:Pipeline` | Coordination definition composing workflows across agent roles. Has `phases` (relation to PipelinePhase) and `workflow` (relation to Workflow). |
-| **Pipeline Phase** | `trellis:PipelinePhase` | Ordered step in a pipeline. Fields: `name`, `description`, `order`, `agentRole` (string enum, not a relation), `workflow` (relation to Workflow). |
-| **AgentRun** | `trellis:AgentRun` | Single execution run of an agent. Links back to `executedBy` (Agent), `usedTool` (Tool), `handoffTo`/`handoffFrom` (AgentRun chain). |
-| **DecisionTrace** | `trellis:DecisionTrace` | Decision recorded during an agent run. Links to `belongsToRun` (AgentRun) and `madeBy` (Agent). |
-| **DAGRun** | `trellis:DAGRun` | DAG workflow run tracking step-level state (workflowId, status, steps JSON). |
-| **WorkerPool Task** | `trellis:WorkerPoolTask` | Queued or active task in a WorkerPool (agentId, runId, status, timestamps). |
-
 ## User / app layer
 
 What application authors define and instantiate.

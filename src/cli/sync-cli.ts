@@ -6,13 +6,11 @@
 
 import { Command } from 'commander';
 import { SyncDaemon } from '../sync/sync-daemon.js';
-import { IrohSyncTransport } from '../sync/iroh-transport.js';
 import { QuarantineStore } from '../vcs/sync-policy.js';
 import { readFileSync } from 'fs';
 import { resolveRepoRoot } from './repo-path.js';
 import { opsPathForRoot } from '../vcs/oplog-remote.js';
 import type { VcsOp } from '../vcs/types.js';
-import type { SyncTransport } from '../sync/types.js';
 
 let daemonInstance: SyncDaemon | null = null;
 
@@ -29,13 +27,6 @@ export function registerSyncCommands(program: Command): void {
       'WebSocket server URL',
       'ws://localhost:8231/sync',
     )
-    .option(
-      '-t, --transport <type>',
-      'Transport type: ws (WebSocket) or iroh (QUIC P2P)',
-      'ws',
-    )
-    .option('--ticket <ticket>', 'Remote peer ticket (required for iroh transport)')
-    .option('--peer-id <peerId>', 'Remote peer ID (required for iroh transport)')
     .option('-i, --interval <ms>', 'Sync interval in ms', '1000')
     .option('--bootstrap', 'Enable automatic bootstrap for empty remotes')
     .action(async (opts) => {
@@ -62,29 +53,13 @@ export function registerSyncCommands(program: Command): void {
 
         const lines = newOps.map((op) => JSON.stringify(op));
         const content = lines.join('\n') + '\n';
+        // Append to ops file
         const { appendFileSync } = await import('fs');
         appendFileSync(opsPath, content);
       };
 
-      let transport: SyncTransport | undefined;
-      if (opts.transport === 'iroh') {
-        const irohTrans = await IrohSyncTransport.create();
-        console.log(`Iroh endpoint: ${irohTrans.localId()}`);
-        console.log(`Share this ticket with the remote peer:`);
-        console.log(`  ${irohTrans.ticket()}`);
-
-        if (opts.ticket && opts.peerId) {
-          await irohTrans.connectToPeer(opts.ticket, opts.peerId, 'remote');
-          console.log(`Connected to remote peer ${opts.peerId}`);
-        } else {
-          console.log('Waiting for remote connection (use --ticket and --peer-id to connect)...');
-        }
-        transport = irohTrans;
-      }
-
       daemonInstance = new SyncDaemon({
-        url: opts.transport !== 'iroh' ? opts.url : undefined,
-        transport,
+        url: opts.url,
         localPeerId: peerId,
         getLocalOps: readOps,
         onOpsReceived: integrateOps,

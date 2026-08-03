@@ -141,7 +141,7 @@ export class WebSocketTransport implements SyncTransport {
   /**
    * Disconnect from the sync server.
    */
-  async disconnect(): Promise<void> {
+  disconnect(): void {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;

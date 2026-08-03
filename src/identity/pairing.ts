@@ -15,11 +15,9 @@ import {
   readdirSync,
 } from 'fs';
 import { join } from 'path';
-import { homedir } from 'node:os';
 import {
   createIdentity,
   loadIdentity,
-  resolveRepoIdentity,
   signMessage,
   verifySignature,
   type IdentityConfig,
@@ -52,17 +50,9 @@ export interface JoinResponse {
   challengeId: string;
   devicePublicKey: string;
   deviceLabel?: string;
-  /** Slice C metadata — stamped by the joining device, honored by the registry. */
-  kind?: DeviceKind;
-  transport?: DeviceTransport;
   /** Signature over canonical challenge bytes. */
   signature: string;
 }
-
-/** Slice C — device identity metadata (docs/planning/device-registry-and-sprite-pairing.md). */
-export type DeviceKind = 'desktop' | 'cli' | 'cloud-sprite';
-export type DeviceTransport = 'ws' | 'http' | 'iroh';
-export type DeviceSyncState = 'idle' | 'syncing' | 'behind' | 'diverged' | 'offline';
 
 export interface DeviceAuthorization {
   v: 1;
@@ -71,9 +61,6 @@ export interface DeviceAuthorization {
   did: string;
   devicePublicKey: string;
   deviceLabel?: string;
-  /** Slice C metadata — passed through from the joining device. */
-  kind?: DeviceKind;
-  transport?: DeviceTransport;
   issuedAt: string;
   expiresAt?: string;
   issuerDeviceId: string;
@@ -93,12 +80,6 @@ export interface DeviceRecord {
   revokedAt?: string;
   issuerDeviceId: string;
   challengeId: string;
-  /** Slice C — metadata + state (fed by pairing stamps, sync daemon, presence). */
-  kind?: DeviceKind;
-  transport?: DeviceTransport;
-  lastSeenAt?: string;
-  lastSyncOpHash?: string;
-  syncState?: DeviceSyncState;
 }
 
 export interface DeviceRegistry {
@@ -116,12 +97,6 @@ export interface LocalDeviceKey {
   privateKey: string;
   deviceLabel?: string;
   createdAt: string;
-  /** Slice C — this device's own metadata + state (self touchpoint). */
-  kind?: DeviceKind;
-  transport?: DeviceTransport;
-  lastSeenAt?: string;
-  lastSyncOpHash?: string;
-  syncState?: DeviceSyncState;
 }
 
 // ---------------------------------------------------------------------------
@@ -174,36 +149,16 @@ function newId(prefix: string): string {
 // Paths
 // ---------------------------------------------------------------------------
 
-/**
- * Person-scoped device store (Slice B, docs/planning/device-registry-and-
- * sprite-pairing.md): a paired device follows the person, so every clone of
- * the identity recognizes it. `~/.trellis/devices` mirrors the person
- * identity dir (ADR 0032 §3). The legacy repo-scoped store
- * (`.trellis/devices`) is still read as a fallback and migrated up once.
- */
-export function personDevicesDir(): string {
-  return join(homedir(), '.trellis', 'devices');
-}
-
 function devicesDir(trellisDir: string): string {
   return join(trellisDir, 'devices');
 }
 
-function registryPaths(trellisDir: string): {
-  person: string;
-  repo: string;
-} {
-  return {
-    person: join(personDevicesDir(), 'registry.json'),
-    repo: join(devicesDir(trellisDir), 'registry.json'),
-  };
+function registryPath(trellisDir: string): string {
+  return join(devicesDir(trellisDir), 'registry.json');
 }
 
-function localPaths(trellisDir: string): { person: string; repo: string } {
-  return {
-    person: join(personDevicesDir(), 'local.json'),
-    repo: join(devicesDir(trellisDir), 'local.json'),
-  };
+function localPath(trellisDir: string): string {
+  return join(devicesDir(trellisDir), 'local.json');
 }
 
 function challengesDir(trellisDir: string): string {
@@ -217,82 +172,39 @@ function ensureDevicesDir(trellisDir: string): void {
   if (!existsSync(c)) mkdirSync(c, { recursive: true });
 }
 
-function ensurePersonDevicesDir(): string {
-  const d = personDevicesDir();
-  if (!existsSync(d)) mkdirSync(d, { recursive: true });
-  return d;
-}
-
-function readJson<T>(p: string): T | null {
-  if (!existsSync(p)) return null;
-  try {
-    return JSON.parse(readFileSync(p, 'utf-8')) as T;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * One-way copy-up migration (Slice B ratchet): when the person-scoped store
- * is empty but a legacy repo-scoped file exists, copy it up once. The repo
- * copy stays as a stale snapshot; nothing writes back down.
- */
-function migrateUp(from: string, to: string): void {
-  if (existsSync(to)) return;
-  let raw: string;
-  try {
-    raw = readFileSync(from, 'utf-8');
-  } catch {
-    return;
-  }
-  try {
-    ensurePersonDevicesDir();
-    writeFileSync(to, raw);
-  } catch {
-    /* best-effort */
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Registry / local persistence
 // ---------------------------------------------------------------------------
 
 export function loadRegistry(trellisDir: string): DeviceRegistry | null {
-  const { person, repo } = registryPaths(trellisDir);
-  const personReg = readJson<DeviceRegistry>(person);
-  if (personReg) return personReg;
-  migrateUp(repo, person);
-  return readJson<DeviceRegistry>(person) ?? readJson<DeviceRegistry>(repo);
+  const p = registryPath(trellisDir);
+  if (!existsSync(p)) return null;
+  try {
+    return JSON.parse(readFileSync(p, 'utf-8')) as DeviceRegistry;
+  } catch {
+    return null;
+  }
 }
 
 export function saveRegistry(trellisDir: string, registry: DeviceRegistry): void {
-  const { person, repo } = registryPaths(trellisDir);
-  ensurePersonDevicesDir();
-  writeFileSync(person, JSON.stringify(registry, null, 2));
-  // Keep a legacy repo-scope copy in sync (same identity) so old readers see
-  // revocations; never write a repo copy for a different identity.
-  const repoReg = readJson<DeviceRegistry>(repo);
-  if (repoReg && repoReg.identityEntityId === registry.identityEntityId) {
-    writeFileSync(repo, JSON.stringify(registry, null, 2));
-  }
+  ensureDevicesDir(trellisDir);
+  writeFileSync(registryPath(trellisDir), JSON.stringify(registry, null, 2));
 }
 
 export function loadLocalDevice(trellisDir: string): LocalDeviceKey | null {
-  const { person, repo } = localPaths(trellisDir);
-  const personLocal = readJson<LocalDeviceKey>(person);
-  if (personLocal) return personLocal;
-  migrateUp(repo, person);
-  return readJson<LocalDeviceKey>(person) ?? readJson<LocalDeviceKey>(repo);
+  const p = localPath(trellisDir);
+  if (!existsSync(p)) return null;
+  try {
+    return JSON.parse(readFileSync(p, 'utf-8')) as LocalDeviceKey;
+  } catch {
+    return null;
+  }
 }
 
 export function saveLocalDevice(trellisDir: string, local: LocalDeviceKey): void {
+  ensureDevicesDir(trellisDir);
   // Never write into identity.json
-  const { person, repo } = localPaths(trellisDir);
-  ensurePersonDevicesDir();
-  writeFileSync(person, JSON.stringify(local, null, 2));
-  if (existsSync(repo)) {
-    writeFileSync(repo, JSON.stringify(local, null, 2));
-  }
+  writeFileSync(localPath(trellisDir), JSON.stringify(local, null, 2));
 }
 
 function ensureRegistryFromIdentity(
@@ -329,47 +241,12 @@ export function revokeDevice(trellisDir: string, deviceId: string): boolean {
   return true;
 }
 
-/**
- * Register a device record without the QR handshake (Slice D — sprite
- * provisioning). The device key is minted out-of-band (never the root
- * identity key) and installed on the sprite; this records it in the
- * person-scoped registry so it appears in `pair list` and resolves through
- * the resolver like any paired device.
- */
-export function registerDevice(
-  trellisDir: string,
-  record: Omit<
-    DeviceRecord,
-    'authorizedAt' | 'issuerDeviceId' | 'challengeId' | 'deviceId'
-  > & { deviceId: string },
-): DeviceRecord {
-  const identity = resolveRepoIdentity(trellisDir);
-  if (!identity) {
-    throw new Error(
-      'No identity — onboard first (`trellis init` first-run) or run `trellis identity init`',
-    );
-  }
-  const registry = ensureRegistryFromIdentity(trellisDir, identity);
-  const full: DeviceRecord = {
-    ...record,
-    authorizedAt: new Date().toISOString(),
-    issuerDeviceId: ROOT_DEVICE_ID,
-    challengeId: `provision:${newId('pr_')}`,
-  };
-  registry.devices = registry.devices.filter(
-    (d) => d.deviceId !== full.deviceId,
-  );
-  registry.devices.push(full);
-  saveRegistry(trellisDir, registry);
-  return full;
-}
-
 export function resolveDevicePublicKey(
   trellisDir: string,
   identityEntityId: string,
   deviceId: string,
 ): string | null {
-  const identity = resolveRepoIdentity(trellisDir);
+  const identity = loadIdentity(trellisDir);
   if (deviceId === ROOT_DEVICE_ID) {
     if (identity && identity.entityId === identityEntityId) {
       return identity.publicKey;
@@ -466,11 +343,9 @@ export function pairStart(
   trellisDir: string,
   opts?: { ttlSeconds?: number },
 ): { challenge: PairChallenge; payload: string; shortCode: string } {
-  const identity = resolveRepoIdentity(trellisDir);
+  const identity = loadIdentity(trellisDir);
   if (!identity) {
-    throw new Error(
-      'No identity — onboard first (`trellis init` first-run) or run `trellis identity init` (person scope default)',
-    );
+    throw new Error('No identity — run `trellis identity init` first');
   }
   ensureRegistryFromIdentity(trellisDir, identity);
 
@@ -495,7 +370,7 @@ export function pairStart(
 export function pairJoin(
   trellisDir: string,
   challengePayloadOrCode: string,
-  opts?: { deviceLabel?: string; kind?: DeviceKind; transport?: DeviceTransport },
+  opts?: { deviceLabel?: string },
 ): {
   join: JoinResponse;
   payload: string;
@@ -526,8 +401,6 @@ export function pairJoin(
     publicKey: deviceIdentity.publicKey,
     privateKey: deviceIdentity.privateKey,
     deviceLabel: opts?.deviceLabel,
-    kind: opts?.kind,
-    transport: opts?.transport,
     createdAt: new Date().toISOString(),
   };
   // Persist pending local key before approve (B holds key; auth comes later)
@@ -553,8 +426,6 @@ export function pairJoin(
     challengeId: challenge.challengeId,
     devicePublicKey: deviceIdentity.publicKey,
     deviceLabel: opts?.deviceLabel,
-    kind: opts?.kind,
-    transport: opts?.transport,
     signature: signMessage(challengeBytes, deviceIdentity.privateKey),
   };
   return {
@@ -579,7 +450,7 @@ export function pairApprove(
       'Refusing to approve without confirmation — pass { yes: true } or CLI --yes after verifying fingerprint',
     );
   }
-  const identity = resolveRepoIdentity(trellisDir);
+  const identity = loadIdentity(trellisDir);
   if (!identity) throw new Error('No identity on approving device');
 
   const join = decodePayload<JoinResponse>(JOIN_PREFIX, joinPayload);
@@ -612,8 +483,6 @@ export function pairApprove(
     did: identity.did,
     devicePublicKey: join.devicePublicKey,
     deviceLabel: join.deviceLabel,
-    kind: join.kind,
-    transport: join.transport,
     issuedAt: new Date().toISOString(),
     issuerDeviceId: ROOT_DEVICE_ID,
     challengeId: challenge.challengeId,
@@ -632,8 +501,6 @@ export function pairApprove(
     authorizedAt: authorization.issuedAt,
     issuerDeviceId: ROOT_DEVICE_ID,
     challengeId: challenge.challengeId,
-    kind: join.kind,
-    transport: join.transport,
   });
   saveRegistry(trellisDir, registry);
   consumeChallenge(trellisDir, challenge.challengeId);
@@ -692,8 +559,6 @@ export function pairAccept(
   local.identityEntityId = authorization.identityEntityId;
   local.did = authorization.did;
   local.deviceLabel = authorization.deviceLabel ?? local.deviceLabel;
-  local.kind = authorization.kind ?? local.kind;
-  local.transport = authorization.transport ?? local.transport;
   saveLocalDevice(trellisDir, local);
 
   const registry: DeviceRegistry = {
@@ -708,8 +573,6 @@ export function pairAccept(
         authorizedAt: authorization.issuedAt,
         issuerDeviceId: authorization.issuerDeviceId,
         challengeId: authorization.challengeId,
-        kind: authorization.kind,
-        transport: authorization.transport,
       },
     ],
   };
@@ -736,66 +599,13 @@ export function getSigningMaterial(trellisDir: string): {
       signedWith: local.deviceId,
     };
   }
-  const identity = resolveRepoIdentity(trellisDir);
+  const identity = loadIdentity(trellisDir);
   if (!identity) return null;
   return {
     privateKey: identity.privateKey,
     identityEntityId: identity.entityId,
     signedWith: ROOT_DEVICE_ID,
   };
-}
-
-/**
- * Update this machine's device state (Slice C): stamps `lastSeenAt` plus
- * optional sync metadata on the local device key, and mirrors the same onto
- * this device's record in the local registry when present (e.g. the approving
- * machine's own paired devices). Returns false when this machine has no
- * local device key (not paired).
- */
-export function markDeviceSeen(
-  trellisDir: string,
-  patch?: { syncState?: DeviceSyncState; lastSyncOpHash?: string },
-): boolean {
-  const local = loadLocalDevice(trellisDir);
-  if (!local) return false;
-  const now = new Date().toISOString();
-  local.lastSeenAt = now;
-  if (patch?.lastSyncOpHash !== undefined) local.lastSyncOpHash = patch.lastSyncOpHash;
-  if (patch?.syncState) local.syncState = patch.syncState;
-  saveLocalDevice(trellisDir, local);
-
-  const reg = loadRegistry(trellisDir);
-  if (reg) {
-    const rec = reg.devices.find((d) => d.deviceId === local.deviceId);
-    if (rec && !rec.revokedAt) {
-      rec.lastSeenAt = now;
-      if (patch?.lastSyncOpHash !== undefined) rec.lastSyncOpHash = patch.lastSyncOpHash;
-      if (patch?.syncState) rec.syncState = patch.syncState;
-      saveRegistry(trellisDir, reg);
-    }
-  }
-  return true;
-}
-
-/**
- * Patch state on an arbitrary device record in the registry (Slice C) —
- * used by the sync daemon and future sprite heartbeats. No-op for unknown or
- * revoked devices.
- */
-export function updateDeviceState(
-  trellisDir: string,
-  deviceId: string,
-  patch: { syncState?: DeviceSyncState; lastSyncOpHash?: string; lastSeenAt?: string },
-): boolean {
-  const reg = loadRegistry(trellisDir);
-  if (!reg) return false;
-  const rec = reg.devices.find((d) => d.deviceId === deviceId);
-  if (!rec || rec.revokedAt) return false;
-  if (patch.lastSeenAt) rec.lastSeenAt = patch.lastSeenAt;
-  if (patch.lastSyncOpHash !== undefined) rec.lastSyncOpHash = patch.lastSyncOpHash;
-  if (patch.syncState) rec.syncState = patch.syncState;
-  saveRegistry(trellisDir, reg);
-  return true;
 }
 
 /**
@@ -810,15 +620,8 @@ export function updateDeviceState(
  * Returns `null` when the directory has no identity at all, so callers can
  * keep the resolver opt-in (an identity-less repo gets no PKI enforcement).
  */
-/**
- * Build an `IdentityResolver` bound to a trellis directory (ADR 0022 Phase 3,
- * ADR 0036). Resolves keys from the device registries (person scope first,
- * repo scope fallback) plus the local identity root — regardless of whether a
- * local identity exists: a machine with no identity still verifies remote ops
- * signed by identities it knows through pairing. An identity whose key is in
- * neither the registries nor the local store resolves to nothing (fail-closed).
- */
-export function pairingResolver(trellisDir: string): IdentityResolver {
+export function pairingResolver(trellisDir: string): IdentityResolver | null {
+  if (!loadIdentity(trellisDir)) return null;
   return {
     resolvePublicKey: (entityId) => resolveDevicePublicKey(trellisDir, entityId, ROOT_DEVICE_ID),
     resolveDevicePublicKey: (entityId, deviceId) =>

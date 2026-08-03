@@ -57,9 +57,9 @@ agentic stack:
 ### 1. Initializing the Agentic Environment
 
 ```typescript
-import { TrellisVcsEngine } from 'trellis';
+import { TrellisVcsEngine } from "trellis";
 
-const engine = new TrellisVcsEngine({ rootPath: './my-project' });
+const engine = new TrellisVcsEngine({ rootPath: "./my-project" });
 await engine.initRepo(); // Standardizes the causal stream
 ```
 
@@ -276,37 +276,6 @@ trellis garden list                  # All clusters
 trellis garden search -k "auth"      # Search by keyword
 trellis garden revive <cluster-id>   # Revive into a new branch
 ```
-
-### Realtime Sync (3.4.1+)
-
-Trellis supports realtime, full-state synchronization between environments via WebSocket. The sync daemon maintains a persistent connection and automatically syncs graph state, with safety gates to prevent destructive operations.
-
-```bash
-# Start the sync daemon (connects to ws://localhost:8231/sync by default)
-trellis realtime-sync start
-
-# Check sync status (connection state, last sync time, pending ops)
-trellis realtime-sync status
-
-# Pause sync (stop automatic push/pull while daemon stays connected)
-trellis realtime-sync pause
-
-# Quarantine management - review blocked changes
-trellis realtime-sync quarantine list
-trellis realtime-sync quarantine apply <id>    # Approve and apply
-trellis realtime-sync quarantine reject <id>    # Reject and discard
-```
-
-**Safety Gates**: The sync daemon enforces environment-specific policies (production, sandbox, development) that block destructive ops, bulk deletes, and system modifications. Suspicious changes are held in quarantine for manual review.
-
-**Protocol Extensions**: Full-state sync uses extended message types:
-
-- `graph-snapshot`: SQLite DB snapshot
-- `lane-journal`: Lane-specific op journals
-- `decision-trace`: Decision audit traces
-- `entity-delta`: Incremental entity changes
-
-**Environment Variable**: `TRELLIS_SYNC_ENV` controls the sync policy environment (defaults to `development`).
 
 ### Issue Tracking
 

@@ -199,7 +199,7 @@ export class Orchestrator {
             }
           }
 
-          if ((phase.status as string) !== 'failed') {
+          if (phase.status !== 'failed') {
             phase.status = 'completed';
             phase.completedAt = now();
             previousOutput = phase.output ?? previousOutput;

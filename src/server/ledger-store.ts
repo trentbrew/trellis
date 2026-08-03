@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
-import type { JournalMeta, RemoteRepoInfo } from '../vcs/oplog-remote.js';
+import type { JournalMeta } from '../vcs/oplog-remote.js';
 
 export const CHECKPOINT_RETENTION = 8;
 
@@ -24,10 +24,6 @@ export interface LedgerPushPayload {
   byteLength: number;
   lineCount: number;
   checkpoint: string;
-  /** Owner entity id (`identity:<did>`) — ADR 0032. */
-  owner?: string;
-  /** Repo slug scoped under the owner. */
-  name?: string;
 }
 
 export type LedgerPushResult =
@@ -87,60 +83,6 @@ export class LedgerStore {
     return null;
   }
 
-  /** List hosted ledgers for discovery / clone (`GET /v0/ledger/repos`). */
-  listRepos(): RemoteRepoInfo[] {
-    if (!existsSync(this.dataRoot)) return [];
-    const repos: RemoteRepoInfo[] = [];
-    for (const repoId of readdirSync(this.dataRoot)) {
-      const tipPath = join(this.dataRoot, repoId, 'tip.json');
-      if (!existsSync(tipPath)) continue;
-      try {
-        const meta = JSON.parse(
-          readFileSync(tipPath, 'utf-8'),
-        ) as JournalMeta;
-        repos.push({
-          repoId,
-          ...this.readProjectMeta(repoId),
-          tailHash: meta.tailHash,
-          byteLength: meta.byteLength,
-          lineCount: meta.lineCount,
-          updatedAt: statSync(tipPath).mtime.toISOString(),
-        });
-      } catch {
-        /* unreadable tip — skip */
-      }
-    }
-    return repos;
-  }
-
-  private readProjectMeta(
-    repoId: string,
-  ): { owner?: string; name?: string } {
-    const path = join(this.dataRoot, repoId, 'project.json');
-    if (!existsSync(path)) return {};
-    try {
-      const raw = JSON.parse(readFileSync(path, 'utf-8')) as {
-        owner?: string;
-        name?: string;
-      };
-      return { owner: raw.owner, name: raw.name };
-    } catch {
-      return {};
-    }
-  }
-
-  private writeProjectMeta(
-    repoId: string,
-    meta: { owner?: string; name?: string },
-  ): void {
-    if (!meta.owner && !meta.name) return;
-    const dir = this.repoRoot(repoId);
-    writeFileSync(
-      join(dir, 'project.json'),
-      JSON.stringify({ owner: meta.owner, name: meta.name }, null, 2),
-    );
-  }
-
   push(payload: LedgerPushPayload): LedgerPushResult {
     const existing = this.getTail(payload.repoId);
     if (
@@ -171,10 +113,6 @@ export class LedgerStore {
       lineCount: payload.lineCount,
     };
     writeFileSync(join(repoDir, 'tip.json'), JSON.stringify(meta, null, 2));
-    this.writeProjectMeta(payload.repoId, {
-      owner: payload.owner,
-      name: payload.name,
-    });
     this.trimCheckpoints(payload.repoId);
     return { ok: true, meta };
   }

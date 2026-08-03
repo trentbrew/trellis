@@ -1,10 +1,14 @@
 # Trellis TUI Fork — Harness Integration Cycle
 
-> **Date:** 2026-08-02
-> **Status:** Executing (Step 0 done → Phase 1)
+> **Date:** 2026-08-02 (checkpoint 2026-08-03)
+> **Status:** PAUSED after kernel safety floor — see
+> [`git-ssot-fault-line-checkpoint-2026-08-03.md`](./git-ssot-fault-line-checkpoint-2026-08-03.md).
+> Studio/fork OFF LIMITS until separately cleaned. Do not resume desk chrome from stale fork state.
 > **Repos:** trellis-node (kernel/authority) + turtlecode/ide (`packages/opencode` fork, the desk harness)
 > **Relates:** `docs/planning/trellis-opencode-fork-scope.md` (superseded by this doc's decisions),
-> `docs/planning/lane-gc-regression-recovery.md` (TRL-409 incident), ADR 0014, ADR 0015, ADR 0036
+> `docs/planning/lane-gc-regression-recovery.md` (TRL-409 incident),
+> `docs/planning/git-ssot-fault-line-checkpoint-2026-08-03.md` (dual-SSoT pause),
+> ADR 0014, ADR 0015, ADR 0036
 
 ## 1. Purpose
 

@@ -81,17 +81,6 @@ trellis issue check TRL-1              # run acceptance criteria
 trellis issue close TRL-1 --confirm    # requires all AC pass + confirm
 ```
 
-12. **Realtime sync** with remote environments:
-
-```bash
-trellis realtime-sync start           # start sync daemon
-trellis realtime-sync status          # check connection state
-trellis realtime-sync pause           # pause automatic sync
-trellis realtime-sync quarantine list # review blocked changes
-trellis realtime-sync quarantine apply <id>  # approve safe changes
-trellis realtime-sync quarantine reject <id>  # reject suspicious changes
-```
-
 ## Key Rules
 
 - **Never** modify `.trellis/` directly

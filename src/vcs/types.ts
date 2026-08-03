@@ -59,23 +59,15 @@ export type VcsOpKind =
   | 'vcs:issueUnblock'
   // Decision traces
   | 'vcs:decisionRecord'
-  // Harness chat transcripts (gated by `transcripts.enabled`, local-only by
-  // default — see src/vcs/transcript.ts). Privacy is the default; sync is
-  // the decision.
-  | 'vcs:chatMessage'
   // Agent lanes (ADR 0001, ADR 0005)
   | 'vcs:laneCreate'
   | 'vcs:laneDrop'
-  | 'vcs:laneGc'
   | 'vcs:lanePromoteStart'
   | 'vcs:lanePromoteComplete'
   | 'vcs:lanePromoteAbort'
   // Remote ledger peer (TRL-235)
   | 'vcs:remotePush'
   | 'vcs:remotePull'
-  // Project attestation (ADR 0032 §4) — owner-signed self-attestation that
-  // this ledger is `{owner}/{name}` with repoId.
-  | 'vcs:repoAttest'
   // EAV store (CMS / knowledge graph)
   | 'vcs:storeAssert'
   | 'vcs:storeRetract'
@@ -180,16 +172,6 @@ export interface VcsPayload {
   decisionToolInput?: string;
   decisionToolOutput?: string;
 
-  // Harness chat transcripts (vcs:chatMessage)
-  chatMessageId?: string;
-  chatSessionId?: string;
-  chatLaneId?: string;
-  chatRole?: 'user' | 'assistant' | 'tool' | 'system';
-  chatText?: string;
-  chatToolName?: string;
-  /** Token usage carried on the message (input+output), for per-session/lane rollups. */
-  chatTokens?: number;
-
   // Acceptance criteria
   criterionId?: string;
   criterionDescription?: string;
@@ -207,12 +189,7 @@ export interface VcsPayload {
   testRunOutput?: string;
   testRunExitCode?: number;
   testRunDurationMs?: number;
-  testRunTrigger?:
-    | 'manual'
-    | 'watch'
-    | 'pre-promote'
-    | 'pre-close'
-    | 'criterion';
+  testRunTrigger?: 'manual' | 'watch' | 'pre-promote' | 'pre-close' | 'criterion';
 
   // Remote ledger peer (TRL-235)
   remoteName?: string;
@@ -220,21 +197,9 @@ export interface VcsPayload {
   remoteTailHash?: string;
   remoteByteLength?: number;
 
-  // Project attestation (ADR 0032 §4)
-  /** Owner entity id (`identity:<did>`) self-attesting the ledger. */
-  repoOwner?: string;
-  /** Repo slug scoped under the owner (`{peer}/{repo}`). */
-  repoName?: string;
-  /** The ledger repoId the attestation covers. */
-  repoId?: string;
-  /** Project kind (code, knowledge-base, notes, data, media, other). */
-  projectKind?: string;
-
   // Agent lanes
   laneId?: string;
   laneStatus?: 'active' | 'promoting' | 'promoted' | 'dropped';
-  gcDisposition?: string;
-  gcReason?: string;
   targetBranch?: string;
   parentLaneId?: string;
   forkKind?: 'sibling' | 'child';
@@ -359,11 +324,7 @@ export function branchHeadEntity(
   principal?: string,
   defaultBranch = 'main',
 ): string {
-  if (
-    !principal ||
-    branchName === defaultBranch ||
-    branchName === 'integration'
-  ) {
+  if (!principal || branchName === defaultBranch || branchName === 'integration') {
     return `branch:${branchName}`;
   }
   return `branch:${branchName}@${principal}`;
@@ -433,25 +394,10 @@ export interface TrellisVcsConfig {
   /** Whether init/watch should reconcile existing workspace files by default. */
   indexWorkspace: boolean;
 
-  /** Stable ledger identity (ADR 0031) — independent of checkout path. */
-  repoId?: string;
-
-  /** Project metadata (ADR 0032 §2/§5) — owner identity + slug + kind. */
-  project?: {
-    /** Owner entity id (`identity:<did>`) — the person who created it. */
-    owner?: string;
-    /** Repo slug scoped under the owner (`{peer}/{repo}`). */
-    name?: string;
-    /** Project kind (code, knowledge-base, notes, data, media, other). */
-    kind?: string;
-  };
-
   /** Agent lane filesystem bind (ADR 0014 Phase 2). */
   lanes?: {
     /** Provision git worktrees per lane; default true on init. */
     worktreeBind?: boolean;
-    /** Auto-prune worktrees after N days of inactivity (default: 7). */
-    worktreeRetentionDays?: number;
   };
 
   /** Git mirror adapter — sync integration to main at promote/close. */

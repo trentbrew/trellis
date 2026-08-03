@@ -1,32 +1,24 @@
 /**
  * Sync Daemon for Background Realtime Sync (TRL-334)
  *
- * Background process that maintains persistent sync connection
+ * Background process that maintains persistent WebSocket connection
  * and auto-syncs full graph state between environments.
- * Transport-agnostic — works with WebSocket, Iroh, or any SyncTransport.
  */
 
 import { SyncEngine } from './sync-engine.js';
 import { WebSocketTransport } from './websocket-transport.js';
-import type { SyncTransport } from './types.js';
-import type { SyncMessage } from './types.js';
 import type { VcsOp } from '../vcs/types.js';
+import type { SyncMessage } from './types.js';
 import {
   getSyncPolicy,
   shouldBlockMessage,
   QuarantineStore,
 } from '../vcs/sync-policy.js';
 import { SyncAuditTrail } from './audit-trail.js';
-import { RateLimiter } from './rate-limiter.js';
-import { join } from 'node:path';
-import { markDeviceSeen, revokeDevice } from '../identity/pairing.js';
-import type { SyncDeviceRevokedMessage } from './types.js';
 
 export interface SyncDaemonOptions {
-  /** WebSocket server URL (used when transport is not provided). */
-  url?: string;
-  /** Sync transport. Defaults to WebSocketTransport if not provided. */
-  transport?: SyncTransport;
+  /** WebSocket server URL. */
+  url: string;
   /** Local peer ID. */
   localPeerId: string;
   /** Function to get local ops. */
@@ -53,15 +45,14 @@ export interface SyncDaemonState {
 
 /**
  * Background sync daemon.
- * Maintains connection and auto-syncs on interval.
+ * Maintains WebSocket connection and auto-syncs on interval.
  */
 export class SyncDaemon {
   private options: SyncDaemonOptions;
   private engine: SyncEngine;
-  private transport: SyncTransport;
+  private transport: WebSocketTransport;
   private quarantine: QuarantineStore;
   private auditTrail: SyncAuditTrail;
-  private rateLimiter: RateLimiter;
   private interval: NodeJS.Timeout | null = null;
   private state: SyncDaemonState = {
     running: false,
@@ -78,57 +69,36 @@ export class SyncDaemon {
       ...opts,
     };
 
-    if (opts.transport) {
-      this.transport = opts.transport;
-    } else if (opts.url) {
-      let authToken = this.options.authToken;
-      if (!authToken) {
-        try {
-          const { readFileSync } = require('node:fs');
-          const { join } = require('node:path');
-          const dbPath = join(this.options.rootPath!, '.trellis-db.json');
-          const db = JSON.parse(readFileSync(dbPath, 'utf-8'));
-          authToken = db.apiKey;
-        } catch {
-          // No API key available
-        }
+    // Load API key from .trellis-db.json if not provided
+    let authToken = this.options.authToken;
+    if (!authToken) {
+      try {
+        const { readFileSync } = require('node:fs');
+        const { join } = require('node:path');
+        const dbPath = join(this.options.rootPath!, '.trellis-db.json');
+        const db = JSON.parse(readFileSync(dbPath, 'utf-8'));
+        authToken = db.apiKey;
+      } catch {
+        // No API key available
       }
-
-      this.transport = new WebSocketTransport({
-        url: opts.url,
-        localPeerId: this.options.localPeerId,
-        authToken,
-      });
-    } else {
-      throw new Error('SyncDaemon requires either url or transport option');
     }
+
+    this.transport = new WebSocketTransport({
+      url: this.options.url,
+      localPeerId: this.options.localPeerId,
+      authToken,
+    });
 
     this.quarantine = new QuarantineStore();
     this.auditTrail = new SyncAuditTrail(this.options.rootPath!);
-    this.rateLimiter = new RateLimiter();
 
     this.engine = new SyncEngine({
       localPeerId: this.options.localPeerId,
       transport: this.transport,
       getLocalOps: this.options.getLocalOps,
-      onDeviceRevoked: (msg) => this.handleDeviceRevoked(msg),
       onOpsReceived: async (ops) => {
-        const rateCheck = this.rateLimiter.check('remote');
-        if (!rateCheck.allowed) {
-          const id = this.quarantine.add({ type: 'ops', ops }, 'remote', 'rate_limited');
-          this.state.quarantineCount++;
-          this.auditTrail.logQuarantine('remote', 'rate_limited', ops.length);
-          console.warn(`Rate limit exceeded for remote (quarantined as ${id})`);
-          return {
-            rejections: ops.map((op) => ({
-              hash: op.hash,
-              reason: 'rate_limited',
-            })),
-          };
-        }
-
         const policy = getSyncPolicy();
-        const message = { type: 'ops', ops } as SyncMessage;
+        const message = { type: 'ops', ops };
         const block = shouldBlockMessage(message, policy);
 
         if (block.blocked) {
@@ -165,7 +135,7 @@ export class SyncDaemon {
     }
 
     try {
-      await this.transport.connect?.();
+      await this.transport.connect();
       this.state.connected = true;
       this.state.running = true;
       this.auditTrail.logConnect(this.options.localPeerId, true);
@@ -181,7 +151,6 @@ export class SyncDaemon {
 
       // Initial sync
       await this.engine.pullAllFrom('server');
-      this.markSeen('idle');
 
       // Periodic sync
       this.interval = setInterval(async () => {
@@ -191,10 +160,8 @@ export class SyncDaemon {
             await this.engine.pullFrom('server');
             this.state.syncCount++;
             this.state.lastSyncTime = new Date().toISOString();
-            this.markSeen('idle');
           } catch (err) {
             console.error('Sync failed:', err);
-            this.markSeen('offline');
             this.auditTrail.logSend(
               this.options.localPeerId,
               0,
@@ -227,7 +194,7 @@ export class SyncDaemon {
       this.interval = null;
     }
 
-    this.transport.disconnect?.();
+    this.transport.disconnect();
     this.state.running = false;
     this.state.connected = false;
     this.auditTrail.logDisconnect(this.options.localPeerId, true);
@@ -243,44 +210,10 @@ export class SyncDaemon {
   }
 
   /**
-   * Slice C — stamp this machine's device state after a sync cycle. No-op for
-   * machines without a paired device key (`markDeviceSeen` returns false).
-   */
-  private markSeen(syncState: 'idle' | 'offline'): void {
-    try {
-      markDeviceSeen(join(this.options.rootPath ?? '.', '.trellis'), {
-        syncState,
-        lastSyncOpHash: this.options.getLocalOps().at(-1)?.hash,
-      });
-    } catch {
-      /* best-effort — device state is advisory */
-    }
-  }
-
-  /**
-   * Slice D — a peer revoked one of this identity's devices: update the local
-   * person registry so the resolver fails closed on the revoked key.
-   */
-  private handleDeviceRevoked(msg: SyncDeviceRevokedMessage): void {
-    const trellisDir = join(this.options.rootPath ?? '.', '.trellis');
-    const ok = revokeDevice(trellisDir, msg.deviceId);
-    if (ok) {
-      console.log(
-        `Device revoked via sync: ${msg.deviceId} (by ${msg.revokedBy})`,
-      );
-      this.auditTrail.logReceive(
-        msg.peerId,
-        0,
-        JSON.stringify(msg).length,
-        true,
-      );
-    }
-  }
-
-  /**
    * Check remote state to determine if bootstrap is needed.
    */
   private async checkRemoteState(): Promise<{ opCount: number }> {
+    // Send have message to get remote op count
     const localOps = this.options.getLocalOps();
     await this.transport.send('server', {
       version: 1,
@@ -291,6 +224,8 @@ export class SyncDaemon {
       opCount: localOps.length,
     });
 
+    // Wait for have response (simplified - in production use proper async handshake)
+    // For now, return 0 to trigger bootstrap if enabled
     return { opCount: 0 };
   }
 
@@ -301,6 +236,7 @@ export class SyncDaemon {
     const localOps = this.options.getLocalOps();
     console.log(`Bootstrapping remote with ${localOps.length} ops...`);
 
+    // Send ops message with full local state
     await this.transport.send('server', {
       version: 1,
       type: 'ops',
@@ -316,9 +252,9 @@ export class SyncDaemon {
    * Public method to explicitly bootstrap remote.
    */
   async bootstrap(): Promise<void> {
-    await this.transport.connect?.();
+    await this.transport.connect();
     await this.bootstrapRemote();
-    this.transport.disconnect?.();
+    this.transport.disconnect();
   }
 
   /**

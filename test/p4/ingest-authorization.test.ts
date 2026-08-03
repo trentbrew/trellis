@@ -5,8 +5,8 @@
  * verification: integrity and attribution at one gate. These tests pin what the
  * gate rejects, and — as importantly — what it currently lets through.
  */
-import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdirSync, rmSync, cpSync, mkdtempSync } from 'fs';
+import { describe, test, expect, beforeEach, afterEach } from 'vitest';
+import { mkdirSync, rmSync, cpSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { TrellisVcsEngine } from '../../src/engine.js';
@@ -39,14 +39,8 @@ async function forgeOp(kind: string, vcs: Record<string, unknown>): Promise<VcsO
 
 describe('Phase 3 ingest boundary', () => {
   let engine: TrellisVcsEngine;
-  const originalHome = process.env.HOME;
-  let home: string;
 
   beforeEach(async () => {
-    // Hermetic HOME: no person identity in the sandbox, so signing falls back
-    // to the repo identity (Slice A person-first resolution).
-    home = mkdtempSync(join(tmpdir(), 'ingest-authz-home-'));
-    process.env.HOME = home;
     rmSync(TEST_ROOT, { recursive: true, force: true });
     mkdirSync(TEST_ROOT, { recursive: true });
     engine = new TrellisVcsEngine({ rootPath: TEST_ROOT });
@@ -61,9 +55,6 @@ describe('Phase 3 ingest boundary', () => {
 
   afterEach(() => {
     rmSync(TEST_ROOT, { recursive: true, force: true });
-    rmSync(home, { recursive: true, force: true });
-    if (originalHome === undefined) delete process.env.HOME;
-    else process.env.HOME = originalHome;
   });
 
   test('rejects an UNSIGNED grant op from a peer', async () => {
@@ -91,11 +82,7 @@ describe('Phase 3 ingest boundary', () => {
     const res = await engine.integrateOps([op]);
 
     expect(res.rejected).toHaveLength(1);
-    // ADR 0036: the resolver is always wired (peerKeyResolver never null), so
-    // the gate verifies the claimed signature cryptographically first and
-    // fails closed — a garbage 'sig' from an unknown identity is rejected as
-    // invalid, not merely as a non-owner envelope claim.
-    expect(res.rejected[0]!.message).toMatch(/no valid signature/);
+    expect(res.rejected[0]!.message).toMatch(/not Owner/);
   });
 
   test('non-auth ops are unaffected by the gate', async () => {
@@ -119,12 +106,8 @@ describe('Phase 3.2 — resolver wired from the local identity', () => {
   let engine: TrellisVcsEngine;
   let realOwner: string;
   let realZone: string;
-  const originalHome = process.env.HOME;
-  let home: string;
 
   beforeEach(async () => {
-    home = mkdtempSync(join(tmpdir(), 'ingest-authz-home-'));
-    process.env.HOME = home;
     rmSync(TEST_ROOT, { recursive: true, force: true });
     mkdirSync(TEST_ROOT, { recursive: true });
     engine = new TrellisVcsEngine({ rootPath: TEST_ROOT });
@@ -149,9 +132,6 @@ describe('Phase 3.2 — resolver wired from the local identity', () => {
 
   afterEach(() => {
     rmSync(TEST_ROOT, { recursive: true, force: true });
-    rmSync(home, { recursive: true, force: true });
-    if (originalHome === undefined) delete process.env.HOME;
-    else process.env.HOME = originalHome;
   });
 
   test('local auth ops are signed, and still pass the integrity hash', async () => {

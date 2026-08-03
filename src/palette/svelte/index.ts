@@ -46,8 +46,8 @@ export function createPaletteStore(input: PaletteInput): PaletteStore {
 
   return {
     state: toSvelteStore(core),
-    query: toSvelteStore(core, (s: any) => s.query),
-    results: toSvelteStore(core, (s: any) => s.results),
+    query: toSvelteStore(core, (s) => s.query),
+    results: toSvelteStore(core, (s) => s.results),
     actions: core.actions,
     core,
   };

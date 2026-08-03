@@ -100,9 +100,9 @@ async function handleAdd(type: string, name: string, rootPath: string): Promise<
       const existing = kernel.getEntity(agentId);
       if (existing) {
         console.log(chalk.dim(`  Agent ${agentId} already exists, updating`));
-        await kernel.updateEntity(agentId, attrs, { provenance: PROVENANCE.cli });
+        await kernel.updateEntity(agentId, attrs);
       } else {
-        await kernel.createEntity(agentId, 'core:Agent', attrs, undefined, { provenance: PROVENANCE.cli });
+        await kernel.createEntity(agentId, 'core:Agent', attrs);
         console.log(chalk.dim(`  Created agent entity ${agentId}`));
       }
     }
