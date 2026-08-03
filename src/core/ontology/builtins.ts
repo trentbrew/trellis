@@ -201,7 +201,7 @@ export const agentOntology: OntologySchema = {
       attributes: [
         { name: 'startedAt', type: 'date', required: true },
         { name: 'completedAt', type: 'date' },
-        { name: 'status', type: 'string', enum: ['running', 'plan_pending', 'paused', 'completed', 'failed', 'cancelled'], default: 'running' },
+        { name: 'status', type: 'string', enum: ['running', 'completed', 'failed', 'cancelled'], default: 'running' },
         { name: 'input', type: 'string' },
         { name: 'output', type: 'string' },
         { name: 'totalTokens', type: 'number' },

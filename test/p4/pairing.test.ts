@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -23,7 +23,6 @@ import {
   resolveDevicePublicKey,
   resolvePublicKeys,
   getSigningMaterial,
-  personDevicesDir,
   ROOT_DEVICE_ID,
 } from '../../src/identity/pairing.js';
 import { createVcsOp } from '../../src/vcs/ops.js';
@@ -33,22 +32,6 @@ function tempTrellis(): { root: string; trellisDir: string } {
   const trellisDir = join(root, '.trellis');
   return { root, trellisDir };
 }
-
-// File-scope HOME sandbox: pairing writes are person-scoped (Slice B), so
-// every test must run against a throwaway ~/.trellis.
-const originalHome = process.env.HOME;
-let home: string;
-
-beforeEach(() => {
-  home = mkdtempSync(join(tmpdir(), 'pair-home-'));
-  process.env.HOME = home;
-});
-
-afterEach(() => {
-  rmSync(home, { recursive: true, force: true });
-  if (originalHome === undefined) delete process.env.HOME;
-  else process.env.HOME = originalHome;
-});
 
 describe('pairing registry', () => {
   let a: { root: string; trellisDir: string };
@@ -66,7 +49,7 @@ describe('pairing registry', () => {
     rmSync(b.root, { recursive: true, force: true });
   });
 
-  test('registry persists authorized device in person scope (Slice B)', () => {
+  test('registry persists authorized device under .trellis/devices/', () => {
     const { payload: challengePayload } = pairStart(a.trellisDir);
     const { payload: joinPayload } = pairJoin(b.trellisDir, challengePayload, {
       deviceLabel: 'phone',
@@ -78,11 +61,10 @@ describe('pairing registry', () => {
     );
     pairAccept(b.trellisDir, authPayload);
 
-    // Devices follow the person: registry lands in ~/.trellis/devices, not
-    // the repo clone (Slice B).
-    expect(existsSync(join(personDevicesDir(), 'registry.json'))).toBe(true);
-    expect(existsSync(join(b.trellisDir, 'devices', 'local.json'))).toBe(false);
-    expect(existsSync(join(personDevicesDir(), 'local.json'))).toBe(true);
+    expect(existsSync(join(a.trellisDir, 'devices', 'registry.json'))).toBe(
+      true,
+    );
+    expect(existsSync(join(b.trellisDir, 'devices', 'local.json'))).toBe(true);
     expect(existsSync(join(b.trellisDir, 'identity.json'))).toBe(false);
 
     const regA = loadRegistry(a.trellisDir)!;

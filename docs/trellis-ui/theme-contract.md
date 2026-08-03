@@ -136,71 +136,6 @@ chroma (C) + hue (H). Unlike HSL, oklch lightness is perceptually linear —
 | `--line-height-normal` | `1.5` |
 | `--line-height-relaxed` | `1.75` |
 
-### Icon tokens
-
-| Token | Default | Purpose |
-|---|---|---|
-| `--icon-pack` | `lucide` | Iconify set prefix for bare `<trellis-icon name>` resolution (see TRL-315) |
-
-The icon pack is a **theme concern**: the same markup renders Lucide under one
-theme and Tabler under another. Components never hardcode `set:` prefixes in
-markup — the pack token owns it.
-
-### Motion tokens
-
-| Token | Default | Purpose |
-|---|---|---|
-| `--motion-duration-fast` | `120ms` | Hover, active, small transitions |
-| `--motion-duration-normal` | `200ms` | Panel/card transitions, theme switches |
-| `--motion-duration-slow` | `350ms` | Enter/exit, layout reveals |
-| `--motion-ease-standard` | `cubic-bezier(0.2, 0, 0, 1)` | Standard ease (Material-style) |
-| `--motion-ease-emphasized` | `cubic-bezier(0.3, 0, 0.2, 1)` | Emphasized motion, page entrances |
-| `--motion-ease-out` | `cubic-bezier(0, 0, 0.2, 1)` | Fast exits, dismissals |
-| `--motion-ease-in` | `cubic-bezier(0.4, 0, 1, 1)` | Entries that should feel quick |
-
-Motion is part of the pixel contract: themes own duration + easing, components
-own *what* animates, never *how fast* or *with what feel*.
-
-### Prose & rhythm tokens (typeset model)
-
-For rendered content surfaces — editor output, markdown, chat, docs. The
-shadcn/typeset model is adopted as a **token group**, not a vendored CSS file:
-three controls drive the reading rhythm; headings, list indents, and block
-spacing derive from them.
-
-| Token | Default | Purpose |
-|---|---|---|
-| `--prose-size` | `1em` | Body text size; container-relative (fractal: follows the inset context) |
-| `--prose-leading` | `1.75` | Line height |
-| `--prose-flow` | `1.25em` | Space between blocks (heading + list spacing derive from it) |
-| `--prose-font-body` | `var(--font-sans)` | Body family (font registry role) |
-| `--prose-font-heading` | `var(--font-display)` | Heading family |
-| `--prose-font-mono` | `var(--font-mono)` | Inline code family |
-| `--prose-measure` | `65ch` | Max line length for the content column (layout owns it; token sets it) |
-
-Presets are themes — a `reading` type with serif body + roomier rhythm, a
-`chat` type with tighter flow:
-
-```css
-[data-theme="reading"] {
-  --prose-size: 18px;
-  --prose-leading: 1.9;
-  --prose-flow: 2em;
-  --prose-font-body: var(--font-serif);
-}
-[data-theme="chat"] {
-  --prose-size: 1em;
-  --prose-flow: 1em;
-  --prose-leading: 1.6;
-}
-```
-
-**Streaming contract:** prose styling is append-stable — no `:last-child`,
-`:has()`, or `:empty` in layout rules; spacing flows one direction
-(`margin-block-start` only) so a new block never restyles the blocks above it.
-Surfaces may opt out per-container (the `not-typeset` pattern) — components own
-that opt-out via a scoped token, not a hardcoded class.
-
 ## Theme Switching
 
 Themes are applied via `data-theme` attribute on any container element:
@@ -235,17 +170,9 @@ Products ship one or more `[data-theme="..."]` blocks. Consumers pick:
 - `default` — Light theme (aliased to `[data-theme]` omitted)
 - `dark` — Dark theme
 - `high-contrast` — Accessibility theme
-- `uithing` — First-party theme that adopts the ui-thing visual language
-  (colors, radii, shadows, motion, icon pack, typography). **Every pixel
-  decision of ui-thing lives in this theme block** — animations via
-  `--motion-*`, color scheme via the semantic groups, icon set via
-  `--icon-pack`. Products opt in with `<html data-theme="uithing">`.
 
 Themes are additive: a dark theme block only overrides tokens that differ from
-default. Nested themes inherit unset tokens from parent. Theme extensions that
-ui-thing needs but the contract lacks today (e.g. scrollbar styling, glass
-effects, new motion presets) are added here as named tokens first — never as
-component-specific hardcodes.
+default. Nested themes inherit unset tokens from parent.
 
 ## Component Usage
 
@@ -285,13 +212,3 @@ slices for consumers that need only a subset.
 4. Entity-type tokens cover: issue, lane, project, person, note, doc
 5. Status tokens cover: todo, in-progress, done, blocked, cancelled
 6. No component CSS file hardcodes a color, spacing, or typography value
-7. `--icon-pack` token exists; `<trellis-icon name>` resolves bare names
-   through it (TRL-315)
-8. `--motion-*` tokens exist (durations + easings); components never hardcode
-   transition duration/easing
-9. `[data-theme="uithing"]` block overrides all pixels (colors, radii, shadows,
-   motion, `--icon-pack`, typography); adding it requires zero component changes
-10. `--prose-*` tokens exist (size/leading/flow + font roles); prose surfaces
-    consume them and never hardcode rhythm values
-11. Prose styling is append-stable: no `:last-child`/`:has()`/`:empty` layout
-    selectors, `margin-block-start`-only spacing

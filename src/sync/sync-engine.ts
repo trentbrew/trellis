@@ -12,7 +12,6 @@ import type {
   SyncTransport,
   SyncMessage,
   SyncNackMessage,
-  SyncDeviceRevokedMessage,
   SyncState,
   PeerId,
   BranchPolicy,
@@ -63,9 +62,6 @@ export class SyncEngine {
     ops: VcsOp[],
   ) => void | OpsReceivedResult | Promise<void | OpsReceivedResult>;
   private onNackReceived?: (nack: SyncNackMessage) => void | Promise<void>;
-  private onDeviceRevoked?: (
-    msg: SyncDeviceRevokedMessage,
-  ) => void | Promise<void>;
   private branchPolicy: BranchPolicy;
 
   constructor(opts: {
@@ -76,9 +72,6 @@ export class SyncEngine {
       ops: VcsOp[],
     ) => void | OpsReceivedResult | Promise<void | OpsReceivedResult>;
     onNackReceived?: (nack: SyncNackMessage) => void | Promise<void>;
-    onDeviceRevoked?: (
-      msg: SyncDeviceRevokedMessage,
-    ) => void | Promise<void>;
     branchPolicy?: BranchPolicy;
   }) {
     this.localPeerId = opts.localPeerId;
@@ -86,7 +79,6 @@ export class SyncEngine {
     this.getLocalOps = opts.getLocalOps;
     this.onOpsReceived = opts.onOpsReceived;
     this.onNackReceived = opts.onNackReceived;
-    this.onDeviceRevoked = opts.onDeviceRevoked;
     this.branchPolicy = opts.branchPolicy ?? { linear: true };
 
     this.state = {
@@ -278,16 +270,7 @@ export class SyncEngine {
         break;
       case 'sync-snapshot':
         break;
-      case 'device-revoked':
-        await this.handleDeviceRevoked(msg);
-        break;
     }
-  }
-
-  private async handleDeviceRevoked(
-    msg: SyncDeviceRevokedMessage,
-  ): Promise<void> {
-    await this.onDeviceRevoked?.(msg);
   }
 
   private async handleSnapshot(

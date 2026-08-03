@@ -17,7 +17,6 @@ import {
 } from 'crypto';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
-import { homedir } from 'os';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -179,60 +178,6 @@ export function toPublicIdentity(identity: IdentityConfig): PublicIdentity {
     entityId: identity.entityId,
     createdAt: identity.createdAt,
   };
-}
-
-// ---------------------------------------------------------------------------
-// Person-scoped identity (ADR 0032 §3)
-//
-// Identity belongs to a *person*, not a repo. The person key lives at
-// ~/.trellis/identity.json and is shared by every repo on the machine, so a
-// person is the same person on every VM that holds (or was paired into) the
-// key. Per-repo .trellis/identity.json remains as the legacy location.
-// ---------------------------------------------------------------------------
-
-export function personIdentityDir(): string {
-  return join(homedir(), '.trellis');
-}
-
-export function personIdentityPath(): string {
-  return join(personIdentityDir(), IDENTITY_FILE);
-}
-
-/** Save an identity to the person-scoped ~/.trellis/identity.json. */
-export function savePersonIdentity(identity: IdentityConfig): void {
-  saveIdentity(personIdentityDir(), identity);
-}
-
-/** Load the person-scoped identity (null when unset). */
-export function loadPersonIdentity(): IdentityConfig | null {
-  return loadIdentity(personIdentityDir());
-}
-
-export function hasPersonIdentity(): boolean {
-  return existsSync(personIdentityPath());
-}
-
-/** Load or create the person identity, persisting it on creation. */
-export function ensurePersonIdentity(opts?: {
-  displayName?: string;
-  email?: string;
-}): IdentityConfig {
-  const existing = loadPersonIdentity();
-  if (existing) return existing;
-  const identity = createIdentity({
-    displayName: opts?.displayName ?? 'Anonymous',
-    email: opts?.email,
-  });
-  savePersonIdentity(identity);
-  return identity;
-}
-
-/**
- * Resolve the signing identity for a repo: the person key is authoritative
- * (ADR 0032 §3); a legacy per-repo key is the fallback.
- */
-export function resolveRepoIdentity(trellisDir: string): IdentityConfig | null {
-  return loadIdentity(trellisDir) ?? loadPersonIdentity();
 }
 
 // ---------------------------------------------------------------------------

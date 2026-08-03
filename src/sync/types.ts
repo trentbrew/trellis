@@ -46,8 +46,7 @@ export type SyncMessage =
   | SyncGraphSnapshotMessage
   | SyncLaneJournalMessage
   | SyncDecisionTraceMessage
-  | SyncEntityDeltaMessage
-  | SyncDeviceRevokedMessage;
+  | SyncEntityDeltaMessage;
 
 export type SyncMessageHandler = (message: SyncMessage) => void | Promise<void>;
 
@@ -69,8 +68,7 @@ export type NackReason =
   | 'destructive-op'
   | 'bulk-delete'
   | 'system-modification'
-  | 'quarantine-required'
-  | 'rate_limited';
+  | 'quarantine-required';
 
 /** Advertise which op hashes we have. */
 export interface SyncHaveMessage {
@@ -222,7 +220,8 @@ export interface SyncEntityDeltaMessage {
   type: 'entity-delta';
   peerId: string;
   /** Delta hash for deduplication. */
-  deltaHash: string;  /** Base snapshot hash this delta applies to. */
+  deltaHash: string;
+  /** Base snapshot hash this delta applies to. */
   baseSnapshotHash: string;
   /** JSON-encoded entity changes. */
   entityData: string;
@@ -230,25 +229,6 @@ export interface SyncEntityDeltaMessage {
   entityCount: number;
   /** Change types present: add, modify, delete. */
   changeTypes: ('add' | 'modify' | 'delete')[];
-}
-
-/**
- * Device revocation signal (Slice D — docs/planning/device-registry-and-
- * sprite-pairing.md). Sent by the revoking machine so clones and sprites
- * update their local registries; the resolver then fails closed on the
- * revoked key (ADR 0036 §2).
- */
-export interface SyncDeviceRevokedMessage {
-  version: number;
-  type: 'device-revoked';
-  peerId: string;
-  /** The revoked device id (as registered under the identity). */
-  deviceId: string;
-  /** Identity the device was paired under. */
-  identityEntityId: string;
-  /** Device id of the revoking machine (root for CLI revocation). */
-  revokedBy: string;
-  timestamp: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -286,8 +266,4 @@ export interface SyncTransport {
   onMessage(handler: SyncMessageHandler): void;
   /** List connected peers. */
   peers(): PeerId[];
-  /** Connect to the sync endpoint (or to a peer, for per-peer transports like the WebSocket one). */
-  connect?(peerId?: string, url?: string): Promise<void>;
-  /** Disconnect from the sync endpoint (or from a peer). */
-  disconnect?(peerId?: string): Promise<void>;
 }

@@ -27,8 +27,6 @@ export function registerRemoteCommands(program: Command): void {
     .description('Configure default remote sprite URL')
     .option('--name <name>', 'Remote name', 'default')
     .option('--repo-id <id>', 'Remote repo id (defaults to repo hash)')
-    .option('--owner <owner>', 'Owner entity id (identity:<did>) for identity-indexing')
-    .option('--repo <repo>', 'Repo slug under the owner ({peer}/{repo} right half)')
     .option('--api-key <key>', 'API key (also stored in .trellis/remote.json)')
     .option('-p, --path <path>', 'Repository path', '.')
     .action((url, opts) => {
@@ -37,15 +35,10 @@ export function registerRemoteCommands(program: Command): void {
         name: opts.name,
         repoId: opts.repoId,
         apiKey: opts.apiKey,
-        owner: opts.owner,
-        repo: opts.repo,
       });
       console.log(chalk.green(`✓ Remote ${chalk.bold(opts.name)} configured`));
       console.log(`  ${chalk.dim('URL:')}    ${peer.url}`);
       console.log(`  ${chalk.dim('Repo:')}   ${peer.repoId}`);
-      if (peer.owner && peer.repo) {
-        console.log(`  ${chalk.dim('Project:')} ${peer.owner}/${peer.repo}`);
-      }
     });
 
   remote

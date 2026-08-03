@@ -10,13 +10,6 @@ export {
   loadIdentity,
   hasIdentity,
   toPublicIdentity,
-  personIdentityDir,
-  personIdentityPath,
-  savePersonIdentity,
-  loadPersonIdentity,
-  hasPersonIdentity,
-  ensurePersonIdentity,
-  resolveRepoIdentity,
 } from './identity.js';
 
 export type { IdentityConfig, PublicIdentity } from './identity.js';
@@ -35,16 +28,12 @@ export {
   pairAccept,
   listDevices,
   revokeDevice,
-  registerDevice,
   loadRegistry,
   loadLocalDevice,
   resolveDevicePublicKey,
   resolvePublicKeys,
   getSigningMaterial,
   pairingResolver,
-  personDevicesDir,
-  markDeviceSeen,
-  updateDeviceState,
   deviceFingerprint,
   decodePayload,
   encodePayload,
@@ -62,22 +51,11 @@ export type {
   DeviceRecord,
   DeviceRegistry,
   LocalDeviceKey,
-  DeviceKind,
-  DeviceTransport,
-  DeviceSyncState,
 } from './pairing.js';
 
 export { renderPairingQr, encodePairingQr } from './qr.js';
 
 export type { PairQrOptions, PairQrEcc } from './qr.js';
-
-export { peerKeyResolver } from './peer-key-resolver.js';
-
-export {
-  provisionSpriteDeviceKey,
-} from './sprite-device.js';
-
-export type { ProvisionedSpriteDevice } from './sprite-device.js';
 
 export { evaluatePolicy, createPolicy } from './governance.js';
 

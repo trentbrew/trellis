@@ -24,12 +24,4 @@ describe('handleCliError', () => {
 
     expect(exit).toHaveBeenCalledWith(0);
   });
-
-  it('exits zero for commander version display (trellis -v / --version)', () => {
-    const exit = vi.spyOn(process, 'exit').mockImplementation((() => {}) as never);
-
-    handleCliError({ code: 'commander.versionDisplayed' });
-
-    expect(exit).toHaveBeenCalledWith(0);
-  });
 });

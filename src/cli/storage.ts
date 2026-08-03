@@ -55,12 +55,9 @@ export function collectReferencedBlobHashes(rootPath: string): Set<string> {
   return hashes;
 }
 
-export function inspectBlobStorage(
-  rootPath: string,
-  blobResolver?: BlobResolver | null,
-): BlobStorageStats {
+export function inspectBlobStorage(rootPath: string, blobResolver?: BlobResolver | null): BlobStorageStats {
   const trellisDir = join(rootPath, '.trellis');
-  const store = blobResolver?.getBlobStore() ?? new BlobStore(trellisDir);
+  const store = blobResolver?.getBlobStore();
   if (!store) return emptyStats();
   const existing = store.listHashes();
   const referenced = collectReferencedBlobHashes(rootPath);
@@ -109,15 +106,11 @@ export function inspectBlobStorage(
 
 function emptyStats(): BlobStorageStats {
   return {
-    totalBlobs: 0,
-    totalBytes: 0,
-    referencedBlobs: 0,
-    referencedBytes: 0,
-    unreferencedBlobs: 0,
-    unreferencedBytes: 0,
+    totalBlobs: 0, totalBytes: 0,
+    referencedBlobs: 0, referencedBytes: 0,
+    unreferencedBlobs: 0, unreferencedBytes: 0,
     missingReferencedBlobs: 0,
-    gitResolvedBlobs: 0,
-    gitResolvedBytes: 0,
+    gitResolvedBlobs: 0, gitResolvedBytes: 0,
   };
 }
 
@@ -156,9 +149,7 @@ function formatBytes(bytes: number): string {
 export function registerStorageCommand(program: Command): void {
   program
     .command('storage')
-    .description(
-      'Inspect blob-store usage and optionally prune unreferenced blobs',
-    )
+    .description('Inspect blob-store usage and optionally prune unreferenced blobs')
     .option('-p, --path <path>', 'Repository path', '.')
     .option('--prune', 'Delete unreferenced blobs from .trellis/blobs')
     .action((opts) => {
@@ -169,34 +160,22 @@ export function registerStorageCommand(program: Command): void {
       console.log();
       console.log(`  ${chalk.dim('Repo:')}               ${rootPath}`);
       console.log(`  ${chalk.dim('Total blobs:')}        ${before.totalBlobs}`);
-      console.log(
-        `  ${chalk.dim('Referenced:')}         ${before.referencedBlobs} (${formatBytes(before.referencedBytes)})`,
-      );
+      console.log(`  ${chalk.dim('Referenced:')}         ${before.referencedBlobs} (${formatBytes(before.referencedBytes)})`);
       if (before.gitResolvedBlobs > 0) {
-        console.log(
-          `  ${chalk.dim('Git-resolved:')}       ${before.gitResolvedBlobs} (${formatBytes(before.gitResolvedBytes)})`,
-        );
+        console.log(`  ${chalk.dim('Git-resolved:')}       ${before.gitResolvedBlobs} (${formatBytes(before.gitResolvedBytes)})`);
       }
-      console.log(
-        `  ${chalk.dim('Unreferenced:')}       ${before.unreferencedBlobs} (${formatBytes(before.unreferencedBytes)})`,
-      );
-      console.log(
-        `  ${chalk.dim('Store size:')}         ${formatBytes(before.totalBytes)}`,
-      );
+      console.log(`  ${chalk.dim('Unreferenced:')}       ${before.unreferencedBlobs} (${formatBytes(before.unreferencedBytes)})`);
+      console.log(`  ${chalk.dim('Store size:')}         ${formatBytes(before.totalBytes)}`);
       if (before.missingReferencedBlobs > 0) {
-        console.log(
-          `  ${chalk.dim('Missing referenced:')} ${chalk.yellow(String(before.missingReferencedBlobs))}`,
-        );
+        console.log(`  ${chalk.dim('Missing referenced:')} ${chalk.yellow(String(before.missingReferencedBlobs))}`);
       }
 
       if (!opts.prune) {
         console.log();
         console.log(
           before.unreferencedBlobs > 0
-            ? chalk.yellow(
-                'Dry run only. Re-run with --prune to reclaim unreferenced blob storage.',
-              )
-            : chalk.green('No unreferenced blobs found.'),
+            ? chalk.yellow('Dry run only. Re-run with --prune to reclaim unreferenced blob storage.')
+            : chalk.green('No unreferenced blobs found.')
         );
         return;
       }
@@ -204,16 +183,8 @@ export function registerStorageCommand(program: Command): void {
       const deleted = pruneUnreferencedBlobs(rootPath);
       const after = inspectBlobStorage(rootPath);
       console.log();
-      console.log(
-        chalk.green(
-          `Deleted ${deleted.deletedBlobs} blob(s), reclaimed ${formatBytes(deleted.deletedBytes)}.`,
-        ),
-      );
-      console.log(
-        `  ${chalk.dim('New store size:')}     ${formatBytes(after.totalBytes)}`,
-      );
-      console.log(
-        `  ${chalk.dim('Remaining orphans:')} ${after.unreferencedBlobs}`,
-      );
+      console.log(chalk.green(`Deleted ${deleted.deletedBlobs} blob(s), reclaimed ${formatBytes(deleted.deletedBytes)}.`));
+      console.log(`  ${chalk.dim('New store size:')}     ${formatBytes(after.totalBytes)}`);
+      console.log(`  ${chalk.dim('Remaining orphans:')} ${after.unreferencedBlobs}`);
     });
 }

@@ -55,10 +55,6 @@ export function createLedgerFetchHandler(
       return json(tip);
     }
 
-    if (url.pathname === '/v0/ledger/repos' && req.method === 'GET') {
-      return json(store.listRepos());
-    }
-
     if (url.pathname === '/v0/ledger/push' && req.method === 'POST') {
       let payload: Record<string, unknown>;
       try {
@@ -86,8 +82,6 @@ export function createLedgerFetchHandler(
           typeof payload.lineCount === 'number'
             ? payload.lineCount
             : checkpoint.split('\n').filter((l) => l.trim()).length,
-        owner: typeof payload.owner === 'string' ? payload.owner : undefined,
-        name: typeof payload.name === 'string' ? payload.name : undefined,
         checkpoint,
       });
       if (!result.ok) {

@@ -23,12 +23,6 @@ import type { SchemaDefinition } from '../core/ontology/types.js';
 import { EntityConflictError } from '../core/ontology/sync-policy.js';
 import type { ResolveSpec } from '../schema/resolve.js';
 import type { TenantPool } from '../server/tenancy.js';
-import {
-  readFormOverrides,
-  resolveFormDescriptor,
-  listFormableTypes,
-} from '../forms/index.js';
-import type { FormDescriptor, FormMode } from '../forms/index.js';
 
 // ---------------------------------------------------------------------------
 // Result types
@@ -375,63 +369,6 @@ export class TrellisDb {
       }
       throw err;
     }
-  }
-
-  // -------------------------------------------------------------------------
-  // Headless forms (schema-derived descriptors)
-  // -------------------------------------------------------------------------
-
-  /**
-   * Resolve the headless form descriptor for an entity type, layered with
-   * any `trellis:Form` override entities in the graph.
-   *
-   * Local mode derives in-process; remote mode hits `GET /forms/:type`.
-   * Returns `null` when the type has no registered schema.
-   */
-  async formDescriptor(
-    type: string,
-    opts: { mode?: FormMode } = {},
-  ): Promise<FormDescriptor | null> {
-    const mode = opts.mode ?? 'create';
-
-    if (isRemote(this.opts)) {
-      try {
-        return (await this._fetch(
-          'GET',
-          `/forms/${encodeURIComponent(type)}?mode=${mode}`,
-        )) as FormDescriptor;
-      } catch (err) {
-        if (err instanceof FetchError && err.status === 404) return null;
-        throw err;
-      }
-    }
-
-    const pool = await this._getPool();
-    const tenantId = (this.opts as TrellisDbLocalOptions).tenantId ?? null;
-    const kernel = pool.get(tenantId);
-    return (
-      resolveFormDescriptor(kernel.listOntologies(), type, {
-        mode,
-        overrides: readFormOverrides(kernel),
-      }) ?? null
-    );
-  }
-
-  /** List entity types with registered schemas (form derivable). */
-  async listForms(): Promise<
-    Array<{ entityType: string; schemaId: string; label: string }>
-  > {
-    if (isRemote(this.opts)) {
-      return (await this._fetch('GET', '/forms')) as Array<{
-        entityType: string;
-        schemaId: string;
-        label: string;
-      }>;
-    }
-    const pool = await this._getPool();
-    const tenantId = (this.opts as TrellisDbLocalOptions).tenantId ?? null;
-    const kernel = pool.get(tenantId);
-    return listFormableTypes(kernel.listOntologies());
   }
 
   // -------------------------------------------------------------------------

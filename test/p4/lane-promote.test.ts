@@ -4,13 +4,8 @@ import { join } from 'path';
 import { TrellisVcsEngine } from '../../src/engine.js';
 import { createVcsOp } from '../../src/vcs/ops.js';
 import { loadLaneMeta } from '../../src/vcs/lane.js';
-import {
-  planLanePromote,
-  resolveBranchHeadFromOps,
-  PROMOTE_LIFECYCLE_KINDS,
-} from '../../src/vcs/lane-promote.js';
+import { planLanePromote, resolveBranchHeadFromOps, PROMOTE_LIFECYCLE_KINDS } from '../../src/vcs/lane-promote.js';
 import { BlobStore } from '../../src/vcs/blob-store.js';
-import { BlobResolver } from '../../src/vcs/blob-resolver.js';
 
 const TEST_ROOT = '/tmp/trellis-p4-lane-promote';
 
@@ -59,12 +54,8 @@ describe('Lane promote', () => {
 
     expect(engine.getIssue(idA)?.description).toBe('lane A work');
     expect(engine.getIssue(idB)?.description).toBe('lane B work');
-    expect(loadLaneMeta(join(TEST_ROOT, '.trellis'), laneA.id)?.status).toBe(
-      'promoted',
-    );
-    expect(loadLaneMeta(join(TEST_ROOT, '.trellis'), laneB.id)?.status).toBe(
-      'promoted',
-    );
+    expect(loadLaneMeta(join(TEST_ROOT, '.trellis'), laneA.id)?.status).toBe('promoted');
+    expect(loadLaneMeta(join(TEST_ROOT, '.trellis'), laneB.id)?.status).toBe('promoted');
 
     const milestones = engine.listMilestones();
     expect(milestones.some((m) => m.message === 'Lane B narrative')).toBe(true);
@@ -84,8 +75,9 @@ describe('Lane promote', () => {
   });
 
   test('draftLanePromoteMilestoneMessage prefers name then issue then files', async () => {
-    const { draftLanePromoteMilestoneMessage } =
-      await import('../../src/vcs/lane-promote.js');
+    const { draftLanePromoteMilestoneMessage } = await import(
+      '../../src/vcs/lane-promote.js'
+    );
     const meta = {
       id: 'lane-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
       status: 'active' as const,
@@ -136,11 +128,7 @@ describe('Lane promote', () => {
     });
     const laneStatusOp = await createVcsOp('vcs:issueUpdate', {
       agentId: 'agent:lane',
-      vcs: {
-        issueId,
-        issueStatus: 'in_progress',
-        oldIssueStatus: 'in_progress',
-      },
+      vcs: { issueId, issueStatus: 'in_progress', oldIssueStatus: 'in_progress' },
     });
 
     const integrationOps = [createOp, startOp, queueOp];
@@ -181,11 +169,9 @@ describe('Lane promote', () => {
     await engine.updateIssue(issueId, { title: 'integration title' });
 
     const plan = await engine.promoteLane(lane.id, { dryRun: true });
-    expect(
-      plan.blockingConflicts.some(
-        (c) => c.class === 'hard' && c.attribute === 'title',
-      ),
-    ).toBe(true);
+    expect(plan.blockingConflicts.some((c) => c.class === 'hard' && c.attribute === 'title')).toBe(
+      true,
+    );
     expect(plan.canPromote).toBe(false);
   });
 
@@ -237,22 +223,16 @@ describe('Lane promote', () => {
     const issueId = created.vcs!.issueId!;
 
     const lane = await engine.createLane();
-    await engine.updateIssue(issueId, {
-      description: 'integration description',
-    });
+    await engine.updateIssue(issueId, { description: 'integration description' });
 
     await engine.enterLane(lane.id);
-    await engine.updateIssue(issueId, {
-      description: 'lane stale description',
-    });
+    await engine.updateIssue(issueId, { description: 'lane stale description' });
     await engine.leaveLane();
 
     const plan = await engine.promoteLane(lane.id, { dryRun: true });
     expect(plan.blockingConflicts).toHaveLength(0);
     expect(plan.opsToReplay).toHaveLength(0);
-    expect(engine.getIssue(issueId)?.description).toBe(
-      'integration description',
-    );
+    expect(engine.getIssue(issueId)?.description).toBe('integration description');
   });
 
   test('criterion added inside a lane routes to integration (no promote needed)', async () => {
@@ -269,9 +249,7 @@ describe('Lane promote', () => {
 
     // Criterion is visible on integration without any promote.
     const issue = engine.getIssue(issueId);
-    expect(issue?.criteria.some((c) => c.description === 'test:bun test')).toBe(
-      true,
-    );
+    expect(issue?.criteria.some((c) => c.description === 'test:bun test')).toBe(true);
 
     // The lane journal stays empty: nothing to replay, no conflicts.
     const plan = await engine.promoteLane(lane.id, { dryRun: true });
@@ -287,9 +265,7 @@ describe('Lane promote', () => {
     const issueId = created.vcs!.issueId!;
 
     const lane = await engine.createLane();
-    await engine.updateIssue(issueId, {
-      description: 'integration changed description',
-    });
+    await engine.updateIssue(issueId, { description: 'integration changed description' });
 
     await engine.enterLane(lane.id);
     await engine.updateIssue(issueId, { title: 'lane changed title' });
@@ -310,10 +286,7 @@ describe('Lane promote', () => {
   test('dry-run reports ready when lane ops are safe', async () => {
     const lane = await engine.createLane();
     await engine.enterLane(lane.id);
-    await engine.recordDecision({
-      toolName: 'test.lane',
-      context: 'safe promote',
-    });
+    await engine.recordDecision({ toolName: 'test.lane', context: 'safe promote' });
     await engine.leaveLane();
 
     const plan = await engine.promoteLane(lane.id, { dryRun: true });
@@ -325,10 +298,7 @@ describe('Lane promote', () => {
   test('promote replays lane decision onto integration', async () => {
     const lane = await engine.createLane();
     await engine.enterLane(lane.id);
-    await engine.recordDecision({
-      toolName: 'test.lane',
-      context: 'promoted decision',
-    });
+    await engine.recordDecision({ toolName: 'test.lane', context: 'promoted decision' });
     await engine.leaveLane();
 
     const before = engine.getIntegrationOpCount();
@@ -341,12 +311,8 @@ describe('Lane promote', () => {
   test('file modify with non-overlapping edits plans a clean three-way merge', async () => {
     const blobStore = new BlobStore(join(TEST_ROOT, '.trellis'));
     const baseHash = blobStore.putSync(Buffer.from('alpha\nbeta\n', 'utf-8'));
-    const integrationHash = blobStore.putSync(
-      Buffer.from('alpha\nBETA\n', 'utf-8'),
-    );
-    const laneHash = blobStore.putSync(
-      Buffer.from('alpha\nbeta\nomega\n', 'utf-8'),
-    );
+    const integrationHash = blobStore.putSync(Buffer.from('alpha\nBETA\n', 'utf-8'));
+    const laneHash = blobStore.putSync(Buffer.from('alpha\nbeta\nomega\n', 'utf-8'));
 
     const filePath = 'notes.txt';
     const integrationOps = [
@@ -372,12 +338,10 @@ describe('Lane promote', () => {
     const laneOps = [
       await createVcsOp('vcs:fileModify', {
         agentId: 'agent:lane',
-        previousHash: baseOpHash,
         vcs: { filePath, contentHash: laneHash },
       }),
     ];
 
-    const blobResolver = new BlobResolver(blobStore, TEST_ROOT);
     const plan = await planLanePromote({
       laneId: 'lane-test',
       meta: {
@@ -394,7 +358,7 @@ describe('Lane promote', () => {
       snapshotHead,
       integrationOps,
       laneOps,
-      blobResolver,
+      blobStore,
     });
 
     expect(plan.blockingConflicts).toHaveLength(0);
@@ -406,9 +370,7 @@ describe('Lane promote', () => {
   test('file modify-modify conflict blocks promote', async () => {
     const blobStore = new BlobStore(join(TEST_ROOT, '.trellis'));
     const baseHash = blobStore.putSync(Buffer.from('same line\n', 'utf-8'));
-    const integrationHash = blobStore.putSync(
-      Buffer.from('integration edit\n', 'utf-8'),
-    );
+    const integrationHash = blobStore.putSync(Buffer.from('integration edit\n', 'utf-8'));
     const laneHash = blobStore.putSync(Buffer.from('lane edit\n', 'utf-8'));
 
     const filePath = 'conflict.txt';
@@ -445,7 +407,7 @@ describe('Lane promote', () => {
       snapshotHead: modOp.hash,
       integrationOps: [addOp, modOp],
       laneOps,
-      blobResolver: new BlobResolver(blobStore, TEST_ROOT),
+      blobStore,
     });
 
     expect(plan.canPromote).toBe(false);
@@ -455,7 +417,7 @@ describe('Lane promote', () => {
   test('resolveBranchHeadFromOps skips promote lifecycle at tail', async () => {
     const content = await createVcsOp('vcs:issueCreate', {
       agentId: 'agent:test',
-      vcs: { issueId: 'TRL-snapshot', issueTitle: 'Snapshot head test' },
+      vcs: { issueId: 'TRL-snapshot', title: 'Snapshot head test' },
     });
     const start = await createVcsOp('vcs:lanePromoteStart', {
       agentId: 'agent:test',
@@ -476,12 +438,12 @@ describe('Lane promote', () => {
   test('resolveBranchHeadFromOps returns foreign integration op after lifecycle skip', async () => {
     const content = await createVcsOp('vcs:issueCreate', {
       agentId: 'agent:test',
-      vcs: { issueId: 'TRL-foreign', issueTitle: 'Foreign op test' },
+      vcs: { issueId: 'TRL-foreign', title: 'Foreign op test' },
     });
     const foreign = await createVcsOp('vcs:issueUpdate', {
       agentId: 'agent:other',
       previousHash: content.hash,
-      vcs: { issueId: 'TRL-foreign', issueTitle: 'concurrent write' },
+      vcs: { issueId: 'TRL-foreign', description: 'concurrent write' },
     });
     const start = await createVcsOp('vcs:lanePromoteStart', {
       agentId: 'agent:test',
@@ -494,10 +456,7 @@ describe('Lane promote', () => {
     });
 
     expect(
-      resolveBranchHeadFromOps(
-        [content, foreign, start],
-        'issue/TRL-foreign-spec',
-      ),
+      resolveBranchHeadFromOps([content, foreign, start], 'issue/TRL-foreign-spec'),
     ).toBe(foreign.hash);
   });
 
@@ -507,9 +466,7 @@ describe('Lane promote', () => {
 
     await engine.startIssue(issueId);
     const laneId = engine.getActiveLaneId()!;
-    await engine.updateIssue(issueId, {
-      description: 'lane work on issue branch',
-    });
+    await engine.updateIssue(issueId, { description: 'lane work on issue branch' });
     await engine.leaveLane();
 
     const dry = await engine.promoteLane(laneId, { dryRun: true });
@@ -518,8 +475,6 @@ describe('Lane promote', () => {
 
     const result = await engine.promoteLane(laneId);
     expect(result.promoted).toBe(true);
-    expect(engine.getIssue(issueId)?.description).toBe(
-      'lane work on issue branch',
-    );
+    expect(engine.getIssue(issueId)?.description).toBe('lane work on issue branch');
   });
 });

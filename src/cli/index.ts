@@ -30,7 +30,6 @@ import {
 import { buildRAGContext } from '../embeddings/auto-embed.js';
 import { buildView, STATUS_ORDER, type IssueGroup } from './views.js';
 import type { IssueInfo } from '../vcs/issue.js';
-import type { IdentityConfig } from '../identity/identity.js';
 import { VectorStore } from '../embeddings/store.js';
 import { embed } from '../embeddings/model.js';
 import { EmbeddingManager } from '../embeddings/search.js';
@@ -43,9 +42,6 @@ import {
   loadIdentity,
   hasIdentity,
   toPublicIdentity,
-  savePersonIdentity,
-  loadPersonIdentity,
-  hasPersonIdentity,
   pairStart,
   pairJoin,
   pairApprove,
@@ -61,13 +57,13 @@ import {
   loadProfile,
   saveProfile,
   hasProfile,
+  promptForProfile,
   updateProfile,
   inferProjectContext,
   writeAgentScaffold,
   writeIdeScaffold,
   seedContext,
 } from '../scaffold/index.js';
-import { onboardFirstRun } from './onboarding.js';
 import { cliVersion, findRepoRoot, resolveRepoRoot } from './repo-path.js';
 import { handleCliError } from './errors.js';
 import { applyInitIndexGate } from '../vcs/init-storage-guard.js';
@@ -89,14 +85,7 @@ import { registerDoctorCommand } from './doctor.js';
 import { registerQueryStressCommand } from './query-stress.js';
 import { registerStorageCommand } from './storage.js';
 import { registerRemoteCommands } from './remote-cli.js';
-import { registerCloneCommands } from './clone-cli.js';
 import { registerLedgerSpriteCommands } from './ledger-sprite-cli.js';
-import { registerSyncCommands } from './sync-cli.js';
-import { registerRegistryCommands } from './registry-cli.js';
-import { registerPublishCommands } from './publish-cli.js';
-import { registerOpsCommands } from './ops-cli.js';
-import { registerWorkflowCommands } from './workflow-cli.js';
-import { registerPipelineCommands } from './pipeline-cli.js';
 
 export type IdeType =
   | 'cursor'
@@ -128,7 +117,7 @@ const program = new Command();
 program
   .name('trellis')
   .description('TrellisVCS — graph-native, code-first version control')
-  .version(cliVersion(), '-v, --version');
+  .version(cliVersion());
 
 async function runInit(
   rootPath: string,
@@ -140,7 +129,6 @@ async function runInit(
     plugins?: string[];
     indexWorkspace?: boolean;
     explicitIndexWorkspace?: boolean;
-    identity?: 'new' | 'existing' | 'skip';
   } = {},
 ): Promise<{
   selectedIdes: string[];
@@ -167,10 +155,22 @@ async function runInit(
   }
 
   if (!hasProfile()) {
-    await onboardFirstRun({
-      interactive: isInteractive,
-      identityFlag: opts.identity,
-    });
+    const identity = hasIdentity(rootPath)
+      ? loadIdentity(join(rootPath, '.trellis'))
+      : null;
+
+    if (isInteractive) {
+      console.log(chalk.cyan("\n  Welcome to Trellis! Let's get you set up."));
+      const newProfile = await promptForProfile({
+        name: identity?.displayName,
+      });
+      saveProfile(newProfile);
+      console.log(
+        chalk.green('  ✓ Profile saved to ~/.trellis/profile.json\n'),
+      );
+    } else {
+      updateProfile({ name: identity?.displayName || 'Unknown' });
+    }
   }
 
   const preInfer = await inferProjectContext(rootPath);
@@ -372,13 +372,13 @@ async function runInit(
     isInteractive,
     confirmLargeIndex: isInteractive
       ? async () => {
-          const { confirm } = await import('@inquirer/prompts');
-          return confirm({
-            message:
-              'This workspace exceeds the safe indexing threshold. Index all files anyway?',
-            default: false,
-          });
-        }
+        const { confirm } = await import('@inquirer/prompts');
+        return confirm({
+          message:
+            'This workspace exceeds the safe indexing threshold. Index all files anyway?',
+          default: false,
+        });
+      }
       : undefined,
   });
 
@@ -391,11 +391,7 @@ async function runInit(
     console.log(chalk.yellow(`  ⚠ ${gate.umbrellaWarning}`));
   }
 
-  const engine = new TrellisVcsEngine({
-    rootPath,
-    indexWorkspace,
-    provenance: PROVENANCE.cli,
-  });
+  const engine = new TrellisVcsEngine({ rootPath, indexWorkspace, provenance: PROVENANCE.cli });
   let renderedProgress = false;
   const result = await engine.initRepo({
     indexWorkspace,
@@ -483,10 +479,6 @@ program
   )
   .option('--no-index', 'Skip indexing existing workspace files during init')
   .option('--no-interactive', 'Skip interactive prompts')
-  .option(
-    '--identity <identity>',
-    'First-run onboarding: new (create identity), existing (pair a device), skip (stay anonymous)',
-  )
   .action(async (opts) => {
     try {
       const rootPath = resolve(opts.path);
@@ -500,10 +492,7 @@ program
 
       if (TrellisVcsEngine.isRepo(rootPath)) {
         if (opts.indexWorkspace === true && indexWorkspace !== false) {
-          const engine = new TrellisVcsEngine({
-            rootPath,
-            provenance: PROVENANCE.cli,
-          });
+          const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
           engine.open();
           let renderedProgress = false;
           const result = await engine.indexWorkspace({
@@ -538,7 +527,9 @@ program
           console.log(
             `  ${chalk.dim('Files indexed:')}  ${result.filesIndexed}`,
           );
-          console.log(`  ${chalk.dim('Ops created:')}    ${result.opsCreated}`);
+          console.log(
+            `  ${chalk.dim('Ops created:')}    ${result.opsCreated}`,
+          );
           return;
         }
 
@@ -554,7 +545,6 @@ program
         footprint,
         indexWorkspace: indexWorkspace ?? false,
         explicitIndexWorkspace: opts.indexWorkspace === true,
-        identity: opts.identity,
       });
 
       console.log(chalk.green('✓ Initialized Trellis repository'));
@@ -563,15 +553,12 @@ program
         `  ${chalk.dim('Files indexed:')}  ${configResult.filesIndexed}`,
       );
       console.log(
-        `  ${chalk.dim('Ops:')}            ${configResult.opsCreated} initial ${
-          configResult.opsCreated === 1 ? 'operation' : 'operations'
+        `  ${chalk.dim('Ops:')}            ${configResult.opsCreated} initial ${configResult.opsCreated === 1 ? 'operation' : 'operations'
         }`,
       );
       console.log(`  ${chalk.dim('Config:')}         .trellis/config.json`);
       console.log(`  ${chalk.dim('Op log:')}         .trellis/ops.json`);
-      console.log(
-        `  ${chalk.dim('Agent context:')}  .trellis/agents/AGENTS.md`,
-      );
+      console.log(`  ${chalk.dim('Agent context:')}  .trellis/agents/AGENTS.md`);
       const preInfer = await inferProjectContext(rootPath);
       if (preInfer.domain) {
         console.log(
@@ -714,9 +701,7 @@ program
       }
 
       if (result.lost === -1 && result.recovered === 0) {
-        console.log(
-          chalk.red('Repair failed — could not write recovered journal.'),
-        );
+        console.log(chalk.red('Repair failed — could not write recovered journal.'));
       } else if (result.lost === -1) {
         console.log(
           chalk.yellow(
@@ -732,9 +717,7 @@ program
           ),
         );
       } else {
-        console.log(
-          chalk.green('ops.json is already valid. No repair needed.'),
-        );
+        console.log(chalk.green('ops.json is already valid. No repair needed.'));
       }
     } catch (err: any) {
       console.error(chalk.red(err?.message ?? String(err)));
@@ -753,10 +736,7 @@ program
   .action(async (opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
     const st = engine.status();
 
@@ -810,10 +790,7 @@ program
   .action(async (opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
     let ops = engine.log({
       limit: parseInt(opts.limit, 10),
@@ -870,17 +847,17 @@ program
     const groupedOps =
       opts.all || opts.remote
         ? ops.reduce(
-            (groups, op) => {
-              const remoteFact = op.facts?.find(
-                (fact) => fact.e === 'op' && fact.a === 'remote',
-              );
-              const remote = remoteFact ? (remoteFact.v as string) : 'local';
-              if (!groups[remote]) groups[remote] = [];
-              groups[remote].push(op);
-              return groups;
-            },
-            {} as Record<string, typeof ops>,
-          )
+          (groups, op) => {
+            const remoteFact = op.facts?.find(
+              (fact) => fact.e === 'op' && fact.a === 'remote',
+            );
+            const remote = remoteFact ? (remoteFact.v as string) : 'local';
+            if (!groups[remote]) groups[remote] = [];
+            groups[remote].push(op);
+            return groups;
+          },
+          {} as Record<string, typeof ops>,
+        )
         : { local: ops };
 
     console.log(chalk.bold(`Causal Stream — ${ops.length} ops`));
@@ -920,10 +897,7 @@ program
   .action(async (opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
     const files = engine.trackedFiles();
 
@@ -954,10 +928,7 @@ program
   .action(async (opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
     await engine.syncEnvLaneFromEnv();
 
@@ -1097,9 +1068,7 @@ program
 
 const gitCmd = program
   .command('git')
-  .description(
-    'Git mirror adapter — Trellis owns semantics, git is downstream',
-  );
+  .description('Git mirror adapter — Trellis owns semantics, git is downstream');
 
 gitCmd
   .command('sync')
@@ -1109,29 +1078,14 @@ gitCmd
   .option('-m, --message <msg>', 'Commit message override')
   .action(async (opts) => {
     const rootPath = resolveRepoRoot(opts.path);
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
-    const result = await engine.syncGitIntegration({
+    const result = engine.syncGitIntegration({
       message: opts.message,
       push: opts.push,
       force: true,
     });
-
-    if (result.refused) {
-      console.error(
-        chalk.red(`✗ Git sync refused: ${result.reason ?? 'working tree out of sync'}`),
-      );
-      console.error(
-        chalk.dim(
-          'The working tree could not be reconciled with the op-log — nothing was materialized or committed.',
-        ),
-      );
-      process.exit(1);
-    }
 
     if (result.committed) {
       console.log(
@@ -1169,10 +1123,7 @@ program
   .action(async (name, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     // Delete
@@ -1269,19 +1220,13 @@ program
   .option('-m, --message <message>', 'Milestone message')
   .option('--from <hash>', 'Start op hash for the milestone range')
   .option('--to <hash>', 'End op hash for the milestone range')
-  .option(
-    '--commit',
-    'Auto-commit to git using the milestone message (integration only)',
-  )
+  .option('--commit', 'Auto-commit to git using the milestone message (integration only)')
   .option('--json', 'Emit machine-readable JSON (no color)')
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (action, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     if (action === 'create') {
@@ -1320,18 +1265,10 @@ program
             ),
           );
         } else {
-          const sync = await engine.syncGitIntegration({
+          const sync = engine.syncGitIntegration({
             message: opts.message,
             force: true,
           });
-          if (sync.refused) {
-            console.error(
-              chalk.red(
-                `✗ Git sync refused: ${sync.reason ?? 'working tree out of sync'}`,
-              ),
-            );
-            process.exit(1);
-          }
           if (sync.committed) {
             console.log(
               chalk.green(
@@ -1405,10 +1342,7 @@ program
   .action(async (action, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     if (action === 'create') {
@@ -1454,10 +1388,7 @@ program
   .action((from, to, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     let result;
@@ -1535,10 +1466,7 @@ program
   .action((branch, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const result = engine.mergeBranch(branch);
@@ -1581,10 +1509,7 @@ program
   .option('-p, --path <path>', 'Repository path', '.')
   .action((file, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const { readFileSync } = require('fs');
@@ -1643,10 +1568,7 @@ program
   .option('-p, --path <path>', 'Repository path', '.')
   .action((fileA, fileB, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const { readFileSync } = require('fs');
@@ -1730,10 +1652,7 @@ program
   .action((action, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
     const ops = engine.getOps();
 
@@ -1754,10 +1673,7 @@ program
         process.exit(1);
       }
 
-      const remoteEngine = new TrellisVcsEngine({
-        rootPath: remotePath,
-        provenance: PROVENANCE.cli,
-      });
+      const remoteEngine = new TrellisVcsEngine({ rootPath: remotePath, provenance: PROVENANCE.cli });
       remoteEngine.open();
       const remoteOps = remoteEngine.getOps();
 
@@ -1816,10 +1732,7 @@ program
   .action((action, id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
     const garden = engine.garden();
 
@@ -2075,10 +1988,7 @@ issueCmd
   .action(async (opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const labels = opts.labels
@@ -2087,11 +1997,11 @@ issueCmd
 
     const criteria = opts.ac
       ? opts.ac.map((ac: string) => {
-          if (ac.startsWith('test:')) {
-            return { description: ac.slice(5), command: ac.slice(5) };
-          }
-          return { description: ac };
-        })
+        if (ac.startsWith('test:')) {
+          return { description: ac.slice(5), command: ac.slice(5) };
+        }
+        return { description: ac };
+      })
       : undefined;
 
     const op = await engine.createIssue(opts.title, {
@@ -2140,7 +2050,10 @@ issueCmd
     '--sort <sort>',
     'Sort by: priority, created, started, progress, blocked',
   )
-  .option('--group-by <group>', 'Group by: status, priority, label, assignee')
+  .option(
+    '--group-by <group>',
+    'Group by: status, priority, label, assignee',
+  )
   .option('--json', 'Emit machine-readable JSON (no color)')
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (opts) => {
@@ -2183,7 +2096,9 @@ async function listIssuesAction(opts: any): Promise<void> {
       }
     } else if (opts.remote) {
       // Filter by specific remote only
-      issues = issues.filter((issue) => issue.id.startsWith(`${opts.remote}:`));
+      issues = issues.filter((issue) =>
+        issue.id.startsWith(`${opts.remote}:`),
+      );
     }
   }
 
@@ -2244,9 +2159,10 @@ async function listIssuesAction(opts: any): Promise<void> {
 }
 
 // Bare `trellis issue` defaults to listing (agent DX parity with other entities).
-issueCmd.action(async (opts) => {
-  await listIssuesAction({ ...opts, path: opts.path ?? '.' });
-});
+issueCmd
+  .action(async (opts) => {
+    await listIssuesAction({ ...opts, path: opts.path ?? '.' });
+  });
 
 /**
  * Kanban: one column per status (backlog → closed), issues listed inside.
@@ -2277,8 +2193,7 @@ function renderKanban(groups: IssueGroup[]): void {
 
 function formatRowTail(issue: IssueInfo): string {
   const parts: string[] = [];
-  if (issue.labels?.length)
-    parts.push(chalk.dim(` [${issue.labels.join(',')}]`));
+  if (issue.labels?.length) parts.push(chalk.dim(` [${issue.labels.join(',')}]`));
   if (issue.assignee) parts.push(chalk.dim(` → ${issue.assignee}`));
   if (issue.claimedLaneId) parts.push(chalk.dim(` ⤷ ${issue.claimedLaneId}`));
   if (issue.isBlocked) parts.push(chalk.yellow(' 🔒 blocked'));
@@ -2309,7 +2224,10 @@ function renderTable(groups: IssueGroup[]): void {
   }
 }
 
-function renderList(groups: IssueGroup[], remoteScoped: boolean): void {
+function renderList(
+  groups: IssueGroup[],
+  remoteScoped: boolean,
+): void {
   const showGroup = groups.length > 1 || groups[0]?.key !== 'all';
   for (const group of groups) {
     if (showGroup) {
@@ -2334,10 +2252,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const issue = engine.getIssue(id);
@@ -2428,10 +2343,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.startIssue(id, {
@@ -2473,10 +2385,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.pauseIssue(id, opts.note);
@@ -2494,10 +2403,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.resumeIssue(id, { lane: !opts.noLane });
@@ -2520,10 +2426,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.triageIssue(id);
@@ -2551,10 +2454,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const updates: Record<string, any> = {};
@@ -2593,10 +2493,7 @@ issueCmd
   .action(async (id, description, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.updateIssue(id, { description });
@@ -2612,10 +2509,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.assignIssue(id, opts.to);
@@ -2633,10 +2527,7 @@ issueCmd
   .action(async (id, description, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.addCriterion(id, description, {
@@ -2664,10 +2555,7 @@ issueCmd
   .action(async (id, index, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.removeCriterion(id, parseInt(index, 10));
@@ -2685,10 +2573,7 @@ issueCmd
   .action(async (id, index, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.setCriterionStatus(id, parseInt(index, 10), 'passed');
@@ -2708,10 +2593,7 @@ issueCmd
   .action(async (id, index, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.setCriterionStatus(id, parseInt(index, 10), 'failed');
@@ -2728,10 +2610,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     console.log(chalk.bold(`Running criteria for ${id}...\n`));
@@ -2783,26 +2662,17 @@ issueCmd
   )
   .argument('<id>', 'Issue ID')
   .option('--confirm', 'Confirm closure after criteria pass')
-  .option(
-    '--push',
-    'Push git main after close (requires git.sync or prior promote sync)',
-  )
+  .option('--push', 'Push git main after close (requires git.sync or prior promote sync)')
   .option(
     '--no-promote',
     'Refuse close if the issue lane still has unpromoted ops (require explicit trellis lane promote first)',
   )
-  .option(
-    '--require-test',
-    'Run promote.require test suites during auto-promote',
-  )
+  .option('--require-test', 'Run promote.require test suites during auto-promote')
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const lane = engine.findLaneForIssue(id);
@@ -2813,7 +2683,11 @@ issueCmd
       engine.getLaneOpCount(lane.id) > 0 &&
       !opts.noPromote
     ) {
-      console.log(chalk.dim(`Auto-promoting lane ${lane.id} before close…`));
+      console.log(
+        chalk.dim(
+          `Auto-promoting lane ${lane.id} before close…`,
+        ),
+      );
     }
 
     try {
@@ -2873,10 +2747,7 @@ issueCmd
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.reopenIssue(id);
@@ -2892,10 +2763,7 @@ issueCmd
   .action(async (id, blockedBy, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.blockIssue(id, blockedBy);
@@ -2915,10 +2783,7 @@ issueCmd
   .action(async (id, blockedBy, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     await engine.unblockIssue(id, blockedBy);
@@ -2936,10 +2801,7 @@ issueCmd
   .action((opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const active = engine.getActiveIssues();
@@ -2969,10 +2831,7 @@ issueCmd
   .action((opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const result = engine.checkCompletionReadiness();
@@ -3057,9 +2916,10 @@ function listDecisionsAction(opts: any): void {
 }
 
 // Bare `trellis decision` defaults to listing (agent DX parity with other entities).
-decisionCmd.action((opts) => {
-  listDecisionsAction({ ...opts, path: opts.path ?? '.' });
-});
+decisionCmd
+  .action((opts) => {
+    listDecisionsAction({ ...opts, path: opts.path ?? '.' });
+  });
 
 decisionCmd
   .command('show')
@@ -3069,10 +2929,7 @@ decisionCmd
   .action((id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const d = engine.getDecision(id);
@@ -3113,10 +2970,7 @@ decisionCmd
   .action((entityId, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const chain = engine.getDecisionChain(entityId);
@@ -3144,25 +2998,19 @@ decisionCmd
 program
   .command('identity')
   .description('Manage local identity (Ed25519 key pair)')
-  .argument('[action]', '"init", "show", "export", or "import" (default: show)')
+  .argument('[action]', '"init" or "show" (default: show)')
   .option('-p, --path <path>', 'Repository path', '.')
   .option('--name <name>', 'Display name for new identity')
   .option('--email <email>', 'Email for new identity')
-  .option('--json <json>', 'Identity JSON for import')
-  .option('--local', 'Write/read the legacy per-repo identity, not the person key')
-  .action(async (action, opts) => {
+  .action((action, opts) => {
     const rootPath = resolve(opts.path);
     const trellisDir = join(rootPath, '.trellis');
-    const usePerson = !opts.local;
 
     if (action === 'init') {
-      const exists = usePerson
-        ? hasPersonIdentity()
-        : hasIdentity(trellisDir);
-      if (exists) {
+      if (hasIdentity(trellisDir)) {
         console.error(
           chalk.yellow(
-            `Identity already exists (${usePerson ? 'person scope ~/.trellis' : 'repo scope'}). Use \`trellis identity\` to view it.`,
+            'Identity already exists. Use `trellis identity` to view it.',
           ),
         );
         process.exit(1);
@@ -3172,13 +3020,9 @@ program
       const email = opts.email;
 
       const identity = createIdentity({ displayName: name, email });
-      if (usePerson) savePersonIdentity(identity);
-      else saveIdentity(trellisDir, identity);
+      saveIdentity(trellisDir, identity);
 
       console.log(chalk.green('✓ Identity created'));
-      console.log(
-        `  ${chalk.dim('Scope:')}  ${usePerson ? 'person (~/.trellis/identity.json)' : 'repo (.trellis/identity.json)'}`,
-      );
       console.log(`  ${chalk.dim('Name:')}  ${identity.displayName}`);
       if (identity.email) {
         console.log(`  ${chalk.dim('Email:')} ${identity.email}`);
@@ -3188,49 +3032,8 @@ program
       return;
     }
 
-    if (action === 'export') {
-      const identity = usePerson
-        ? loadPersonIdentity()
-        : loadIdentity(trellisDir);
-      if (!identity) {
-        console.error(
-          chalk.yellow(
-            'No identity configured. Run `trellis identity init --name "Your Name"`.',
-          ),
-        );
-        process.exit(1);
-      }
-      // Private key is included on purpose — export is the cross-VM path
-      // (ADR 0032 §3): the same person key on every VM.
-      console.log(JSON.stringify(identity, null, 2));
-      return;
-    }
-
-    if (action === 'import') {
-      const raw = opts.json ?? (await readStdin());
-      let parsed: IdentityConfig;
-      try {
-        parsed = JSON.parse(raw) as IdentityConfig;
-      } catch {
-        console.error(chalk.red('Failed to parse identity JSON.'));
-        process.exit(1);
-      }
-      if (!parsed.privateKey || !parsed.publicKey || !parsed.did) {
-        console.error(
-          chalk.red('Identity JSON must include publicKey, privateKey, and did.'),
-        );
-        process.exit(1);
-      }
-      if (usePerson) savePersonIdentity(parsed);
-      else saveIdentity(trellisDir, parsed);
-      console.log(chalk.green('✓ Identity imported'));
-      console.log(`  ${chalk.dim('Scope:')}  ${usePerson ? 'person (~/.trellis/identity.json)' : 'repo (.trellis/identity.json)'}`);
-      console.log(`  ${chalk.dim('DID:')}   ${parsed.did}`);
-      return;
-    }
-
     // Show (default)
-    const identity = usePerson ? loadPersonIdentity() : loadIdentity(trellisDir);
+    const identity = loadIdentity(trellisDir);
     if (!identity) {
       console.log(
         chalk.dim(
@@ -3242,9 +3045,6 @@ program
 
     const pub = toPublicIdentity(identity);
     console.log(chalk.bold('Identity\n'));
-    console.log(
-      `  ${chalk.dim('Scope:')}       ${usePerson ? 'person (~/.trellis/identity.json)' : 'repo (.trellis/identity.json)'}`,
-    );
     console.log(`  ${chalk.dim('Name:')}       ${pub.displayName}`);
     if (pub.email) {
       console.log(`  ${chalk.dim('Email:')}      ${pub.email}`);
@@ -3256,56 +3056,25 @@ program
   });
 
 // ---------------------------------------------------------------------------
-// trellis pair
+// trellis pair (ADR 0020 Phase 0)
 // ---------------------------------------------------------------------------
-
-function relativeTime(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return `${s}s ago`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  return `${d}d ago`;
-}
-
-function stateColor(state: string, _label: string): string {
-  switch (state) {
-    case 'syncing':
-      return chalk.cyan(state);
-    case 'behind':
-      return chalk.yellow(state);
-    case 'diverged':
-    case 'offline':
-      return chalk.red(state);
-    case 'revoked':
-      return chalk.red(chalk.strikethrough(state));
-    default:
-      return chalk.green(state);
-  }
-}
 
 program
   .command('pair')
   .description(
-    'Device pairing under local Ed25519 identity (ADR 0020). Subcommands: start, join, approve, accept, list, show, revoke',
+    'Device pairing under local Ed25519 identity (ADR 0020). Subcommands: start, join, approve, accept, list, revoke',
   )
-  .argument('<action>', 'start | join | approve | accept | list | show | revoke')
   .argument(
-    '[payload]',
-    'Challenge / join / auth payload (or deviceId for revoke)',
+    '<action>',
+    'start | join | approve | accept | list | revoke',
   )
+  .argument('[payload]', 'Challenge / join / auth payload (or deviceId for revoke)')
   .option('-p, --path <path>', 'Repository path', '.')
   .option('--label <label>', 'Device label (join)')
-  .option('--kind <kind>', 'Device kind (join): desktop, cli, cloud-sprite')
-  .option('--transport <transport>', 'Device transport (join): ws, http, iroh')
-  .option('--push <url>', 'Notify a peer via WS after revoke (device-revoked signal)')
   .option('--yes', 'Confirm approve after reviewing fingerprint')
   .option('--qr', 'Force terminal QR for OOB payloads (even when not a TTY)')
   .option('--no-qr', 'Skip terminal QR')
-  .action(async (action, payload, opts) => {
+  .action((action, payload, opts) => {
     const rootPath = resolve(opts.path);
     const trellisDir = join(rootPath, '.trellis');
     const showQr =
@@ -3346,19 +3115,13 @@ program
 
       if (action === 'join') {
         if (!payload) {
-          console.error(
-            chalk.red('Usage: trellis pair join <challenge-payload>'),
-          );
+          console.error(chalk.red('Usage: trellis pair join <challenge-payload>'));
           process.exit(1);
         }
         const { payload: out, local } = pairJoin(trellisDir, payload, {
           deviceLabel: opts.label,
-          kind: opts.kind as any,
-          transport: opts.transport as any,
         });
-        console.log(
-          chalk.green('✓ Join response ready — send to approving device'),
-        );
+        console.log(chalk.green('✓ Join response ready — send to approving device'));
         console.log(`  ${chalk.dim('Device:')} ${local.deviceId}`);
         console.log(
           `  ${chalk.dim('Fingerprint:')} ${deviceFingerprint(local.publicKey)}`,
@@ -3388,27 +3151,27 @@ program
               ),
             );
             console.log(
-              chalk.dim(
-                'Re-run with --yes to authorize after verifying fingerprint.',
-              ),
+              chalk.dim('Re-run with --yes to authorize after verifying fingerprint.'),
             );
           } catch (e) {
             console.error(chalk.red((e as Error).message));
           }
           process.exit(1);
         }
-        const {
-          payload: out,
-          fingerprint,
-          signed,
-        } = pairApprove(trellisDir, payload, { yes: true });
+        const { payload: out, fingerprint, signed } = pairApprove(
+          trellisDir,
+          payload,
+          { yes: true },
+        );
         console.log(chalk.green('✓ Device authorized'));
         console.log(
           `  ${chalk.dim('Device ID:')} ${signed.authorization.deviceId}`,
         );
         console.log(`  ${chalk.dim('Fingerprint:')} ${fingerprint}`);
         printQr('Scan on joining device:', out);
-        console.log(`  ${chalk.dim('Auth payload (send to joining device):')}`);
+        console.log(
+          `  ${chalk.dim('Auth payload (send to joining device):')}`,
+        );
         console.log(out);
         return;
       }
@@ -3419,12 +3182,8 @@ program
           process.exit(1);
         }
         const { local, authorization } = pairAccept(trellisDir, payload);
-        console.log(
-          chalk.green('✓ Pairing accepted — this device can sign as identity'),
-        );
-        console.log(
-          `  ${chalk.dim('Identity:')} ${authorization.identityEntityId}`,
-        );
+        console.log(chalk.green('✓ Pairing accepted — this device can sign as identity'));
+        console.log(`  ${chalk.dim('Identity:')} ${authorization.identityEntityId}`);
         console.log(`  ${chalk.dim('Device:')}   ${local.deviceId}`);
         return;
       }
@@ -3435,115 +3194,26 @@ program
           console.log(chalk.dim('No paired devices in local registry.'));
           return;
         }
-        console.log(chalk.bold('Paired devices (person-scoped registry)\n'));
+        console.log(chalk.bold('Paired devices (local registry)\n'));
         for (const d of devices) {
-          const kind = d.kind ?? 'cli';
-          const transport = d.transport ?? '';
-          const state = d.syncState ?? (d.revokedAt ? 'revoked' : 'idle');
-          const seen = d.lastSeenAt
-            ? relativeTime(d.lastSeenAt)
-            : chalk.dim('never');
           console.log(
-            `  ${d.deviceId}  ${chalk.dim(d.deviceLabel ?? '')} ${chalk.dim(kind)}${transport ? chalk.dim(`/${transport}`) : ''} ${stateColor(state, state)}  ${chalk.dim('seen ' + seen)}  fp=${deviceFingerprint(d.devicePublicKey)}`,
+            `  ${d.deviceId}  ${chalk.dim(d.deviceLabel ?? '')}  fp=${deviceFingerprint(d.devicePublicKey)}`,
           );
         }
-        return;
-      }
-
-      if (action === 'show') {
-        if (!payload) {
-          console.error(chalk.red('Usage: trellis pair show <deviceId>'));
-          process.exit(1);
-        }
-        const devices = listDevices(trellisDir);
-        const rec = devices.find((d) => d.deviceId === payload);
-        if (!rec) {
-          console.error(
-            chalk.red(`Device not found in registry: ${payload}`),
-          );
-          process.exit(1);
-        }
-        console.log(chalk.bold('Device\n'));
-        console.log(`  ${chalk.dim('ID:')}          ${rec.deviceId}`);
-        console.log(
-          `  ${chalk.dim('Label:')}       ${rec.deviceLabel ?? chalk.dim('-')}`,
-        );
-        console.log(
-          `  ${chalk.dim('Kind:')}        ${rec.kind ?? 'cli'}`,
-        );
-        console.log(
-          `  ${chalk.dim('Transport:')}   ${rec.transport ?? chalk.dim('-')}`,
-        );
-        console.log(`  ${chalk.dim('Authorized:')}  ${rec.authorizedAt}`);
-        console.log(
-          `  ${chalk.dim('Last seen:')}   ${rec.lastSeenAt ?? chalk.dim('never')}`,
-        );
-        console.log(
-          `  ${chalk.dim('Sync state:')}  ${stateColor(rec.syncState ?? 'idle', rec.syncState ?? 'idle')}`,
-        );
-        console.log(
-          `  ${chalk.dim('Last sync op:')} ${rec.lastSyncOpHash ?? chalk.dim('-')}`,
-        );
-        console.log(
-          `  ${chalk.dim('Revoked:')}     ${rec.revokedAt ?? chalk.dim('no')}`,
-        );
-        console.log(
-          `  ${chalk.dim('Fingerprint:')} ${deviceFingerprint(rec.devicePublicKey)}`,
-        );
         return;
       }
 
       if (action === 'revoke') {
         if (!payload) {
-          console.error(chalk.red('Usage: trellis pair revoke <deviceId> [--push <ws-url>]'));
+          console.error(chalk.red('Usage: trellis pair revoke <deviceId>'));
           process.exit(1);
         }
         const ok = revokeDevice(trellisDir, payload);
         if (!ok) {
-          console.error(
-            chalk.red(`Device not found or already revoked: ${payload}`),
-          );
+          console.error(chalk.red(`Device not found or already revoked: ${payload}`));
           process.exit(1);
         }
-        console.log(
-          chalk.green(`✓ Revoked ${payload} ${opts.push ? '(local + pushed)' : '(local registry only — use --push <ws-url> to notify peers)'}`),
-        );
-
-        // Slice D — revocation signal: notify connected peers so their
-        // registries update and their resolvers fail closed on the key.
-        if (opts.push) {
-          try {
-            const { WebSocketTransport } = await import(
-              '../sync/websocket-transport.js'
-            );
-            const { getSigningMaterial } = await import(
-              '../identity/pairing.js'
-            );
-            const transport = new WebSocketTransport({
-              url: opts.push,
-              localPeerId: `revoke-${payload}`,
-            });
-            await transport.connect();
-            const material = getSigningMaterial(trellisDir);
-            await transport.send('server', {
-              version: 1,
-              type: 'device-revoked',
-              peerId: `revoke-${payload}`,
-              deviceId: payload,
-              identityEntityId: material?.identityEntityId ?? '',
-              revokedBy: material?.signedWith ?? 'root',
-              timestamp: new Date().toISOString(),
-            });
-            await transport.disconnect();
-            console.log(chalk.green(`  ✓ Sent revocation signal to ${opts.push}`));
-          } catch (err: any) {
-            console.error(
-              chalk.yellow(
-                `  ⚠ Revoked locally, but failed to notify peers: ${err.message}`,
-              ),
-            );
-          }
-        }
+        console.log(chalk.green(`✓ Revoked ${payload} (local registry only)`));
         return;
       }
 
@@ -3577,10 +3247,7 @@ program
   .action((file, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const { readFileSync } = require('fs');
@@ -3790,10 +3457,7 @@ program
   .action(async (query, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const { EmbeddingManager } = require('../embeddings/index.js');
@@ -3854,10 +3518,7 @@ program
   .action(async (opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const { EmbeddingManager } = require('../embeddings/index.js');
@@ -4009,10 +3670,7 @@ async function withGraphStore(
   }) => Promise<void>,
 ): Promise<void> {
   if (TrellisVcsEngine.isRepo(rootPath)) {
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
     await fn({ mode: 'vcs', engine });
     return;
@@ -4173,13 +3831,13 @@ entityCmd
       const entities =
         mode === 'vcs' && engine
           ? engine.listStoreEntities(
-              opts.type,
-              Object.keys(filters).length > 0 ? filters : undefined,
-            )
+            opts.type,
+            Object.keys(filters).length > 0 ? filters : undefined,
+          )
           : kernel!.listEntities(
-              opts.type,
-              Object.keys(filters).length > 0 ? filters : undefined,
-            );
+            opts.type,
+            Object.keys(filters).length > 0 ? filters : undefined,
+          );
 
       if (opts.json) {
         const out = entities.map((e) => {
@@ -4436,10 +4094,7 @@ program
   .action(async (opts: any) => {
     const rootPath = resolveRepoRoot(opts.path);
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     const examples = buildRepoExamples({
@@ -4553,7 +4208,7 @@ program
 
     let store: any;
     let engine: QueryEngine;
-    let closeStore: () => void = () => {};
+    let closeStore: () => void = () => { };
 
     if (TrellisVcsEngine.isRepo(rootPath)) {
       const vcsEngine = new TrellisVcsEngine({
@@ -4571,7 +4226,9 @@ program
 
     console.log(chalk.cyan.bold('Trellis TQL REPL'));
     console.log(
-      chalk.dim('Type TQL queries or "find ?e where attr = value" shorthand.'),
+      chalk.dim(
+        'Type TQL queries or "find ?e where attr = value" shorthand.',
+      ),
     );
     console.log(chalk.dim('Type .exit to quit, .help for help.\n'));
 
@@ -4800,10 +4457,10 @@ ontologyCmd
     console.log(
       chalk.dim(
         'Available ontologies: ' +
-          registry
-            .list()
-            .map((s) => s.id)
-            .join(', '),
+        registry
+          .list()
+          .map((s) => s.id)
+          .join(', '),
       ),
     );
     console.log(
@@ -5072,8 +4729,9 @@ db.command('serve')
     }
 
     const port = opts.port ? parseInt(opts.port) : (config.port ?? 3000);
-    const { DEFAULT_TENANT, resolvePoolBackendFromEnv } =
-      await import('../server/tenancy.js');
+    const { DEFAULT_TENANT, resolvePoolBackendFromEnv } = await import(
+      '../server/tenancy.js'
+    );
     const backendOpts = resolvePoolBackendFromEnv();
     const pool = new TenantPool(
       config.dbPath,
@@ -5308,9 +4966,7 @@ async function handleDeployCommand(opts: {
 
 // trellis db deploy
 registerDeployOptions(
-  db
-    .command('deploy')
-    .description('Deploy Trellis DB to a Sprites cloud environment'),
+  db.command('deploy').description('Deploy Trellis DB to a Sprites cloud environment'),
 ).action(handleDeployCommand);
 
 // trellis deploy — top-level alias (TurtleDB Cloud C0)
@@ -5369,33 +5025,6 @@ vmProgram
         hasTrellis: true,
         apiKey: result.apiKey,
       });
-
-      // Slice D — the sprite is a paired device: mint a cloud-sprite device
-      // key under the person identity, register it locally, install it on the
-      // sprite. Best-effort: without an identity this is skipped with a
-      // warning, not fatal.
-      try {
-        const { provisionSpriteDeviceKey } =
-          await import('../identity/sprite-device.js');
-        const { installSpriteDeviceKey } = await import('../server/deploy.js');
-        const { local, record } = provisionSpriteDeviceKey(
-          join(process.cwd(), '.trellis'),
-          { name },
-        );
-        await installSpriteDeviceKey(name, local, (msg) =>
-          console.log(chalk.dim(`  ${msg}`)),
-        );
-        console.log(
-          chalk.green(`✓ Sprite paired as device: ${chalk.bold(record.deviceId)}`),
-        );
-        console.log(chalk.dim(`  Kind: cloud-sprite · transport: ws`));
-      } catch (err: any) {
-        console.log(
-          chalk.yellow(
-            `  ⚠ Sprite not paired as a device (${err.message}). Run \`trellis identity init\` to onboard, then re-pair.`,
-          ),
-        );
-      }
 
       console.log('');
       console.log(
@@ -5941,7 +5570,7 @@ program
       existing.generatedAt = new Date().toISOString();
       existing.confidence = 'high';
       writeFileSync(agentContextPath, JSON.stringify(existing, null, 2));
-    } catch {}
+    } catch { }
 
     console.log();
     console.log(chalk.green('✓ Project context updated'));
@@ -6115,12 +5744,12 @@ program
       mcpServers: {
         'trellis-vcs': opts.web
           ? {
-              url: `${mcpUrl}/sse`,
-            }
+            url: `${mcpUrl}/sse`,
+          }
           : {
-              command: 'bun',
-              args: ['run', mcp, '--quiet', '--path', rootPath],
-            },
+            command: 'bun',
+            args: ['run', mcp, '--quiet', '--path', rootPath],
+          },
       },
     };
 
@@ -6282,7 +5911,7 @@ cmsCmd
   .command('register-library <pkg>')
   .description(
     'Register a Svelte 5 component library as DesignComponent entities. ' +
-      'The package must ship dist/components.json (see @turtle.tech/ui for the format).',
+    'The package must ship dist/components.json (see @turtle.tech/ui for the format).',
   )
   .option('-p, --path <path>', 'Repository path', '.')
   .option('--url <url>', 'Trellis server URL', 'http://localhost:4096')
@@ -6446,8 +6075,8 @@ program
         for (const remote of remotes) {
           const lastPulled = remote.pulledAt
             ? chalk.dim(
-                ` (pulled ${new Date(remote.pulledAt).toLocaleDateString()})`,
-              )
+              ` (pulled ${new Date(remote.pulledAt).toLocaleDateString()})`,
+            )
             : chalk.dim(' (never pulled)');
           console.log(
             `  ${chalk.cyan(remote.name)}: ${remote.path}${lastPulled}`,
@@ -6500,10 +6129,7 @@ program
     const { RemoteManager } = await import('../federation/remote-manager.js');
     const remoteManager = new RemoteManager(join(rootPath, '.trellis'));
 
-    const engine = new TrellisVcsEngine({
-      rootPath,
-      provenance: PROVENANCE.cli,
-    });
+    const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
     engine.open();
 
     try {
@@ -6638,7 +6264,8 @@ gatewayProgram
   .action(async (opts) => {
     const { startGatewayServer } = await import('../mcp/gateway-serve.js');
     const port = parseInt(opts.port, 10) || 3940;
-    const publicUrl = opts.publicUrl?.trim() || `http://localhost:${port}`;
+    const publicUrl =
+      opts.publicUrl?.trim() || `http://localhost:${port}`;
     const server = await startGatewayServer({
       port,
       configDir: opts.configDir,
@@ -6650,11 +6277,7 @@ gatewayProgram
     console.log(chalk.dim(`  MCP:      ${publicUrl}/mcp`));
     console.log(chalk.dim(`  Gateway:  ${publicUrl}/gateway/mcp`));
     console.log(chalk.dim(`  Health:   ${publicUrl}/health`));
-    console.log(
-      chalk.dim(
-        `  OAuth:    ${publicUrl}/.well-known/oauth-protected-resource`,
-      ),
-    );
+    console.log(chalk.dim(`  OAuth:    ${publicUrl}/.well-known/oauth-protected-resource`));
     console.log('');
     console.log(chalk.bold('Tools: list_rooms, get_room, connect_room'));
 
@@ -6677,12 +6300,11 @@ gatewayProgram
     'Vanity URL for agents',
     'https://mcp.trellis.computer',
   )
-  .option('--port <port>', 'Port inside Sprite (default: 8080)')
   .option(
-    '--config-dir <dir>',
-    'Directory for gateway config + room registry',
-    '.',
+    '--port <port>',
+    'Port inside Sprite (default: 8080)',
   )
+  .option('--config-dir <dir>', 'Directory for gateway config + room registry', '.')
   .option(
     '--rooms-file <path>',
     'Extra rooms JSON merged into .trellis-rooms.json at deploy',
@@ -6714,23 +6336,7 @@ registerDoctorCommand(program);
 registerQueryStressCommand(program);
 registerStorageCommand(program);
 registerRemoteCommands(program);
-registerCloneCommands(program);
 registerLedgerSpriteCommands(program);
-registerSyncCommands(program);
-registerRegistryCommands(program);
-registerPublishCommands(program);
-registerOpsCommands(program);
-registerWorkflowCommands(program);
-registerPipelineCommands(program);
-
-/** Read all of stdin as a string (used by `identity import`). */
-async function readStdin(): Promise<string> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of process.stdin) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-  }
-  return Buffer.concat(chunks).toString('utf-8');
-}
 
 // ---------------------------------------------------------------------------
 // trellis who / trellis presence — ambient agent awareness (TRL stigmergy)
@@ -6829,12 +6435,9 @@ program
 
 program
   .command('presence')
-  .description("Manage this session's ambient presence heartbeat")
+  .description('Manage this session\'s ambient presence heartbeat')
   .argument('[action]', '"announce" or "clear" (default: announce)')
-  .option(
-    '--client <client>',
-    'Client/provider tag (opencode|claude|gemini|codex)',
-  )
+  .option('--client <client>', 'Client/provider tag (opencode|claude|gemini|codex)')
   .option('--status <status>', 'active | idle | away', 'active')
   .option('-p, --path <path>', 'Repository path', '.')
   .action((action, opts) => {
@@ -6852,9 +6455,7 @@ program
     info.status = opts.status as PresenceInfo['status'];
     writeHeartbeat(rootPath, info);
     console.log(
-      chalk.green(
-        `✓ Presence announced as ${info.displayName} (${info.client})`,
-      ),
+      chalk.green(`✓ Presence announced as ${info.displayName} (${info.client})`),
     );
   });
 

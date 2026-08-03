@@ -248,7 +248,7 @@ export function registerWorkflowCommands(program: Command): void {
         }
         if (opts.active !== undefined) updates.active = opts.active === 'true' || opts.active === true;
 
-        await kernel.updateEntity(id, updates as any, AGENT_CTX);
+        await kernel.updateEntity(id, updates, AGENT_CTX);
         console.log(chalk.green(`✓ Workflow updated: ${id}`));
         close();
       } catch (err) {

@@ -48,9 +48,9 @@ export function createComboboxStore(input: ComboboxInput): ComboboxStore {
 
   return {
     state: toSvelteStore(core),
-    query: toSvelteStore(core, (s: any) => s.query),
-    results: toSvelteStore(core, (s: any) => s.results),
-    highlight: toSvelteStore(core, (s: any) => s.highlight),
+    query: toSvelteStore(core, (s) => s.query),
+    results: toSvelteStore(core, (s) => s.results),
+    highlight: toSvelteStore(core, (s) => s.highlight),
     actions: core.actions,
     core,
   };

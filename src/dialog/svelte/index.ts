@@ -47,7 +47,7 @@ export function createDialogStore(input: DialogInput = {}): DialogStore {
 
   return {
     state: toSvelteStore(core),
-    top: toSvelteStore(core, (s: any) => s.top),
+    top: toSvelteStore(core, (s) => s.top),
     actions: core.actions,
     core,
   };
