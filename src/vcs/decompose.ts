@@ -672,6 +672,35 @@ export function decompose(op: VcsOp): DecomposedOp {
       break;
     }
 
+    case 'vcs:chatMessage': {
+      // Transcripts decompose into EAV entities (conversation + message) so
+      // they are queryable and embeddable like any other graph content.
+      // Entity ids are deterministic from op content so replay is idempotent.
+      if (!vcs.chatSessionId) break;
+      const conv = `conversation:${vcs.chatSessionId}`;
+      const msg = `message:${op.hash}`;
+      result.addFacts.push(
+        { e: conv, a: 'type', v: 'Conversation' },
+        { e: conv, a: 'createdAt', v: op.timestamp },
+        { e: msg, a: 'type', v: 'ChatMessage' },
+        { e: msg, a: 'role', v: vcs.chatRole ?? 'assistant' },
+        { e: msg, a: 'text', v: vcs.chatText ?? '' },
+        { e: msg, a: 'createdAt', v: op.timestamp },
+        { e: msg, a: 'createdBy', v: op.agentId },
+      );
+      if (vcs.chatLaneId) {
+        result.addFacts.push({ e: msg, a: 'laneId', v: vcs.chatLaneId });
+      }
+      if (vcs.chatToolName) {
+        result.addFacts.push({ e: msg, a: 'toolName', v: vcs.chatToolName });
+      }
+      if (typeof vcs.chatTokens === 'number') {
+        result.addFacts.push({ e: msg, a: 'tokens', v: vcs.chatTokens });
+      }
+      result.addLinks.push({ e1: conv, a: 'hasMessage', e2: msg });
+      break;
+    }
+
     case 'vcs:laneCreate': {
       if (!vcs.laneId) break;
       const lid = laneEntityId(vcs.laneId);

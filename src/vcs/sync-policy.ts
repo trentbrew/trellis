@@ -43,6 +43,19 @@ export interface QuarantineEntry {
 }
 
 /**
+ * Op kinds that never leave the local desk unless a team opts in.
+ *
+ * Chat transcripts are local-only by default (privacy is the default; sync is
+ * the decision). Peer-sync producers must filter ops by kind through
+ * `isLocalOnlyOpKind` before delivery.
+ */
+export const LOCAL_ONLY_OP_KINDS: readonly string[] = ['vcs:chatMessage'];
+
+export function isLocalOnlyOpKind(kind: string): boolean {
+  return LOCAL_ONLY_OP_KINDS.includes(kind);
+}
+
+/**
  * Default policies by environment type.
  */
 export const DEFAULT_POLICIES: Record<string, SyncPolicy> = {

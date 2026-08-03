@@ -39,6 +39,8 @@ import type { EngineContext, ApplyOpOptions } from './vcs/engine-context.js';
 import * as branchMod from './vcs/branch.js';
 import * as milestoneMod from './vcs/milestone.js';
 import * as checkpointMod from './vcs/checkpoint.js';
+import { writeCheckpoint, loadCheckpoint } from './protocol/whereami.js';
+import type { ReentryCheckpoint } from './protocol/whereami.js';
 import * as diffMod from './vcs/diff.js';
 import * as mergeMod from './vcs/merge.js';
 import * as issueMod from './vcs/issue.js';
@@ -49,6 +51,7 @@ import { createProjectAttestation } from './vcs/project.js';
 import type { Atom } from './core/store/eav-store.js';
 import type { EntityRecord } from './core/kernel/trellis-kernel.js';
 import * as decisionMod from './decisions/index.js';
+import * as transcriptMod from './vcs/transcript.js';
 import { IdeaGarden, buildMilestonedOpHashes } from './garden/index.js';
 import {
   typescriptParser,
@@ -386,6 +389,9 @@ export class TrellisVcsEngine {
   private writePersistedConfig(createdAt?: string): PersistedConfig {
     const existing = this.readPersistedConfig();
     const persistedConfig: PersistedConfig = {
+      // Preserve unknown/harness keys (e.g. `transcripts`) across re-inits —
+      // re-initializing a repo must never clobber opt-in config.
+      ...(existing ?? {}),
       rootPath: this.config.rootPath,
       ignorePatterns: this.config.ignorePatterns,
       debounceMs: this.config.debounceMs,
@@ -1148,6 +1154,86 @@ for (const event of scanEvents) {
     return this.activeLaneId;
   }
 
+  /**
+   * Write a re-entry checkpoint (`.trellis/reentry-checkpoint.json`) capturing
+   * the active lane's issue — the harness-side "session end" bookkeeping.
+   * Never promotes; checkpointing is always safe.
+   */
+  writeReentryCheckpoint(): ReentryCheckpoint {
+    const laneId = this.getActiveLaneId();
+    const issueIds: string[] = [];
+    if (laneId) {
+      const meta = this.getLaneMeta(laneId);
+      if (meta?.issueId) issueIds.push(meta.issueId);
+    }
+    return writeCheckpoint(this.config.rootPath, issueIds, []);
+  }
+
+  /**
+   * Re-entry status for the harness "whereami" banner: the persisted
+   * checkpoint (if any) plus the active lane's issue.
+   */
+  reentryStatus(): {
+    checkpoint: ReentryCheckpoint | null;
+    activeLaneId?: string;
+    issueIds: string[];
+  } {
+    const cp = loadCheckpoint(this.config.rootPath);
+    const laneId = this.getActiveLaneId();
+    const issueIds: string[] = [];
+    if (laneId) {
+      const meta = this.getLaneMeta(laneId);
+      if (meta?.issueId) issueIds.push(meta.issueId);
+    }
+    return { checkpoint: cp, activeLaneId: laneId, issueIds };
+  }
+
+  /**
+   * Persist a session's LLM usage rollup as a `session:<id>` EAV entity
+   * (latest write wins). Store-only — no op journal pollution. Backs the
+   * harness token/cost visibility (Phase 2).
+   */
+  recordSessionUsage(input: {
+    sessionId: string;
+    laneId?: string;
+    tokens: number;
+    inputTokens?: number;
+    outputTokens?: number;
+    cost?: number;
+    model?: string;
+  }): void {
+    const store = this.getEavStore();
+    const eid = `session:${input.sessionId}`;
+    const existing = store.getFactsByEntity(eid);
+    if (existing.length > 0) store.deleteFacts(existing);
+    const now = new Date().toISOString();
+    const facts: Fact[] = [
+      { e: eid, a: 'type', v: 'SessionUsage' },
+      { e: eid, a: 'tokens', v: input.tokens },
+      { e: eid, a: 'updatedAt', v: now },
+    ];
+    if (input.laneId) facts.push({ e: eid, a: 'laneId', v: input.laneId });
+    if (typeof input.inputTokens === 'number') {
+      facts.push({ e: eid, a: 'inputTokens', v: input.inputTokens });
+    }
+    if (typeof input.outputTokens === 'number') {
+      facts.push({ e: eid, a: 'outputTokens', v: input.outputTokens });
+    }
+    if (typeof input.cost === 'number') facts.push({ e: eid, a: 'cost', v: input.cost });
+    if (input.model) facts.push({ e: eid, a: 'model', v: input.model });
+    store.addFacts(facts);
+  }
+
+  /** Read back a session usage rollup, if recorded. */
+  getSessionUsage(sessionId: string): Record<string, unknown> | null {
+    const store = this.getEavStore();
+    const facts = store.getFactsByEntity(`session:${sessionId}`);
+    if (facts.length === 0) return null;
+    const out: Record<string, unknown> = {};
+    for (const f of facts) out[f.a] = f.v;
+    return out;
+  }
+
   /** Whether milestones should auto-commit to git on create (config opt-in). */
   get milestoneAutoCommit(): boolean {
     return this.config.milestones?.autoCommit === true;
@@ -1325,16 +1411,163 @@ for (const event of scanEvents) {
   }
 
   /**
-   * Mirror integration branch file state to the primary git worktree and commit.
+   * Journal the current working tree into the integration op-log.
+   *
+   * Reconciles the *actual* files on disk against the op-log's recorded file
+   * state (`buildFileStateAtOp`) and emits `vcs:fileAdd` / `vcs:fileModify`
+   * ops for every divergence, then advances `branch` (the git-sync target) to
+   * the last journaled op so a subsequent materialize sees the reconciled
+   * state. This closes the journaling gap that let an un-journaled working
+   * tree get clobbered by `git sync` materialization: after catch-up, the
+   * op-log file state matches disk, so a subsequent materialize is a no-op
+   * instead of a revert.
+   *
+   * Returns the count of ops journaled and any paths that could not be
+   * reconciled (unreadable, blob-store failure). Callers that require a safe
+   * materialize should refuse when `unreconciled.length > 0`.
    */
-  syncGitIntegration(opts?: {
+  async journalWorkingTreeToOps(opts?: {
+    branch?: string;
+    onProgress?: (progress: {
+      phase: 'scanning' | 'journaling' | 'done';
+      current: number;
+      total: number;
+      message: string;
+    }) => void;
+  }): Promise<{ journaled: number; unreconciled: string[] }> {
+    const root = this.config.rootPath;
+    if (!this._blobStore || !this._blobResolver) {
+      return { journaled: 0, unreconciled: [] };
+    }
+
+    // 1. Current op-log file state (cumulative, all ops).
+    const state = diffMod.buildFileStateAtOp(this.opLog.readAll());
+
+    // 2. Scan disk (same ignore rules as the watcher, plus .trellis).
+    const watcher = new FileWatcher({
+      rootPath: root,
+      ignorePatterns: [...this.config.ignorePatterns, '.trellis'],
+      debounceMs: 0,
+      onEvent: async () => {},
+    });
+    const events = await watcher.scan();
+
+    const journaled: string[] = [];
+    const unreconciled: string[] = [];
+
+    for (const event of events) {
+      const known = state.get(event.path);
+      if (known && !known.deleted && known.contentHash === event.contentHash) {
+        continue; // already journaled at this content
+      }
+      if (event.type !== 'add') continue; // scan emits adds only
+
+      const absPath = join(root, event.path);
+      let content: Buffer;
+      try {
+        content = await readFile(absPath);
+      } catch {
+        unreconciled.push(event.path);
+        continue;
+      }
+      try {
+        if (
+          event.contentHash &&
+          !this._blobResolver?.canSkipPut(event.path, event.contentHash)
+        ) {
+          await this._blobStore.put(content);
+        }
+        const op = await createVcsOp(
+          known && !known.deleted ? 'vcs:fileModify' : 'vcs:fileAdd',
+          {
+            agentId: this.agentId,
+            previousHash: this.opLog.getLastOp()?.hash,
+            vcs: {
+              filePath: event.path,
+              contentHash: event.contentHash,
+              oldContentHash: known && !known.deleted ? known.contentHash : undefined,
+              size: event.size,
+            },
+          },
+        );
+        await this.applyOp(op, {
+          skipOwnershipCheck: true,
+          allowIntegrationWrite: true,
+        });
+        journaled.push(event.path);
+      } catch (err) {
+        unreconciled.push(event.path);
+      }
+    }
+
+    // 3. Detect deletions: files in the op-log state that no longer exist on disk.
+    const diskPaths = new Set(events.map((e) => e.path));
+    for (const [path, fileState] of state) {
+      if (fileState.deleted || diskPaths.has(path)) continue;
+      const absPath = join(root, path);
+      if (existsSync(absPath)) continue;
+      try {
+        const op = await createVcsOp('vcs:fileDelete', {
+          agentId: this.agentId,
+          previousHash: this.opLog.getLastOp()?.hash,
+          vcs: {
+            filePath: path,
+            oldContentHash: fileState.contentHash,
+          },
+        });
+        await this.applyOp(op, {
+          skipOwnershipCheck: true,
+          allowIntegrationWrite: true,
+        });
+        journaled.push(path);
+      } catch (err) {
+        unreconciled.push(path);
+      }
+    }
+
+    // 4. Advance the sync-target branch to the last journaled op so
+    //    `buildFileStateAtOp` (which stops at the branch head) includes the
+    //    reconciled state. Without this, catch-up ops appended after the
+    //    branch head would be invisible to materialization.
+    if (journaled.length > 0) {
+      const targetBranch = opts?.branch ?? this.currentBranch;
+      const lastOp = this.opLog.getLastOp();
+      if (lastOp) {
+        try {
+          const advanceOp = await createVcsOp('vcs:branchAdvance', {
+            agentId: this.agentId,
+            previousHash: lastOp.hash,
+            vcs: { branchName: targetBranch, targetOpHash: lastOp.hash },
+          });
+          await this.applyOp(advanceOp, {
+            skipBranchAdvance: true,
+            allowIntegrationWrite: true,
+          });
+        } catch (err) {
+          unreconciled.push(`branch:${targetBranch}`);
+        }
+      }
+    }
+
+    return { journaled: journaled.length, unreconciled };
+  }
+
+  /**
+   * Mirror integration branch file state to the primary git worktree and commit.
+   *
+   * Safe by construction (Phase C): the working tree is journaled into the
+   * op-log *before* any materialization, so the op-log file state always
+   * matches disk. If any path cannot be reconciled, the sync is refused —
+   * it never materializes stale blobs over a newer working tree.
+   */
+  async syncGitIntegration(opts?: {
     message?: string;
     push?: boolean;
     lane?: LaneMeta;
     laneOps?: VcsOp[];
     /** When true, sync even if git.syncOnPromote is false. */
     force?: boolean;
-  }): GitSyncResult {
+  }): Promise<GitSyncResult> {
     if (!this._blobResolver || !laneWorktreeMod.isGitRepo(this.config.rootPath)) {
       return { committed: false, pushed: false, filesMaterialized: 0 };
     }
@@ -1344,8 +1577,24 @@ for (const event of scanEvents) {
       return { committed: false, pushed: false, filesMaterialized: 0 };
     }
 
+    // Phase C catch-up: reconcile disk → op-log before materializing. Without
+    // this, a working tree with un-journaled edits would be overwritten by
+    // stale op-log blobs (9801056-regression class).
     const branch =
       this.config.git?.branch ?? this.config.defaultBranch ?? 'main';
+    const catchUp = await this.journalWorkingTreeToOps({ branch });
+    if (catchUp.unreconciled.length > 0) {
+      return {
+        committed: false,
+        pushed: false,
+        filesMaterialized: 0,
+        refused: true,
+        reason: `working tree could not be reconciled with the op-log (${catchUp.unreconciled
+          .slice(0, 5)
+          .join(', ')}${catchUp.unreconciled.length > 5 ? ', …' : ''})`,
+      };
+    }
+
     const integrationOps = this.opLog.readAll();
     const headOpHash =
       resolveIntegrationHead(integrationOps, branch) ??
@@ -1919,7 +2168,7 @@ for (const event of scanEvents) {
 
       let gitSync: GitSyncResult | undefined;
       if (this.config.git?.syncOnPromote !== false) {
-        gitSync = this.syncGitIntegration({
+        gitSync = await this.syncGitIntegration({
           lane: meta,
           laneOps,
           force: true,
@@ -2429,7 +2678,7 @@ for (const event of scanEvents) {
         const message = issue?.title
           ? `${id}: ${issue.title}`
           : `${id}: issue close`;
-        const gitSync = this.syncGitIntegration({
+        const gitSync = await this.syncGitIntegration({
           message,
           push: true,
           force: true,
@@ -2701,6 +2950,34 @@ for (const event of scanEvents) {
     );
     await this.flushAutoCheckpoint();
     return op;
+  }
+
+  /**
+   * Record a harness chat message as a vcs:chatMessage op.
+   *
+   * Config-gated by `transcripts.enabled` (default false); returns null when
+   * disabled. Transcript ops are local-only by default (no peer sync).
+   */
+  async recordChatMessage(
+    input: transcriptMod.ChatMessageInput,
+  ): Promise<VcsOp | null> {
+    const op = await transcriptMod.recordChatMessage(
+      this._ctx(),
+      this.config.rootPath,
+      input,
+    );
+    if (op) await this.flushAutoCheckpoint();
+    return op;
+  }
+
+  /** Recent chat messages from the op log (most recent first). */
+  async listChatMessages(opts?: {
+    sessionId?: string;
+    laneId?: string;
+    limit?: number;
+  }): Promise<ReturnType<typeof transcriptMod.listChatMessages>> {
+    const ops = await this.getOps();
+    return transcriptMod.listChatMessages(ops, opts);
   }
 
   async recordRemotePush(info: {
