@@ -15,7 +15,8 @@ Decisions for the **Agent Lane** program (`trellis lane`). Status: **accepted**
 | [0014](./0014-git-materialization-and-lane-worktrees.md) | Git materialization + lane worktrees | Blob-store commit on promote; per-lane worktree bind (W5)                 |
 | [0015](./0015-agent-handoff-protocol.md)                 | Agent handoff protocol               | Graph-backed protocol messages + `whereami` re-entry (Phase 1a)           |
 | [0016](./0016-relay-blob-serving.md)                     | Relay blob serving                   | Content-addressed `/blob` HTTP surface on the realtime relay              |
-| [0017](./0017-blob-gc-thermal-decay.md)                  | Blob GC + thermal decay              | W‑TinyLFU hot cache; hot→cold→OPFS→peer ladder; never-sole-copy invariant |
+| [0017](./0017-blob-gc-thermal-decay.md)                  | Blob GC + thermal decay                  | W‑TinyLFU hot cache; hot→cold→OPFS→peer ladder; never-sole-copy invariant |
+| [0038](./0038-git-authoritative-file-tier.md)            | Git-authoritative file tier              | Git sole byte authority; op-log demoted to non-materializing provenance (proposed, 2026-08-04) |
 
 Desk issue: **TRL-35** (W0), **TRL-36** (W1). Plan:
 `TRELLIS/tooling/planning/agent-lanes.md`.
@@ -49,7 +50,10 @@ ADR 0001–0004 use historical **workspace** prose. Canonical terms are in
 
 ## Supersedes
 
-Nothing structurally. ADR 0005 supersedes **naming only** in 0001–0004.
+[0038](./0038-git-authoritative-file-tier.md) supersedes [0037](./0037-graph-native-write-path-opt-out-capture.md)
+(capture model), the file-authority clauses of [0014](./0014-git-materialization-and-lane-worktrees.md),
+and the replay-promote clauses of [0002](./0002-workspace-promote-algorithm.md).
+ADR 0005 supersedes **naming only** in 0001–0004.
 
 ## Next implementation phase
 

@@ -137,4 +137,49 @@ Node `fs.writeFileSync` to `.trellis/state.json` (lane guard blocks shell edits 
 
 ---
 
+## Step 3 — Commit path choice: Path A (2026-08-04T02:3xZ)
+
+**Decision:** Path A — direct `git commit`. No `git sync`, no op-log journaling,
+no materialize-from-op-log. Keeps the recovery commit out of the op-log entirely
+(safe from 9801056-class re-revert). Un-journaled commit is accepted as temporary
+debt (catch-up follows as separate step later).
+
+## Step 4 — Commit recovery (2026-08-04T02:3xZ)
+
+**Commit hash:** `0dbfad4`
+**Message:** `recover: restore tree to b941575 after 5155578 pollution; re-apply ADR 0037 + journal catch-up CLI`
+
+**Contents:** 77 files (76 modified + 1 new planning note).
+- All reverted files restored to `b941575` content
+- ADR 0037 + docs site write-path + checkpoint mermaid diagram re-applied from `a291635`
+- Journal catch-up CLI command re-added to `src/cli/index.ts`
+- Planning note (this file)
+
+**Lane guard:** Returned `ask` on `git commit`. User committed manually in terminal.
+
+## Step 5 — Push (2026-08-04T02:3xZ)
+
+`git push origin main` — `0dbfad4` pushed. `origin/main` now at `0dbfad4`.
+
+**History on main:**
+```
+0dbfad4 recover: restore tree to b941575…
+a291635  docs(adr): ADR 0037…
+5155578  feat(journal): … (polluted — 77 files reverted)
+b941575  Phase A/B/C safety floor (good baseline)
+```
+
+Polluted `5155578` remains in history — deliberate (audit trail of the bug).
+
+### Post-push verification
+| Check | Result |
+|--------|--------|
+| `git status --short` | 0 (clean) |
+| `pnpm check` | Clean |
+| `node bin/trellis.mjs git journal catch-up --help` | Works |
+| HEAD vs origin/main | Synced (`0dbfad4`) |
+| Working tree | Matches `b941575` + ADR/docs/CLI |
+
+---
+
 <!-- Step log appended below as steps complete -->

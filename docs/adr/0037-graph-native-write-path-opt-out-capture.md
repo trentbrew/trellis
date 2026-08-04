@@ -1,6 +1,6 @@
 # ADR 0037: Graph-native write path — opt-out capture by default
 
-**Status:** Proposed
+**Status:** Superseded by [0038](./0038-git-authoritative-file-tier.md) (git-authoritative file tier)
 **Date:** 2026-08-03
 **Related:** [0014](./0014-git-materialization-and-lane-worktrees.md) (git as mirror),
 `docs/planning/git-ssot-fault-line-checkpoint-2026-08-03.md` (dual-SSoT fault line),

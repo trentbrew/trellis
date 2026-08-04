@@ -8,7 +8,7 @@
 import type { Fact, Link } from '../core/store/eav-store.js';
 import type { VcsOp } from './types.js';
 import { ISSUE_TYPES } from './types.js';
-import { writerPrincipal, branchHeadEntity } from './types.js';
+import { writerPrincipal, branchHeadEntity, branchEntityId } from './types.js';
 
 /**
  * Owner principal encoded in a zoneId (`turtle://<ownerDid>/zone/<uuid>`).
@@ -875,6 +875,23 @@ export function decompose(op: VcsOp): DecomposedOp {
 
     case 'vcs:storeUnlink': {
       result.deleteLinks.push(...pickLinks(vcs.links));
+      break;
+    }
+
+    case 'vcs:gitSync': {
+      // ADR 0038 — non-materializing annotation. The commit on disk is the
+      // authority; the graph records where bytes went so the op-log can
+      // answer "what did git look like at this op?" without owning bytes.
+      if (vcs.gitBranch) {
+        const bid = branchEntityId(vcs.gitBranch);
+        result.addFacts.push(
+          { e: bid, a: 'type', v: 'Branch' },
+          { e: bid, a: 'name', v: vcs.gitBranch },
+        );
+        if (vcs.gitCommitHash) {
+          result.addFacts.push({ e: bid, a: 'lastGitCommit', v: vcs.gitCommitHash });
+        }
+      }
       break;
     }
 

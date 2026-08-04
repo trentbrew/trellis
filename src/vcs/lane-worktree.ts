@@ -105,3 +105,74 @@ export function removeWorktree(opts: {
     }
   }
 }
+
+/**
+ * Commit whatever the agent left in the worktree (ADR 0038).
+ *
+ * The working tree is the source of truth for file bytes: auto-saving it
+ * ensures the lane branch captures the agent's edits even when the agent
+ * never ran an explicit `git commit`. No-ops when the worktree is clean.
+ */
+export function commitWorktree(
+  worktreePath: string,
+  message: string,
+): { committed: boolean; commitHash?: string } {
+  if (!existsSync(worktreePath) || !isGitRepo(worktreePath)) {
+    return { committed: false };
+  }
+  git(worktreePath, 'add -A');
+  const dirty = git(worktreePath, 'status --porcelain').trim().length > 0;
+  if (!dirty) {
+    return { committed: false };
+  }
+  const subject = message.split('\n')[0] ?? 'trellis sync';
+  git(
+    worktreePath,
+    `commit -m "${subject.replace(/"/g, '\\"')}" -m "${message.replace(/"/g, '\\"')}"`,
+  );
+  return {
+    committed: true,
+    commitHash: git(worktreePath, 'rev-parse HEAD'),
+  };
+}
+
+/**
+ * Merge a lane branch into the current HEAD of the main worktree (ADR 0038).
+ *
+ * The lane branch holds the agent's actual bytes; the merge (not the op-log)
+ * is what moves those bytes to the integration head. `up-to-date` means no
+ * new commit was needed; `failed` means a merge conflict — the caller should
+ * abort the promote (git is the authority, so a conflicted merge cannot be
+ * papered over with a synthesized file state).
+ */
+export function mergeLaneWorktree(
+  rootPath: string,
+  branch: string,
+  message: string,
+): 'merged' | 'up-to-date' | 'failed' {
+  if (!isGitRepo(rootPath)) {
+    return 'failed';
+  }
+  const subject = (message.split('\n')[0] ?? 'trellis: merge lane').replace(
+    /"/g,
+    '\\"',
+  );
+  try {
+    const before = revParseHead(rootPath);
+    git(rootPath, `merge --no-ff -m "${subject}" ${branch}`);
+    const after = revParseHead(rootPath);
+    return before === after ? 'up-to-date' : 'merged';
+  } catch {
+    try {
+      git(rootPath, 'merge --abort');
+    } catch {
+      // leave the tree untouched on abort failure
+    }
+    return 'failed';
+  }
+}
+
+/** Resolve the current HEAD commit of a worktree/repo. */
+export function revParseHead(rootPath: string): string {
+  return git(rootPath, 'rev-parse HEAD');
+}

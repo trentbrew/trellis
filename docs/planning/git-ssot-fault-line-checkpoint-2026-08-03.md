@@ -214,6 +214,9 @@ flowchart TD
 - `docs/planning/oplog-safety-mirror-and-destructive-guards.md` — guard posture
 - ADR 0014 — git as rebuildable blob-tree mirror (op-log is carrier of record)
 - ADR 0015 — handoff protocol / lane ownership
+- ADR 0038 — **git-authoritative file tier** (2026-08-04): supersedes ADR 0014's
+  file-authority clauses and ADR 0037's capture model — git sole byte authority,
+  op-log demoted to non-materializing provenance
 
 ADR 0014 already says git is a **mirror**, not the carrier of record. Practice drifted:
 agents edit git-first, journal lags, sync assumes op-log-first → clobber.

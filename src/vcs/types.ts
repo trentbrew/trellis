@@ -73,6 +73,9 @@ export type VcsOpKind =
   // Remote ledger peer (TRL-235)
   | 'vcs:remotePush'
   | 'vcs:remotePull'
+  // Git authority (ADR 0038) — non-materializing annotation recorded when the
+  // working tree is committed to git. The op-log never owns file bytes.
+  | 'vcs:gitSync'
   // Project attestation (ADR 0032 §4) — owner-signed self-attestation that
   // this ledger is `{owner}/{name}` with repoId.
   | 'vcs:repoAttest'
@@ -219,6 +222,12 @@ export interface VcsPayload {
   remoteRepoId?: string;
   remoteTailHash?: string;
   remoteByteLength?: number;
+
+  // Git authority (ADR 0038) — echoed onto vcs:gitSync annotations
+  /** Commit hash minted by committing the working tree. */
+  gitCommitHash?: string;
+  /** Branch the working-tree commit landed on. */
+  gitBranch?: string;
 
   // Project attestation (ADR 0032 §4)
   /** Owner entity id (`identity:<did>`) self-attesting the ledger. */
