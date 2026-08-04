@@ -9,6 +9,7 @@ import { join } from 'path';
 import { TrellisVcsEngine } from '../engine.js';
 import type { LaneMeta } from '../vcs/lane.js';
 import * as lanePromoteMod from '../vcs/lane-promote.js';
+import { gcLanes } from '../vcs/lane-gc.js';
 import { resolveRepoRoot } from './repo-path.js';
 import { PROVENANCE } from '../core/persist/canonical-op.js';
 import { requireDestructiveConfirm } from '../vcs/destructive-guard.js';
@@ -533,6 +534,67 @@ export function registerLaneCommands(program: Command): void {
         } else if (opts.dryRun && result.canPromote) {
           console.log(chalk.dim('\n  Run without --dry-run to apply'));
         }
+      } catch (err: unknown) {
+        console.error(chalk.red((err as Error).message));
+        process.exit(1);
+      }
+    });
+
+  laneCmd
+    .command('gc')
+    .description(
+      'Sweep lane lifecycle — classify by bound issue; dry-run default',
+    )
+    .option('--apply', 'Execute dispositions (promote/drop/garden)')
+    .option(
+      '--force',
+      'Allow destructive drop of lanes that carry ops',
+    )
+    .option('--session <id>', 'Restrict sweep to one session (session-end hook)')
+    .option('-p, --path <path>', 'Repository path', '.')
+    .action(async (opts, command) => {
+      const rootPath = resolveLaneRepoPath(opts, command);
+      const engine = await openEngine(rootPath);
+
+      try {
+        const rows = await gcLanes(engine, {
+          apply: opts.apply,
+          force: opts.force,
+          sessionId: opts.session,
+        });
+
+        const color: Record<string, (s: string) => string> = {
+          promote: chalk.green,
+          drop: chalk.red,
+          garden: chalk.yellow,
+          leave: chalk.dim,
+        };
+
+        console.log(chalk.bold('Lane GC — disposition sweep\n'));
+        console.log(
+          `${chalk.dim('lane'.padEnd(44))} ${chalk.dim('issue'.padEnd(12))} ${chalk.dim('ops'.padEnd(4))} ${chalk.dim('disposition'.padEnd(12))} action`,
+        );
+
+        const counts: Record<string, number> = {};
+        for (const row of rows) {
+          const label = opts.apply ? row.action : `would ${row.disposition}`;
+          const shortId = row.laneId.slice(0, 13);
+          console.log(
+            `${color[row.disposition](shortId.padEnd(44))} ${(row.boundIssue ?? '—').padEnd(12)} ${String(row.opCount).padEnd(4)} ${color[row.disposition](row.disposition.padEnd(12))} ${chalk.dim(label)}`,
+          );
+          console.log(`    ${chalk.dim(row.reason)}`);
+          counts[row.disposition] = (counts[row.disposition] ?? 0) + 1;
+        }
+
+        console.log('');
+        for (const [k, n] of Object.entries(counts)) {
+          console.log(`  ${color[k](`${k}: ${n}`)}`);
+        }
+        console.log(
+          opts.apply
+            ? chalk.dim(`\n  ${rows.filter((r) => r.action !== 'none').length} action(s) executed`)
+            : chalk.dim('\n  Dry run — pass --apply to execute'),
+        );
       } catch (err: unknown) {
         console.error(chalk.red((err as Error).message));
         process.exit(1);

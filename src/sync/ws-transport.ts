@@ -31,15 +31,15 @@ export class WebSocketSyncTransport implements SyncTransport {
   /**
    * Connect to a remote peer's WebSocket endpoint.
    */
-  async connect(peerId: string, url: string, name?: string): Promise<void> {
+  async connect(peerId?: string, url?: string, name?: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const ws = new WebSocket(url);
+      const ws = new WebSocket(url!);
 
       ws.onopen = () => {
-        this.connections.set(peerId, ws);
-        this.knownPeers.set(peerId, {
-          id: peerId,
-          name: name ?? peerId,
+        this.connections.set(peerId!, ws);
+        this.knownPeers.set(peerId!, {
+          id: peerId!,
+          name: name ?? peerId!,
           lastSeen: new Date().toISOString(),
         });
         resolve();
@@ -60,7 +60,7 @@ export class WebSocketSyncTransport implements SyncTransport {
       };
 
       ws.onclose = () => {
-        this.connections.delete(peerId);
+        this.connections.delete(peerId!);
       };
 
       ws.onerror = (err) => {
@@ -118,12 +118,13 @@ export class WebSocketSyncTransport implements SyncTransport {
   /**
    * Disconnect from a peer.
    */
-  disconnect(peerId: string): void {
-    const ws = this.connections.get(peerId);
+  disconnect(peerId?: string): Promise<void> {
+    const ws = this.connections.get(peerId!);
     if (ws) {
       ws.close();
-      this.connections.delete(peerId);
+      this.connections.delete(peerId!);
     }
+    return Promise.resolve();
   }
 
   /**

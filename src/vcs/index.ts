@@ -25,3 +25,5 @@ export * from './idb-op-log.js';
 export * from './lane.js';
 export * from './test-manifest.js';
 export * from './test-runner.js';
+export * from './authority.js';
+export * from './transcript.js';

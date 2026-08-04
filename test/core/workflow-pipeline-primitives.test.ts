@@ -1,12 +1,13 @@
-"""Test the basic workflow and pipeline primitives.
+/**
+ * Test the basic workflow and pipeline primitives.
 
-This test demonstrates the two main primitives for multi-agent coordination:
-1. **DAG Workflow**: Directed Acyclic Graph execution for step-based workflows
-2. **Pipeline Orchestration**: Sequential coordination of multiple agent roles
+ * This test demonstrates the two main primitives for multi-agent coordination:
+ * 1. **DAG Workflow**: Directed Acyclic Graph execution for step-based workflows
+ * 2. **Pipeline Orchestration**: Sequential coordination of multiple agent roles
 
-These primitives form the foundation for building complex agent systems.
-"""
-import { describe, it, expect, beforeEach } from 'vitest';
+ * These primitives form the foundation for building complex agent systems.
+ */
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DAGScheduler } from '../../src/core/agents/dag-scheduler.js';
 import type { DAGWorkflow } from '../../src/core/agents/dag-scheduler.js';
 import { Orchestrator } from '../../src/orchestration/orchestrator.js';

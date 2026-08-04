@@ -36,7 +36,9 @@ export type HeadlessComponentType =
   | 'code'
   | 'colorpicker'
   | 'flow'
-  | 'layout';
+  | 'layout'
+  | 'kanban'
+  | 'undo-history';
 
 /**
  * Registry entry: one framework's visual component for a headless type.

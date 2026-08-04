@@ -8,6 +8,7 @@ import {
   type FileState,
 } from '../../src/vcs/diff.js';
 import { BlobStore } from '../../src/vcs/blob-store.js';
+import { BlobResolver } from '../../src/vcs/blob-resolver.js';
 import { TrellisVcsEngine } from '../../src/engine.js';
 import { mkdirSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
@@ -84,7 +85,11 @@ describe('generateUnifiedDiff', () => {
   });
 
   test('returns empty string for identical content', () => {
-    const diff = generateUnifiedDiff('test.ts', 'same\ncontent', 'same\ncontent');
+    const diff = generateUnifiedDiff(
+      'test.ts',
+      'same\ncontent',
+      'same\ncontent',
+    );
     expect(diff).toBe('');
   });
 
@@ -106,8 +111,16 @@ describe('generateUnifiedDiff', () => {
 describe('buildFileStateAtOp', () => {
   test('builds state from fileAdd ops', () => {
     const ops = [
-      { kind: 'vcs:fileAdd', hash: 'h1', vcs: { filePath: 'a.ts', contentHash: 'aaa' } },
-      { kind: 'vcs:fileAdd', hash: 'h2', vcs: { filePath: 'b.ts', contentHash: 'bbb' } },
+      {
+        kind: 'vcs:fileAdd',
+        hash: 'h1',
+        vcs: { filePath: 'a.ts', contentHash: 'aaa' },
+      },
+      {
+        kind: 'vcs:fileAdd',
+        hash: 'h2',
+        vcs: { filePath: 'b.ts', contentHash: 'bbb' },
+      },
     ] as any;
 
     const state = buildFileStateAtOp(ops);
@@ -118,9 +131,21 @@ describe('buildFileStateAtOp', () => {
 
   test('stops at specified op hash', () => {
     const ops = [
-      { kind: 'vcs:fileAdd', hash: 'h1', vcs: { filePath: 'a.ts', contentHash: 'aaa' } },
-      { kind: 'vcs:fileAdd', hash: 'h2', vcs: { filePath: 'b.ts', contentHash: 'bbb' } },
-      { kind: 'vcs:fileAdd', hash: 'h3', vcs: { filePath: 'c.ts', contentHash: 'ccc' } },
+      {
+        kind: 'vcs:fileAdd',
+        hash: 'h1',
+        vcs: { filePath: 'a.ts', contentHash: 'aaa' },
+      },
+      {
+        kind: 'vcs:fileAdd',
+        hash: 'h2',
+        vcs: { filePath: 'b.ts', contentHash: 'bbb' },
+      },
+      {
+        kind: 'vcs:fileAdd',
+        hash: 'h3',
+        vcs: { filePath: 'c.ts', contentHash: 'ccc' },
+      },
     ] as any;
 
     const state = buildFileStateAtOp(ops, 'h2');
@@ -130,7 +155,11 @@ describe('buildFileStateAtOp', () => {
 
   test('handles fileDelete', () => {
     const ops = [
-      { kind: 'vcs:fileAdd', hash: 'h1', vcs: { filePath: 'a.ts', contentHash: 'aaa' } },
+      {
+        kind: 'vcs:fileAdd',
+        hash: 'h1',
+        vcs: { filePath: 'a.ts', contentHash: 'aaa' },
+      },
       { kind: 'vcs:fileDelete', hash: 'h2', vcs: { filePath: 'a.ts' } },
     ] as any;
 
@@ -140,8 +169,16 @@ describe('buildFileStateAtOp', () => {
 
   test('handles fileModify', () => {
     const ops = [
-      { kind: 'vcs:fileAdd', hash: 'h1', vcs: { filePath: 'a.ts', contentHash: 'v1' } },
-      { kind: 'vcs:fileModify', hash: 'h2', vcs: { filePath: 'a.ts', contentHash: 'v2' } },
+      {
+        kind: 'vcs:fileAdd',
+        hash: 'h1',
+        vcs: { filePath: 'a.ts', contentHash: 'v1' },
+      },
+      {
+        kind: 'vcs:fileModify',
+        hash: 'h2',
+        vcs: { filePath: 'a.ts', contentHash: 'v2' },
+      },
     ] as any;
 
     const state = buildFileStateAtOp(ops);
@@ -150,8 +187,16 @@ describe('buildFileStateAtOp', () => {
 
   test('handles fileRename', () => {
     const ops = [
-      { kind: 'vcs:fileAdd', hash: 'h1', vcs: { filePath: 'old.ts', contentHash: 'v1' } },
-      { kind: 'vcs:fileRename', hash: 'h2', vcs: { filePath: 'new.ts', oldFilePath: 'old.ts', contentHash: 'v1' } },
+      {
+        kind: 'vcs:fileAdd',
+        hash: 'h1',
+        vcs: { filePath: 'old.ts', contentHash: 'v1' },
+      },
+      {
+        kind: 'vcs:fileRename',
+        hash: 'h2',
+        vcs: { filePath: 'new.ts', oldFilePath: 'old.ts', contentHash: 'v1' },
+      },
     ] as any;
 
     const state = buildFileStateAtOp(ops);
@@ -167,14 +212,18 @@ describe('buildFileStateAtOp', () => {
 describe('diffFileStates', () => {
   test('detects additions', () => {
     const stateA = new Map<string, FileState>();
-    const stateB = new Map<string, FileState>([['a.ts', { contentHash: 'aaa' }]]);
+    const stateB = new Map<string, FileState>([
+      ['a.ts', { contentHash: 'aaa' }],
+    ]);
     const result = diffFileStates(stateA, stateB);
     expect(result.stats.added).toBe(1);
     expect(result.diffs[0].kind).toBe('fileAdded');
   });
 
   test('detects deletions', () => {
-    const stateA = new Map<string, FileState>([['a.ts', { contentHash: 'aaa' }]]);
+    const stateA = new Map<string, FileState>([
+      ['a.ts', { contentHash: 'aaa' }],
+    ]);
     const stateB = new Map<string, FileState>();
     const result = diffFileStates(stateA, stateB);
     expect(result.stats.removed).toBe(1);
@@ -182,22 +231,32 @@ describe('diffFileStates', () => {
   });
 
   test('detects modifications', () => {
-    const stateA = new Map<string, FileState>([['a.ts', { contentHash: 'v1' }]]);
-    const stateB = new Map<string, FileState>([['a.ts', { contentHash: 'v2' }]]);
+    const stateA = new Map<string, FileState>([
+      ['a.ts', { contentHash: 'v1' }],
+    ]);
+    const stateB = new Map<string, FileState>([
+      ['a.ts', { contentHash: 'v2' }],
+    ]);
     const result = diffFileStates(stateA, stateB);
     expect(result.stats.modified).toBe(1);
     expect(result.diffs[0].kind).toBe('fileModified');
   });
 
   test('no diff for identical states', () => {
-    const stateA = new Map<string, FileState>([['a.ts', { contentHash: 'same' }]]);
-    const stateB = new Map<string, FileState>([['a.ts', { contentHash: 'same' }]]);
+    const stateA = new Map<string, FileState>([
+      ['a.ts', { contentHash: 'same' }],
+    ]);
+    const stateB = new Map<string, FileState>([
+      ['a.ts', { contentHash: 'same' }],
+    ]);
     const result = diffFileStates(stateA, stateB);
     expect(result.diffs.length).toBe(0);
   });
 
   test('ignores deleted files in state B', () => {
-    const stateA = new Map<string, FileState>([['a.ts', { contentHash: 'v1' }]]);
+    const stateA = new Map<string, FileState>([
+      ['a.ts', { contentHash: 'v1' }],
+    ]);
     const stateB = new Map<string, FileState>([['a.ts', { deleted: true }]]);
     const result = diffFileStates(stateA, stateB);
     expect(result.stats.removed).toBe(1);
@@ -214,9 +273,14 @@ describe('diffFileStates', () => {
     const oldHash = bs.putSync(oldContent);
     const newHash = bs.putSync(newContent);
 
-    const stateA = new Map<string, FileState>([['a.ts', { contentHash: oldHash }]]);
-    const stateB = new Map<string, FileState>([['a.ts', { contentHash: newHash }]]);
-    const result = diffFileStates(stateA, stateB, bs);
+    const stateA = new Map<string, FileState>([
+      ['a.ts', { contentHash: oldHash }],
+    ]);
+    const stateB = new Map<string, FileState>([
+      ['a.ts', { contentHash: newHash }],
+    ]);
+    const blobResolver = new BlobResolver(bs, testDir);
+    const result = diffFileStates(stateA, stateB, blobResolver);
 
     expect(result.diffs[0].unifiedDiff).toBeDefined();
     expect(result.diffs[0].unifiedDiff).toContain('-line2');
@@ -233,9 +297,21 @@ describe('diffFileStates', () => {
 describe('diffOpRange', () => {
   test('diffs between two op hashes', () => {
     const ops = [
-      { kind: 'vcs:fileAdd', hash: 'h1', vcs: { filePath: 'a.ts', contentHash: 'v1' } },
-      { kind: 'vcs:fileAdd', hash: 'h2', vcs: { filePath: 'b.ts', contentHash: 'v2' } },
-      { kind: 'vcs:fileModify', hash: 'h3', vcs: { filePath: 'a.ts', contentHash: 'v3' } },
+      {
+        kind: 'vcs:fileAdd',
+        hash: 'h1',
+        vcs: { filePath: 'a.ts', contentHash: 'v1' },
+      },
+      {
+        kind: 'vcs:fileAdd',
+        hash: 'h2',
+        vcs: { filePath: 'b.ts', contentHash: 'v2' },
+      },
+      {
+        kind: 'vcs:fileModify',
+        hash: 'h3',
+        vcs: { filePath: 'a.ts', contentHash: 'v3' },
+      },
     ] as any;
 
     const result = diffOpRange(ops, 'h1', 'h3');
@@ -283,7 +359,7 @@ describe('Engine diff integration', () => {
     writeFileSync(join(REPO_ROOT, 'a.ts'), 'v1');
 
     const engine = new TrellisVcsEngine({ rootPath: REPO_ROOT });
-    await engine.initRepo();
+    await engine.initRepo({ indexWorkspace: true });
 
     const ops = engine.getOps();
     // Diff from the branch op (first op) to HEAD should show the added file

@@ -92,6 +92,9 @@ export { HttpSyncTransport, createSyncHandler } from './http-transport.js';
 
 export { WebSocketSyncTransport } from './ws-transport.js';
 
+export { IrohSyncTransport } from './iroh-transport.js';
+export type { IrohSyncTransportOptions } from './iroh-transport.js';
+
 export {
   MultiRepoManager,
   parseCrossRepoRef,

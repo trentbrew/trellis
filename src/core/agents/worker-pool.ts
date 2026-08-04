@@ -351,7 +351,7 @@ export class WorkerPool {
       if (task.startedAt) updates.startedAt = task.startedAt;
       if (task.completedAt) updates.completedAt = task.completedAt;
       if (task.error) updates.error = task.error;
-      await k.updateEntity(task.id, updates, AGENT_CTX);
+      await k.updateEntity(task.id, updates as any, AGENT_CTX);
     } catch { /* swallow persistence errors */ }
   }
 }

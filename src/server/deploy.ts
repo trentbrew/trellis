@@ -185,6 +185,37 @@ function writeRemoteDeployConfig(opts: {
   );
 }
 
+/**
+ * Slice D — install a sprite's device key on the sprite VM. Writes
+ * `.trellis/devices/local.json` (device key only; the root identity key never
+ * leaves the user's machine) so the sprite signs as the identity via
+ * `getSigningMaterial` (device-first).
+ */
+export async function installSpriteDeviceKey(
+  name: string,
+  local: {
+    deviceId: string;
+    identityEntityId: string;
+    did: string;
+    publicKey: string;
+    privateKey: string;
+    deviceLabel?: string;
+    kind?: string;
+    transport?: string;
+    createdAt: string;
+  },
+  onProgress: (msg: string) => void = () => {},
+): Promise<void> {
+  const remoteDir = '/home/sprite/trellis-db/.trellis/devices';
+  const staged = join(resolve(process.cwd(), '.trellis-deploy'), 'sprite-device.json');
+  if (!existsSync(dirname(staged))) mkdirSync(dirname(staged), { recursive: true });
+  writeFileSync(staged, JSON.stringify(local, null, 2));
+
+  onProgress(`Installing device key on sprite ${name}...`);
+  await runSpriteExec(name, `mkdir -p ${remoteDir}`);
+  await runSpriteCopy(staged, name, `${remoteDir}/local.json`);
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

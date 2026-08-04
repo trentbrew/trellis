@@ -275,7 +275,7 @@ export function registerPipelineCommands(program: Command): void {
         if (opts.description) updates.description = opts.description;
         if (opts.active !== undefined) updates.active = opts.active === 'true' || opts.active === true;
 
-        await kernel.updateEntity(id, updates, AGENT_CTX);
+        await kernel.updateEntity(id, updates as any, AGENT_CTX);
         console.log(chalk.green(`✓ Pipeline updated: ${id}`));
         close();
       } catch (err) {
