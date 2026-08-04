@@ -447,14 +447,17 @@ Everything else (lane shape, guard tone, Studio desk chrome, branch GC) unblocks
 
 ## Open threads (parking lot)
 
-- [ ] Architecture decision record: file-content ownership (B decided; write doc for the refined framing)
-- [ ] **Graph-native write path:** `PostToolUse` hook → `journalWorkingTreeToOps` on `Write | Edit | Bash`
+- [x] Architecture decision record: file-content ownership (B decided; → [ADR 0037](../adr/0037-graph-native-write-path-opt-out-capture.md))
+- [ ] **Graph-native write path:** `PostToolUse` hook → `journalWorkingTreeToOps` on `Write | Edit | Bash` (shipped in `5155578`)
+- [ ] Continuous FileWatcher daemon (opt-out capture — per ADR 0037)
+- [ ] `.trellisignore` exclusion surface
 - [ ] Lane/worktree/branch GC (simplifies: worktrees become disposable renders)
 - [ ] Guard session-reload story (opencode caches ESM helpers)
 - [ ] Pretty-up commit message on `b941575` if it bothers anyone (optional amend/follow-up)
 - [ ] Pre-existing `workflow-pipeline-primitives` 4 failures (unrelated, still red)
 - [ ] Studio desk ship — separate cleanup when Studio is back on-limits
 - [ ] TRL issue AC updates for 424/425 if still open when desk resumes
+- [ ] **Versioning strategy (deferred):** Trellis is a CLI, not a library — nobody pins it in `dependencies`. 3.x already signals breaking changes are expected. Ship 4.0 when write-path/daemon lands rather than walking backward to alpha. If stability signal is needed: README banner ("op-log format and EAV kernel are stable; CLI/MCP/Studio surface under active development"). Dist-tags are movable, versions are permanent — don't deprecate three majors for a stability claim.
 
 ---
 
