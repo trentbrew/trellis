@@ -1,6 +1,6 @@
 # ADR 0038: Git-authoritative file tier — op-log demoted to non-materializing provenance
 
-**Status:** Proposed
+**Status:** Accepted (Phase 1 implemented, 2026-08-04)
 **Date:** 2026-08-04
 **Supersedes:** [0037](./0037-graph-native-write-path-opt-out-capture.md) (capture model),
 file-authority clauses of [0014](./0014-git-materialization-and-lane-worktrees.md)

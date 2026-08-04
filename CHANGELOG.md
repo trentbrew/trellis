@@ -4,6 +4,58 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [4.0.0] — 2026-08-04
+
+**Git is now the sole authority over file bytes. The op-log can no longer write
+file state. (ADR 0038)**
+
+The structural bug that caused the `9801056`-class silent revert — `git sync`
+materializing stale op-log bytes over newer disk content — is fixed by removing
+the second authority entirely, not by adding another guard. Two systems
+claiming authority over the same bytes is unsound; someone always forgets to
+guard one of the paths. ADR 0038 makes git the only writer of bytes and the
+op-log a pure provenance layer that is *incapable* of clobbering disk.
+
+- **`syncIntegrationToGit` commits the working tree as-is** (ADR 0038). No more
+  `buildFileStateAtOp` / `materializeToDisk` reconstruction from op-log blobs —
+  it checks out `-B`, `add -A`, and commits the actual bytes on disk. `git sync`
+  can never overwrite a newer file with stale op-log state.
+- **Non-materializing `vcs:gitSync` annotations.** Each sync records
+  `vcs:gitSync { gitCommitHash, gitBranch }` on the causal stream. The op-log
+  holds provenance (who/what/why, milestones, decisions, lane lifecycle) — never
+  byte state. `journalWorkingTreeToOps` is diagnostic-only; sync no longer calls
+  it.
+- **Promote delivers bytes via git, not replay.** `promoteLane` now runs a git
+  branch merge (lane branch → integration) as the byte delivery, then rechains
+  annotation ops onto integration. `mergeLaneWorktree` returns
+  `merged | up-to-date | failed`; a real conflict aborts before replay.
+- **Lane worktrees are git checkouts, not op-log materials.** Entering a lane
+  auto-commits the agent's working bytes (`commitWorktree`) onto the lane
+  branch; re-entry sees the lane's files from git. `lanes.worktreeBind` gives
+  true per-agent isolation — one agent's `revert`/`reset` physically cannot
+  touch another's files.
+
+### Breaking changes
+
+- `GitSyncResult.refused` and `reason` are removed — sync never refuses and
+  there is no journal catch-up to race. The CLI "refused" branches in `git sync`
+  and milestone auto-commit are gone.
+- `syncIntegrationToGit` no longer takes `blobResolver`, `integrationOps`, or
+  `headOpHash`. `resolveIntegrationHead` was removed from the `git-sync` module.
+- `trellis git sync` does **not** journal previously-unjournaled edits — disk
+  edits to tracked files now flow through git commits, not file-materializing
+  ops.
+
+### Fixes
+
+- **`trellis lane list -p <dir>` resolved from cwd instead of the target.** The
+  child `-p` default of `.` shadowed the parent command's `-p`, so `lane list`
+  walked up from the shell cwd and reported an empty/mismatched lane set. The
+  list action now resolves paths the same way as every other `lane` subcommand.
+- workflow-pipeline-primitives test mock brought in line with the real
+  `EAVStore` API (`addFacts`/`getLinksByEntity`), and the mock pool emits
+  `task:completed` so DAG runs terminate.
+
 ## trellis [3.4.0] — 2026-07-24
 
 **Lane ops were unverifiable; criterion removal (TRL-1, TRL-102).**
