@@ -73,12 +73,15 @@ function isStaleLane(lane: LaneMeta): boolean {
   return ageMs > 24 * 60 * 60 * 1000;
 }
 
-async function listLanesAction(opts: {
-  active?: boolean;
-  stale?: boolean;
-  path: string;
-}): Promise<void> {
-  const rootPath = resolveRepoRoot(opts.path);
+async function listLanesAction(
+  opts: {
+    active?: boolean;
+    stale?: boolean;
+    path: string;
+  },
+  command?: { parent?: { opts: () => { path?: string } } },
+): Promise<void> {
+  const rootPath = resolveLaneRepoPath(opts, command);
   const engine = await openEngine(rootPath);
 
   let lanes = engine.listLanes();

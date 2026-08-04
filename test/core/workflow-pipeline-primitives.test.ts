@@ -36,36 +36,48 @@ function createMockKernel(): TrellisKernel {
   };
   
   const store = new EAVStore();
-  
+
+  const addFact = (e: string, a: string, v: unknown): void => {
+    store.addFacts([
+      { e, a, v: typeof v === 'object' ? JSON.stringify(v) : (v as never) },
+    ]);
+  };
+
   const kernel: TrellisKernel = {
     createEntity: vi.fn(async (id: string, type: string, attrs: Record<string, any>) => {
-      Object.entries(attrs).forEach(([a, v]) => {
-        store.add({ e: id, a, v: typeof v === 'object' ? JSON.stringify(v) : v });
-      });
+      addFact(id, '__type', type);
+      Object.entries(attrs).forEach(([a, v]) => addFact(id, a, v));
     }),
     getEntity: vi.fn((id: string) => {
-      const facts = [];
-      for (const link of store.getLinksByEntity(id)) {
-        facts.push({ e: id, a: link.a, v: link.v });
-      }
+      const facts = store.getFactsByEntity(id);
+      const type = facts.find((f) => f.a === '__type')?.v as string | undefined;
       return { id, type, facts };
     }),
     updateEntity: vi.fn(async (id: string, updates: Record<string, any>) => {
       Object.entries(updates).forEach(([a, v]) => {
-        store.replace(id, a, v);
+        store.deleteFacts(store.getFactsByEntity(id).filter((f) => f.a === a));
+        addFact(id, a, v);
       });
     }),
     deleteEntity: vi.fn(async (id: string) => {}),
     listEntities: vi.fn((type?: string) => {
-      return store.list(type).map(r => ({
-        id: r.e,
-        type: r.type,
-        facts: [{ e: r.e, a: '__type', v: r.type }],
-        links: store.getLinksByEntity(r.e),
+      const ids = [
+        ...new Set(
+          store
+            .getAllFacts()
+            .filter((f) => f.a === '__type' && (type === undefined || f.v === type))
+            .map((f) => f.e),
+        ),
+      ];
+      return ids.map((e) => ({
+        id: e,
+        type,
+        facts: store.getFactsByEntity(e),
+        links: store.getLinksByEntity(e),
       }));
     }),
     addLink: vi.fn(async (e1: string, a: string, e2: string) => {
-      store.addLink(e1, a, e2);
+      store.addLinks([{ e1, a, e2 }]);
     }),
     getStore: vi.fn(() => store),
     boot: vi.fn(),
@@ -133,7 +145,7 @@ describe('DAG Workflow Primitive', () => {
     expect(run.steps.every(s => s.status === 'completed')).toBe(true);
   });
 
-  it('detects and prevents workflow cycles', () => {
+  it('detects and prevents workflow cycles', async () => {
     const cyclicWorkflow: DAGWorkflow = {
       id: 'demo:cyclic-workflow',
       name: 'Cyclic Workflow',
@@ -143,7 +155,7 @@ describe('DAG Workflow Primitive', () => {
       ],
     };
 
-    expect(() => scheduler.run(cyclicWorkflow)).rejects.toThrow('Workflow cycle detected');
+    await expect(scheduler.run(cyclicWorkflow)).rejects.toThrow('Workflow cycle detected');
   });
 
   it('handles workflow run lifecycle management', async () => {
@@ -280,7 +292,13 @@ function createMockTestSetup() {
   
   const mockPool: any = {
     enqueue: vi.fn(async (agentId: string, input: string, opts?: any, runId?: string) => {
-      return runId || `run:${agentId}:${Date.now()}`;
+      const id = runId || `run:${agentId}:${Date.now()}`;
+      setImmediate(() => {
+        for (const listener of mockPool.listeners) {
+          listener({ type: 'task:completed', task: { runId: id }, result: 'mock output' });
+        }
+      });
+      return id;
     }),
     on: vi.fn((listener: any) => {
       mockPool.listeners.push(listener);

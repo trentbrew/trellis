@@ -1,27 +1,20 @@
 /**
- * Git Sync — mirror Trellis integration state to the primary git worktree.
+ * Git Sync — commit the working tree to the target branch (ADR 0038).
  *
- * Trellis owns semantics; git on `main` is a downstream artifact updated at
- * promote/close boundaries (ADR 0014 git adapter).
+ * Git is the sole authority over file bytes. Sync never materializes op-log
+ * state over disk: it stages the actual working tree and commits it, then
+ * optionally pushes. The op-log is not consulted for file content.
  */
 
 import { execSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
-import type { BlobResolver } from '../vcs/blob-resolver.js';
-import { buildFileStateAtOp } from '../vcs/diff.js';
-import { BlobStore } from '../vcs/blob-store.js';
-import { materializeToDisk } from '../vcs/lane-disk-materialize.js';
 import { isGitRepo } from '../vcs/lane-worktree.js';
 import type { LaneMeta } from '../vcs/lane.js';
 import type { VcsOp } from '../vcs/types.js';
 
 export interface GitSyncOptions {
   rootPath: string;
-  blobResolver: BlobResolver;
-  integrationOps: VcsOp[];
-  /** Integration branch head op hash to materialize. */
-  headOpHash: string;
   branch?: string;
   remote?: string;
   authorName?: string;
@@ -38,11 +31,8 @@ export interface GitSyncResult {
   committed: boolean;
   commitHash?: string;
   pushed: boolean;
+  /** Number of files staged from the working tree. */
   filesMaterialized: number;
-  /** True when the sync was refused because the working tree could not be reconciled with the op-log. */
-  refused?: boolean;
-  /** Human-readable reason for the refusal. */
-  reason?: string;
 }
 
 export interface PromoteCommitMessageParams {
@@ -138,8 +128,11 @@ function ensureGitUser(rootPath: string, name: string, email: string): void {
 }
 
 /**
- * Materialize integration file state at `headOpHash` onto `rootPath`, commit,
- * and optionally push to `remote`.
+ * Commit the actual working tree to `branch`, and optionally push to `remote`.
+ *
+ * The working tree is the source of truth (ADR 0038): no op-log state is
+ * materialized over disk. `filesMaterialized` reports the number of files
+ * staged from disk, so callers can gauge what the commit captured.
  */
 export function syncIntegrationToGit(
   opts: GitSyncOptions,
@@ -164,13 +157,13 @@ export function syncIntegrationToGit(
     }
   }
 
-  const fileStates = buildFileStateAtOp(opts.integrationOps, opts.headOpHash);
-  materializeToDisk(opts.rootPath, fileStates, opts.blobResolver);
-
   git(opts.rootPath, 'add -A');
   const status = git(opts.rootPath, 'status --porcelain');
+  const stagedCount = status
+    .split('\n')
+    .filter((line) => line.trim().length > 0).length;
 
-  if (opts.skipIfClean !== false && status.trim().length === 0) {
+  if (opts.skipIfClean !== false && stagedCount === 0) {
     let pushed = false;
     if (opts.push && opts.remote) {
       pushed = tryPush(opts.rootPath, opts.remote, branch);
@@ -178,7 +171,7 @@ export function syncIntegrationToGit(
     return {
       committed: false,
       pushed,
-      filesMaterialized: fileStates.size,
+      filesMaterialized: stagedCount,
     };
   }
 
@@ -198,7 +191,7 @@ export function syncIntegrationToGit(
     committed: true,
     commitHash,
     pushed,
-    filesMaterialized: fileStates.size,
+    filesMaterialized: stagedCount,
   };
 }
 

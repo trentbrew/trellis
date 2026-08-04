@@ -3,10 +3,7 @@ import { execSync } from 'child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { TrellisVcsEngine } from '../../src/engine.js';
-import { BlobStore } from '../../src/vcs/blob-store.js';
-import { laneDir, loadLaneMeta, updateLaneHead } from '../../src/vcs/lane.js';
-import { LaneOpLog } from '../../src/vcs/op-log.js';
-import { createVcsOp } from '../../src/vcs/ops.js';
+import { loadLaneMeta } from '../../src/vcs/lane.js';
 
 const TEST_ROOT = '/tmp/trellis-p4-lane-worktree-bind';
 
@@ -23,27 +20,6 @@ function initGitRepo(root: string): void {
   git(root, 'add -A');
   git(root, 'commit -m "init"');
   git(root, 'branch -M main');
-}
-
-async function appendLaneFileOp(
-  rootPath: string,
-  laneId: string,
-  filePath: string,
-  content: string,
-): Promise<void> {
-  const trellisDir = join(rootPath, '.trellis');
-  const blob = new BlobStore(trellisDir);
-  const hash = blob.putSync(Buffer.from(content, 'utf-8'));
-  const meta = loadLaneMeta(trellisDir, laneId)!;
-  const laneLog = new LaneOpLog(laneDir(trellisDir, laneId));
-  laneLog.load();
-  const op = await createVcsOp('vcs:fileModify', {
-    agentId: 'agent:test',
-    previousHash: laneLog.getLastOp()?.hash ?? meta.baseOpHash,
-    vcs: { filePath, contentHash: hash, laneId },
-  });
-  laneLog.append(op);
-  updateLaneHead(trellisDir, laneId, op.hash);
 }
 
 describe('Lane worktree bind (W5-MVP)', () => {
@@ -73,11 +49,13 @@ describe('Lane worktree bind (W5-MVP)', () => {
     expect(git(TEST_ROOT, 'worktree list')).toContain(meta.worktreePath!);
   });
 
-  test('enterLane materializes lane file ops to worktree', async () => {
+  test('enterLane keeps lane worktree bytes as the source of truth (ADR 0038)', async () => {
     const lane = await engine.createLane();
-    await appendLaneFileOp(TEST_ROOT, lane.id, 'src/lane.txt', 'lane content');
-
     const meta = loadLaneMeta(join(TEST_ROOT, '.trellis'), lane.id)!;
+
+    mkdirSync(join(meta.worktreePath!, 'src'), { recursive: true });
+    writeFileSync(join(meta.worktreePath!, 'src/lane.txt'), 'lane content');
+
     await engine.enterLane(lane.id);
 
     const diskPath = join(meta.worktreePath!, 'src/lane.txt');
@@ -85,22 +63,23 @@ describe('Lane worktree bind (W5-MVP)', () => {
     await engine.leaveLane();
   });
 
-  test('two lanes isolate file content on disk', async () => {
+  test('two lane worktrees isolate file content on disk', async () => {
     const laneA = await engine.createLane();
     const laneB = await engine.createLane();
-
-    await appendLaneFileOp(TEST_ROOT, laneA.id, 'shared.txt', 'content A');
-    await appendLaneFileOp(TEST_ROOT, laneB.id, 'shared.txt', 'content B');
 
     const metaA = loadLaneMeta(join(TEST_ROOT, '.trellis'), laneA.id)!;
     const metaB = loadLaneMeta(join(TEST_ROOT, '.trellis'), laneB.id)!;
 
+    writeFileSync(join(metaA.worktreePath!, 'shared.txt'), 'content A');
     await engine.enterLane(laneA.id);
     expect(readFileSync(join(metaA.worktreePath!, 'shared.txt'), 'utf-8')).toBe(
       'content A',
     );
     await engine.leaveLane();
 
+    expect(existsSync(join(metaB.worktreePath!, 'shared.txt'))).toBe(false);
+
+    writeFileSync(join(metaB.worktreePath!, 'shared.txt'), 'content B');
     await engine.enterLane(laneB.id);
     expect(readFileSync(join(metaB.worktreePath!, 'shared.txt'), 'utf-8')).toBe(
       'content B',

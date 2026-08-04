@@ -1121,18 +1121,6 @@ gitCmd
       force: true,
     });
 
-    if (result.refused) {
-      console.error(
-        chalk.red(`✗ Git sync refused: ${result.reason ?? 'working tree out of sync'}`),
-      );
-      console.error(
-        chalk.dim(
-          'The working tree could not be reconciled with the op-log — nothing was materialized or committed.',
-        ),
-      );
-      process.exit(1);
-    }
-
     if (result.committed) {
       console.log(
         chalk.green(
@@ -1386,14 +1374,6 @@ program
             message: opts.message,
             force: true,
           });
-          if (sync.refused) {
-            console.error(
-              chalk.red(
-                `✗ Git sync refused: ${sync.reason ?? 'working tree out of sync'}`,
-              ),
-            );
-            process.exit(1);
-          }
           if (sync.committed) {
             console.log(
               chalk.green(

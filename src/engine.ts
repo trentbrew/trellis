@@ -94,11 +94,9 @@ import * as issueClaimMod from './vcs/issue-claim.js';
 import * as promoteLockMod from './vcs/promote-lock.js';
 import {
   buildPromoteCommitMessage,
-  resolveIntegrationHead,
   syncIntegrationToGit,
   type GitSyncResult,
 } from './git/git-sync.js';
-import * as laneDiskMod from './vcs/lane-disk-materialize.js';
 
 /**
  * Parse an ignore file (.gitignore or .trellisignore) and return normalized
@@ -780,31 +778,25 @@ for (const event of scanEvents) {
     return meta;
   }
 
+  /**
+   * Auto-save a lane worktree before use (ADR 0038).
+   *
+   * Git is the sole authority over file bytes. Committing whatever the agent
+   * left in the worktree — even when the agent never ran an explicit git
+   * commit — guarantees re-entry and promotion see exactly the bytes the
+   * agent produced. No op-log blobs are materialized over disk.
+   */
   private async materializeLaneWorktree(meta: LaneMeta): Promise<void> {
     if (
       !this.isWorktreeBindEnabled() ||
       !meta.worktreePath ||
-      !this._blobResolver ||
-      !this.activeLaneLog
+      !laneWorktreeMod.isGitRepo(this.config.rootPath)
     ) {
       return;
     }
-
-    let parentLaneOps: VcsOp[] | undefined;
-    if (meta.forkKind === 'child' && meta.parentLaneId) {
-      parentLaneOps = this.loadLaneJournalOps(meta.parentLaneId);
-    }
-
-    const fileStates = laneDiskMod.collectLaneFileStates(
-      this.opLog.readAll(),
-      this.activeLaneLog.readAll(),
-      meta,
-      parentLaneOps,
-    );
-    laneDiskMod.materializeToDisk(
+    laneWorktreeMod.commitWorktree(
       meta.worktreePath,
-      fileStates,
-      this._blobResolver,
+      `trellis: lane worktree entry @ ${meta.id}`,
     );
   }
 
@@ -1553,12 +1545,14 @@ for (const event of scanEvents) {
   }
 
   /**
-   * Mirror integration branch file state to the primary git worktree and commit.
+   * Commit the actual working tree to the default git branch (ADR 0038).
    *
-   * Safe by construction (Phase C): the working tree is journaled into the
-   * op-log *before* any materialization, so the op-log file state always
-   * matches disk. If any path cannot be reconciled, the sync is refused —
-   * it never materializes stale blobs over a newer working tree.
+   * Git is the sole authority over file bytes. The working tree is staged and
+   * committed as-is — the op-log is never consulted for file content and no
+   * op-log state is materialized over disk. After a successful commit a
+   * non-materializing `vcs:gitSync` annotation op records `{ gitCommitHash,
+   * gitBranch }` so the op-log can answer "where do these bytes live in git?"
+   * without owning them.
    */
   async syncGitIntegration(opts?: {
     message?: string;
@@ -1568,7 +1562,7 @@ for (const event of scanEvents) {
     /** When true, sync even if git.syncOnPromote is false. */
     force?: boolean;
   }): Promise<GitSyncResult> {
-    if (!this._blobResolver || !laneWorktreeMod.isGitRepo(this.config.rootPath)) {
+    if (!laneWorktreeMod.isGitRepo(this.config.rootPath)) {
       return { committed: false, pushed: false, filesMaterialized: 0 };
     }
 
@@ -1577,32 +1571,8 @@ for (const event of scanEvents) {
       return { committed: false, pushed: false, filesMaterialized: 0 };
     }
 
-    // Phase C catch-up: reconcile disk → op-log before materializing. Without
-    // this, a working tree with un-journaled edits would be overwritten by
-    // stale op-log blobs (9801056-regression class).
     const branch =
       this.config.git?.branch ?? this.config.defaultBranch ?? 'main';
-    const catchUp = await this.journalWorkingTreeToOps({ branch });
-    if (catchUp.unreconciled.length > 0) {
-      return {
-        committed: false,
-        pushed: false,
-        filesMaterialized: 0,
-        refused: true,
-        reason: `working tree could not be reconciled with the op-log (${catchUp.unreconciled
-          .slice(0, 5)
-          .join(', ')}${catchUp.unreconciled.length > 5 ? ', …' : ''})`,
-      };
-    }
-
-    const integrationOps = this.opLog.readAll();
-    const headOpHash =
-      resolveIntegrationHead(integrationOps, branch) ??
-      branchMod.getBranchHeadOpHash(this._ctx(), branch) ??
-      integrationOps.at(-1)?.hash;
-    if (!headOpHash) {
-      return { committed: false, pushed: false, filesMaterialized: 0 };
-    }
 
     let message = opts?.message;
     if (!message && opts?.lane && opts.laneOps) {
@@ -1618,18 +1588,102 @@ for (const event of scanEvents) {
         issueTitle,
       });
     }
-    message ??= `trellis: sync integration @ ${headOpHash.slice(0, 12)}`;
+    message ??= `trellis: sync integration @ ${branch}`;
 
-    return syncIntegrationToGit({
+    const sync = syncIntegrationToGit({
       rootPath: this.config.rootPath,
-      blobResolver: this._blobResolver,
-      integrationOps,
-      headOpHash,
       branch,
       remote: this.config.git?.remote ?? 'origin',
       message,
       push: opts?.push,
     });
+
+    if (sync.committed && sync.commitHash) {
+      await this.recordGitSyncAnnotation(sync.commitHash, branch);
+    }
+
+    return sync;
+  }
+
+  /**
+   * Record a non-materializing `vcs:gitSync` annotation (ADR 0038): the op-log
+   * learns where bytes live in git without ever claiming byte authority.
+   */
+  private async recordGitSyncAnnotation(
+    commitHash: string,
+    branch: string,
+  ): Promise<void> {
+    const annotationOp = await createVcsOp('vcs:gitSync', {
+      agentId: this.agentId,
+      previousHash: this.opLog.getLastOp()?.hash,
+      vcs: {
+        gitCommitHash: commitHash,
+        gitBranch: branch,
+      },
+    });
+    await this.applyOp(annotationOp, { skipBranchAdvance: true });
+  }
+
+  /**
+   * Deliver a promoted lane's bytes to git (ADR 0038).
+   *
+   * 1. Auto-commit the lane worktree (the agent's actual bytes) onto its
+   *    `lane/<shortId>` branch.
+   * 2. Merge that branch into the integration head of the main worktree.
+   * 3. Root sync: commit any remaining root dirt + push when configured.
+   *
+   * A git merge conflict fails the delivery — git is the authority, so a
+   * conflicted merge cannot be papered over with a synthesized file state.
+   */
+  private async gitDeliveryForLane(opts: {
+    lane: LaneMeta;
+    laneOps: VcsOp[];
+  }): Promise<GitSyncResult> {
+    const rootPath = this.config.rootPath;
+    const worktreePath =
+      this.isWorktreeBindEnabled() && opts.lane.worktreePath
+        ? opts.lane.worktreePath
+        : undefined;
+
+    let message: string | undefined;
+    {
+      let issueTitle: string | undefined;
+      if (opts.lane.issueId) {
+        const issueId = opts.lane.issueId.replace(/^issue:/, '');
+        const issue = issueMod.getIssue(this._ctx(), issueId);
+        issueTitle = issue?.title;
+      }
+      message = buildPromoteCommitMessage({
+        lane: opts.lane,
+        laneOps: opts.laneOps,
+        issueTitle,
+      });
+    }
+
+    const targetBranch =
+      this.config.git?.branch ?? this.config.defaultBranch ?? 'main';
+
+    if (worktreePath && laneWorktreeMod.isGitRepo(rootPath)) {
+      laneWorktreeMod.commitWorktree(worktreePath, message);
+      const laneBranch = laneWorktreeMod.laneGitBranch(opts.lane.id);
+      const merged = laneWorktreeMod.mergeLaneWorktree(
+        rootPath,
+        laneBranch,
+        message,
+      );
+      if (merged === 'failed') {
+        return { committed: false, pushed: false, filesMaterialized: 0 };
+      }
+      if (merged === 'merged') {
+        await this.recordGitSyncAnnotation(
+          laneWorktreeMod.revParseHead(rootPath),
+          targetBranch,
+        );
+      }
+    }
+
+    // Root delivery: commit any remaining dirty root bytes + push.
+    return this.syncGitIntegration({ message, force: true });
   }
 
   /**
@@ -2106,29 +2160,14 @@ for (const event of scanEvents) {
       let opsAppended = 0;
 
       for (const action of plan.opsToReplay) {
-        let opToApply: VcsOp;
-
-        if (action.mergedContent !== undefined && action.sourceOp.vcs?.filePath) {
-          const contentHash = await this._blobStore!.put(
-            Buffer.from(action.mergedContent, 'utf-8'),
-          );
-          opToApply = await createVcsOp('vcs:fileModify', {
-            agentId: action.sourceOp.agentId,
-            previousHash,
-            vcs: {
-              filePath: action.sourceOp.vcs.filePath,
-              contentHash,
-            },
-          });
-          // Lane is envelope provenance, not identity (TRL-102) — a merged
-          // fileModify must hash on its path + content, not on its lane.
-          opToApply.laneId = action.sourceOp.laneId ?? laneId;
-        } else {
-          opToApply = await lanePromoteMod.rechainOpForIntegration(
-            action.sourceOp,
-            previousHash,
-          );
-        }
+        // ADR 0038: the op-log is annotation, not authority. Every op —
+        // including merge-resolved ones — is re-chained from its source; the
+        // merged bytes themselves are delivered by the git merge (see
+        // gitDeliveryForLane). No blob is put, no synthetic fileModify minted.
+        const opToApply = await lanePromoteMod.rechainOpForIntegration(
+          action.sourceOp,
+          previousHash,
+        );
 
         await this.applyOp(opToApply, {
           skipBranchAdvance: true,
@@ -2159,21 +2198,23 @@ for (const event of scanEvents) {
       meta.updatedAt = new Date().toISOString();
       laneMod.saveLaneMeta(this.trellisDir(), meta);
 
+      // Deliver the lane's bytes to git BEFORE the worktree is removed — the
+      // lane branch is the merge source (ADR 0038: git, not the op-log, moves
+      // bytes to the integration head).
+      let gitSync: GitSyncResult | undefined;
+      if (this.config.git?.syncOnPromote !== false) {
+        gitSync = await this.gitDeliveryForLane({
+          lane: meta,
+          laneOps,
+        });
+      }
+
       // Clean up worktree after successful promotion
       this.removeLaneWorktree(meta);
 
       this.invalidateIntegrationCache();
       this.refreshMaterializedStore(this.opLog.readAll());
       this.syncIngestionLastOpHash();
-
-      let gitSync: GitSyncResult | undefined;
-      if (this.config.git?.syncOnPromote !== false) {
-        gitSync = await this.syncGitIntegration({
-          lane: meta,
-          laneOps,
-          force: true,
-        });
-      }
 
       let milestoneId: string | undefined;
       let milestoneMessage: string | undefined;

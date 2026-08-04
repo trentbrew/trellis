@@ -16,13 +16,14 @@ function initGitRepo(root: string): void {
   git(root, 'init');
   git(root, 'config user.email "test@trellis.dev"');
   git(root, 'config user.name "Test"');
+  writeFileSync(join(root, '.gitignore'), '.trellis/\n');
   writeFileSync(join(root, 'README.md'), '# test\n');
   git(root, 'add -A');
   git(root, 'commit -m "init"');
   git(root, 'branch -M main');
 }
 
-describe('syncGitIntegration working-tree catch-up (Phase C)', () => {
+describe('syncGitIntegration git-authoritative working tree (ADR 0038)', () => {
   let engine: TrellisVcsEngine;
 
   beforeEach(async () => {
@@ -40,7 +41,7 @@ describe('syncGitIntegration working-tree catch-up (Phase C)', () => {
     rmSync(TEST_ROOT, { recursive: true, force: true });
   });
 
-  test('journalWorkingTreeToOps journals un-journaled edits before sync', async () => {
+  test('journalWorkingTreeToOps remains available as a diagnostic', async () => {
     // 1. Journal a baseline file state via the engine (op-log knows v1).
     mkdirSync(join(TEST_ROOT, 'src'), { recursive: true });
     writeFileSync(join(TEST_ROOT, 'src/app.ts'), 'v1');
@@ -50,10 +51,9 @@ describe('syncGitIntegration working-tree catch-up (Phase C)', () => {
     expect(stateBefore.get('src/app.ts')?.contentHash).toBeDefined();
 
     // 2. Simulate the journaling gap: edit the file DIRECTLY on disk.
-    //    No watcher runs; the op-log still holds v1.
     writeFileSync(join(TEST_ROOT, 'src/app.ts'), 'v2-dirty');
 
-    // 3. Catch-up reconciles disk → op-log.
+    // 3. Catch-up still works as a standalone diagnostic tool.
     const result = await engine.journalWorkingTreeToOps();
     expect(result.unreconciled).toEqual([]);
     expect(result.journaled).toBeGreaterThanOrEqual(1);
@@ -64,10 +64,14 @@ describe('syncGitIntegration working-tree catch-up (Phase C)', () => {
     );
   });
 
-  test('git sync does NOT revert a dirty working tree (9801056 class)', async () => {
+  test('git sync commits disk truth without journaling or clobbering (9801056 class)', async () => {
     mkdirSync(join(TEST_ROOT, 'src'), { recursive: true });
     writeFileSync(join(TEST_ROOT, 'src/app.ts'), 'v1');
     await engine.indexWorkspace();
+
+    const fileOpsBefore = engine
+      .getOps()
+      .filter((op) => /^vcs:file(Add|Modify|Delete)/.test(op.kind)).length;
 
     // Commit the journaled state to git first (as a shipped baseline).
     await engine.syncGitIntegration({ force: true, message: 'baseline' });
@@ -76,39 +80,54 @@ describe('syncGitIntegration working-tree catch-up (Phase C)', () => {
     // Dirty the working tree WITHOUT journaling (the trap scenario).
     writeFileSync(join(TEST_ROOT, 'src/app.ts'), 'v2-shipped-later');
 
-    const result = await engine.syncGitIntegration({ force: true, message: 'sync after dirty' });
+    const journalSpy = vi.spyOn(engine, 'journalWorkingTreeToOps');
+    const result = await engine.syncGitIntegration({
+      force: true,
+      message: 'sync after dirty',
+    });
 
-    // No refusal — the tree reconciled.
-    expect(result.refused).toBeUndefined();
-    expect(result.refused ?? false).toBe(false);
+    // Sync never journals: the op-log is not on the write path anymore.
+    expect(journalSpy).not.toHaveBeenCalled();
+    journalSpy.mockRestore();
 
     // The shipped content survived: git HEAD has v2, not a revert to v1.
+    expect(result.committed).toBe(true);
     expect(readFileSync(join(TEST_ROOT, 'src/app.ts'), 'utf-8')).toBe(
       'v2-shipped-later',
     );
     expect(git(TEST_ROOT, 'show HEAD:src/app.ts')).toBe('v2-shipped-later');
 
-    // The op-log now agrees with disk.
-    const state = buildFileStateAtOp(engine.getOps());
-    expect(state.get('src/app.ts')).toBeDefined();
-
-    // At most one new commit was minted by the sync (the catch-up, not a revert).
+    // At most one new commit was minted by the sync.
     const gitLogAfter = git(TEST_ROOT, 'log --oneline').split('\n').length;
     expect(gitLogAfter).toBeLessThanOrEqual(gitLogBefore + 1);
+
+    // Sync minted no file ops — only vcs:gitSync annotations.
+    const fileOpsAfter = engine
+      .getOps()
+      .filter((op) => /^vcs:file(Add|Modify|Delete)/.test(op.kind)).length;
+    expect(fileOpsAfter).toBe(fileOpsBefore);
+    const syncOps = engine.getOps().filter((op) => op.kind === 'vcs:gitSync');
+    expect(syncOps.length).toBeGreaterThanOrEqual(2);
   });
 
-  test('git sync refuses when the working tree cannot be reconciled', async () => {
-    // Simulate an unreconcilable tree: the catch-up reports a path it could
-    // not journal (e.g. blob-store failure). Sync must refuse, not materialize.
+  test('git sync succeeds even when the working tree is unreconcilable', async () => {
+    // Even if a diagnostic catch-up would fail, sync must NOT refuse or
+    // materialize: git commits whatever is on disk.
+    mkdirSync(join(TEST_ROOT, 'src'), { recursive: true });
+    writeFileSync(join(TEST_ROOT, 'src/app.ts'), 'v1');
+    await engine.indexWorkspace();
+
     const spy = vi
       .spyOn(engine, 'journalWorkingTreeToOps')
       .mockResolvedValue({ journaled: 0, unreconciled: ['src/app.ts'] });
 
-    const result = await engine.syncGitIntegration({ force: true, message: 'dirty' });
+    const result = await engine.syncGitIntegration({
+      force: true,
+      message: 'dirty',
+    });
 
-    expect(result.refused).toBe(true);
-    expect(result.committed).toBe(false);
-    expect(result.reason).toContain('could not be reconciled');
+    expect(result.committed).toBe(true);
+    expect(git(TEST_ROOT, 'show HEAD:src/app.ts')).toBe('v1');
     spy.mockRestore();
   });
 
