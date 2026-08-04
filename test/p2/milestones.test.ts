@@ -17,7 +17,7 @@ describe('Milestones', () => {
     writeFileSync(join(TEST_ROOT, 'b.ts'), 'export const b = 2;');
 
     engine = new TrellisVcsEngine({ rootPath: TEST_ROOT });
-    await engine.initRepo();
+    await engine.initRepo({ indexWorkspace: true });
   });
 
   afterEach(() => {

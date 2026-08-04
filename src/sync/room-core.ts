@@ -1,5 +1,6 @@
 import { isVcsOpKind, verifyVcsOpHash } from '../vcs/ops.js';
 import type { VcsOp } from '../vcs/types.js';
+import { isLocalOnlyOpKind } from '../vcs/sync-policy.js';
 import type { PeerId, SyncMessage } from './types.js';
 import {
   PROTOCOL_VERSION,
@@ -182,8 +183,9 @@ export class SyncRoomCore {
       case 'lane-journal':
       case 'decision-trace':
       case 'entity-delta':
-        // Full-state sync messages (TRL-334) - not handled by room core
-        // These are handled by the sync daemon directly
+      case 'device-revoked':
+        // Full-state / identity messages (TRL-334, Slice D) - not handled by
+        // room core. These are handled by the sync daemon / engine peer side.
         return [];
     }
   }
@@ -366,6 +368,10 @@ export class SyncRoomCore {
 
   private opsDelivery(peerId: string, ops: VcsOp[]): SyncRoomDelivery[] {
     if (ops.length === 0) return [];
+    // Local-only ops (chat transcripts) never leave the desk unless a team
+    // explicitly opts into sync — privacy is the default.
+    const deliverable = ops.filter((op) => !isLocalOnlyOpKind(op.kind));
+    if (deliverable.length === 0) return [];
     return [
       {
         peerId,
@@ -373,7 +379,7 @@ export class SyncRoomCore {
           version: PROTOCOL_VERSION,
           type: 'ops',
           peerId: this.roomPeer.id,
-          ops,
+          ops: deliverable,
         },
       },
     ];

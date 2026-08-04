@@ -67,7 +67,7 @@ project kanban.backlog
   use shell issue.card
 ```
 
-```tml
+```
 shell lane.card
   kind: lane
   density: card
@@ -101,7 +101,7 @@ shell issue.card (kind: issue, density: card) {
 }
 ```
 
-```tml
+```
 # Combined authoring view (same as shells/ + projects/)
 
 shell todo.row (kind: todo, density: row)
@@ -123,7 +123,7 @@ project todo.list
 
 # LIT
 
-```lit-example.ts
+```ts
 import {LitElement, css, html} from 'lit';
 import {customElement, property} from 'lit/decorators.js';
 

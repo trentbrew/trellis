@@ -56,7 +56,7 @@ export interface ToolResult {
 // Agent run
 // ---------------------------------------------------------------------------
 
-export type RunStatus = 'running' | 'completed' | 'failed' | 'cancelled' | 'plan_pending';
+export type RunStatus = 'running' | 'plan_pending' | 'paused' | 'completed' | 'failed' | 'cancelled';
 
 export interface AgentRun {
   id: string;

@@ -672,6 +672,35 @@ export function decompose(op: VcsOp): DecomposedOp {
       break;
     }
 
+    case 'vcs:chatMessage': {
+      // Transcripts decompose into EAV entities (conversation + message) so
+      // they are queryable and embeddable like any other graph content.
+      // Entity ids are deterministic from op content so replay is idempotent.
+      if (!vcs.chatSessionId) break;
+      const conv = `conversation:${vcs.chatSessionId}`;
+      const msg = `message:${op.hash}`;
+      result.addFacts.push(
+        { e: conv, a: 'type', v: 'Conversation' },
+        { e: conv, a: 'createdAt', v: op.timestamp },
+        { e: msg, a: 'type', v: 'ChatMessage' },
+        { e: msg, a: 'role', v: vcs.chatRole ?? 'assistant' },
+        { e: msg, a: 'text', v: vcs.chatText ?? '' },
+        { e: msg, a: 'createdAt', v: op.timestamp },
+        { e: msg, a: 'createdBy', v: op.agentId },
+      );
+      if (vcs.chatLaneId) {
+        result.addFacts.push({ e: msg, a: 'laneId', v: vcs.chatLaneId });
+      }
+      if (vcs.chatToolName) {
+        result.addFacts.push({ e: msg, a: 'toolName', v: vcs.chatToolName });
+      }
+      if (typeof vcs.chatTokens === 'number') {
+        result.addFacts.push({ e: msg, a: 'tokens', v: vcs.chatTokens });
+      }
+      result.addLinks.push({ e1: conv, a: 'hasMessage', e2: msg });
+      break;
+    }
+
     case 'vcs:laneCreate': {
       if (!vcs.laneId) break;
       const lid = laneEntityId(vcs.laneId);
@@ -735,6 +764,10 @@ export function decompose(op: VcsOp): DecomposedOp {
       const lid = laneEntityId(vcs.laneId);
       result.deleteFacts.push({ e: lid, a: 'status', v: 'active' });
       result.addFacts.push({ e: lid, a: 'status', v: 'promoting' });
+      break;
+    }
+
+    case 'vcs:laneGc': {
       break;
     }
 
@@ -842,6 +875,37 @@ export function decompose(op: VcsOp): DecomposedOp {
 
     case 'vcs:storeUnlink': {
       result.deleteLinks.push(...pickLinks(vcs.links));
+      break;
+    }
+
+    case 'vcs:repoAttest': {
+      // ADR 0032 §4 — owner-signed self-attestation that this ledger is
+      // `{owner}/{name}`. Recorded as facts on the ledger entity so discovery
+      // and clone verification can read ownership from the graph, not just the
+      // sprite's index.
+      if (vcs.repoId) {
+        const ledger = `ledger:${vcs.repoId}`;
+        result.addFacts.push(
+          { e: ledger, a: 'type', v: 'Ledger' },
+          { e: ledger, a: 'repoId', v: vcs.repoId },
+        );
+        if (vcs.repoOwner) {
+          result.addFacts.push({ e: ledger, a: 'owner', v: vcs.repoOwner });
+        }
+        if (vcs.repoName) {
+          result.addFacts.push({ e: ledger, a: 'name', v: vcs.repoName });
+        }
+        if (vcs.projectKind) {
+          result.addFacts.push({ e: ledger, a: 'kind', v: vcs.projectKind });
+        }
+        if (vcs.signedBy) {
+          result.addFacts.push({
+            e: ledger,
+            a: 'attestedBy',
+            v: vcs.signedBy,
+          });
+        }
+      }
       break;
     }
   }

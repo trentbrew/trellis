@@ -135,4 +135,80 @@ describe('ledger handler', () => {
     expect(res.status).toBe(200);
     expect(await res.text()).toBe(checkpoint);
   });
+
+  it('repos endpoint lists hosted ledgers', async () => {
+    const op = sampleOp('5');
+    const checkpoint = checkpointBody([op]);
+    await fetchHandler(
+      new Request('http://127.0.0.1/v0/ledger/push', {
+        method: 'POST',
+        headers: { ...authHeaders(), 'content-type': 'application/json' },
+        body: JSON.stringify({
+          repoId,
+          tailHash: op.hash,
+          checkpoint,
+          format: 'jsonl',
+          byteLength: Buffer.byteLength(checkpoint, 'utf-8'),
+          lineCount: 1,
+        }),
+      }),
+    );
+
+    const res = await fetchHandler(
+      new Request('http://127.0.0.1/v0/ledger/repos', {
+        headers: authHeaders(),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      repoId: string;
+      tailHash: string;
+      lineCount: number;
+    }[];
+    expect(body.length).toBe(1);
+    expect(body[0]!.repoId).toBe(repoId);
+    expect(body[0]!.tailHash).toBe(op.hash);
+    expect(body[0]!.lineCount).toBe(1);
+  });
+
+  it('repos endpoint includes owner/name when pushed with project metadata (ADR 0032)', async () => {
+    const op = sampleOp('6');
+    const checkpoint = checkpointBody([op]);
+    await fetchHandler(
+      new Request('http://127.0.0.1/v0/ledger/push', {
+        method: 'POST',
+        headers: { ...authHeaders(), 'content-type': 'application/json' },
+        body: JSON.stringify({
+          repoId,
+          tailHash: op.hash,
+          checkpoint,
+          format: 'jsonl',
+          byteLength: Buffer.byteLength(checkpoint, 'utf-8'),
+          lineCount: 1,
+          owner: 'identity:did:key:zAlice',
+          name: 'trellis-node',
+        }),
+      }),
+    );
+
+    const res = await fetchHandler(
+      new Request('http://127.0.0.1/v0/ledger/repos', {
+        headers: authHeaders(),
+      }),
+    );
+    const body = (await res.json()) as {
+      repoId: string;
+      owner?: string;
+      name?: string;
+    }[];
+    expect(body[0]!.owner).toBe('identity:did:key:zAlice');
+    expect(body[0]!.name).toBe('trellis-node');
+  });
+
+  it('repos endpoint requires auth when key set', async () => {
+    const res = await fetchHandler(
+      new Request('http://127.0.0.1/v0/ledger/repos'),
+    );
+    expect(res.status).toBe(401);
+  });
 });
