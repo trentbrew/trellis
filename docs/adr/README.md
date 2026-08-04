@@ -16,7 +16,7 @@ Decisions for the **Agent Lane** program (`trellis lane`). Status: **accepted**
 | [0015](./0015-agent-handoff-protocol.md)                 | Agent handoff protocol               | Graph-backed protocol messages + `whereami` re-entry (Phase 1a)           |
 | [0016](./0016-relay-blob-serving.md)                     | Relay blob serving                   | Content-addressed `/blob` HTTP surface on the realtime relay              |
 | [0017](./0017-blob-gc-thermal-decay.md)                  | Blob GC + thermal decay                  | W‑TinyLFU hot cache; hot→cold→OPFS→peer ladder; never-sole-copy invariant |
-| [0038](./0038-git-authoritative-file-tier.md)            | Git-authoritative file tier              | Git sole byte authority; op-log demoted to non-materializing provenance (proposed, 2026-08-04) |
+| [0038](./0038-git-authoritative-file-tier.md)            | Git-authoritative file tier              | Git sole byte authority; op-log demoted to non-materializing provenance (accepted, Phase 1 implemented) |
 
 Desk issue: **TRL-35** (W0), **TRL-36** (W1). Plan:
 `TRELLIS/tooling/planning/agent-lanes.md`.
