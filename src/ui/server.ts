@@ -686,6 +686,32 @@ export async function startUIServer(opts: UIServerOptions): Promise<{
       });
     }
 
+    // Serve theme CSS files
+    if (path.startsWith('/theme/')) {
+      const cssPath = join(dirname(findClientHtml()), path.slice(1));
+      if (existsSync(cssPath)) {
+        return new Response(readFileSync(cssPath, 'utf-8'), {
+          headers: {
+            ...headers,
+            'Content-Type': 'text/css; charset=utf-8',
+            'Cache-Control': 'no-cache',
+          },
+        });
+      }
+      return new Response('Theme file not found.', { status: 404, headers });
+    }
+
+    // Serve table-view-demo at /demo/table
+    if (path === '/demo/table' || path === '/table-view-demo.html') {
+      const demoPath = join(dirname(findClientHtml()), 'table-view-demo.html');
+      if (existsSync(demoPath)) {
+        return new Response(readFileSync(demoPath, 'utf-8'), {
+          headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8' },
+        });
+      }
+      return new Response('table-view-demo.html not found.', { status: 404, headers });
+    }
+
     // Serve admin UI at /admin route
     if (path === '/admin' || path === '/admin.html') {
       const adminHtmlPath = join(dirname(findClientHtml()), 'admin.html');

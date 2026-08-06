@@ -182,6 +182,36 @@ export type {
   UseComboboxReturn,
 } from '../combobox/index.js';
 
+// Headless table (ADR 0034 wedge 6) — core is browser-safe
+export { createTableCore } from '../table/index.js';
+export type {
+  CellValueType,
+  EditingCell,
+  SortDirection,
+  SortSpec,
+  TableActions,
+  TableColumn,
+  TableColumnView,
+  TableConfig,
+  TableRowView,
+  TableState,
+  UndoCommandLike,
+  UndoLike,
+  UseTableReturn,
+} from '../table/index.js';
+
+// Headless view core (Phase C) — manages view mode + column layout + vantage
+export { createViewCore } from '../view/index.js';
+export type {
+  ViewMode,
+  ViewColumn,
+  ViewSortSpec,
+  ViewState,
+  ViewActions,
+  ViewConfig,
+  UseViewReturn,
+} from '../view/index.js';
+
 export {
   RealtimeRoom,
   MemoryHub,

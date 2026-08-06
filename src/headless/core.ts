@@ -38,6 +38,7 @@ export type HeadlessComponentType =
   | 'flow'
   | 'layout'
   | 'kanban'
+  | 'view'
   | 'undo-history';
 
 /**

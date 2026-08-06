@@ -246,8 +246,104 @@
 }
 
 /*
+  View-mode morphing — seamless transitions between grid/table/kanban/card.
+  The view-toggle switches `data-view-mode` on the projection host; CSS
+  transitions animate layout properties so nodes flow between formats.
+*/
+
+.view-host {
+  transition:
+    display 0.18s ease,
+    grid-template-columns 0.18s ease,
+    flex-direction 0.18s ease,
+    gap 0.18s ease;
+}
+
+.view-host[data-view-mode="grid"] {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-3, 12px);
+}
+
+.view-host[data-view-mode="table"] {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border-base, rgba(255, 255, 255, 0.195));
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+}
+
+.view-host[data-view-mode="table"] .table-row {
+  display: contents;
+}
+
+.view-host[data-view-mode="table"] .table-row > * {
+  display: table-cell;
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  border-bottom: 1px solid var(--border-base, rgba(255, 255, 255, 0.06));
+}
+
+.view-host[data-view-mode="table"] .table-header-row > * {
+  background: var(--surface-raised-base, #1c1c1c);
+  font-family: var(--font-family-mono, ui-monospace, monospace);
+  font-size: var(--font-size-xs, 11px);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-weak, rgba(255, 255, 255, 0.422));
+  border-bottom: 1px solid var(--border-strong, rgba(255, 255, 255, 0.266));
+}
+
+.view-host[data-view-mode="kanban"] {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-2, 8px);
+  overflow-x: auto;
+}
+
+.view-host[data-view-mode="card"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+}
+
+/* Per-node shell morphing inside table view */
+.view-host[data-view-mode="table"] [data-trellis-shell="node"] .table-cell-text {
+  display: none;
+}
+
+.view-host[data-view-mode="table"] [data-trellis-shell="node"] .table-cell-pip {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--entity-default, rgba(255, 255, 255, 0.618));
+}
+
+.view-host[data-view-mode="table"] [data-trellis-shell="row"] .table-row > * {
+  padding: 6px 12px;
+  font-size: var(--font-size-sm, 13px);
+}
+
+.view-host[data-view-mode="table"] [data-trellis-shell="card"] .table-row > * {
+  padding: var(--space-3, 12px);
+  border-radius: var(--radius-lg, 10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Motion tokens */
+:root {
+  --motion-duration-fast: 120ms;
+  --motion-duration-normal: 180ms;
+  --motion-duration-slow: 320ms;
+  --motion-ease-out: cubic-bezier(0.2, 0, 0.2, 1);
+  --motion-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/*
   Phase C+ / TRL-25 (not in this wedge):
   dual-shell crossfade; full 0–21 territory table; band ACL L1|L2
   html[data-trellis-band="L1|L2|L3"]
   [data-ui-vantage] [data-trellis-shell="node|row|card"]
+  [data-view-mode="grid|table|kanban|card"]
 */
