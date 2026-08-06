@@ -9,7 +9,7 @@ import { TrellisVcsEngine } from '../engine.js';
 import type { VcsOp } from '../vcs/types.js';
 import { loadLaneMeta, saveLaneMeta } from '../vcs/lane.js';
 import { startNodeServer } from '../server/node-adapter.js';
-import { buildLanesSnapshot } from './lanes-snapshot.js';
+import { buildLanesSnapshot, type LaneRow } from './lanes-snapshot.js';
 import { buildCausalGraphSnapshot } from './causal-graph-snapshot.js';
 import { PROVENANCE } from '../core/persist/canonical-op.js';
 import { resolveRuntimeThemeCss } from './theme/resolve-runtime-theme-css.js';
@@ -156,8 +156,53 @@ export async function startLanesDashboard(
     'Cache-Control': 'no-store',
   };
 
+  // Health indicators for lanes
+  function getLaneHealth(lane: LaneRow, engine: TrellisVcsEngine): string {
+    const isActive = lane.isActive;
+    const opCount = lane.opCount;
+    const worktreePath = lane.worktreePath;
+    const status = lane.status;
+    
+    if (status === 'dropped') return 'dead';
+    if (status === 'promoting') return 'busy';
+    if (!worktreePath) return 'orphaned'; // Orphaned worktree
+    if (!lane.issueId) return 'unbound';
+    if (opCount === 0) {
+      if (isActive) return 'stale-active';
+      return 'stale';
+    }
+    if (isActive) return 'healthy';
+    return 'bound';
+  }
+
+  function formatHealthBadge(health: string): string {
+    const badges: Record<string, { label: string; color: string }> = {
+      healthy: { label: '● Healthy', color: '#22c55e' }, // green
+      bound: { label: '● Bound', color: '#3b82f6' }, // blue
+      stale: { label: '● Stale', color: '#eab308' }, // yellow
+      'stale-active': { label: '● Stale Active', color: '#eab308' }, // yellow
+      orphaned: { label: '● Orphaned', color: '#f97316' }, // orange
+      unbound: { label: '● Unbound', color: '#94a3b8' }, // gray-blue
+      busy: { label: '● Promoting', color: '#8b5cf6' }, // purple
+      dead: { label: '● Dropped', color: '#ef4444' }, // red
+    };
+    const badge = badges[health] || { label: health, color: '#6b7280' }; // gray
+    return `<span style="color: ${badge.color}">${badge.label}</span>`;
+  }
+
+  // Enhanced snapshot with health indicators
+  const enhancedSnapshot = () => {
+    const snapshot = buildLanesSnapshot(engine, opts.rootPath, { port: boundPort, viewers });
+    const lanesWithHealth = snapshot.lanes.map(lane => ({
+      ...lane,
+      health: getLaneHealth(lane, engine),
+      healthBadge: formatHealthBadge(getLaneHealth(lane, engine)),
+    }));
+    return { ...snapshot, lanes: lanesWithHealth };
+  };
+
   const snapshot = () =>
-    buildLanesSnapshot(engine, opts.rootPath, { port: boundPort, viewers });
+    enhancedSnapshot();
 
   const serveBundledJs = async (jsName: string, tsName: string): Promise<Response> => {
     if (uiDev) {
@@ -248,7 +293,7 @@ export async function startLanesDashboard(
 
     if (path === '/api/lanes') {
       engine.open();
-      return Response.json(snapshot(), { headers });
+      return Response.json(enhancedSnapshot(), { headers });
     }
 
     if (path === '/api/causal-graph') {

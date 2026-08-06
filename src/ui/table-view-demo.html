@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en" data-trellis-band="L3">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trellis — Table view · fractal morphing</title>
+  <link rel="stylesheet" href="/theme/foundation.css">
+  <link rel="stylesheet" href="/theme/semantic.css">
+  <link rel="stylesheet" href="/theme/runtime-theme.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-family-sans, system-ui, -apple-system, sans-serif);
+      background: var(--surface-bg, #101010);
+      color: var(--text-strong, rgba(255, 255, 255, 0.936));
+      padding: 24px;
+      min-height: 100vh;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    h1 span {
+      color: var(--text-weak, rgba(255, 255, 255, 0.422));
+      font-weight: 400;
+      font-size: 12px;
+      margin-left: 8px;
+    }
+
+    .tag {
+      font: 600 10px var(--font-family-mono, ui-monospace, monospace);
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      color: var(--primary, #9dbefe);
+      border: 1px solid var(--border-base, rgba(255, 255, 255, 0.195));
+      border-radius: 999px;
+      padding: 3px 9px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .seg {
+      display: inline-flex;
+      background: var(--surface-raised-base, #1c1c1c);
+      border: 1px solid var(--border-base, rgba(255, 255, 255, 0.195));
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .seg-btn {
+      border: none;
+      background: none;
+      color: var(--text-weak, rgba(255, 255, 255, 0.422));
+      font: 500 12px var(--font-family-sans, system-ui, sans-serif);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .seg-btn:hover {
+      color: var(--text-base, rgba(255, 255, 255, 0.618));
+    }
+
+    .seg-btn.selected {
+      color: var(--text-strong, rgba(255, 255, 255, 0.936));
+      background: var(--surface-inset-alpha, rgba(0, 0, 0, 0.5));
+    }
+
+    .vantage-group {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .vantage-label {
+      font: 400 10px var(--font-family-mono, ui-monospace, monospace);
+      color: var(--text-weak, rgba(255, 255, 255, 0.422));
+    }
+
+    .reset {
+      border: 1px solid var(--border-base, rgba(255, 255, 255, 0.195));
+      background: none;
+      color: var(--text-weak, rgba(255, 255, 255, 0.422));
+      font: 500 11px var(--font-family-sans, system-ui, sans-serif);
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-left: auto;
+    }
+
+    .reset:hover {
+      color: var(--text-base, rgba(255, 255, 255, 0.618));
+    }
+
+    .hint {
+      font: 400 11px var(--font-family-mono, ui-monospace, monospace);
+      color: var(--text-weak, rgba(255, 255, 255, 0.422));
+      margin-bottom: 12px;
+    }
+
+    /* Seed rows use the view-host morphing contract from runtime-theme.css */
+    .view-host {
+      --motion-ease-out: cubic-bezier(0.2, 0, 0.2, 1);
+    }
+
+    .table-row--entity {
+      display: contents;
+      cursor: pointer;
+    }
+
+    .table-cell {
+      display: table-cell;
+      padding: var(--space-2, 8px) var(--space-3, 12px);
+      border-bottom: 1px solid var(--border-base, rgba(255, 255, 255, 0.06));
+      vertical-align: top;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: all 0.15s ease;
+    }
+
+    .cell-title {
+      font-weight: 500;
+      color: var(--text-strong, rgba(255, 255, 255, 0.936));
+    }
+
+    .cell-id {
+      font: 400 11px var(--font-family-mono, ui-monospace, monospace);
+      color: var(--primary, #9dbefe);
+    }
+
+    .cell-pip {
+      display: none;
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--entity-default, rgba(255, 255, 255, 0.618));
+    }
+
+    /* Grid / card / kanban overrides live in runtime-theme.css .view-host rules */
+
+    .badge {
+      display: inline-block;
+      font: 600 9px var(--font-family-mono, ui-monospace, monospace);
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .badge.critical {
+      background: color-mix(in oklch, var(--surface-critical-strong, #fc533a) 18%, transparent);
+      color: var(--surface-critical-strong, #fc533a);
+    }
+
+    .badge.high {
+      background: color-mix(in oklch, var(--surface-warning-strong, #fcd53a) 16%, transparent);
+      color: var(--surface-warning-strong, #fcd53a);
+    }
+
+    .badge.medium {
+      background: color-mix(in oklch, var(--surface-info-strong, #edb2f1) 16%, transparent);
+      color: var(--surface-info-strong, #edb2f1);
+    }
+
+    .badge.low {
+      background: var(--surface-raised-base, #242424);
+      color: var(--text-weak, rgba(255, 255, 255, 0.422));
+    }
+
+    .status {
+      font: 400 11px var(--font-family-mono, ui-monospace, monospace);
+    }
+
+    .status.running {
+      color: var(--surface-success-strong, #12c905);
+    }
+
+    .status.idle {
+      color: var(--text-weak, rgba(255, 255, 255, 0.422));
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .view-host,
+      .table-row--entity,
+      .table-cell,
+      .seg-btn {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Trellis <span>Table view · fractal morphing</span></h1>
+    <span class="tag" id="territory">card · v8</span>
+  </header>
+
+  <div class="toolbar">
+    <div class="seg" id="view-toggle" role="radiogroup" aria-label="View mode">
+      <button class="seg-btn" role="radio" aria-checked="false" tabindex="-1" data-mode="grid">Grid</button>
+      <button class="seg-btn selected" role="radio" aria-checked="true" tabindex="0" data-mode="table">Table</button>
+      <button class="seg-btn" role="radio" aria-checked="false" tabindex="-1" data-mode="kanban">Kanban</button>
+      <button class="seg-btn" role="radio" aria-checked="false" tabindex="-1" data-mode="card">Card</button>
+    </div>
+
+    <div class="vantage-group">
+      <span class="vantage-label">Shell vantage</span>
+      <div class="seg" id="vantage" role="radiogroup" aria-label="Shell vantage">
+        <button class="seg-btn" role="radio" aria-checked="false" tabindex="-1" data-v="2" data-shell="node">Node</button>
+        <button class="seg-btn" role="radio" aria-checked="false" tabindex="-1" data-v="5" data-shell="row">Row</button>
+        <button class="seg-btn selected" role="radio" aria-checked="true" tabindex="0" data-v="8" data-shell="card">Card</button>
+      </div>
+    </div>
+
+    <button class="reset" id="reset">Reset</button>
+  </div>
+
+  <p class="hint" id="hint">↕ morphs the whole view · nodes reflow and shells snap to vantage · selection persists in localStorage</p>
+
+  <div class="view-host" id="host" data-view-mode="table" data-ui-vantage="8"></div>
+
+  <script type="module">
+    // ──────────────────────────────────────────────────────────────────────
+    // Seed lanes + issues (mirrors lanes.html / ISSUE_COLUMNS).
+    // ──────────────────────────────────────────────────────────────────────
+    const DATA = [
+      { id: 'TRL-1', title: 'Fractal vantage shell registry', kind: 'issue', status: 'in_progress', priority: 'critical', lane: 'agent-architect' },
+      { id: 'TRL-2', title: 'Seamless grid→table morph', kind: 'issue', status: 'backlog', priority: 'high', lane: 'synthesist' },
+      { id: 'TRL-3', title: 'Persist per-node view config', kind: 'issue', status: 'queue', priority: 'medium', lane: 'agent-optimizer' },
+      { id: 'TRL-4', title: 'Entity-list table projection', kind: 'issue', status: 'in_progress', priority: 'high', lane: 'executor' },
+      { id: 'TRL-5', title: 'Dual-shell crossfade prep', kind: 'issue', status: 'backlog', priority: 'low', lane: 'reviewer' },
+      { id: 'TRL-6', title: 'Vantage territory table', kind: 'issue', status: 'queue', priority: 'medium', lane: 'agent-strategist' },
+      { id: 'lane-1', title: 'render-engine', kind: 'lane', status: 'running', priority: 'high', lane: 'feature/shell' },
+      { id: 'lane-2', title: 'persist-core', kind: 'lane', status: 'running', priority: 'medium', lane: 'feature/persist' },
+      { id: 'lane-3', title: 'inspect', kind: 'lane', status: 'idle', priority: 'low', lane: 'main' },
+    ];
+
+    const MODE_KEY = 'trellis-demo-view-mode';
+    const VANT_KEY = 'trellis-demo-vantage';
+    const COLUMNS = [
+      { id: 'id', label: 'ID' },
+      { id: 'title', label: 'Title' },
+      { id: 'kind', label: 'Kind' },
+      { id: 'lane', label: 'Lane' },
+      { id: 'status', label: 'Status' },
+      { id: 'priority', label: 'Priority' },
+    ];
+    const SHELL_NAMES = { 2: 'node', 5: 'row', 8: 'card' };
+    const TERRITORY = { 2: 'Labeled node', 5: 'Row', 8: 'Card' };
+
+    const host = document.getElementById('host');
+    const territory = document.getElementById('territory');
+    const hint = document.getElementById('hint');
+    const viewBtns = [...document.querySelectorAll('#view-toggle .seg-btn')];
+    const vantBtns = [...document.querySelectorAll('#vantage .seg-btn')];
+
+    function read(key, fallback) {
+      try { const v = localStorage.getItem(key); return v == null ? fallback : v; }
+      catch { return fallback; }
+    }
+    function write(key, value) {
+      try { localStorage.setItem(key, value); } catch {}
+    }
+
+    let mode = read(MODE_KEY, 'table');
+    let vantage = Number(read(VANT_KEY, '8'));
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Render rows as morphing entities.
+    // ──────────────────────────────────────────────────────────────────────
+    function cellHtml(d, col) {
+      if (col.id === 'id') return `<span class="cell-id">${d.id}</span>`;
+      if (col.id === 'title') return `<span class="cell-title">${d.title}</span>`;
+      if (col.id === 'status') return `<span class="status ${d.status}">${d.status}</span>`;
+      if (col.id === 'priority') return `<span class="badge ${d.priority}">${d.priority}</span>`;
+      return `<span class="cell-${col.id}">${d[col.id] ?? ''}</span>`;
+    }
+
+    function render() {
+      const shell = SHELL_NAMES[vantage] ?? 'card';
+      host.dataset.viewMode = mode;
+      host.setAttribute('data-ui-vantage', String(vantage));
+
+      // header row (table only)
+      let html = mode === 'table'
+        ? `<div class="table-row table-header-row">${COLUMNS.map(c => `<div class="table-cell table-cell--header">${c.label}</div>`).join('')}</div>`
+        : '';
+
+      html += DATA.map(d => {
+        const cells = COLUMNS.map(c => `<div class="table-cell">${cellHtml(d, c)}</div>`).join('');
+        // pip + title for node shell
+        const pip = `<span class="cell-pip"></span>`;
+        return `<div class="table-row--entity" data-entity-id="${d.id}" data-trellis-shell="${shell}" data-vantage="${vantage}">${pip}${cells}</div>`;
+      }).join('');
+
+      host.innerHTML = html;
+
+      // territory + hint
+      territory.textContent = `${TERRITORY[vantage]} · v${vantage}`;
+      hint.textContent = `view: ${mode} · shell: ${shell} · ${DATA.length} nodes · persisted`;
+
+      // sync the two segmented controls
+      viewBtns.forEach(b => {
+        const on = b.dataset.mode === mode;
+        b.classList.toggle('selected', on);
+        b.setAttribute('aria-checked', on ? 'true' : 'false');
+        b.tabIndex = on ? 0 : -1;
+      });
+      vantBtns.forEach(b => {
+        const on = Number(b.dataset.v) === vantage;
+        b.classList.toggle('selected', on);
+        b.setAttribute('aria-checked', on ? 'true' : 'false');
+        b.tabIndex = on ? 0 : -1;
+      });
+
+      // clicking a node opens a fake detail (persist + readout)
+      host.querySelectorAll('.table-row--entity').forEach(el => {
+        el.addEventListener('click', () => {
+          const id = el.dataset.entityId;
+          const d = DATA.find(x => x.id === id);
+          alert(`${d.kind}: ${d.title}\nid ${d.id}\nlane ${d.lane}\nstatus ${d.status} · ${d.priority}`);
+        });
+      });
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Wiring
+    // ──────────────────────────────────────────────────────────────────────
+    viewBtns.forEach(b => b.addEventListener('click', () => {
+      mode = b.dataset.mode;
+      write(MODE_KEY, mode);
+      render();
+    }));
+
+    vantBtns.forEach(b => b.addEventListener('click', () => {
+      vantage = Number(b.dataset.v);
+      write(VANT_KEY, String(vantage));
+      render();
+    }));
+
+    document.getElementById('reset').addEventListener('click', () => {
+      try { localStorage.removeItem(MODE_KEY); localStorage.removeItem(VANT_KEY); } catch {}
+      mode = 'table';
+      vantage = 8;
+      render();
+    });
+
+    render();
+  </script>
+</body>
+
+</html>
