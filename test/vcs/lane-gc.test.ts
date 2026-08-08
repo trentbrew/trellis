@@ -109,6 +109,41 @@ describe('lane-gc classifier (TRL-407)', () => {
     });
     expect(row.disposition).toBe('leave');
   });
+
+  test('sessionEnd: fresh empty lane gardens immediately (no 24h wait)', () => {
+    const fresh = lane({
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    const row = classifyLane({ lane: fresh, issue: null, opCount: 0, sessionEnd: true });
+    expect(row.disposition).toBe('garden');
+  });
+
+  test('sessionEnd: closed issue with ops is left, never auto-promoted', () => {
+    const row = classifyLane({
+      lane: lane(),
+      issue: issue('closed') as any,
+      opCount: 5,
+      sessionEnd: true,
+    });
+    expect(row.disposition).toBe('leave');
+    expect(row.reason).toContain('never auto-promotes');
+  });
+
+  test('sessionEnd: closed issue, zero ops still drops', () => {
+    const row = classifyLane({
+      lane: lane(),
+      issue: issue('closed') as any,
+      opCount: 0,
+      sessionEnd: true,
+    });
+    expect(row.disposition).toBe('drop');
+  });
+
+  test('sessionEnd: op-carrying unbound lane still protected (retained)', () => {
+    const row = classifyLane({ lane: lane(), issue: null, opCount: 3, sessionEnd: true });
+    expect(row.disposition).toBe('leave');
+  });
 });
 
 describe('lane-gc sweep (TRL-407)', () => {
@@ -157,6 +192,31 @@ describe('lane-gc sweep (TRL-407)', () => {
     const rows = await gcLanes(engine, { sessionId: 'ses-drop' });
     expect(rows.every((r) => r.laneId === dropLane.id)).toBe(true);
     expect(rows.some((r) => r.disposition === 'garden')).toBe(true);
+  });
+
+  test('session-end hook: fresh empty lane gardens immediately and drops', async () => {
+    const keep = await engine.createLane({ sessionId: 'ses-keep' });
+    const dropLane = await engine.createLane({ sessionId: 'ses-drop' });
+    // fresh — NOT backdated; sessionEnd must bypass the 24h staleness cutoff
+    const rows = await gcLanes(engine, {
+      sessionId: 'ses-drop',
+      sessionEnd: true,
+      apply: true,
+    });
+
+    expect(rows.every((r) => r.laneId === dropLane.id)).toBe(true);
+    const row = rows.find((r) => r.laneId === dropLane.id)!;
+    expect(row.disposition).toBe('garden');
+    expect(row.action).toBe('gardened');
+    // the keep-session lane is untouched and still active
+    expect(loadLaneMeta(join(TEST_ROOT, '.trellis'), keep.id)?.status).toBe('active');
+  });
+
+  test('without sessionEnd, a fresh empty lane is left (not stale yet)', async () => {
+    const lane = await engine.createLane({ sessionId: 'ses-fresh' });
+    const rows = await gcLanes(engine, { sessionId: 'ses-fresh' });
+    const row = rows.find((r) => r.laneId === lane.id)!;
+    expect(row.disposition).toBe('leave');
   });
 
   test('apply: closed-issue-with-ops lane is promoted and journaled', async () => {

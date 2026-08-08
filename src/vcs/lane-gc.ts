@@ -31,6 +31,13 @@ export interface LaneGcOptions {
   force?: boolean;
   /** Restrict the sweep to one session (session-end hook path). */
   sessionId?: string;
+  /**
+   * Session-end hook semantics: lanes bound to the swept session are treated
+   * as stale immediately (no 24h wait — the session is over), and lanes with
+   * ops are NEVER auto-promoted (session-end is checkpoint-only per the
+   * TUI fork-cycle decision #2). Empty lanes garden, op-carrying lanes leave.
+   */
+  sessionEnd?: boolean;
   /** Clock injection for tests. */
   now?: number;
 }
@@ -40,6 +47,8 @@ export interface GcLaneInput {
   issue: IssueInfo | null;
   opCount: number;
   now?: number;
+  /** Session-end hook: bypass staleness cutoff, suppress auto-promote. */
+  sessionEnd?: boolean;
 }
 
 /**
@@ -83,9 +92,25 @@ export function classifyLane(input: GcLaneInput): LaneGcRow {
     };
   }
 
+  // Session-end hook: the session is over, so its lanes are stale by
+  // definition — no 24h wait before they become sweepable.
+  const stale = input.sessionEnd || isLaneStale(lane, now);
+
   if (boundIssue && issue) {
     if (issue.status === 'closed') {
       if (opCount > 0) {
+        // Never auto-promote on session end — promote is explicit + AC-gated.
+        if (input.sessionEnd) {
+          return {
+            laneId: lane.id,
+            boundIssue,
+            opCount,
+            disposition: 'leave',
+            reason:
+              'bound issue closed with ops — session-end never auto-promotes',
+            action: 'none',
+          };
+        }
         return {
           laneId: lane.id,
           boundIssue,
@@ -106,7 +131,7 @@ export function classifyLane(input: GcLaneInput): LaneGcRow {
     }
     if (
       (issue.status === 'cancelled' || issue.status === 'backlog') &&
-      isLaneStale(lane, now)
+      stale
     ) {
       return {
         laneId: lane.id,
@@ -127,7 +152,7 @@ export function classifyLane(input: GcLaneInput): LaneGcRow {
     };
   }
 
-  if (!boundIssue && opCount === 0 && isLaneStale(lane, now)) {
+  if (!boundIssue && opCount === 0 && stale) {
     return {
       laneId: lane.id,
       boundIssue,
@@ -169,7 +194,7 @@ export async function gcLanes(
 
     const issue = lane.issueId ? engine.getIssue(lane.issueId) : null;
     const opCount = engine.getLaneOpCount(lane.id);
-    const row = classifyLane({ lane, issue, opCount, now });
+    const row = classifyLane({ lane, issue, opCount, now, sessionEnd: opts.sessionEnd });
 
     const destructive =
       row.disposition === 'drop' || row.disposition === 'garden';
