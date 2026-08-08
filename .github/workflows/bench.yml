@@ -1,0 +1,26 @@
+name: Kernel perf bench
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  bench-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Bench smoke (kernel-cycle V1 read path)
+        run: bun bench/run.ts --smoke
+
+      - name: Budget corridor gate
+        run: bun bench/check.ts

@@ -1,0 +1,5 @@
+{
+  "lock": false,
+  "note": "Corridor lock. Set lock=true and fill corridors with the first baseline (bun bench/run.ts) so bench/check.ts enforces them in CI.",
+  "corridors": []
+}
