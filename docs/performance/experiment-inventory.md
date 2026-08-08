@@ -66,3 +66,8 @@ whole-log `getLocalOps()` (`readAll` into heap per message) measured
   needs a subprocess slice (TRL-24 harness note, same as baseline).
 - Recommendation: **promote the reader as the sync default** once the V2
   graph-snapshot path lands; keep array fallback for full pushes.
+
+Follow-up (same lane, post-spike): wired `opsReader` through
+`TrellisVcsSyncPeer` (production peer seam) + a peer-level parity test
+(`test/sync/sync-peer-bounded.test.ts`) proving the bounded path delivers the
+identical want-window as the array path across the real message flow.
