@@ -9,6 +9,10 @@
  */
 
 import type { EntityRef, RefContext, RefNamespace, RefSource } from './types.js';
+import {
+  DEFAULT_ISSUE_PREFIX,
+  issueRefRegex,
+} from '../vcs/issue-prefix.js';
 
 // ---------------------------------------------------------------------------
 // Main regex for [[...]] wiki-links
@@ -49,22 +53,30 @@ const CODE_EXTENSIONS = new Set([
  * Parse all [[...]] references from a file's content.
  * Detects context (markdown vs doc-comment) based on file extension.
  */
-export function parseFileRefs(content: string, filePath: string): EntityRef[] {
+export function parseFileRefs(
+  content: string,
+  filePath: string,
+  prefixes: string[] = [DEFAULT_ISSUE_PREFIX],
+): EntityRef[] {
   const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
 
   if (ext === 'md') {
-    return parseMarkdownRefs(content, filePath);
+    return parseMarkdownRefs(content, filePath, prefixes);
   }
 
   // Source code: extract refs from doc-comments only
-  return parseDocCommentRefs(content, filePath, ext);
+  return parseDocCommentRefs(content, filePath, ext, prefixes);
 }
 
 /**
  * Parse all [[...]] references from markdown content.
  */
-export function parseMarkdownRefs(content: string, filePath: string): EntityRef[] {
-  return extractRefs(content, filePath, 'markdown');
+export function parseMarkdownRefs(
+  content: string,
+  filePath: string,
+  prefixes: string[] = [DEFAULT_ISSUE_PREFIX],
+): EntityRef[] {
+  return extractRefs(content, filePath, 'markdown', 0, prefixes);
 }
 
 /**
@@ -75,13 +87,20 @@ export function parseDocCommentRefs(
   content: string,
   filePath: string,
   ext?: string,
+  prefixes: string[] = [DEFAULT_ISSUE_PREFIX],
 ): EntityRef[] {
   const fileExt = ext ?? (filePath.split('.').pop()?.toLowerCase() ?? '');
   const commentBlocks = extractDocComments(content, fileExt);
   const refs: EntityRef[] = [];
 
   for (const block of commentBlocks) {
-    const blockRefs = extractRefs(block.text, filePath, block.context, block.startLine);
+    const blockRefs = extractRefs(
+      block.text,
+      filePath,
+      block.context,
+      block.startLine,
+      prefixes,
+    );
     refs.push(...blockRefs);
   }
 
@@ -106,6 +125,7 @@ function extractRefs(
   filePath: string,
   context: RefContext,
   lineOffset: number = 0,
+  prefixes: string[] = [DEFAULT_ISSUE_PREFIX],
 ): EntityRef[] {
   const refs: EntityRef[] = [];
   const lines = text.split('\n');
@@ -122,7 +142,7 @@ function extractRefs(
       const col = match.index;
       const lineNum = i + 1 + lineOffset;
 
-      const parsed = parseRefContent(raw);
+      const parsed = parseRefContent(raw, prefixes);
       if (!parsed) continue;
 
       refs.push({
@@ -164,7 +184,10 @@ interface ParsedRef {
  *   - "path#anchor"                → symbol ref
  *   - "path#anchor|alias"          → symbol ref + alias
  */
-export function parseRefContent(raw: string): ParsedRef | null {
+export function parseRefContent(
+  raw: string,
+  prefixes: string[] = [DEFAULT_ISSUE_PREFIX],
+): ParsedRef | null {
   if (!raw || !raw.trim()) return null;
 
   // Split alias first: "content|alias"
@@ -197,7 +220,7 @@ export function parseRefContent(raw: string): ParsedRef | null {
   // No explicit namespace — infer from content
   const { target, anchor } = splitAnchor(content);
 
-  const inferred = inferNamespace(target, anchor);
+  const inferred = inferNamespace(target, anchor, prefixes);
   if (!inferred) return null;
 
   return { namespace: inferred, target, anchor, alias };
@@ -227,18 +250,23 @@ function isValidNamespace(s: string): boolean {
  * Infer the namespace from bare ref content.
  *
  * Rules (in order):
- *   1. TRL-\d+ pattern → issue
- *   2. DEC-\d+ pattern → decision
+ *   1. DEC-\d+ pattern → decision (checked first so a custom issue prefix
+ *      can never swallow decision refs)
+ *   2. <prefix>-\d+ pattern → issue (TRL plus any configured prefix)
  *   3. Has anchor (#) → symbol
  *   4. Contains '/' or has known file extension → file
  *   5. Otherwise → null (namespace required)
  */
-export function inferNamespace(target: string, anchor?: string): RefNamespace | null {
-  // Issue pattern: TRL-1, TRL-42, etc.
-  if (/^TRL-\d+$/i.test(target)) return 'issue';
-
+export function inferNamespace(
+  target: string,
+  anchor?: string,
+  prefixes: string[] = [DEFAULT_ISSUE_PREFIX],
+): RefNamespace | null {
   // Decision pattern: DEC-1, DEC-42, etc.
   if (/^DEC-\d+$/i.test(target)) return 'decision';
+
+  // Issue pattern: TRL-1, TF-42, etc.
+  if (issueRefRegex(prefixes).test(target)) return 'issue';
 
   // Symbol: has anchor
   if (anchor) return 'symbol';

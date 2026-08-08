@@ -33,6 +33,7 @@ import { PROVENANCE } from './core/persist/canonical-op.js';
 import type { OpProvenance } from './core/persist/canonical-op.js';
 import type { VcsOp, TrellisVcsConfig } from './vcs/types.js';
 import { DEFAULT_CONFIG } from './vcs/types.js';
+import { readIssuePrefix } from './vcs/issue-prefix.js';
 import { BlobStore } from './vcs/blob-store.js';
 import { BlobResolver } from './vcs/blob-resolver.js';
 import type { EngineContext, ApplyOpOptions } from './vcs/engine-context.js';
@@ -170,6 +171,7 @@ interface PersistedConfig {
   debounceMs: number;
   defaultBranch: string;
   indexWorkspace?: boolean;
+  issuePrefix?: string;
   lanes?: TrellisVcsConfig['lanes'];
   git?: TrellisVcsConfig['git'];
   repoId?: string;
@@ -338,6 +340,7 @@ export class TrellisVcsEngine {
       defaultBranch: opts.defaultBranch ?? DEFAULT_CONFIG.defaultBranch,
       dbPath: opts.dbPath ?? DEFAULT_CONFIG.dbPath,
       indexWorkspace: opts.indexWorkspace ?? DEFAULT_CONFIG.indexWorkspace,
+      issuePrefix: opts.issuePrefix ?? DEFAULT_CONFIG.issuePrefix,
       lanes: opts.lanes,
     };
     this.agentId = opts.agentId ?? `agent:${process.env.USER ?? 'unknown'}`;
@@ -395,6 +398,7 @@ export class TrellisVcsEngine {
       debounceMs: this.config.debounceMs,
       defaultBranch: this.config.defaultBranch,
       indexWorkspace: this.config.indexWorkspace,
+      issuePrefix: this.config.issuePrefix,
       lanes: this.config.lanes,
       git: this.config.git,
       agentId: this.agentId,
@@ -590,6 +594,8 @@ let opsCreated = 0;
       this.config.defaultBranch = persisted.defaultBranch;
       this.config.indexWorkspace =
         persisted.indexWorkspace ?? DEFAULT_CONFIG.indexWorkspace;
+      this.config.issuePrefix =
+        persisted.issuePrefix ?? this.config.issuePrefix;
       if (persisted.lanes) {
         this.config.lanes = persisted.lanes;
       }
@@ -1061,6 +1067,14 @@ for (const event of scanEvents) {
    */
   getRootPath(): string {
     return this.config.rootPath;
+  }
+
+  /**
+   * Returns the configured issue-id prefix (default `TRL`). Falls back to
+   * reading `.trellis/config.json` for hosts that never `open()`ed.
+   */
+  getIssuePrefix(): string {
+    return this.config.issuePrefix ?? readIssuePrefix(this.config.rootPath);
   }
 
   /**

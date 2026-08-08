@@ -21,7 +21,33 @@ export type AdminDatatableHandle = {
 
 const TABLE_SORT_KEY = 'trellis-admin-table-sort';
 const TABLE_COL_KEYS = ['lane', 'agent', 'ops', 'files', 'branch', 'issue'] as const;
-const ISSUE_ID_RE = /^TRL-\d+$/i;
+const DEFAULT_ISSUE_PREFIX = 'TRL';
+
+/** Configured issue prefix from `<meta name="trellis:issue-prefix">` (browser). */
+function configuredIssuePrefix(): string {
+  if (typeof document === 'undefined') return DEFAULT_ISSUE_PREFIX;
+  const value = document
+    .querySelector('meta[name="trellis:issue-prefix"]')
+    ?.getAttribute('content')
+    ?.trim();
+  return value && /^[A-Z][A-Z0-9]*$/.test(value)
+    ? value.toUpperCase()
+    : DEFAULT_ISSUE_PREFIX;
+}
+
+/** Legacy `TRL` plus the configured prefix when different. */
+function issuePrefixSet(): string[] {
+  const configured = configuredIssuePrefix();
+  return configured === DEFAULT_ISSUE_PREFIX
+    ? [DEFAULT_ISSUE_PREFIX]
+    : [DEFAULT_ISSUE_PREFIX, configured];
+}
+
+/** Accepts `TRL-N` and any configured `<prefix>-N`. */
+function issueRefRegex(): RegExp {
+  const body = issuePrefixSet().join('|');
+  return new RegExp(`^(${body})-(\\d+)$`, 'i');
+}
 
 /** Pure: compare two cell strings (numeric when both parse). */
 export function compareCellValues(av: string, bv: string): number {
@@ -38,20 +64,20 @@ export function resolveEmptyState(rowCount: number, visibleCount: number): Table
   return 'hidden';
 }
 
-/** Empty/whitespace OK (→ null); else must match TRL-N. */
+/** Empty/whitespace OK (→ null); else must match TRL-N or <prefix>-N. */
 export function isValidIssueId(raw: string): boolean {
   const t = raw.trim();
   if (!t) return true;
-  return ISSUE_ID_RE.test(t);
+  return issueRefRegex().test(t);
 }
 
-/** Empty → null; else canonical TRL-N (uppercase prefix). */
+/** Empty → null; else canonical `<PREFIX>-N` (uppercase prefix). */
 export function normalizeIssueCommit(raw: string): string | null {
   const t = raw.trim();
   if (!t) return null;
-  const m = t.match(/^trl-(\d+)$/i);
+  const m = t.match(issueRefRegex());
   if (!m) return t;
-  return `TRL-${m[1]}`;
+  return `${m[1].toUpperCase()}-${m[2]}`;
 }
 
 export function isValidBranchCommit(raw: string): boolean {
@@ -370,7 +396,7 @@ export function mountAdminDatatable(
         cur.td.setAttribute('aria-invalid', 'true');
         cur.input.setAttribute('aria-invalid', 'true');
         cur.input.setAttribute('aria-describedby', 'cell-edit-error');
-        setCellError('Invalid issue id — use TRL-N');
+        setCellError(`Invalid issue id — use ${configuredIssuePrefix()}-N`);
         cur.input.focus();
         return false;
       }

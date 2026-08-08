@@ -155,8 +155,8 @@ export function validateEnvelope(
   }
   if (!env.re?.trim()) {
     errors.push('re is required');
-  } else if (!/^TRL-\d+/.test(env.re.trim())) {
-    errors.push(`re must start with TRL-N issue ref, got: ${env.re}`);
+  } else if (!/^[A-Z][A-Z0-9]*-\d+/.test(env.re.trim())) {
+    errors.push(`re must reference an issue (e.g. TRL-N), got: ${env.re}`);
   }
 
   return errors.length === 0 ? { ok: true } : { ok: false, errors };

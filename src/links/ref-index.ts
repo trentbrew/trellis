@@ -14,6 +14,7 @@ import type { EntityRef, RefIndex, RefSource } from './types.js';
 import { parseFileRefs } from './parser.js';
 import { resolveRef } from './resolver.js';
 import type { ResolverContext } from './resolver.js';
+import { DEFAULT_ISSUE_PREFIX } from '../vcs/issue-prefix.js';
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -25,6 +26,7 @@ import type { ResolverContext } from './resolver.js';
 export function buildRefIndex(
   files: Array<{ path: string; content: string }>,
   ctx: ResolverContext,
+  prefixes: string[] = [DEFAULT_ISSUE_PREFIX],
 ): RefIndex {
   const index: RefIndex = {
     outgoing: new Map(),
@@ -32,7 +34,7 @@ export function buildRefIndex(
   };
 
   for (const file of files) {
-    const refs = parseFileRefs(file.content, file.path);
+    const refs = parseFileRefs(file.content, file.path, prefixes);
     addFileToIndex(index, file.path, refs, ctx);
   }
 
@@ -48,12 +50,13 @@ export function updateFileInIndex(
   filePath: string,
   content: string,
   ctx: ResolverContext,
+  prefixes: string[] = [DEFAULT_ISSUE_PREFIX],
 ): void {
   // Remove old entries for this file
   removeFileFromIndex(index, filePath);
 
   // Parse and add new entries
-  const refs = parseFileRefs(content, filePath);
+  const refs = parseFileRefs(content, filePath, prefixes);
   addFileToIndex(index, filePath, refs, ctx);
 }
 

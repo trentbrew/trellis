@@ -21,6 +21,12 @@ import type { VcsOp, IssueType } from './types.js';
 import { issueEntityId, criterionEntityId } from './types.js';
 import type { EngineContext } from './engine-context.js';
 import {
+  readIssuePrefix,
+  issuePrefixSet,
+  parseIssueRefId,
+  isIssueRefId,
+} from './issue-prefix.js';
+import {
   loadTestManifest,
   resolveIssueStartCriteria,
   type CriterionTemplate,
@@ -119,8 +125,9 @@ export interface IssueCreateOptions {
    */
   laneId?: string;
   /**
-   * Recovery-only: mint a specific legacy `TRL-N` id. Bumps the repo counter so
-   * later allocates continue above N. Refuses if the id already exists.
+   * Recovery-only: mint a specific legacy `TRL-N` (or configured-prefix `-N`)
+   * id. Bumps the repo counter so later allocates continue above N. Refuses
+   * if the id already exists.
    */
   forceIssueId?: string;
 }
@@ -201,7 +208,7 @@ function nextIssueId(rootPath: string, laneId?: string): string {
     counter++;
     writeFileSync(scopedCounterPath, JSON.stringify({ counter }, null, 2));
     if (laneScope) return `issue:${laneScope}:${counter}`;
-    return `TRL-${counter}`;
+    return `${readIssuePrefix(rootPath)}-${counter}`;
   } finally {
     closeSync(lockFd);
     try {
@@ -406,11 +413,12 @@ function buildIssueInfo(
 
 /**
  * Default display alias for a canonical issue id.
- * Legacy `TRL-N` ids are already human-readable; lane-scoped canonical ids
+ * Legacy `TRL-N` ids are already human-readable; ids minted under a
+ * configured prefix (`<prefix>-N`) are too. Lane-scoped canonical ids
  * have no alias until a promotion step assigns one.
  */
 function defaultDisplayId(id: string): string | undefined {
-  return /^TRL-\d+$/.test(id) ? id : undefined;
+  return /^[A-Z][A-Z0-9]*-\d+$/i.test(id) ? id : undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -436,13 +444,16 @@ export async function createIssue(
   let id: string;
   if (opts?.forceIssueId) {
     id = opts.forceIssueId.trim();
-    if (!/^TRL-\d+$/.test(id)) {
-      throw new Error(`forceIssueId must be TRL-N (got ${id})`);
+    if (!isIssueRefId(id, issuePrefixSet(rootPath))) {
+      throw new Error(
+        `forceIssueId must be TRL-N or <configured prefix>-N (got ${id})`,
+      );
     }
     if (getIssue(ctx, id)) {
       throw new Error(`Issue ${id} already exists.`);
     }
-    bumpIssueCounterAtLeast(rootPath, parseInt(id.slice(4), 10));
+    const parts = parseIssueRefId(id, issuePrefixSet(rootPath))!;
+    bumpIssueCounterAtLeast(rootPath, parts.n);
   } else {
     id = nextIssueId(rootPath, opts?.laneId);
   }
