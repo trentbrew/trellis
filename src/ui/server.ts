@@ -29,6 +29,8 @@ import {
   getReferencedEntities,
   getBacklinks,
 } from '../links/index.js';
+import { issuePrefixSet } from '../vcs/issue-prefix.js';
+import { injectIssuePrefixMeta } from './issue-prefix-meta.js';
 import { resolveRuntimeThemeCss } from './theme/resolve-runtime-theme-css.js';
 
 // ---------------------------------------------------------------------------
@@ -190,7 +192,11 @@ function buildGraph(engine: TrellisVcsEngine): GraphData {
         listMilestones: () => milestones as any,
       } as any);
 
-      const refIndex = buildRefIndex(mdFiles, ctx);
+      const refIndex = buildRefIndex(
+        mdFiles,
+        ctx,
+        issuePrefixSet(engine.getRootPath()),
+      );
 
       for (const [filePath, refs] of refIndex.outgoing) {
         const sourceId = `file:${filePath}`;
@@ -716,7 +722,11 @@ export async function startUIServer(opts: UIServerOptions): Promise<{
     if (path === '/admin' || path === '/admin.html') {
       const adminHtmlPath = join(dirname(findClientHtml()), 'admin.html');
       if (existsSync(adminHtmlPath)) {
-        return new Response(readFileSync(adminHtmlPath, 'utf-8'), {
+        const html = injectIssuePrefixMeta(
+          readFileSync(adminHtmlPath, 'utf-8'),
+          engine.getRootPath(),
+        );
+        return new Response(html, {
           headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8' },
         });
       }

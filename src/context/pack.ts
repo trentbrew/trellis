@@ -7,6 +7,7 @@
 
 import type { TrellisVcsEngine } from '../engine.js';
 import { parseMarkdownRefs } from '../links/parser.js';
+import { issueRefRegex, issuePrefixSet } from '../vcs/issue-prefix.js';
 import {
   findWaitingOnYou,
   getActiveContext,
@@ -176,7 +177,12 @@ function buildLinks(
   const issue = engine.getIssue(focusId);
   if (!issue?.description) return [];
 
-  const refs = parseMarkdownRefs(issue.description, `issue:${focusId}`);
+  const prefixes = issuePrefixSet(engine.getRootPath());
+  const refs = parseMarkdownRefs(
+    issue.description,
+    `issue:${focusId}`,
+    prefixes,
+  );
   const out: ContextPackRef[] = [];
   const seen = new Set<string>();
 
@@ -187,7 +193,7 @@ function buildLinks(
     seen.add(id);
 
     let kind: ContextPackRef['kind'] = 'entity';
-    if (ref.namespace === 'issue' || /^TRL-\d+/i.test(ref.target)) {
+    if (ref.namespace === 'issue' || issueRefRegex(prefixes).test(ref.target)) {
       kind = 'issue';
     } else if (
       ref.namespace === 'file' ||

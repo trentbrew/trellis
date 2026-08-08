@@ -442,6 +442,12 @@ export interface TrellisVcsConfig {
   /** Whether init/watch should reconcile existing workspace files by default. */
   indexWorkspace: boolean;
 
+  /**
+   * Issue id prefix (default `TRL`). Legacy `TRL-N` ids always remain
+   * parseable/valid even after a switch — see `src/vcs/issue-prefix.ts`.
+   */
+  issuePrefix?: string;
+
   /** Stable ledger identity (ADR 0031) — independent of checkout path. */
   repoId?: string;
 
@@ -503,4 +509,5 @@ export const DEFAULT_CONFIG: Omit<TrellisVcsConfig, 'rootPath'> = {
   defaultBranch: 'main',
   dbPath: '.trellis/trellis.db',
   indexWorkspace: false,
+  issuePrefix: 'TRL',
 };

@@ -8,6 +8,12 @@ import { fileURLToPath } from 'url';
 import { TrellisVcsEngine } from '../engine.js';
 import type { VcsOp } from '../vcs/types.js';
 import { loadLaneMeta, saveLaneMeta } from '../vcs/lane.js';
+import {
+  issuePrefixSet,
+  isIssueRefId,
+  canonicalIssueRef,
+} from '../vcs/issue-prefix.js';
+import { injectIssuePrefixMeta } from './issue-prefix-meta.js';
 import { startNodeServer } from '../server/node-adapter.js';
 import { buildLanesSnapshot, type LaneRow } from './lanes-snapshot.js';
 import { buildCausalGraphSnapshot } from './causal-graph-snapshot.js';
@@ -453,6 +459,7 @@ export async function startLanesDashboard(
         });
       }
       let html = readFileSync(htmlPath, 'utf-8');
+      html = injectIssuePrefixMeta(html, opts.rootPath);
       if (uiDev) html = injectDevLiveReload(html);
       return new Response(html, {
         headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' },
@@ -597,14 +604,13 @@ export async function startLanesDashboard(
               delete meta.issueId;
             } else {
               const plain = String(raw).replace(/^issue:/, '').trim();
-              if (!/^TRL-\d+$/i.test(plain)) {
+              if (!isIssueRefId(plain, issuePrefixSet(opts.rootPath))) {
                 return new Response(JSON.stringify({ error: 'invalid issueId' }), {
                   status: 400,
                   headers,
                 });
               }
-              const m = plain.match(/^trl-(\d+)$/i);
-              meta.issueId = m ? `issue:TRL-${m[1]}` : `issue:${plain}`;
+              meta.issueId = `issue:${canonicalIssueRef(plain, issuePrefixSet(opts.rootPath))}`;
             }
           }
           meta.updatedAt = new Date().toISOString();

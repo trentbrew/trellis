@@ -15,7 +15,11 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { resolve, join, dirname } from 'path';
+import { resolve, join, dirname, relative } from 'path';
+import {
+  scaffoldIssueDoc,
+  issueDocExists,
+} from '../vcs/issue-doc.js';
 // @inquirer/prompts is lazy-imported only in init command (saves ~116ms on every other command)
 import { TrellisVcsEngine } from '../engine.js';
 import { PROVENANCE } from '../core/persist/canonical-op.js';
@@ -2453,6 +2457,48 @@ issueCmd
         console.log(`    ${formatCriterionStatus(c.status)} ${desc}${cmd}`);
       }
     }
+
+    if (!issueDocExists(rootPath, issue.id)) {
+      console.log(
+        chalk.dim(
+          `\n  ${chalk.dim('Doc:')}        none — optional: trellis issue doc ${issue.id}`,
+        ),
+      );
+    }
+  });
+
+issueCmd
+  .command('doc')
+  .description(
+    'Scaffold a long-form markdown doc (docs/issues/<id>/summary.md) for an issue',
+  )
+  .argument('<id>', 'Issue ID (e.g. TRL-1)')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (id, opts) => {
+    const rootPath = resolveRepoRoot(opts.path);
+
+    const engine = new TrellisVcsEngine({
+      rootPath,
+      provenance: PROVENANCE.cli,
+    });
+    engine.open();
+
+    const issue = engine.getIssue(id);
+    if (!issue) {
+      throw new Error(`Issue not found: ${id}`);
+    }
+
+    const docPath = scaffoldIssueDoc(rootPath, issue);
+    console.log(
+      chalk.green(
+        `✓ Issue doc created: ${chalk.bold(relative(rootPath, docPath))}`,
+      ),
+    );
+    console.log(
+      chalk.dim(
+        `  Edit it for long-form context; images live beside it (e.g. docs/issues/${issue.id}/diagram.png) and show via [[issue:${issue.id}]].`,
+      ),
+    );
   });
 
 issueCmd
@@ -2884,6 +2930,13 @@ issueCmd
       }
 
       console.log(chalk.green(`✓ Issue ${chalk.bold(id)} closed`));
+      if (!issueDocExists(rootPath, id)) {
+        console.log(
+          chalk.dim(
+            `  ${chalk.dim('Doc:')}         none — optional: trellis issue doc ${id}`,
+          ),
+        );
+      }
       if (result.promoteResult?.promoted) {
         console.log(
           chalk.dim(
@@ -3639,6 +3692,7 @@ program
       createResolverContext,
     } = require('../links/index.js');
     const { StaleRefRegistry, getDiagnostics } = require('../links/index.js');
+    const { issuePrefixSet } = require('../vcs/issue-prefix.js');
 
     // Build resolver context from engine
     const resolverCtx = createResolverContext(engine);
@@ -3656,7 +3710,7 @@ program
       }
     }
 
-    const index = buildRefIndex(fileContents, resolverCtx);
+    const index = buildRefIndex(fileContents, resolverCtx, issuePrefixSet(rootPath));
 
     // --stats: show index statistics
     if (opts.stats) {

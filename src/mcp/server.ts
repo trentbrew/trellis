@@ -941,6 +941,7 @@ export function createTrellisMcpServer(): McpServer {
         createResolverContext,
         resolveRef,
       } = require('../links/index.js');
+      const { issuePrefixSet } = require('../vcs/issue-prefix.js');
 
       const resolverCtx = createResolverContext(engine);
       const rootPath = engine.getRootPath();
@@ -955,7 +956,11 @@ export function createTrellisMcpServer(): McpServer {
           fileContents.push({ path: f.path, content });
         } catch {}
       }
-      const index = buildRefIndex(fileContents, resolverCtx);
+      const index = buildRefIndex(
+        fileContents,
+        resolverCtx,
+        issuePrefixSet(rootPath),
+      );
 
       if (action === 'stats') {
         const stats = getIndexStats(index);
@@ -1036,6 +1041,7 @@ export function createTrellisMcpServer(): McpServer {
         StaleRefRegistry,
         getDiagnostics,
       } = require('../links/index.js');
+      const { issuePrefixSet } = require('../vcs/issue-prefix.js');
 
       const resolverCtx = createResolverContext(engine);
       const rootPath = engine.getRootPath();
@@ -1050,7 +1056,11 @@ export function createTrellisMcpServer(): McpServer {
           fileContents.push({ path: f.path, content });
         } catch {}
       }
-      const index = buildRefIndex(fileContents, resolverCtx);
+      const index = buildRefIndex(
+        fileContents,
+        resolverCtx,
+        issuePrefixSet(rootPath),
+      );
 
       // Resolve all refs
       const registry = new StaleRefRegistry();
