@@ -45,3 +45,24 @@ First pass of the locked kernel-cycle bench on the V1 read path
 | Date | TRL | Hypothesis | Variant | Baseline | Candidate | Parity | Outcome | Repro |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 2026-08-08 | TRL-24 | Baseline V1 read path | control | — | see table above | n/a | baseline | `bun bench/run.ts --depths=10000,100000 --cold-runs=0 --warm-runs=3` |
+| 2026-08-08 | TRL-20 | Sync tail catch-up: bounded rowid reader vs whole-log per message | spike | syncControl 169.6ms p50 / 21.5ms p50 (100k / 10k) | syncBounded 1.7ms p50 / 1.6ms p50 | identical op sets (guard) | **pass (spike)** | `bun bench/run.ts --depths=10000,100000 --cold-runs=0 --warm-runs=5 --tail-window=1000` (rev dfe7666) |
+
+## TRL-20 spike result (bounded sync tail reads)
+
+A `want` for a 1,000-op tail catch-up at 100k history via the classic
+whole-log `getLocalOps()` (`readAll` into heap per message) measured
+~170 ms p50. The same `want` through the new `LocalOpsReader`
+(sqlite rowid-cursor `readAfter` + `LIMIT 1 OFFSET` probe) measures
+~1.7 ms — **~100x wall reduction** and read cost decoupled from history size.
+
+- Parity: the bounded path delivered the identical op set/order as the
+  whole-log path for the same cursor hash (in-run guard + unit tests).
+- Scope: `sync-engine.ts` message handlers (`handleHave`, `handleWant`,
+  `handleOps` linear path) now accept an optional `LocalOpsReader` and use
+  bounded reads when present; classic array path unchanged when absent.
+- Backend additions: `SqliteKernelBackend.{readAfterRowid, readTailChunk,
+  lastRowid, rowidOf, opAtOffset}` for cursor/tail reads.
+- Caveat: RSS numbers share the process after `readAll`, so tail isolation
+  needs a subprocess slice (TRL-24 harness note, same as baseline).
+- Recommendation: **promote the reader as the sync default** once the V2
+  graph-snapshot path lands; keep array fallback for full pushes.

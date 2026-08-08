@@ -6,6 +6,10 @@ import { fileURLToPath } from 'node:url';
 
 import { JsonOpLog } from '../src/vcs/op-log.js';
 import { SqliteKernelBackend } from '../src/core/persist/sqlite-backend.js';
+import { SyncEngine } from '../src/sync/sync-engine.js';
+import { createSqliteLocalOpsReader } from '../src/sync/sqlite-ops-reader.js';
+import type { SyncTransport, SyncMessage, PeerId } from '../src/sync/types.js';
+import { PROTOCOL_VERSION } from '../src/sync/types.js';
 import { mkCorpus, writeJsonl } from './corpus.js';
 import { dropCaches, rssKb, wallMs } from './measure.js';
 import {
@@ -73,6 +77,85 @@ function prepareSqlite(dbPath: string, corpus: unknown[]): void {
     db.appendBatch(corpus.slice(i, i + chunk) as never[]);
   }
   db.close();
+}
+
+/** 0-based index of the tail's start cursor (the op the peer already has). */
+function tailWindowIdx(depth: number, tailWindow: number): number {
+  return Math.max(0, depth - tailWindow - 1);
+}
+
+/** A sync engine whose local ops come from the whole-log read (control). */
+function createArrayPeer(db: SqliteKernelBackend): SyncEngine {
+  return new SyncEngine({
+    localPeerId: 'control',
+    transport: new benchTransportStub(),
+    getLocalOps: () => db.readAll() as never[],
+    onOpsReceived: async () => ({}),
+  });
+}
+
+/** A sync engine whose local ops come from the bounded sqlite reader. */
+function createReaderPeer(db: SqliteKernelBackend): SyncEngine {
+  return new SyncEngine({
+    localPeerId: 'bounded',
+    transport: new benchTransportStub(),
+    getLocalOps: () => db.readAll() as never[],
+    opsReader: createSqliteLocalOpsReader(db),
+    onOpsReceived: async () => ({}),
+  });
+}
+
+/**
+ * Drive a `want` for ops after the given cursor hash through the engine's
+ * `handleWant`. The tail read itself is synchronous (before the first await),
+ * so `wallMs` captures exactly the read path.
+ */
+function syncWantTail(engine: SyncEngine, cursorHash: string): void {
+  void engine['handleWant']({
+    version: PROTOCOL_VERSION,
+    type: 'want',
+    peerId: 'remote',
+    wantHashes: [],
+    afterHash: cursorHash,
+  } as never);
+}
+
+/**
+ * Correctness parity: the tail delivered by the bounded reader must be exactly
+ * the ops the whole-log path sends (same window, same order) for a `want`.
+ */
+function syncWantParity(
+  control: SyncEngine,
+  bounded: SyncEngine,
+  cursorHash: string,
+): boolean {
+  const controlStub = (control as unknown as { transport: benchTransportStub }).transport;
+  const boundedStub = (bounded as unknown as { transport: benchTransportStub }).transport;
+  controlStub.sent = [];
+  boundedStub.sent = [];
+  syncWantTail(control, cursorHash);
+  syncWantTail(bounded, cursorHash);
+  const controlOps = controlStub.sent.filter((m) => m.type === 'ops');
+  const boundedOps = boundedStub.sent.filter((m) => m.type === 'ops');
+  const controlLen = controlOps.length > 0 ? controlOps[0].ops.length : 0;
+  const boundedLen = boundedOps.length > 0 ? boundedOps[0].ops.length : 0;
+  return controlOps.length === boundedOps.length && controlLen === boundedLen;
+}
+
+/** Capturing transport: records outbound messages. */
+class benchTransportStub implements SyncTransport {
+  sent: SyncMessage[] = [];
+  private handler?: (msg: SyncMessage) => void | Promise<void>;
+  onMessage(handler: (msg: SyncMessage) => void | Promise<void>): void {
+    this.handler = handler;
+  }
+  send(_peerId: string, message: SyncMessage): Promise<void> {
+    this.sent.push(message);
+    return Promise.resolve();
+  }
+  peers(): PeerId[] {
+    return [];
+  }
 }
 
 function sample(loop: () => void, count: number, phase: BenchPhase): Slice {
@@ -161,12 +244,24 @@ function main(): void {
 
     const db = new SqliteKernelBackend(sqlitePath);
     db.init();
+    const cursorIdx = tailWindowIdx(depth, args.tailWindow);
+    const cursorHash = ops[cursorIdx]?.hash ?? ops[0]?.hash;
+    const controlPeer = createArrayPeer(db);
+    const readerPeer = createReaderPeer(db);
+    const parityOk = syncWantParity(controlPeer, readerPeer, cursorHash);
+    if (!parityOk) {
+      throw new Error(
+        `[bench] parity guard failed at depth=${depth}: control vs bounded tail disagree`,
+      );
+    }
     for (const phase of ['cold', 'warm'] as BenchPhase[]) {
       const runs = phase === 'cold' ? args.coldRuns : args.warmRuns;
       if (runs === 0) continue;
       records.push(
         buildRecord(repro, rev, host, 'sqlite', 'readAll', 'flood-cold', phase, depth, sample(() => db.readAll(), runs, phase)),
         buildRecord(repro, rev, host, 'sqlite', 'readAfter', 'live-trickle', phase, depth, sample(() => db.readAfter(tailHash), runs, phase)),
+        buildRecord(repro, rev, host, 'sqlite', 'syncControl', 'live-trickle', phase, depth, sample(() => syncWantTail(controlPeer, cursorHash), runs, phase)),
+        buildRecord(repro, rev, host, 'sqlite', 'syncBounded', 'live-trickle', phase, depth, sample(() => syncWantTail(readerPeer, cursorHash), runs, phase)),
       );
     }
     db.close();
