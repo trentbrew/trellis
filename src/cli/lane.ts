@@ -554,6 +554,10 @@ export function registerLaneCommands(program: Command): void {
       'Allow destructive drop of lanes that carry ops',
     )
     .option('--session <id>', 'Restrict sweep to one session (session-end hook)')
+    .option(
+      '--session-end',
+      'Session-end semantics: treat the session lanes as stale now and never auto-promote (intended with --session)',
+    )
     .option('-p, --path <path>', 'Repository path', '.')
     .action(async (opts, command) => {
       const rootPath = resolveLaneRepoPath(opts, command);
@@ -564,6 +568,7 @@ export function registerLaneCommands(program: Command): void {
           apply: opts.apply,
           force: opts.force,
           sessionId: opts.session,
+          sessionEnd: opts.sessionEnd,
         });
 
         const color: Record<string, (s: string) => string> = {
