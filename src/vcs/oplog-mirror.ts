@@ -11,6 +11,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  rmSync,
   statSync,
   unlinkSync,
   writeFileSync,
@@ -19,7 +20,13 @@ import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 
-const MIRROR_ROOT = join(homedir(), '.trellis', 'oplog-mirror');
+/**
+ * Mirror root. Overridable for tests/embedded harnesses so scratch repos never
+ * touch the machine-level `~/.trellis/oplog-mirror`.
+ */
+const MIRROR_ROOT = process.env.TRELLIS_OPLOG_MIRROR_DIR
+  ? resolve(process.env.TRELLIS_OPLOG_MIRROR_DIR)
+  : join(homedir(), '.trellis', 'oplog-mirror');
 const SNAPSHOT_RING = 8;
 const SNAPSHOT_EVERY_OPS = 500;
 
@@ -205,4 +212,51 @@ export function listMirrors(): MirrorMeta[] {
     if (meta) out.push(meta);
   }
   return out.sort((a, b) => a.rootPath.localeCompare(b.rootPath));
+}
+
+function dirSize(path: string): number {
+  let total = 0;
+  for (const entry of readdirSync(path, { withFileTypes: true })) {
+    const p = join(path, entry.name);
+    if (entry.isDirectory()) {
+      total += dirSize(p);
+    } else if (entry.isFile()) {
+      total += statSync(p).size;
+    }
+  }
+  return total;
+}
+
+export interface OplogMirrorGcResult {
+  removed: number;
+  kept: number;
+  reclaimedBytes: number;
+}
+
+/**
+ * Prune mirror entries whose source `.trellis/ops.json` no longer exists —
+ * scratch repos, deleted checkouts, and one-off test repos leave their
+ * journals behind and bloat the shared machine-level mirror. Entries with a
+ * missing `meta.json` (orphan dirs) count as garbage too. Live repos are
+ * never touched.
+ */
+export function gcOplogMirror(dryRun = false): OplogMirrorGcResult {
+  if (!existsSync(MIRROR_ROOT)) {
+    return { removed: 0, kept: 0, reclaimedBytes: 0 };
+  }
+  let removed = 0;
+  let kept = 0;
+  let reclaimedBytes = 0;
+  for (const repoKey of readdirSync(MIRROR_ROOT)) {
+    const dir = mirrorDir(repoKey);
+    const meta = readMeta(repoKey);
+    if (!meta || !existsSync(meta.sourceOpsPath)) {
+      reclaimedBytes += dirSize(dir);
+      if (!dryRun) rmSync(dir, { recursive: true, force: true });
+      removed++;
+      continue;
+    }
+    kept++;
+  }
+  return { removed, kept, reclaimedBytes };
 }
