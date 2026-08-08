@@ -2,7 +2,7 @@ import type {
   IntegrateOpsResult,
   TrellisVcsEngine,
 } from '../engine.js';
-import { SyncEngine, type OpsReceivedRejection } from './sync-engine.js';
+import { SyncEngine, type OpsReceivedRejection, type LocalOpsReader } from './sync-engine.js';
 import type {
   BranchPolicy,
   NackReason,
@@ -18,6 +18,12 @@ export interface TrellisVcsSyncPeerOptions {
   branchPolicy?: BranchPolicy;
   onIntegrate?: (result: IntegrateOpsResult) => void | Promise<void>;
   onRemoteNack?: (nack: SyncNackMessage) => void | Promise<void>;
+  /**
+   * Bounded local-ops reader (TRL-20). When supplied, the sync message path
+   * uses rowid-cursor tail reads instead of materializing the whole log per
+   * message. Omit to keep the classic `engine.getOps()` behavior.
+   */
+  opsReader?: LocalOpsReader;
 }
 
 /**
@@ -60,6 +66,7 @@ export class TrellisVcsSyncPeer {
       localPeerId: opts.peerId,
       transport: opts.transport,
       getLocalOps: () => this.engine.getOps(),
+      opsReader: opts.opsReader,
       onOpsReceived: async (ops) => {
         const result = await this.engine.integrateOps(ops);
         this.integrationResults.push(result);
