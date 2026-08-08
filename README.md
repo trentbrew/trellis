@@ -96,9 +96,16 @@ The `trellis` package exposes focused subpaths:
 | `trellis/cms`                      | Read content collections over HTTP          |
 | `trellis/server`                   | HTTP + WebSocket DB server                  |
 
+## Status
+
+Actively maintained. Issues are triaged and PRs reviewed; see
+[What's Open, What's Sold](./docs/OPEN-SOURCE-STRATEGY.md) for how the
+ecosystem is positioned.
+
 ## Documentation
 
 - **[trellis.computer](https://trellis.computer)** — full documentation
+- **[What's Open, What's Sold](./docs/OPEN-SOURCE-STRATEGY.md)** — the open-/closed-source line
 - **[The Story](./docs/THE-STORY.md)** — why Trellis exists
 - **[Architecture](./docs/ARCHITECTURE.md)** ·
   **[Design spec](./docs/DESIGN.md)** · **[Roadmap](./docs/ROADMAP.md)**
