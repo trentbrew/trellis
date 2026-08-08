@@ -5,6 +5,7 @@ import { join } from 'path';
 import { resolveRepoRoot } from './repo-path.js';
 import { TrellisVcsEngine } from '../engine.js';
 import { PROVENANCE } from '../core/persist/canonical-op.js';
+import { gcOplogMirror } from '../vcs/oplog-mirror.js';
 import type { VcsOp } from '../vcs/types.js';
 
 function readJsonl(filePath: string): VcsOp[] {
@@ -81,4 +82,46 @@ export function registerOpsCommands(program: Command): void {
       console.log(chalk.dim(`  Total:      ${engine.getOpCount()} ops`));
       console.log(chalk.dim(`  Tracked:    ${engine.trackedFiles().length} files`));
     });
+
+  ops
+    .command('mirror-gc')
+    .description(
+      'Prune stale ~/.trellis/oplog-mirror entries (dead scratch/test repos)',
+    )
+    .option('--dry-run', 'Show what would be removed without deleting')
+    .action((opts) => {
+      const result = gcOplogMirror(!!opts.dryRun);
+
+      console.log(chalk.bold('Trellis Oplog Mirror GC'));
+      console.log();
+      console.log(
+        `  ${chalk.dim('Removable:')}  ${result.removed} entries (${formatBytes(result.reclaimedBytes)})`,
+      );
+      console.log(`  ${chalk.dim('Live kept:')}   ${result.kept} entries`);
+
+      if (!opts.dryRun) {
+        console.log();
+        console.log(
+          result.removed > 0
+            ? chalk.green(`Pruned ${result.removed} stale mirror entries.`)
+            : chalk.green('Mirror is clean.'),
+        );
+      } else if (result.removed > 0) {
+        console.log();
+        console.log(chalk.yellow('Dry run only. Re-run without --dry-run to prune.'));
+      }
+    });
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ['KB', 'MB', 'GB', 'TB'];
+  let value = bytes;
+  let unit = -1;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  const digits = value >= 10 ? 1 : 2;
+  return `${value.toFixed(digits)} ${units[unit]}`;
 }
