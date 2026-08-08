@@ -83,6 +83,11 @@ export class SqliteKernelBackend implements KernelBackend {
     readAll: ReturnType<Database['prepare']>;
     readUntil: ReturnType<Database['prepare']>;
     readAfter: ReturnType<Database['prepare']>;
+    readAfterRowid: ReturnType<Database['prepare']>;
+    readTailChunk: ReturnType<Database['prepare']>;
+    lastRowid: ReturnType<Database['prepare']>;
+    rowidOf: ReturnType<Database['prepare']>;
+    opAtOffset: ReturnType<Database['prepare']>;
     getByHash: ReturnType<Database['prepare']>;
     getLast: ReturnType<Database['prepare']>;
     count: ReturnType<Database['prepare']>;
@@ -125,6 +130,26 @@ export class SqliteKernelBackend implements KernelBackend {
         SELECT hash, kind, timestamp, agent_id, previous_hash, payload
         FROM ops WHERE rowid > (SELECT rowid FROM ops WHERE hash = $hash)
         ORDER BY rowid ASC
+      `),
+      readAfterRowid: this.db.prepare(`
+        SELECT hash, kind, timestamp, agent_id, previous_hash, payload
+        FROM ops WHERE rowid > $rowid
+        ORDER BY rowid ASC
+      `),
+      readTailChunk: this.db.prepare(`
+        SELECT hash, kind, timestamp, agent_id, previous_hash, payload
+        FROM ops WHERE rowid > $rowid
+        ORDER BY rowid ASC LIMIT $limit
+      `),
+      lastRowid: this.db.prepare(`
+        SELECT COALESCE(MAX(rowid), 0) as max_rowid FROM ops
+      `),
+      rowidOf: this.db.prepare(`
+        SELECT rowid FROM ops WHERE hash = $hash
+      `),
+      opAtOffset: this.db.prepare(`
+        SELECT hash, kind, timestamp, agent_id, previous_hash, payload
+        FROM ops ORDER BY rowid ASC LIMIT 1 OFFSET $index
       `),
       getByHash: this.db.prepare(`
         SELECT hash, kind, timestamp, agent_id, previous_hash, payload
@@ -194,6 +219,47 @@ export class SqliteKernelBackend implements KernelBackend {
   readAfter(hash: string): KernelOp[] {
     const rows = this._stmts!.readAfter.all({ $hash: hash }) as any[];
     return rows.map(rowToOp);
+  }
+
+  /** Last rowid in the ops table (0 when empty). Used as a cursor base. */
+  lastRowid(): number {
+    const row = this._stmts!.lastRowid.get() as any;
+    return row?.max_rowid ?? 0;
+  }
+
+  /** Rowid of the given op hash (undefined if absent). */
+  rowidOf(hash: string): number | undefined {
+    const row = this._stmts!.rowidOf.get({ $hash: hash }) as any;
+    return row ? (row.rowid as number) : undefined;
+  }
+
+  /** Op at a 0-based index (bounded: `LIMIT 1 OFFSET`, no full table). */
+  opAtOffset(index: number): KernelOp | undefined {
+    const row = this._stmts!.opAtOffset.get({ $index: index }) as any;
+    return row ? rowToOp(row) : undefined;
+  }
+
+  /** Ops strictly after a rowid cursor (open tail; rowid excludes cursor). */
+  readAfterRowid(rowid: number): KernelOp[] {
+    const rows = this._stmts!.readAfterRowid.all({ $rowid: rowid }) as any[];
+    return rows.map(rowToOp);
+  }
+
+  /**
+   * Chunked tail-read over a rowid cursor. Returns up to `limit` ops strictly
+   * after `rowid` (exclusive), plus the new cursor to resume from.
+   */
+  readTailChunk(
+    rowid: number,
+    limit: number,
+  ): { ops: KernelOp[]; nextRowid: number } {
+    const rows = this._stmts!.readTailChunk.all({
+      $rowid: rowid,
+      $limit: limit,
+    }) as any[];
+    const ops = rows.map(rowToOp);
+    const nextRowid = ops.length > 0 ? rowid + ops.length : rowid;
+    return { ops, nextRowid };
   }
 
   readUntilTimestamp(isoTimestamp: string): KernelOp[] {

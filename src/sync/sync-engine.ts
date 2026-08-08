@@ -50,6 +50,29 @@ export interface OpsReceivedResult {
   rejections: OpsReceivedRejection[];
 }
 
+/**
+ * Bounded local-ops reader for the message path (TRL-20 spike).
+ *
+ * The classic `getLocalOps: () => VcsOp[]` closure forces every sync message
+ * (have/want/ops) to materialize the entire local log in heap. A reader
+ * replaces those calls with bounded queries so a tail catch-up only touches
+ * the tail.
+ */
+export interface LocalOpsReader {
+  /** Total number of local ops (no materialization). */
+  count(): number;
+  /** Last local op (no materialization). */
+  lastOp(): VcsOp | undefined;
+  /** Whether a given op hash exists locally (single lookup). */
+  has(hash: string): boolean;
+  /** Ops strictly after a hash (bounded tail read). */
+  opsAfter(afterHash: string): VcsOp[];
+  /** Op at a 0-based index (bounded probe; SQLite `LIMIT 1 OFFSET`). */
+  getOpAtIndex(index: number): VcsOp | undefined;
+  /** Full fallback: the entire local op set. Rare (full push / reconcile). */
+  all(): VcsOp[];
+}
+
 // ---------------------------------------------------------------------------
 // Sync Engine
 // ---------------------------------------------------------------------------
@@ -59,6 +82,7 @@ export class SyncEngine {
   private state: SyncState;
   private transport: SyncTransport;
   private getLocalOps: () => VcsOp[];
+  private opsReader?: LocalOpsReader;
   private onOpsReceived: (
     ops: VcsOp[],
   ) => void | OpsReceivedResult | Promise<void | OpsReceivedResult>;
@@ -72,6 +96,7 @@ export class SyncEngine {
     localPeerId: string;
     transport: SyncTransport;
     getLocalOps: () => VcsOp[];
+    opsReader?: LocalOpsReader;
     onOpsReceived: (
       ops: VcsOp[],
     ) => void | OpsReceivedResult | Promise<void | OpsReceivedResult>;
@@ -84,6 +109,7 @@ export class SyncEngine {
     this.localPeerId = opts.localPeerId;
     this.transport = opts.transport;
     this.getLocalOps = opts.getLocalOps;
+    this.opsReader = opts.opsReader;
     this.onOpsReceived = opts.onOpsReceived;
     this.onNackReceived = opts.onNackReceived;
     this.onDeviceRevoked = opts.onDeviceRevoked;
@@ -308,20 +334,23 @@ export class SyncEngine {
     // Store peer heads
     this.state.peerHeads.set(msg.peerId, msg.heads);
 
-    // Compare with our state — determine what we need
-    const localOps = this.getLocalOps();
-    const localHashes = new Set(localOps.map((o) => o.hash));
+    // Bounded reads when a reader is present, else the classic whole-log load.
+    const localOps = this.opsReader ? undefined : this.getLocalOps();
+    const localCount = this.opsReader ? this.opsReader.count() : localOps!.length;
+    const lastHash = this.opsReader
+      ? this.opsReader.lastOp()?.hash
+      : localOps!.length > 0
+        ? localOps![localOps!.length - 1].hash
+        : undefined;
 
     // Check if peer has ops we don't
     for (const [, hash] of Object.entries(msg.heads)) {
-      if (!localHashes.has(hash)) {
+      const localHasHash = this.opsReader
+        ? this.opsReader.has(hash)
+        : localOps!.some((o) => o.hash === hash);
+      if (!localHasHash) {
         // Peer is ahead — request their ops
-        const afterHash =
-          msg.opCount > localOps.length
-            ? undefined
-            : localOps.length > 0
-              ? localOps[localOps.length - 1].hash
-              : undefined;
+        const afterHash = msg.opCount > localCount ? undefined : lastHash;
         await this.transport.send(msg.peerId, {
           version: PROTOCOL_VERSION,
           type: 'want',
@@ -333,10 +362,10 @@ export class SyncEngine {
       }
     }
 
-    if (msg.opCount > localOps.length) {
+    if (msg.opCount > localCount) {
       await this.transport.send(msg.peerId, {
-        version: PROTOCOL_VERSION,
         type: 'want',
+        version: PROTOCOL_VERSION,
         peerId: this.localPeerId,
         wantHashes: [],
       });
@@ -345,26 +374,36 @@ export class SyncEngine {
 
     // Check if we have ops they don't — push them
     const peerOpCount = msg.opCount;
-    if (localOps.length > peerOpCount) {
-      // Send ops they might be missing
-      await this.sendOpsMessage(msg.peerId, localOps.slice(peerOpCount));
+    if (localCount > peerOpCount) {
+      // Bounded: ops after the peer's known count. With a reader this is a
+      // tail read; without one, fall back to a slice of the full array.
+      const tail = this.opsReader
+        ? opsTailFromCount(this.opsReader, peerOpCount)
+        : localOps!.slice(peerOpCount);
+      await this.sendOpsMessage(msg.peerId, tail);
     }
   }
 
   private async handleWant(
     msg: Extract<SyncMessage, { type: 'want' }>,
   ): Promise<void> {
-    const localOps = this.getLocalOps();
-
     let opsToSend: VcsOp[];
+
     if (msg.afterHash) {
-      const idx = localOps.findIndex((o) => o.hash === msg.afterHash);
-      opsToSend = idx >= 0 ? localOps.slice(idx + 1) : localOps;
+      if (this.opsReader) {
+        // Bounded tail read: only the ops after the peer's cursor hash.
+        opsToSend = this.opsReader.opsAfter(msg.afterHash);
+      } else {
+        const localOps = this.getLocalOps();
+        const idx = localOps.findIndex((o) => o.hash === msg.afterHash);
+        opsToSend = idx >= 0 ? localOps.slice(idx + 1) : localOps;
+      }
     } else if (msg.wantHashes.length > 0) {
+      const localOps = this.getLocalOps();
       const wanted = new Set(msg.wantHashes);
       opsToSend = localOps.filter((o) => wanted.has(o.hash));
     } else {
-      opsToSend = localOps;
+      opsToSend = this.getLocalOps();
     }
 
     await this.sendOpsMessage(msg.peerId, opsToSend);
@@ -378,9 +417,13 @@ export class SyncEngine {
     let result: OpsReceivedResult | undefined;
     if (this.branchPolicy.linear) {
       // Linear mode: pre-filter dupes, hand new ops to the integrator.
-      const localOps = this.getLocalOps();
-      const localHashes = new Set(localOps.map((o) => o.hash));
-      const newOps = msg.ops.filter((o) => !localHashes.has(o.hash));
+      const newOps = this.opsReader
+        ? msg.ops.filter((o) => !this.opsReader!.has(o.hash))
+        : (() => {
+            const localOps = this.getLocalOps();
+            const localHashes = new Set(localOps.map((o) => o.hash));
+            return msg.ops.filter((o) => !localHashes.has(o.hash));
+          })();
       if (newOps.length > 0) {
         result = (await this.onOpsReceived(newOps)) ?? undefined;
       }
@@ -456,4 +499,15 @@ export class SyncEngine {
       await this.onNackReceived(msg);
     }
   }
+}
+
+/**
+ * Bounded tail from a 0-based op index. With a rowid-cursor backend this is a
+ * probe at `index-1` followed by `opsAfter` — reads only the ops the peer is
+ * missing, never the whole log. Falls back to a slice for array-based readers.
+ */
+function opsTailFromCount(reader: LocalOpsReader, startIndex: number): VcsOp[] {
+  if (startIndex <= 0) return reader.all();
+  const anchor = reader.getOpAtIndex(startIndex - 1);
+  return anchor ? reader.opsAfter(anchor.hash) : reader.all();
 }

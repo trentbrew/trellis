@@ -41,7 +41,9 @@ export { SyncEngine } from './sync-engine.js';
 export type {
   OpsReceivedRejection,
   OpsReceivedResult,
+  LocalOpsReader,
 } from './sync-engine.js';
+export { createSqliteLocalOpsReader } from './sqlite-ops-reader.js';
 
 export { TrellisVcsSyncPeer } from './vcs-sync-peer.js';
 export type {
