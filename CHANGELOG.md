@@ -33,6 +33,9 @@ payload by 70%.**
   even though the admin UI is vendored into `dist/ui/@trellis.computer/ui/dist/`
   at build time. Moved to `devDependencies`; `prepublishOnly` now rejects
   file/link/workspace specifiers in runtime deps.
+- **Fix: declare missing runtime deps** (`@tanstack/table-core`, ProseMirror
+  packages for `editor` / `table` cores) so `npm run build` succeeds on a clean
+  `npm ci` install.
 
 ## trellis [4.0.1] — 2026-08-30
 
