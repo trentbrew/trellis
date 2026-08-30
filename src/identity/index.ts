@@ -10,6 +10,7 @@ export {
   loadIdentity,
   hasIdentity,
   toPublicIdentity,
+  trellisUserDir,
   personIdentityDir,
   personIdentityPath,
   savePersonIdentity,

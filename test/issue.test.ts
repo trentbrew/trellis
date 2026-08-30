@@ -1,9 +1,16 @@
 import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { TrellisVcsEngine } from '../src/engine.js';
-import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs';
+import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 const TEST_DIR = '/tmp/trellis-issue-test';
+
+function disableAutoIssueCriteria(rootPath: string): void {
+  const manifestPath = join(rootPath, '.trellis', 'tests.json');
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  manifest.issueStart = { default: [] };
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+}
 
 function setupTestRepo() {
   rmSync(TEST_DIR, { recursive: true, force: true });
@@ -14,6 +21,7 @@ function setupTestRepo() {
 async function initEngine(): Promise<TrellisVcsEngine> {
   const engine = new TrellisVcsEngine({ rootPath: TEST_DIR });
   await engine.initRepo();
+  disableAutoIssueCriteria(TEST_DIR);
   engine.open();
   return engine;
 }
