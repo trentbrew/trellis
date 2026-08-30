@@ -4,6 +4,45 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [4.0.2] — 2026-08-30
+
+**Fixes `trellis sandbox pack` from an installed package, and cuts the sandbox
+payload by 70%.**
+
+- **Fix: `sandbox pack` failed with "WebContainer sandbox assets not found
+  (index.html)" for every npm install of Trellis.** `resolveSandboxAssetsDir`
+  derived its fallback from `import.meta.url`, but esbuild's `--splitting`
+  hoists the function into a shared `dist/chunk-*.js`, so it looked for
+  `<pkg>/dist/assets` instead of `<pkg>/dist/wc/assets`. Candidates are now
+  derived from the caller-supplied package root, which is correct in both the
+  repo and installed layouts and immune to bundler chunking. The dev-only
+  `src/wc/assets` candidate matched first in every source checkout, which is
+  why CI never saw it.
+- **Fix: `trellis --version` reported `0.0.0` inside the sandbox.** The
+  generated sandbox `package.json` now carries the real Trellis version, making
+  sandbox bug reports attributable to a release.
+- **Sandbox bootstrap is 25.7 MB → 7.6 MB (1069 → 588 files).** Vendored
+  packages now drop unreachable build variants — sql.js shipped 19 MB of asm.js
+  fallbacks, debug builds, and Web Worker wrappers that the sandbox can never
+  resolve — and `dist` sourcemaps are excluded by default. Escape hatches:
+  `trellis sandbox pack --no-prune` and `--sourcemaps`.
+- `buildSandboxBootstrap(root, options)` accepts `{ assetsDir, sourcemaps,
+  prune }`; the previous positional `assetsDir` string still works.
+
+## trellis [4.0.1] — 2026-08-30
+
+**WebContainer sandbox (TRL-431–440).**
+
+- **`trellis sandbox serve`** — local dev host (`:4321`) with COOP/COEP headers
+  and bootstrap API; browser terminal runs Trellis CLI inside StackBlitz
+  WebContainer after `npm run build`.
+- **`trellis sandbox pack`** — writes vendored `dist/` + runtime deps to JSON for
+  static deploy (Vercel prebuilt path under `apps/wc-sandbox/`).
+- Host pre-packs Trellis artifacts and stubs native modules so WebContainer never
+  runs in-browser `npm install` (`sql.js` instead of `better-sqlite3`).
+- Opt-in CI Playwright e2e (`WC_E2E=1`, `npm run test:wc:e2e`) for WC boot.
+- Legacy alias: `npm run test:wc`.
+
 ## trellis [4.0.0] — 2026-08-04
 
 **Git is now the sole authority over file bytes. The op-log can no longer write

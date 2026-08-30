@@ -1,4 +1,4 @@
-export { WC_RUNTIME_DEPS, sandboxPackageJson } from './constants.js';
+export { WC_PACK_PRUNE, WC_RUNTIME_DEPS, sandboxPackageJson } from './constants.js';
 export {
   buildSandboxBootstrap,
   packDist,
@@ -10,4 +10,9 @@ export {
 } from './pack.js';
 export { startSandboxHost } from './host.js';
 export { parseOpsFile } from './parse-ops-file.js';
-export type { PackedFile, SandboxBootstrap, SandboxHostOptions } from './types.js';
+export type {
+  PackedFile,
+  SandboxBootstrap,
+  SandboxHostOptions,
+  SandboxPackOptions,
+} from './types.js';

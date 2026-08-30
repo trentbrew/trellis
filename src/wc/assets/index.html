@@ -8,674 +8,205 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css"
     />
+    <link rel="stylesheet" href="/sandbox-shell.css" />
     <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
-    <style>
-      *,
-      *::before,
-      *::after {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-      :root {
-        --bg: #0d1117;
-        --surface: #161b22;
-        --surface2: #21262d;
-        --border: #30363d;
-        --text: #e6edf3;
-        --dim: #8b949e;
-        --green: #3fb950;
-        --red: #f85149;
-        --blue: #58a6ff;
-        --accent: #238636;
-        --tab-active: #1f6feb;
-        --purple: #a78bfa;
-        --yellow: #fbbf24;
-        --cyan: #67e8f9;
-      }
-      html,
-      body {
-        height: 100%;
-        background: var(--bg);
-        color: var(--text);
-        font-family:
-          -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      }
-
-      header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 0 16px;
-        height: 44px;
-        background: var(--surface);
-        border-bottom: 1px solid var(--border);
-        flex-shrink: 0;
-      }
-      header h1 {
-        font-size: 14px;
-        font-weight: 600;
-      }
-      .badge {
-        font-size: 10px;
-        padding: 2px 7px;
-        border-radius: 999px;
-        background: var(--surface2);
-        border: 1px solid var(--border);
-        color: var(--dim);
-        font-weight: 600;
-        letter-spacing: 0.04em;
-      }
-      .badge.ok {
-        color: var(--green);
-        border-color: #238636;
-        background: #122117;
-      }
-      .badge.live {
-        color: var(--cyan);
-        border-color: #1f6feb;
-        background: #0d1117;
-      }
-      #status {
-        font-size: 11px;
-        color: var(--dim);
-        margin-left: auto;
-      }
-
-      .tabs {
-        display: flex;
-        gap: 0;
-        background: var(--surface);
-        border-bottom: 1px solid var(--border);
-        padding: 0 12px;
-      }
-      .tab {
-        padding: 10px 16px;
-        font-size: 12px;
-        font-weight: 500;
-        color: var(--dim);
-        background: none;
-        border: none;
-        cursor: pointer;
-        border-bottom: 2px solid transparent;
-        margin-bottom: -1px;
-      }
-      .tab:hover {
-        color: var(--text);
-      }
-      .tab.active {
-        color: var(--text);
-        border-bottom-color: var(--tab-active);
-      }
-
-      .panel {
-        display: none;
-        height: calc(100vh - 44px - 41px);
-      }
-      .panel.active {
-        display: flex;
-        flex-direction: column;
-      }
-
-      /* Split CLI + graph */
-      .split {
-        display: flex;
-        flex: 1;
-        min-height: 0;
-      }
-      .split-left,
-      .split-right {
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-      }
-      .split-left {
-        flex: 1;
-        border-right: 1px solid var(--border);
-      }
-      .split-right {
-        flex: 1;
-        background: #010409;
-      }
-
-      .pane-toolbar {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        padding: 8px 12px;
-        background: var(--surface);
-        border-bottom: 1px solid var(--border);
-        flex-shrink: 0;
-        font-size: 11px;
-        color: var(--dim);
-      }
-      .pane-toolbar code {
-        font-family: 'Cascadia Code', Consolas, monospace;
-        color: var(--text);
-        background: var(--surface2);
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 10px;
-      }
-      .pane-toolbar .spacer {
-        flex: 1;
-      }
-      .live-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        font-size: 10px;
-        font-weight: 600;
-        color: var(--cyan);
-      }
-      .live-pill::before {
-        content: '';
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--green);
-        box-shadow: 0 0 6px var(--green);
-        animation: pulse 2s infinite;
-      }
-      @keyframes pulse {
-        0%,
-        100% {
-          opacity: 1;
-        }
-        50% {
-          opacity: 0.45;
-        }
-      }
-
-      #terminal-container {
-        flex: 1;
-        min-height: 0;
-        padding: 4px;
-        background: #010409;
-      }
-      #terminal-container .xterm {
-        height: 100%;
-      }
-
-      #graph-container {
-        flex: 1;
-        min-height: 0;
-        position: relative;
-        overflow: hidden;
-      }
-      #graph-container svg {
-        width: 100%;
-        height: 100%;
-        display: block;
-      }
-      #graph-empty {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--dim);
-        font-size: 12px;
-      }
-      .graph-legend {
-        position: absolute;
-        bottom: 12px;
-        left: 12px;
-        display: flex;
-        gap: 10px;
-        font-size: 10px;
-        color: var(--dim);
-      }
-      .legend-item {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      }
-      .legend-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-      }
-
-      #graph-examples {
-        max-height: 38%;
-        overflow-y: auto;
-        flex-shrink: 0;
-        border-top: 1px solid var(--border);
-        background: var(--surface);
-        padding: 8px 12px;
-        font-size: 10px;
-        color: var(--dim);
-      }
-      #graph-examples[hidden] {
-        display: none;
-      }
-      #graph-examples h3 {
-        font-size: 10px;
-        font-weight: 600;
-        color: var(--text);
-        margin: 0 0 6px;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-      }
-      #graph-examples .ex-section {
-        margin-bottom: 8px;
-      }
-      #graph-examples .ex-title {
-        color: var(--cyan);
-        font-weight: 600;
-        margin-bottom: 3px;
-      }
-      #graph-examples .ex-cmd {
-        font-family: 'Cascadia Code', Consolas, monospace;
-        color: var(--text);
-        cursor: pointer;
-        padding: 1px 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      #graph-examples .ex-cmd:hover {
-        color: var(--blue);
-      }
-      .btn.sm {
-        padding: 3px 8px;
-        font-size: 10px;
-      }
-      .btn.sm.on {
-        background: #1f6feb33;
-        border-color: #1f6feb;
-        color: #58a6ff;
-      }
-
-      /* SDK panel */
-      .btn {
-        padding: 5px 12px;
-        border-radius: 6px;
-        font-size: 11px;
-        font-weight: 600;
-        border: 1px solid var(--border);
-        background: var(--surface2);
-        color: var(--text);
-        cursor: pointer;
-      }
-      .btn:hover:not(:disabled) {
-        border-color: var(--dim);
-      }
-      .btn:disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
-      }
-      .btn.primary {
-        background: var(--accent);
-        border-color: #2ea043;
-        color: #fff;
-      }
-      #monaco-container {
-        flex: 1;
-        min-height: 0;
-      }
-      #sdk-output {
-        height: 140px;
-        overflow-y: auto;
-        padding: 10px 14px;
-        font-family: 'Cascadia Code', Consolas, monospace;
-        font-size: 11px;
-        line-height: 1.55;
-        background: #010409;
-        border-top: 1px solid var(--border);
-        flex-shrink: 0;
-      }
-      .line-stdout {
-        color: var(--text);
-      }
-      .line-stderr {
-        color: var(--red);
-      }
-      .line-info {
-        color: var(--blue);
-      }
-      .line-success {
-        color: var(--green);
-      }
-      .line-dim {
-        color: var(--dim);
-      }
-
-      /* SDK split + multiplayer demo */
-      #panel-sdk .split {
-        flex-direction: row;
-      }
-      #panel-sdk .split-left {
-        flex: 1.2;
-      }
-      #panel-sdk .split-right {
-        flex: 1;
-        border-right: none;
-        border-left: 1px solid var(--border);
-      }
-      #panel-sdk #monaco-container {
-        flex: 1;
-        min-height: 0;
-      }
-      #panel-sdk #sdk-output {
-        height: 120px;
-      }
-
-      /* Multiplayer demo */
-      #mp-container {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-        padding: 12px;
-        gap: 10px;
-        overflow-y: auto;
-      }
-      .mp-peers {
-        display: flex;
-        gap: 10px;
-      }
-      .mp-peer {
-        flex: 1;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        padding: 8px 10px;
-        font-size: 11px;
-      }
-      .mp-peer-name {
-        font-weight: 600;
-        color: var(--cyan);
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        margin-bottom: 6px;
-      }
-      .mp-peer-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: var(--green);
-      }
-      .mp-peer-dot.offline {
-        background: var(--dim);
-      }
-      .mp-peer-dot.syncing {
-        background: var(--yellow);
-        animation: pulse 1s infinite;
-      }
-      .mp-stats {
-        display: flex;
-        gap: 12px;
-        color: var(--dim);
-        font-size: 10px;
-      }
-      .mp-stat {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      }
-      .mp-stat-val {
-        color: var(--text);
-        font-weight: 600;
-        font-family: 'Cascadia Code', Consolas, monospace;
-      }
-      .mp-ops {
-        flex: 1;
-        min-height: 0;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        padding: 10px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-      .mp-ops-title {
-        font-size: 10px;
-        font-weight: 600;
-        color: var(--text);
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .mp-ops-log {
-        flex: 1;
-        overflow-y: auto;
-        font-family: 'Cascadia Code', Consolas, monospace;
-        font-size: 10px;
-        line-height: 1.6;
-      }
-      .mp-op-row {
-        display: flex;
-        gap: 8px;
-        padding: 2px 0;
-        border-bottom: 1px solid var(--surface2);
-      }
-      .mp-op-time {
-        color: var(--dim);
-        min-width: 40px;
-      }
-      .mp-op-peer {
-        color: var(--cyan);
-        min-width: 40px;
-      }
-      .mp-op-kind {
-        color: var(--text);
-      }
-      .mp-op-hash {
-        color: var(--dim);
-      }
-      .mp-issues {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 4px;
-      }
-      .mp-issue-chip {
-        background: var(--surface2);
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        padding: 3px 8px;
-        font-size: 10px;
-        color: var(--text);
-      }
-      .mp-issue-chip.alice {
-        border-color: var(--cyan);
-      }
-      .mp-issue-chip.bob {
-        border-color: var(--magenta);
-      }
-      .mp-todo-list {
-        margin-top: 6px;
-        display: flex;
-        flex-direction: column;
-        gap: 3px;
-        max-height: 80px;
-        overflow-y: auto;
-      }
-      .mp-todo-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 10px;
-        padding: 2px 4px;
-        border-radius: 3px;
-      }
-      .mp-todo-item.done {
-        opacity: 0.5;
-        text-decoration: line-through;
-      }
-      .mp-todo-check {
-        width: 10px;
-        height: 10px;
-        border: 1px solid var(--dim);
-        border-radius: 2px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 8px;
-        flex-shrink: 0;
-      }
-      .mp-todo-check.checked {
-        background: var(--green);
-        border-color: var(--green);
-        color: #fff;
-      }
-      .mp-todos {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        overflow-y: auto;
-      }
-      .mp-todo-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 4px 6px;
-        background: var(--surface2);
-        border-radius: 4px;
-        font-size: 11px;
-      }
-      .mp-todo-row.done {
-        opacity: 0.45;
-      }
-      .mp-todo-row .creator {
-        font-size: 9px;
-        padding: 1px 5px;
-        border-radius: 3px;
-        background: var(--surface);
-        color: var(--dim);
-        flex-shrink: 0;
-      }
-      .mp-todo-row .creator.alice {
-        color: var(--cyan);
-      }
-      .mp-todo-row .creator.bob {
-        color: var(--magenta);
-      }
-      .mp-sync-line {
-        height: 2px;
-        background: var(--surface2);
-        border-radius: 1px;
-        position: relative;
-        overflow: hidden;
-      }
-      .mp-sync-line::after {
-        content: '';
-        position: absolute;
-        left: -20%;
-        top: 0;
-        width: 20%;
-        height: 100%;
-        background: var(--green);
-        border-radius: 1px;
-        animation: syncSlide 1.5s ease-in-out infinite;
-      }
-      .mp-sync-line.active::after {
-        display: block;
-      }
-      .mp-sync-line.idle::after {
-        display: none;
-      }
-      @keyframes syncSlide {
-        0% {
-          left: -20%;
-        }
-        100% {
-          left: 120%;
-        }
-      }
-    </style>
   </head>
-  <body>
-    <header>
-      <h1>Trellis</h1>
-      <span class="badge" id="wc-badge">WebContainer</span>
-      <span class="badge live" id="graph-badge" hidden>Graph live</span>
-      <span id="status">Booting…</span>
-    </header>
+  <body class="app-shell">
+    <div class="chrome-top">
+      <a class="app-logo-mark" href="/" aria-label="Trellis sandbox" title="Trellis">
+        <svg
+          class="app-logo-mark__svg"
+          viewBox="0 0 800 800"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+        >
+          <path
+            d="M373.362 226.643C388.087 211.919 411.96 211.919 426.684 226.643L573.37 373.324C588.094 388.047 588.094 411.92 573.37 426.644L426.684 573.324C411.96 588.048 388.087 588.048 373.362 573.324L226.677 426.644C211.952 411.92 211.952 388.047 226.677 373.324L373.362 226.643Z"
+            fill="currentColor"
+          />
+          <path
+            d="M586.659 513.282C594.021 505.921 605.957 505.921 613.319 513.282L686.66 586.621C694.022 593.983 694.022 605.919 686.66 613.28L613.319 686.619C605.957 693.981 594.021 693.981 586.659 686.619L513.318 613.28C505.956 605.919 505.956 593.983 513.318 586.621L586.659 513.282Z"
+            fill="currentColor"
+          />
+          <path
+            d="M286.502 586.454C293.958 593.909 293.958 605.997 286.502 613.453L213.501 686.452C206.045 693.907 193.957 693.907 186.501 686.452L113.5 613.453C106.044 605.997 106.044 593.909 113.5 586.454L186.501 513.455C193.957 506 206.045 506 213.501 513.455L286.502 586.454Z"
+            fill="currentColor"
+          />
+          <path
+            d="M406.524 93.4982C402.934 97.088 397.113 97.088 393.523 93.4982L356.523 56.499C352.933 52.9092 352.933 47.089 356.523 43.4992L393.523 6.50002C397.113 2.91025 402.934 2.91025 406.524 6.50003L443.524 43.4992C447.114 47.089 447.114 52.9092 443.524 56.499L406.524 93.4982Z"
+            fill="currentColor"
+          />
+          <path
+            d="M186.502 113.498C193.958 106.042 206.047 106.042 213.503 113.498L286.503 186.496C293.959 193.952 293.959 206.04 286.503 213.496L213.503 286.494C206.047 293.95 193.958 293.95 186.502 286.494L113.501 213.496C106.046 206.04 106.046 193.952 113.501 186.496L186.502 113.498Z"
+            fill="currentColor"
+          />
+          <path
+            d="M686.499 186.483C693.955 193.939 693.955 206.027 686.499 213.482L613.499 286.481C606.043 293.937 593.954 293.937 586.498 286.481L513.497 213.482C506.041 206.027 506.041 193.939 513.497 186.483L586.498 113.484C593.954 106.029 606.043 106.029 613.499 113.484L686.499 186.483Z"
+            fill="currentColor"
+          />
+          <path
+            d="M356.689 756.666C353.008 752.985 353.008 747.017 356.689 743.336L393.359 706.667C397.04 702.986 403.009 702.986 406.69 706.667L443.36 743.336C447.041 747.017 447.041 752.985 443.36 756.666L406.69 793.335C403.009 797.016 397.04 797.016 393.359 793.335L356.689 756.666Z"
+            fill="currentColor"
+          />
+        </svg>
+      </a>
+      <header class="app-header">
+        <h1>Trellis</h1>
+        <span class="badge" id="wc-badge">WebContainer</span>
+        <span class="badge live" id="graph-badge" hidden>Graph live</span>
+        <span id="status">Booting…</span>
+      </header>
+    </div>
 
-    <nav class="tabs">
-      <button class="tab active" data-tab="cli">CLI + Graph</button>
-      <button class="tab" data-tab="sdk">SDK Playground</button>
-    </nav>
+    <div class="app-body">
+      <nav class="demo-rail" role="tablist" aria-label="Demos">
+        <button class="demo-rail__tab active" type="button" data-tab="cli" role="tab">
+          CLI + Graph
+        </button>
+        <button class="demo-rail__tab" type="button" data-tab="sdk" role="tab">
+          SDK Playground
+        </button>
+      </nav>
 
-    <section class="panel active" id="panel-cli">
-      <div class="split">
-        <div class="split-left">
-          <div class="pane-toolbar">
-            <span>repo root</span>
-            <code>trellis status</code>
-            <code>trellis issue create -t "…"</code>
-            <code>trellis examples</code>
+      <main class="workspace">
+      <section class="panel active" id="panel-cli" role="tabpanel">
+        <div class="split-host" data-split="h" data-split-id="cli-main">
+          <div class="split-pane">
+            <div class="dock-pane">
+              <div class="pane-toolbar">
+                <div class="pane-toolbar__meta">
+                  <span class="pane-toolbar__label">Terminal</span>
+                  <span class="pane-toolbar__sep" aria-hidden="true"></span>
+                  <span class="pane-toolbar__detail">repo root</span>
+                  <span class="pane-toolbar__detail"><code>trellis status</code></span>
+                </div>
+              </div>
+              <div class="pane-body">
+                <div id="terminal-container"></div>
+              </div>
+            </div>
           </div>
-          <div id="terminal-container"></div>
-        </div>
-        <div class="split-right">
-          <div class="pane-toolbar">
-            <span class="live-pill">Live graph</span>
-            <span id="graph-stats">reads .trellis/ops.json</span>
-            <span class="spacer"></span>
-            <button
-              class="btn sm"
-              id="examples-run-btn"
-              type="button"
-              title="Run trellis examples in the CLI"
+          <div
+            class="split-resizer"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize terminal and graph"
+          ></div>
+          <div class="split-pane">
+            <div
+              class="split-host examples-collapsed"
+              data-split="v"
+              data-split-id="cli-graph"
+              id="cli-graph-split"
             >
-              Examples → CLI
-            </button>
-            <button
-              class="btn sm"
-              id="graph-ops-toggle"
-              type="button"
-              title="Show causal ops from .trellis/ops.json"
-            >
-              Ops
-            </button>
-            <button class="btn sm" id="examples-toggle-btn" type="button">
-              Examples
-            </button>
-            <span
-              id="graph-updated"
-              style="font-size: 10px; color: var(--dim)"
-            ></span>
+              <div class="split-pane">
+                <div class="dock-pane">
+                  <div class="pane-toolbar">
+                    <div class="pane-toolbar__meta">
+                      <span class="pane-toolbar__label live-pill">Live graph</span>
+                      <span class="pane-toolbar__sep" aria-hidden="true"></span>
+                      <span class="pane-toolbar__detail" id="graph-stats"
+                        >reads .trellis/ops.json</span
+                      >
+                    </div>
+                    <div class="pane-toolbar__actions">
+                      <button
+                        class="btn sm"
+                        id="examples-run-btn"
+                        type="button"
+                        title="Run trellis examples in the CLI"
+                      >
+                        Examples → CLI
+                      </button>
+                      <button
+                        class="btn sm"
+                        id="graph-ops-toggle"
+                        type="button"
+                        title="Show causal ops from .trellis/ops.json"
+                      >
+                        Ops
+                      </button>
+                      <button class="btn sm" id="examples-toggle-btn" type="button">
+                        Examples
+                      </button>
+                      <span class="pane-toolbar__detail" id="graph-updated"></span>
+                    </div>
+                  </div>
+                  <div class="pane-body">
+                    <div id="graph-container">
+                      <div id="graph-empty">Waiting for repo init…</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="split-resizer"
+                role="separator"
+                aria-orientation="horizontal"
+                aria-label="Resize graph and examples"
+              ></div>
+              <div class="split-pane examples-pane">
+                <div class="dock-pane">
+                  <div class="pane-toolbar">
+                    <div class="pane-toolbar__meta">
+                      <span class="pane-toolbar__label">Suggested commands</span>
+                    </div>
+                  </div>
+                  <div class="pane-body">
+                    <div id="graph-examples"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div id="graph-container">
-            <div id="graph-empty">Waiting for repo init…</div>
-          </div>
-          <div id="graph-examples" hidden></div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="panel" id="panel-sdk">
-      <div class="split">
-        <div class="split-left">
-          <div class="pane-toolbar">
-            <span>test.mjs</span>
-            <span class="spacer"></span>
-            <button class="btn" id="reset-script-btn" disabled>Reset</button>
-            <button class="btn primary" id="run-btn" disabled>▶ Run</button>
+      <section class="panel" id="panel-sdk" role="tabpanel">
+        <div class="split-host" data-split="h" data-split-id="sdk-main">
+          <div class="split-pane">
+            <div class="dock-pane">
+              <div class="pane-toolbar">
+                <div class="pane-toolbar__meta">
+                  <span class="pane-toolbar__label">test.mjs</span>
+                  <span class="pane-toolbar__sep" aria-hidden="true"></span>
+                  <span class="pane-toolbar__detail">SDK script</span>
+                </div>
+                <div class="pane-toolbar__actions">
+                  <button class="btn" id="reset-script-btn" disabled>Reset</button>
+                  <button class="btn primary" id="run-btn" disabled>▶ Run</button>
+                </div>
+              </div>
+              <div class="pane-body">
+                <div id="monaco-container"></div>
+              </div>
+            </div>
           </div>
-          <div id="monaco-container"></div>
-          <div id="sdk-output"></div>
-        </div>
-        <div class="split-right">
-          <div class="pane-toolbar">
-            <span class="live-pill">Realtime Todos</span>
-            <span id="mp-status">Alice + Bob · MemorySyncRoom · auto-push</span>
-            <span class="spacer"></span>
-            <span
-              id="mp-updated"
-              style="font-size: 10px; color: var(--dim)"
-            ></span>
-          </div>
-          <div id="mp-container">
+          <div
+            class="split-resizer"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize editor and preview"
+          ></div>
+          <div class="split-pane">
+            <div class="split-host" data-split="v" data-split-id="sdk-right">
+              <div class="split-pane">
+                <div class="dock-pane">
+                  <div class="pane-toolbar">
+                    <div class="pane-toolbar__meta">
+                      <span class="pane-toolbar__label live-pill">Realtime Todos</span>
+                      <span class="pane-toolbar__sep" aria-hidden="true"></span>
+                      <span class="pane-toolbar__detail" id="mp-status"
+                        >Alice + Bob · MemorySyncRoom · auto-push</span
+                      >
+                    </div>
+                    <div class="pane-toolbar__actions">
+                      <span class="pane-toolbar__detail" id="mp-updated"></span>
+                    </div>
+                  </div>
+                  <div class="pane-body">
+                    <div id="mp-container">
             <div class="mp-peers">
               <div class="mp-peer">
                 <div class="mp-peer-name">
@@ -721,10 +252,42 @@
               <div class="mp-ops-title">Merged Todo List</div>
               <div class="mp-todos" id="mp-todos"></div>
             </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="split-resizer"
+                role="separator"
+                aria-orientation="horizontal"
+                aria-label="Resize dashboard and output"
+              ></div>
+              <div class="split-pane sdk-output-pane">
+                <div class="dock-pane">
+                  <div class="pane-toolbar">
+                    <div class="pane-toolbar__meta">
+                      <span class="pane-toolbar__label">Output</span>
+                      <span class="pane-toolbar__sep" aria-hidden="true"></span>
+                      <span class="pane-toolbar__detail">SDK run logs</span>
+                    </div>
+                  </div>
+                  <div class="pane-body">
+                    <div id="sdk-output"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </main>
+    </div>
+
+    <footer class="status-bar">
+      <span id="status-bar-left">Trellis WebContainer sandbox</span>
+      <span class="spacer"></span>
+      <span id="status-bar-right">Ready</span>
+    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
     <script type="module">
@@ -763,6 +326,73 @@ import '../../bin/trellis.mjs';
         default: 5,
       };
       const SHOW_OPS_KEY = 'trellis-wc-show-ops';
+      const SPLIT_KEY = 'trellis-wc-splits';
+
+      function setGraphStats(text) {
+        graphStats.textContent = text;
+      }
+
+      function initResizableSplits() {
+        const saved = JSON.parse(localStorage.getItem(SPLIT_KEY) || '{}');
+        document.querySelectorAll('[data-split]').forEach((host) => {
+          const id = host.dataset.splitId;
+          const orientation = host.dataset.split;
+          const panes = host.querySelectorAll(':scope > .split-pane');
+          const resizer = host.querySelector(':scope > .split-resizer');
+          if (!resizer || panes.length < 2) return;
+
+          if (saved[id] != null) {
+            panes[0].style.flex = `0 0 ${saved[id]}%`;
+            panes[1].style.flex = '1 1 0';
+          } else if (id === 'sdk-right') {
+            panes[0].style.flex = '0 0 67%';
+            panes[1].style.flex = '1 1 0';
+          }
+
+          resizer.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            document.body.classList.add(
+              orientation === 'v' ? 'is-resizing-v' : 'is-resizing',
+            );
+
+            const onMove = (ev) => {
+              const rect = host.getBoundingClientRect();
+              let ratio;
+              if (orientation === 'h') {
+                const w = panes[0].getBoundingClientRect().width + (ev.movementX || 0);
+                ratio = (w / rect.width) * 100;
+              } else {
+                const h = panes[0].getBoundingClientRect().height + (ev.movementY || 0);
+                ratio = (h / rect.height) * 100;
+              }
+              ratio = Math.min(78, Math.max(22, ratio));
+              panes[0].style.flex = `0 0 ${ratio}%`;
+              panes[1].style.flex = '1 1 0';
+            };
+
+            const onUp = () => {
+              document.removeEventListener('mousemove', onMove);
+              document.removeEventListener('mouseup', onUp);
+              document.body.classList.remove('is-resizing', 'is-resizing-v');
+              const rect = host.getBoundingClientRect();
+              const pct =
+                orientation === 'h'
+                  ? (panes[0].getBoundingClientRect().width / rect.width) * 100
+                  : (panes[0].getBoundingClientRect().height / rect.height) * 100;
+              const all = JSON.parse(localStorage.getItem(SPLIT_KEY) || '{}');
+              all[id] = pct;
+              localStorage.setItem(SPLIT_KEY, JSON.stringify(all));
+              if (terminal && fitAddon) fitAddon.fit();
+              if (editor) editor.layout();
+            };
+
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+          });
+        });
+      }
+
+      initResizableSplits();
 
       let wc = null;
       let shellProcess = null;
@@ -776,12 +406,18 @@ import '../../bin/trellis.mjs';
       let shellInputWriter = null;
 
       const statusEl = document.getElementById('status');
+      const statusBarRight = document.getElementById('status-bar-right');
+      function setStatus(msg) {
+        statusEl.textContent = msg;
+        if (statusBarRight) statusBarRight.textContent = msg;
+      }
       const wcBadge = document.getElementById('wc-badge');
       const graphBadge = document.getElementById('graph-badge');
       const graphStats = document.getElementById('graph-stats');
       const graphUpdated = document.getElementById('graph-updated');
       const graphEmpty = document.getElementById('graph-empty');
       const graphExamplesEl = document.getElementById('graph-examples');
+      const cliGraphSplit = document.getElementById('cli-graph-split');
       const examplesToggleBtn = document.getElementById('examples-toggle-btn');
       const examplesRunBtn = document.getElementById('examples-run-btn');
       const graphOpsToggle = document.getElementById('graph-ops-toggle');
@@ -876,10 +512,10 @@ clientB.close();
 `;
 
       // ─── Tabs ────────────────────────────────────────────────────────────────────
-      document.querySelectorAll('.tab').forEach((tab) => {
+      document.querySelectorAll('.demo-rail__tab').forEach((tab) => {
         tab.addEventListener('click', () => {
           document
-            .querySelectorAll('.tab')
+            .querySelectorAll('.demo-rail__tab')
             .forEach((t) => t.classList.remove('active'));
           document
             .querySelectorAll('.panel')
@@ -926,6 +562,84 @@ clientB.close();
         return tree;
       }
 
+      // Monaco's theme API accepts hex only. The shell stylesheet defines its
+      // palette in oklch(), which getComputedStyle reports back verbatim, so
+      // every colour has to be normalised before it reaches defineTheme().
+      // A canvas 2d context parses any CSS colour and reports it as hex
+      // (or rgba() when it carries alpha).
+      const colorProbeCtx = document.createElement('canvas').getContext('2d');
+
+      function toHexColor(value, fallback = '#000000') {
+        const raw = String(value ?? '').trim();
+        if (!raw) return fallback;
+        if (/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(raw)) return raw;
+        try {
+          colorProbeCtx.fillStyle = '#000000';
+          colorProbeCtx.fillStyle = raw;
+          const parsed = String(colorProbeCtx.fillStyle);
+          if (parsed.startsWith('#')) return parsed;
+          const rgb = parsed.match(/rgba?\(([^)]+)\)/i);
+          if (rgb) {
+            const parts = rgb[1].split(',').map((p) => p.trim());
+            const hex = parts
+              .slice(0, 3)
+              .map((p) => Math.max(0, Math.min(255, Math.round(Number.parseFloat(p))))
+                .toString(16)
+                .padStart(2, '0'))
+              .join('');
+            const alpha = parts[3] === undefined
+              ? ''
+              : Math.max(0, Math.min(255, Math.round(Number.parseFloat(parts[3]) * 255)))
+                  .toString(16)
+                  .padStart(2, '0');
+            return `#${hex}${alpha === 'ff' ? '' : alpha}`;
+          }
+        } catch {
+          /* fall through to fallback */
+        }
+        return fallback;
+      }
+
+      function cssVarColor(name, fallback = '#000000') {
+        const probe = document.createElement('span');
+        probe.style.color = `var(${name})`;
+        document.body.appendChild(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return toHexColor(color, fallback);
+      }
+
+      function initMonacoTheme() {
+        const background = cssVarColor('--color-background');
+        const foreground = cssVarColor('--color-foreground');
+        const muted = cssVarColor('--color-muted-foreground');
+        const border = cssVarColor('--color-border');
+        monaco.editor.defineTheme('trellis-shell', {
+          base: 'vs-dark',
+          inherit: true,
+          rules: [
+            { token: 'comment', foreground: '708090' },
+            { token: 'string', foreground: '7ec8a4' },
+            { token: 'keyword', foreground: '8b9cf6' },
+          ],
+          colors: {
+            'editor.background': background,
+            'editor.foreground': foreground,
+            'editorLineNumber.foreground': muted,
+            'editorLineNumber.activeForeground': foreground,
+            'editorGutter.background': background,
+            'editor.selectionBackground': '#264f78aa',
+            'editor.inactiveSelectionBackground': '#264f7844',
+            'editorCursor.foreground': cssVarColor('--blue'),
+            'editor.lineHighlightBackground': '#ffffff08',
+            'editorWidget.background': cssVarColor('--color-card'),
+            'editorWidget.border': border,
+            'input.background': cssVarColor('--color-muted'),
+            'input.border': border,
+          },
+        });
+      }
+
       async function initMonaco() {
         await new Promise((resolve) => {
           require.config({
@@ -933,24 +647,48 @@ clientB.close();
               vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs',
             },
           });
-          require(['vs/editor/editor.main'], () => {
-            editor = monaco.editor.create(
-              document.getElementById('monaco-container'),
-              {
-                value: DEFAULT_SCRIPT,
-                language: 'javascript',
-                theme: 'vs-dark',
-                fontSize: 13,
-                fontFamily: "'Cascadia Code', 'Fira Code', Consolas, monospace",
-                lineNumbers: 'on',
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                padding: { top: 12 },
-              },
-            );
+          // The AMD callback must settle the promise on every path — a throw
+          // in here escapes into the loader, leaving `await initMonaco()`
+          // pending forever and hanging boot at "Booting…" instead of
+          // surfacing an error. The SDK editor is auxiliary to the terminal
+          // and graph, so a failure degrades rather than aborts the sandbox.
+          const settle = (err) => {
+            if (err) {
+              console.error('Monaco init failed', err);
+              writeSdk(`Editor unavailable: ${err.message}`, 'line-stderr');
+            }
             resolve();
-          });
+          };
+          require(['vs/editor/editor.main'], () => {
+            try {
+              initMonacoTheme();
+              const shellStyles = getComputedStyle(document.documentElement);
+              const fontSize = Number.parseFloat(shellStyles.fontSize) || 13;
+              const fontFamily = shellStyles
+                .getPropertyValue('--font-mono')
+                .trim()
+                .replace(/^['"]|['"]$/g, '');
+              editor = monaco.editor.create(
+                document.getElementById('monaco-container'),
+                {
+                  value: DEFAULT_SCRIPT,
+                  language: 'javascript',
+                  theme: 'trellis-shell',
+                  fontSize,
+                  fontFamily,
+                  lineNumbers: 'on',
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  padding: { top: 8 },
+                  renderLineHighlight: 'none',
+                },
+              );
+              settle();
+            } catch (err) {
+              settle(err);
+            }
+          }, (err) => settle(err));
         });
       }
 
@@ -992,7 +730,7 @@ clientB.close();
       }
 
       async function bootFilesystem() {
-        statusEl.textContent = 'Booting WebContainer…';
+        setStatus('Booting WebContainer…');
         writeSdk('Booting WebContainer…', 'line-info');
 
         wc = await WebContainer.boot({ coep: 'credentialless' });
@@ -1031,7 +769,7 @@ clientB.close();
         });
 
         if (!bootstrap.nodeModules) {
-          statusEl.textContent = 'Installing dependencies…';
+          setStatus('Installing dependencies…');
           await spawnLogged('npm install', 'npm', ['install']);
         } else {
           writeSdk('Using host-vendored node_modules (no npm install)', 'line-info');
@@ -1065,7 +803,7 @@ clientB.close();
       }
 
       async function initRepo() {
-        statusEl.textContent = 'Initializing trellis repo…';
+        setStatus('Initializing trellis repo…');
         writeSdk('Initializing Trellis repo…', 'line-info');
         await spawnLogged('trellis init', CLI[0], [
           ...CLI.slice(1),
@@ -1402,9 +1140,9 @@ clientB.close();
       }
 
       examplesToggleBtn.addEventListener('click', () => {
-        const open = graphExamplesEl.hidden;
-        graphExamplesEl.hidden = !open;
-        examplesToggleBtn.textContent = open ? 'Hide' : 'Examples';
+        const open = cliGraphSplit.classList.toggle('examples-collapsed');
+        examplesToggleBtn.textContent = open ? 'Examples' : 'Hide';
+        examplesToggleBtn.classList.toggle('on', !open);
       });
 
       examplesRunBtn.addEventListener('click', () =>
@@ -1442,9 +1180,11 @@ clientB.close();
           renderExamplesPanel(data.summary);
           const entityNodes = data.nodes.filter((n) => n.type !== 'op').length;
           const opNodes = data.nodes.length - entityNodes;
-          graphStats.textContent = showOpsInGraph
-            ? `${entityNodes} entities · ${opNodes} ops · ${data.edges.length} edges`
-            : `${data.nodes.length} nodes · ${data.edges.length} edges · ${ops.length} ops`;
+          setGraphStats(
+            showOpsInGraph
+              ? `${entityNodes} entities · ${opNodes} ops · ${data.edges.length} edges`
+              : `${data.nodes.length} nodes · ${data.edges.length} edges · ${ops.length} ops`,
+          );
           graphUpdated.textContent = `updated ${new Date().toLocaleTimeString()}`;
           graphEmpty.style.display = data.nodes.length ? 'none' : 'flex';
           if (!data.nodes.length) {
@@ -1454,10 +1194,10 @@ clientB.close();
         } catch (err) {
           const msg = err?.message ?? String(err);
           if (/ENOENT|not found/i.test(msg)) {
-            graphStats.textContent = 'waiting for .trellis/ops.json…';
+            setGraphStats('waiting for .trellis/ops.json…');
             return;
           }
-          graphStats.textContent = `read error: ${msg}`;
+          setGraphStats(`read error: ${msg}`);
         }
       }
 
@@ -1705,7 +1445,7 @@ clientB.close();
       // ─── SDK run ─────────────────────────────────────────────────────────────────
       runBtn.addEventListener('click', async () => {
         runBtn.disabled = true;
-        statusEl.textContent = 'Running SDK script…';
+        setStatus('Running SDK script…');
         await wc.fs.writeFile('test.mjs', editor.getValue());
 
         writeSdk('');
@@ -1735,7 +1475,7 @@ clientB.close();
           code === 0 ? 'Process exited 0' : `Process exited ${code}`,
           code === 0 ? 'line-success' : 'line-stderr',
         );
-        statusEl.textContent = code === 0 ? 'SDK run OK' : `SDK exit ${code}`;
+        setStatus(code === 0 ? 'SDK run OK' : `SDK exit ${code}`);
         runBtn.disabled = false;
       });
 
@@ -1855,9 +1595,9 @@ clientB.close();
         await startShell();
         startGraphPolling();
         startMpPolling();
-        statusEl.textContent = 'Ready';
+        setStatus('Ready');
       } catch (err) {
-        statusEl.textContent = 'Boot failed';
+        setStatus('Boot failed');
         writeSdk(`Boot failed: ${err.message}`, 'line-stderr');
         if (terminal)
           terminal.write(`\r\n\x1b[31mBoot failed: ${err.message}\x1b[0m\r\n`);

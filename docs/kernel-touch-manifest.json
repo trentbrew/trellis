@@ -1,5 +1,5 @@
 {
-  "version": "4.0.0",
+  "version": "4.0.2",
   "description": "Downstream consumers that must stay in sync with trellis kernel releases.",
   "consumers": [
     {
@@ -19,7 +19,7 @@
         {
           "glob": "templates/*/package.json",
           "field": "dependencies.trellis",
-          "expect": "^4.0.0"
+          "expect": "^4.0.2"
         }
       ],
       "packageVersion": "0.3.0"
@@ -31,13 +31,14 @@
         "content/8.changelog.md",
         "content/4.cli/2.commands.md",
         "content/6.integrations/3.git-bridge.md",
+        "content/6.integrations/6.webcontainer.md",
         "content/2.guides/18.agent-coordination.md",
         "content/2.guides/5.issue-tracking.md",
         "app/data/site-nav.ts"
       ],
       "versionTable": {
         "file": "content/8.changelog.md",
-        "kernelExpect": "4.0.0"
+        "kernelExpect": "4.0.2"
       }
     },
     {
