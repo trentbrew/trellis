@@ -1,0 +1,9 @@
+{
+  "name": "trellis-wc-sandbox",
+  "private": true,
+  "description": "Static Vercel deploy — Trellis WebContainer CLI + graph demo",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "deploy": "vercel --prod"
+  }
+}

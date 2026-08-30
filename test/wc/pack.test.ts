@@ -14,6 +14,7 @@ describe('wc pack', () => {
   it('resolves sandbox assets', () => {
     const assets = resolveSandboxAssetsDir(trellisRoot);
     expect(assets).toContain('wc');
+    expect(assets).toMatch(/src\/wc\/assets$/);
   });
 
   it('packs runtime node_modules with iroh stub and sql.js wasm', () => {

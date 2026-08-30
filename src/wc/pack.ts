@@ -154,9 +154,10 @@ export function packNodeModules(
 
 export function resolveSandboxAssetsDir(trellisRoot: string): string {
   const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+  // Prefer repo source during dev; published package only ships dist/wc/assets.
   const candidates = [
-    path.join(moduleDir, 'assets'),
     path.join(trellisRoot, 'src/wc/assets'),
+    path.join(moduleDir, 'assets'),
   ];
   for (const candidate of candidates) {
     if (fs.existsSync(path.join(candidate, 'index.html'))) return candidate;

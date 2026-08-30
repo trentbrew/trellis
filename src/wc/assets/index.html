@@ -961,18 +961,25 @@ clientB.close();
         return out;
       }
 
+      async function fetchBootstrap() {
+        const paths = ['/api/bootstrap', '/bootstrap.json'];
+        let lastError = 'Bootstrap not available';
+        for (const bootstrapPath of paths) {
+          const res = await fetch(bootstrapPath);
+          if (res.ok) return res.json();
+          const body = await res.json().catch(() => ({}));
+          lastError = body.error ?? `HTTP ${res.status} (${bootstrapPath})`;
+        }
+        throw new Error(lastError);
+      }
+
       async function bootFilesystem() {
         statusEl.textContent = 'Booting WebContainer…';
         writeSdk('Booting WebContainer…', 'line-info');
 
-        wc = await WebContainer.boot();
+        wc = await WebContainer.boot({ coep: 'credentialless' });
 
-        const res = await fetch('/api/bootstrap');
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error ?? `HTTP ${res.status}`);
-        }
-        const bootstrap = await res.json();
+        const bootstrap = await fetchBootstrap();
         trellisVersion = bootstrap.version ?? '?';
         binTrellisContent = bootstrap.binTrellis ?? '';
 
@@ -1055,6 +1062,31 @@ clientB.close();
       }
 
       // ─── Live graph (read ops.json from WebContainer FS) ─────────────────────────
+      /** Parse legacy JSON array or JSONL op journal. */
+      function parseOpsFile(raw) {
+        const trimmed = raw.trim();
+        if (!trimmed) return [];
+        if (trimmed.startsWith('[')) {
+          try {
+            const parsed = JSON.parse(trimmed);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            // fall through — may be truncated array; try line-by-line
+          }
+        }
+        const ops = [];
+        for (const line of trimmed.split('\n')) {
+          const t = line.trim();
+          if (!t) continue;
+          try {
+            ops.push(JSON.parse(t));
+          } catch {
+            // skip corrupt lines during live poll
+          }
+        }
+        return ops;
+      }
+
       function buildGraphFromOps(ops) {
         const nodes = [];
         const edges = [];
@@ -1315,8 +1347,8 @@ clientB.close();
       async function pollGraph() {
         try {
           const raw = await wc.fs.readFile(OPS_PATH, 'utf-8');
-          const ops = JSON.parse(raw);
-          const data = buildGraphFromOps(Array.isArray(ops) ? ops : []);
+          const ops = parseOpsFile(raw);
+          const data = buildGraphFromOps(ops);
           renderGraph(data);
           renderExamplesPanel(data.summary);
           graphStats.textContent = `${data.nodes.length} nodes · ${data.edges.length} edges · ${ops.length} ops`;

@@ -62,7 +62,7 @@ export function startSandboxHost(options: SandboxHostOptions): http.Server {
       return;
     }
 
-    if (pathname === '/api/bootstrap') {
+    const serveBootstrap = () => {
       try {
         const bootstrap = buildSandboxBootstrap(trellisRoot, assetsDir);
         res.setHeader('Content-Type', 'application/json');
@@ -76,6 +76,10 @@ export function startSandboxHost(options: SandboxHostOptions): http.Server {
           }),
         );
       }
+    };
+
+    if (pathname === '/api/bootstrap' || pathname === '/bootstrap.json') {
+      serveBootstrap();
       return;
     }
 

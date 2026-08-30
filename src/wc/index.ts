@@ -9,4 +9,5 @@ export {
   resolveSandboxAssetsDir,
 } from './pack.js';
 export { startSandboxHost } from './host.js';
+export { parseOpsFile } from './parse-ops-file.js';
 export type { PackedFile, SandboxBootstrap, SandboxHostOptions } from './types.js';
