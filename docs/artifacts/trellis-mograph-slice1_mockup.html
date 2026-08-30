@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trellis — Mograph slice 1 (TRL-429 design mock)</title>
+  <style>
+    :root {
+      --base: #0a0a0a;
+      --canvas: #0f0f0f;
+      --surface: #111111;
+      --surface-alt: #1a1a1a;
+      --border: #222222;
+      --border-alt: #333333;
+      --text: #e5e5e5;
+      --text-muted: #666666;
+      --text-faint: #888888;
+      --entity: #c084fc;
+      --attribute: #34d399;
+      --value: #facc15;
+      --highlight: #facc15;
+      --visited: #34d399;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+      --sidebar-w: 220px;
+      --scrubber-h: 32px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--base);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .shell {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      font: 600 13px var(--font-mono);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-badge {
+      font: 500 10px var(--font-mono);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      padding: 2px 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .nav {
+      flex: 1;
+      padding: 12px 0;
+      overflow-y: auto;
+    }
+
+    .nav-label {
+      display: block;
+      padding: 8px 16px 4px;
+      font: 500 10px var(--font-sans);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .nav-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 8px 16px;
+      background: transparent;
+      border: none;
+      border-left: 2px solid transparent;
+      color: var(--text-faint);
+      font: 400 13px var(--font-sans);
+      cursor: pointer;
+    }
+
+    .nav-btn:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .nav-btn.active {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      font: 400 11px var(--font-mono);
+      color: var(--text-muted);
+    }
+
+    /* ── Main ── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .content-header {
+      padding: 24px 32px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .content-header h2 {
+      font: 600 20px var(--font-sans);
+      margin-bottom: 4px;
+    }
+
+    .content-header p {
+      font: 400 14px var(--font-sans);
+      color: var(--text-muted);
+    }
+
+    .canvas-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--base);
+      padding: 16px;
+      min-height: 0;
+    }
+
+    /* Virtual 1920×1080 canvas (scaled down) */
+    .canvas {
+      position: relative;
+      width: 960px;
+      height: 540px;
+      background: var(--canvas);
+      overflow: hidden;
+      box-shadow: 0 0 0 1px var(--border);
+    }
+
+    .panel-left {
+      position: absolute;
+      top: 140px;
+      left: 60px;
+      transform: scale(0.65);
+      transform-origin: top left;
+    }
+
+    .panel-right {
+      position: absolute;
+      top: 140px;
+      left: 390px;
+      transform: scale(0.6);
+      transform-origin: top left;
+    }
+
+    /* CodeTracer mock */
+    .code-tracer {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      font: 400 12px/24px var(--font-mono);
+      min-width: 340px;
+    }
+
+    .code-line {
+      position: relative;
+      padding-left: 8px;
+      color: var(--text-faint);
+    }
+
+    .code-line.active {
+      background: rgba(250, 204, 21, 0.12);
+      color: var(--text);
+      border-radius: 2px;
+    }
+
+    .code-line .kw {
+      color: var(--entity);
+    }
+
+    .code-line .str {
+      color: var(--attribute);
+    }
+
+    .code-line .num {
+      color: var(--value);
+    }
+
+    .code-line .cmt {
+      color: #555555;
+    }
+
+    /* TreeVisualizer mock */
+    .tree-viz {
+      width: 520px;
+      height: 340px;
+      position: relative;
+    }
+
+    .tree-node {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--surface-alt);
+      border: 1px solid var(--border-alt);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font: 500 9px var(--font-mono);
+      color: var(--text);
+      text-align: center;
+      line-height: 1.1;
+    }
+
+    .tree-node.visited {
+      border-color: var(--visited);
+      box-shadow: 0 0 12px rgba(52, 211, 153, 0.4);
+      transform: scale(1.15);
+    }
+
+    .tree-edge {
+      position: absolute;
+      height: 2px;
+      background: var(--border-alt);
+      transform-origin: left center;
+    }
+
+    .tree-edge.active {
+      background: var(--visited);
+      height: 3px;
+    }
+
+    /* FactTriplePanel mock */
+    .fact-panel {
+      width: 640px;
+    }
+
+    .fact-header {
+      font: 500 10px var(--font-mono);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .fact-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 8px;
+      height: 56px;
+      align-items: stretch;
+    }
+
+    .fact-cell {
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font: 400 12px var(--font-mono);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .fact-cell.entity {
+      min-width: 100px;
+      color: var(--entity);
+    }
+
+    .fact-cell.attribute {
+      min-width: 80px;
+      color: var(--attribute);
+    }
+
+    .fact-cell.value {
+      flex: 1;
+      color: var(--value);
+    }
+
+    .fact-row.active .fact-cell {
+      background: rgba(250, 204, 21, 0.15);
+      border-color: var(--highlight);
+    }
+
+    .fact-col-headers {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 8px;
+      padding: 0 2px;
+      font: 500 10px var(--font-mono);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .fact-col-headers span:first-child {
+      min-width: 100px;
+    }
+
+    .fact-col-headers span:nth-child(2) {
+      min-width: 80px;
+    }
+
+    .fact-col-headers span:nth-child(3) {
+      flex: 1;
+    }
+
+    .fact-row.entering {
+      opacity: 0.6;
+    }
+
+    /* Scrubber */
+    .scrubber {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: var(--scrubber-h);
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 12px;
+    }
+
+    .scrubber button {
+      background: transparent;
+      border: 1px solid var(--border-alt);
+      color: var(--text-faint);
+      padding: 4px 10px;
+      font: 500 11px var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+    }
+
+    .scrubber input[type=range] {
+      flex: 1;
+      accent-color: var(--text-faint);
+      height: 2px;
+    }
+
+    .scrubber time {
+      font: 400 11px var(--font-mono);
+      color: var(--text-muted);
+      width: 100px;
+      text-align: right;
+    }
+
+    .scene {
+      display: none;
+    }
+
+    .scene.visible {
+      display: block;
+    }
+
+    .legend {
+      position: fixed;
+      bottom: 12px;
+      right: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      font: 400 11px var(--font-sans);
+      color: var(--text-muted);
+      max-width: 280px;
+    }
+
+    .legend strong {
+      color: var(--text);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .tree-node.visited {
+        transform: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="shell">
+    <aside class="sidebar" data-design-note="Sidebar IA — new Trellis group between Engines and AI Generate">
+      <div class="logo">
+        Anime.js v4 <span class="logo-badge">React Pipeline</span>
+      </div>
+      <nav class="nav">
+        <span class="nav-label">Engines</span>
+        <button class="nav-btn" type="button">QuickSort Algorithm</button>
+        <button class="nav-btn" type="button">BFS Tree Search</button>
+        <button class="nav-btn" type="button">E-Ink Hardware</button>
+
+        <span class="nav-label">Trellis</span>
+        <button class="nav-btn active" type="button" data-scene="genealogy">Genealogy Traversal</button>
+        <button class="nav-btn" type="button" data-scene="eav">EAV Facts</button>
+
+        <span class="nav-label">AI Generate</span>
+        <button class="nav-btn" type="button">Generate Scene</button>
+
+        <span class="nav-label">UI Primitives</span>
+        <button class="nav-btn" type="button">Interactive Suite</button>
+        <button class="nav-btn" type="button">Bi-Directional Triggers</button>
+      </nav>
+      <div class="sidebar-footer">Ready for MP4 Export</div>
+    </aside>
+
+    <main class="main">
+      <header class="content-header" id="header">
+        <h2 id="header-title">Matthew Genealogy — BFS Traversal</h2>
+        <p id="header-sub">1920×1080 · Link graph from trellis-node bible-claims seed</p>
+      </header>
+
+      <div class="canvas-wrapper">
+        <div class="canvas" data-design-note="Virtual canvas 1920×1080 scaled 0.5 for mock">
+          <!-- Scene A: Genealogy -->
+          <div class="scene visible" id="scene-genealogy">
+            <div class="panel-left">
+              <div class="code-tracer"
+                data-design-note="CodeTracer — BFS pseudocode, line highlight syncs with tree visit">
+                <div class="code-line"><span class="kw">queue</span> = [<span class="str">root</span>]</div>
+                <div class="code-line"><span class="kw">visited</span>.add(root)</div>
+                <div class="code-line active"><span class="kw">while</span> queue is not empty:</div>
+                <div class="code-line">&nbsp;&nbsp;node = queue.dequeue()</div>
+                <div class="code-line">&nbsp;&nbsp;process(node)</div>
+                <div class="code-line"><span class="cmt">// Matthew begats traversal</span></div>
+              </div>
+            </div>
+            <div class="panel-right">
+              <div class="tree-viz" data-design-note="TreeVisualizer — Matthew begats, visited node glow">
+                <div class="tree-edge" style="width:80px;top:120px;left:236px;transform:rotate(-35deg)"></div>
+                <div class="tree-edge active" style="width:70px;top:120px;left:156px;transform:rotate(35deg)"></div>
+                <div class="tree-node visited" style="top:80px;left:220px" title="Abraham">Abraham</div>
+                <div class="tree-node visited" style="top:160px;left:140px" title="Isaac">Isaac</div>
+                <div class="tree-node" style="top:160px;left:300px" title="Jacob">Jacob</div>
+                <div class="tree-node" style="top:240px;left:80px" title="Judah">Judah</div>
+                <div class="tree-node" style="top:240px;left:200px" title="David">David</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Scene B: EAV Facts -->
+          <div class="scene" id="scene-eav">
+            <div class="panel-left">
+              <div class="code-tracer" data-design-note="CodeTracer — kernel.mutate addFacts">
+                <div class="code-line"><span class="kw">await</span> kernel.mutate(<span class="str">'addFacts'</span>,
+                  {</div>
+                <div class="code-line">&nbsp;&nbsp;facts: [</div>
+                <div class="code-line active">&nbsp;&nbsp;&nbsp;&nbsp;{ e: <span class="str">'task-1'</span>, a: <span
+                    class="str">'title'</span>, v: <span class="str">'Ship…'</span> },</div>
+                <div class="code-line">&nbsp;&nbsp;],</div>
+                <div class="code-line">});</div>
+              </div>
+            </div>
+            <div class="panel-right">
+              <div class="fact-panel" data-design-note="FactTriplePanel — entity/attribute/value color-coded rows">
+                <div class="fact-header">
+                  <span>Fact triples</span>
+                  <span>task-1</span>
+                </div>
+                <div class="fact-col-headers">
+                  <span>Entity</span>
+                  <span>Attribute</span>
+                  <span>Value</span>
+                </div>
+                <div class="fact-row">
+                  <div class="fact-cell entity">task-1</div>
+                  <div class="fact-cell attribute">type</div>
+                  <div class="fact-cell value">Task</div>
+                </div>
+                <div class="fact-row active">
+                  <div class="fact-cell entity">task-1</div>
+                  <div class="fact-cell attribute">title</div>
+                  <div class="fact-cell value">Ship the composer wedge</div>
+                </div>
+                <div class="fact-row entering">
+                  <div class="fact-cell entity">task-1</div>
+                  <div class="fact-cell attribute">status</div>
+                  <div class="fact-cell value">todo</div>
+                </div>
+                <div class="fact-row entering">
+                  <div class="fact-cell entity">task-1</div>
+                  <div class="fact-cell attribute">priority</div>
+                  <div class="fact-cell value">1</div>
+                </div>
+                <div class="fact-row entering">
+                  <div class="fact-cell entity">task-1</div>
+                  <div class="fact-cell attribute">owner</div>
+                  <div class="fact-cell value">trent</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="scrubber" data-design-note="ScrubberUI — unchanged, RAF-synced in impl">
+            <button type="button">Play</button>
+            <input type="range" min="0" max="100" value="42" />
+            <time>8.40s / 20.00s</time>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="legend">
+    <strong>TRL-429 design mock</strong>
+    Toggle Trellis nav items. Scene A = Genealogy BFS. Scene B = EAV Facts + FactTriplePanel.
+    Tokens mirror <code>mograph/tokens.js</code>.
+  </div>
+
+  <script>
+    const headers = {
+      genealogy: {
+        title: 'Matthew Genealogy — BFS Traversal',
+        sub: '1920×1080 · Link graph from trellis-node bible-claims seed',
+      },
+      eav: {
+        title: 'EAV Facts — Entity Assert',
+        sub: '1920×1080 · Composer task seed → (entity, attribute, value) triples',
+      },
+    };
+
+    document.querySelectorAll('[data-scene]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const scene = btn.dataset.scene;
+        document.querySelectorAll('.nav-btn[data-scene]').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.scene').forEach((s) => s.classList.remove('visible'));
+        document.getElementById('scene-' + scene).classList.add('visible');
+        document.getElementById('header-title').textContent = headers[scene].title;
+        document.getElementById('header-sub').textContent = headers[scene].sub;
+      });
+    });
+  </script>
+</body>
+
+</html>

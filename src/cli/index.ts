@@ -73,6 +73,7 @@ import {
 } from '../scaffold/index.js';
 import { onboardFirstRun } from './onboarding.js';
 import { cliVersion, findRepoRoot, resolveRepoRoot } from './repo-path.js';
+import { createOntologyRegistry } from './load-repo-ontologies.js';
 import { handleCliError } from './errors.js';
 import { applyInitIndexGate } from '../vcs/init-storage-guard.js';
 import {
@@ -101,6 +102,7 @@ import { registerPublishCommands } from './publish-cli.js';
 import { registerOpsCommands } from './ops-cli.js';
 import { registerWorkflowCommands } from './workflow-cli.js';
 import { registerPipelineCommands } from './pipeline-cli.js';
+import { registerSandboxCommands } from './sandbox-cli.js';
 
 export type IdeType =
   | 'cursor'
@@ -376,13 +378,13 @@ async function runInit(
     isInteractive,
     confirmLargeIndex: isInteractive
       ? async () => {
-          const { confirm } = await import('@inquirer/prompts');
-          return confirm({
-            message:
-              'This workspace exceeds the safe indexing threshold. Index all files anyway?',
-            default: false,
-          });
-        }
+        const { confirm } = await import('@inquirer/prompts');
+        return confirm({
+          message:
+            'This workspace exceeds the safe indexing threshold. Index all files anyway?',
+          default: false,
+        });
+      }
       : undefined,
   });
 
@@ -567,8 +569,7 @@ program
         `  ${chalk.dim('Files indexed:')}  ${configResult.filesIndexed}`,
       );
       console.log(
-        `  ${chalk.dim('Ops:')}            ${configResult.opsCreated} initial ${
-          configResult.opsCreated === 1 ? 'operation' : 'operations'
+        `  ${chalk.dim('Ops:')}            ${configResult.opsCreated} initial ${configResult.opsCreated === 1 ? 'operation' : 'operations'
         }`,
       );
       console.log(`  ${chalk.dim('Config:')}         .trellis/config.json`);
@@ -874,17 +875,17 @@ program
     const groupedOps =
       opts.all || opts.remote
         ? ops.reduce(
-            (groups, op) => {
-              const remoteFact = op.facts?.find(
-                (fact) => fact.e === 'op' && fact.a === 'remote',
-              );
-              const remote = remoteFact ? (remoteFact.v as string) : 'local';
-              if (!groups[remote]) groups[remote] = [];
-              groups[remote].push(op);
-              return groups;
-            },
-            {} as Record<string, typeof ops>,
-          )
+          (groups, op) => {
+            const remoteFact = op.facts?.find(
+              (fact) => fact.e === 'op' && fact.a === 'remote',
+            );
+            const remote = remoteFact ? (remoteFact.v as string) : 'local';
+            if (!groups[remote]) groups[remote] = [];
+            groups[remote].push(op);
+            return groups;
+          },
+          {} as Record<string, typeof ops>,
+        )
         : { local: ops };
 
     console.log(chalk.bold(`Causal Stream — ${ops.length} ops`));
@@ -1169,18 +1170,18 @@ gitCmd
       onProgress: opts.json
         ? undefined
         : (p) => {
-            if (p.phase === 'scanning') {
-              process.stderr.write(
-                `\r  ${chalk.dim('Scanning…')} ${p.current}/${p.total}`,
-              );
-            } else if (p.phase === 'journaling') {
-              process.stderr.write(
-                `\r  ${chalk.dim('Journaling…')} ${p.message}`,
-              );
-            } else if (p.phase === 'done') {
-              process.stderr.write('\n');
-            }
-          },
+          if (p.phase === 'scanning') {
+            process.stderr.write(
+              `\r  ${chalk.dim('Scanning…')} ${p.current}/${p.total}`,
+            );
+          } else if (p.phase === 'journaling') {
+            process.stderr.write(
+              `\r  ${chalk.dim('Journaling…')} ${p.message}`,
+            );
+          } else if (p.phase === 'done') {
+            process.stderr.write('\n');
+          }
+        },
     });
 
     if (opts.json) {
@@ -2133,11 +2134,11 @@ issueCmd
 
     const criteria = opts.ac
       ? opts.ac.map((ac: string) => {
-          if (ac.startsWith('test:')) {
-            return { description: ac.slice(5), command: ac.slice(5) };
-          }
-          return { description: ac };
-        })
+        if (ac.startsWith('test:')) {
+          return { description: ac.slice(5), command: ac.slice(5) };
+        }
+        return { description: ac };
+      })
       : undefined;
 
     const op = await engine.createIssue(opts.title, {
@@ -4269,13 +4270,13 @@ entityCmd
       const entities =
         mode === 'vcs' && engine
           ? engine.listStoreEntities(
-              opts.type,
-              Object.keys(filters).length > 0 ? filters : undefined,
-            )
+            opts.type,
+            Object.keys(filters).length > 0 ? filters : undefined,
+          )
           : kernel!.listEntities(
-              opts.type,
-              Object.keys(filters).length > 0 ? filters : undefined,
-            );
+            opts.type,
+            Object.keys(filters).length > 0 ? filters : undefined,
+          );
 
       if (opts.json) {
         const out = entities.map((e) => {
@@ -4649,7 +4650,7 @@ program
 
     let store: any;
     let engine: QueryEngine;
-    let closeStore: () => void = () => {};
+    let closeStore: () => void = () => { };
 
     if (TrellisVcsEngine.isRepo(rootPath)) {
       const vcsEngine = new TrellisVcsEngine({
@@ -4777,9 +4778,10 @@ const ontologyCmd = program
 ontologyCmd
   .command('list')
   .description('List all registered ontologies (built-in + custom)')
-  .action(() => {
-    const registry = new OntologyRegistry();
-    for (const o of builtinOntologies) registry.register(o);
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action((opts: { path: string }) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    const registry = createOntologyRegistry(rootPath);
 
     const schemas = registry.list();
     if (schemas.length === 0) {
@@ -4804,13 +4806,14 @@ ontologyCmd
 ontologyCmd
   .command('inspect')
   .description('Inspect a specific ontology or entity type')
+  .option('-p, --path <path>', 'Repository path', '.')
   .argument(
     '<name>',
     'Ontology ID (e.g. "trellis:project") or entity type name (e.g. "Project")',
   )
-  .action((name: string) => {
-    const registry = new OntologyRegistry();
-    for (const o of builtinOntologies) registry.register(o);
+  .action((name: string, opts: { path: string }) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    const registry = createOntologyRegistry(rootPath);
 
     // Try as ontology ID first
     const schema = registry.get(name);
@@ -4896,10 +4899,10 @@ ontologyCmd
     console.log(
       chalk.dim(
         'Available ontologies: ' +
-          registry
-            .list()
-            .map((s) => s.id)
-            .join(', '),
+        registry
+          .list()
+          .map((s) => s.id)
+          .join(', '),
       ),
     );
     console.log(
@@ -4919,8 +4922,7 @@ ontologyCmd
 
     const kernel = await bootKernel(rootPath);
     try {
-      const registry = new OntologyRegistry();
-      for (const o of builtinOntologies) registry.register(o);
+      const registry = createOntologyRegistry(rootPath);
 
       const store = kernel.getStore();
       const result = validateStore(store, registry);
@@ -6037,7 +6039,7 @@ program
       existing.generatedAt = new Date().toISOString();
       existing.confidence = 'high';
       writeFileSync(agentContextPath, JSON.stringify(existing, null, 2));
-    } catch {}
+    } catch { }
 
     console.log();
     console.log(chalk.green('✓ Project context updated'));
@@ -6211,12 +6213,12 @@ program
       mcpServers: {
         'trellis-vcs': opts.web
           ? {
-              url: `${mcpUrl}/sse`,
-            }
+            url: `${mcpUrl}/sse`,
+          }
           : {
-              command: 'bun',
-              args: ['run', mcp, '--quiet', '--path', rootPath],
-            },
+            command: 'bun',
+            args: ['run', mcp, '--quiet', '--path', rootPath],
+          },
       },
     };
 
@@ -6378,7 +6380,7 @@ cmsCmd
   .command('register-library <pkg>')
   .description(
     'Register a Svelte 5 component library as DesignComponent entities. ' +
-      'The package must ship dist/components.json (see @turtle.tech/ui for the format).',
+    'The package must ship dist/components.json (see @turtle.tech/ui for the format).',
   )
   .option('-p, --path <path>', 'Repository path', '.')
   .option('--url <url>', 'Trellis server URL', 'http://localhost:4096')
@@ -6542,8 +6544,8 @@ program
         for (const remote of remotes) {
           const lastPulled = remote.pulledAt
             ? chalk.dim(
-                ` (pulled ${new Date(remote.pulledAt).toLocaleDateString()})`,
-              )
+              ` (pulled ${new Date(remote.pulledAt).toLocaleDateString()})`,
+            )
             : chalk.dim(' (never pulled)');
           console.log(
             `  ${chalk.cyan(remote.name)}: ${remote.path}${lastPulled}`,
@@ -6818,6 +6820,7 @@ registerPublishCommands(program);
 registerOpsCommands(program);
 registerWorkflowCommands(program);
 registerPipelineCommands(program);
+registerSandboxCommands(program);
 
 /** Read all of stdin as a string (used by `identity import`). */
 async function readStdin(): Promise<string> {

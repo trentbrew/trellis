@@ -1,0 +1,7 @@
+{
+  "name": "@number0/iroh",
+  "version": "1.1.0-stub",
+  "type": "module",
+  "main": "iroh-js/index.js",
+  "description": "WebContainer stub — native Iroh NAPI is unavailable in the browser"
+}

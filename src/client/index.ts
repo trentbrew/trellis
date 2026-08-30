@@ -22,6 +22,7 @@ export type {
   TrellisDbLocalOptions,
   TrellisDbRemoteOptions,
   TrellisDbOptions,
+  TrellisDbClient,
 } from './sdk.js';
 
 // Config

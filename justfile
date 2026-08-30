@@ -622,6 +622,7 @@ demos:
   @echo "  Query playground      just query-demo                → :8241/demo/query/"
   @echo "  Chat + graph          just chat-graph-demo           → :8243/demo/chat-graph/"
   @echo "  WebContainer host     just realtime-app-wc           → :4500"
+  @echo "  CLI sandbox (WC)      just sandbox                   → :4321"
   @echo ""
   @echo "  Build trellis dist    just demo-ensure-build"
   @echo "  Realtime unit tests   just realtime-test"
@@ -784,6 +785,26 @@ realtime-app-wc port="4500" open="1":
   fi
 
   cd "${app}" && WC_HOST_PORT="{{port}}" exec pnpm wc:host
+
+# Trellis CLI in WebContainer — browser terminal + live graph (:4321)
+sandbox port="4321" open="1":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  url="http://localhost:{{port}}"
+
+  just demo-ensure-build
+  just realtime-evict "{{port}}"
+
+  echo ""
+  echo "⚡ Trellis CLI sandbox → ${url}"
+  echo "   trellis sandbox serve  (alias: npm run test:wc)"
+  echo ""
+
+  if [ "{{open}}" = "1" ]; then
+    (sleep 0.6 && open "${url}") &
+  fi
+
+  PORT="{{port}}" exec node test/webcontainer/server.mjs
 
 # React / Vue / Svelte presence + chat + text (relay-backed cross-browser sync)
 universal-presence port="4100" relay_port="8231" open="1":

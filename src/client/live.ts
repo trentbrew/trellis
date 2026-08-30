@@ -23,7 +23,7 @@ import {
 import { entitiesQuery, entityQuery, type WhereInput } from '../schema/eql.js';
 import { resolveRelations, type ResolveSpec } from '../schema/resolve.js';
 import type { AnyType } from '../schema/define.js';
-import type { EntityData, Subscription, TrellisDb } from './sdk.js';
+import type { EntityData, Subscription, TrellisDbClient } from './sdk.js';
 
 export interface ReadState<T> {
   data: T;
@@ -43,7 +43,7 @@ export interface LiveResource<T> {
  * inert until `start()` is called.
  */
 export function liveQuery<T = Record<string, unknown>>(
-  client: TrellisDb,
+  client: TrellisDbClient,
   eql: string,
 ): LiveResource<T[]> {
   const signal = new Signal<ReadState<T[]>>({
@@ -113,7 +113,7 @@ function normalizeLiveEntitiesOpts(
  * loads all `NavItem` rows grouped by `section`, avoiding per-parent reads.
  */
 export function liveEntities<T extends EntityData = EntityData>(
-  client: TrellisDb,
+  client: TrellisDbClient,
   typeOrSchema: string | AnyType,
   whereOrOpts?: Record<string, unknown> | LiveEntitiesOptions,
 ): LiveResource<T[]> {
@@ -197,7 +197,7 @@ export function liveEntities<T extends EntityData = EntityData>(
 }
 
 async function hydrateSubscriptionRows(
-  client: TrellisDb,
+  client: TrellisDbClient,
   rows: Record<string, unknown>[],
   meta?: { resolved?: boolean },
 ): Promise<EntityData[]> {
@@ -214,7 +214,7 @@ async function hydrateSubscriptionRows(
 }
 
 async function pickEntityFromRows(
-  client: TrellisDb,
+  client: TrellisDbClient,
   rows: Record<string, unknown>[],
   entityId: string,
   meta?: { resolved?: boolean },
@@ -233,7 +233,7 @@ async function pickEntityFromRows(
  * via an id-scoped subscription ({@link entityQuery}) — not a full-type scan.
  */
 export function liveEntity<T extends EntityData = EntityData>(
-  client: TrellisDb,
+  client: TrellisDbClient,
   typeOrSchema: string | AnyType,
   id: string | null | undefined,
   opts?: LiveEntityOptions,
@@ -256,7 +256,7 @@ export function liveEntity<T extends EntityData = EntityData>(
     start() {
       if (!id) {
         signal.value = { data: null, loading: false, error: null };
-        return () => {};
+        return () => { };
       }
       if (sub) return () => stop();
 

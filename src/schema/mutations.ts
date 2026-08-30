@@ -5,7 +5,7 @@
  *
  * @module trellis/schema
  */
-import type { TrellisDb } from '../client/sdk.js';
+import type { TrellisDbClient } from '../client/sdk.js';
 import type { AnyType, InferType } from './define.js';
 
 export interface EntityMutations<E> {
@@ -19,7 +19,7 @@ export interface EntityMutations<E> {
 
 /** Bind create/update/remove for a schema to a client. */
 export function entityMutations<S extends AnyType>(
-  client: TrellisDb,
+  client: TrellisDbClient,
   schema: S,
 ): EntityMutations<InferType<S>> {
   return {

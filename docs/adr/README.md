@@ -17,6 +17,8 @@ Decisions for the **Agent Lane** program (`trellis lane`). Status: **accepted**
 | [0016](./0016-relay-blob-serving.md)                     | Relay blob serving                   | Content-addressed `/blob` HTTP surface on the realtime relay              |
 | [0017](./0017-blob-gc-thermal-decay.md)                  | Blob GC + thermal decay                  | W‑TinyLFU hot cache; hot→cold→OPFS→peer ladder; never-sole-copy invariant |
 | [0038](./0038-git-authoritative-file-tier.md)            | Git-authoritative file tier              | Git sole byte authority; op-log demoted to non-materializing provenance (accepted, Phase 1 implemented) |
+| [0039](./0039-no-vendor-kernel-backends-compatibility-bridge.md) | No vendor kernel backends | Compatibility bridge (hosted Trellis, relays, git, export); vendor BaaS is a non-goal for `KernelBackend` |
+| [0040](./0040-lane-boundary-oss-and-hosted-platform.md) | Lane boundary, OSS, hosted Platform | Non-compete on BaaS; open engine; Studio + Platform sibling SKUs; Rox-shaped horizontal agent SaaS |
 
 Desk issue: **TRL-35** (W0), **TRL-36** (W1). Plan:
 `TRELLIS/tooling/planning/agent-lanes.md`.
@@ -41,6 +43,8 @@ Desk issue: **TRL-35** (W0), **TRL-36** (W1). Plan:
 | [0011](./0011-app-shell-three-bands.md)        | App shell three bands        | L1 published / L2 editor / L3 operator inset — one graph, one shell (**accepted**, TRL-33)                                                                    |
 | [0012](./0012-graph-overlay-config-surface.md) | Graph overlay config surface | One projection canvas; anchored/ambient L3 inset; vantage detents; homo/hetero binding (**accepted**, TRL-25/38)                                              |
 | [0013](./0013-rich-text-document-model.md)     | Rich text document model     | Graph-native documents; `trellis/document` semantic layer; editor substrate via Tiptap/Plate; collab tiers; `presenceRelay` dev parity (**accepted**, TRL-10) |
+| [0039](./0039-no-vendor-kernel-backends-compatibility-bridge.md) | No vendor kernel backends | Compatibility bridge over vendor `KernelBackend` adapters (**accepted**); guide: [Shipping today](https://trellis.computer/guides/shipping-today) |
+| [0040](./0040-lane-boundary-oss-and-hosted-platform.md) | Lane boundary, OSS, hosted Platform | BaaS refer-out; open engine + commercial Platform sibling (**accepted**) |
 
 ## Terminology
 

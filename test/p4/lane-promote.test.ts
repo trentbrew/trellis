@@ -255,6 +255,25 @@ describe('Lane promote', () => {
     );
   });
 
+  test('integration labels win over stale lane label replay', async () => {
+    const created = await engine.createIssue('Labels wins issue', {
+      labels: ['parser'],
+    });
+    const issueId = created.vcs!.issueId!;
+
+    const lane = await engine.createLane();
+    await engine.updateIssue(issueId, { labels: ['needs-e2e'] });
+
+    await engine.enterLane(lane.id);
+    await engine.updateIssue(issueId, { labels: ['parser', 'cli'] });
+    await engine.leaveLane();
+
+    const plan = await engine.promoteLane(lane.id, { dryRun: true });
+    expect(plan.blockingConflicts).toHaveLength(0);
+    expect(plan.opsToReplay).toHaveLength(0);
+    expect(engine.getIssue(issueId)?.labels).toEqual(['needs-e2e']);
+  });
+
   test('criterion added inside a lane routes to integration (no promote needed)', async () => {
     // Issue lifecycle + acceptance criteria are integration-direct kinds
     // (ISSUE_INTEGRATION_KINDS): they bypass the lane journal so issue state

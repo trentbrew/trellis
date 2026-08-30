@@ -89,6 +89,28 @@ export interface SubscribeOptions {
   resolve?: ResolveSpec;
 }
 
+/**
+ * CRUD + live-read surface shared by Node (`sdk`) and browser (`sdk.browser`)
+ * TrellisDb classes. Framework adapters type against this, not the Node class.
+ */
+export interface TrellisDbClient {
+  read<T extends EntityData = EntityData>(id: string): Promise<T | null>;
+  create(
+    type: string,
+    attributes?: Record<string, unknown>,
+    links?: Array<{ attribute: string; targetEntityId: string }>,
+    options?: CreateEntityOptions,
+  ): Promise<string>;
+  update(id: string, attributes: Record<string, unknown>): Promise<void>;
+  delete(id: string): Promise<void>;
+  query(eql: string): Promise<QueryResult>;
+  subscribe<T = EntityData>(
+    eql: string,
+    callback: SubscriptionCallback<T>,
+    options?: SubscribeOptions,
+  ): Subscription;
+}
+
 // ---------------------------------------------------------------------------
 // SDK options
 // ---------------------------------------------------------------------------
