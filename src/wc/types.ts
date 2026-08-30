@@ -13,6 +13,15 @@ export type SandboxBootstrap = {
   version: string;
 };
 
+export type SandboxPackOptions = {
+  /** Override the sandbox asset directory (default: auto-resolved). */
+  assetsDir?: string;
+  /** Include `dist/*.map` sourcemaps in the payload (default: false). */
+  sourcemaps?: boolean;
+  /** Drop unreachable build variants from vendored packages (default: true). */
+  prune?: boolean;
+};
+
 export type SandboxHostOptions = {
   port?: number;
   trellisRoot: string;

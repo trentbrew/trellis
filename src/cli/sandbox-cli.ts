@@ -59,9 +59,14 @@ export function registerSandboxCommands(program: import('commander').Command): v
     .description('Write WebContainer bootstrap JSON for static deploy (Vercel)')
     .option('-P, --path <path>', 'Trellis package root (default: auto-detect)', '.')
     .option('-o, --output <file>', 'Output file (default: stdout)')
+    .option('--sourcemaps', 'Include dist sourcemaps (larger payload)', false)
+    .option('--no-prune', 'Keep every vendored build variant (adds ~18 MB)')
     .action((opts) => {
       const trellisRoot = findTrellisPackageRoot(opts.path);
-      const bootstrap = buildSandboxBootstrap(trellisRoot);
+      const bootstrap = buildSandboxBootstrap(trellisRoot, {
+        sourcemaps: opts.sourcemaps,
+        prune: opts.prune,
+      });
       const json = JSON.stringify(bootstrap);
       if (opts.output) {
         fs.mkdirSync(path.dirname(path.resolve(opts.output)), { recursive: true });

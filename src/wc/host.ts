@@ -62,6 +62,15 @@ export function startSandboxHost(options: SandboxHostOptions): http.Server {
       return;
     }
 
+    if (pathname === '/sandbox-shell.css') {
+      const cssPath = path.join(assetsDir, 'sandbox-shell.css');
+      if (fs.existsSync(cssPath)) {
+        res.setHeader('Content-Type', 'text/css; charset=utf-8');
+        res.end(fs.readFileSync(cssPath));
+        return;
+      }
+    }
+
     const serveBootstrap = () => {
       try {
         const bootstrap = buildSandboxBootstrap(trellisRoot, assetsDir);

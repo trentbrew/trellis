@@ -3,8 +3,8 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
-import { sandboxPackageJson } from './constants.js';
-import type { PackedFile, SandboxBootstrap } from './types.js';
+import { WC_PACK_PRUNE, sandboxPackageJson } from './constants.js';
+import type { PackedFile, SandboxBootstrap, SandboxPackOptions } from './types.js';
 
 const TEXT_EXTS = new Set([
   '.js',
@@ -39,8 +39,18 @@ export function resolvePkgDir(
   throw new Error(`Could not resolve package directory for ${name}`);
 }
 
-/** Recursively collect dist JS/map files → { relativePath → utf8 content } */
-export function packDist(distDir: string): Record<string, string> {
+/**
+ * Recursively collect dist JS files → { relativePath → utf8 content }.
+ *
+ * Sourcemaps are excluded by default: the sandbox has no debugger attached to
+ * consume them, and they roughly triple the file count the WebContainer has to
+ * materialise on boot. Pass `sourcemaps: true` when debugging the sandbox.
+ */
+export function packDist(
+  distDir: string,
+  options: { sourcemaps?: boolean } = {},
+): Record<string, string> {
+  const exts = options.sourcemaps ? ['.js', '.map'] : ['.js'];
   const result: Record<string, string> = {};
   const walk = (dir: string, base = dir) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -51,7 +61,7 @@ export function packDist(distDir: string): Record<string, string> {
         continue;
       }
       const ext = path.extname(entry.name).toLowerCase();
-      if (['.js', '.map'].includes(ext)) {
+      if (exts.includes(ext)) {
         result[rel] = fs.readFileSync(full, 'utf8');
       }
     }
@@ -87,9 +97,12 @@ export function packNodePackage(
   trellisRoot: string,
   seen = new Set<string>(),
   requireFn = createRequire(import.meta.url),
+  prune = true,
 ): Record<string, PackedFile> {
   if (seen.has(name)) return {};
   seen.add(name);
+
+  const isPruned = prune ? (WC_PACK_PRUNE[name] ?? null) : null;
 
   let pkgDir: string;
   try {
@@ -111,6 +124,7 @@ export function packNodePackage(
       }
       const ext = path.extname(entry.name).toLowerCase();
       const relToPkg = path.relative(base, full).replace(/\\/g, '/');
+      if (isPruned?.(relToPkg)) continue;
       const relPath = path.posix.join(mountPrefix, relToPkg);
       if (TEXT_EXTS.has(ext)) {
         files[relPath] = fs.readFileSync(full, 'utf8');
@@ -130,7 +144,7 @@ export function packNodePackage(
   for (const dep of Object.keys(pkg.dependencies ?? {})) {
     Object.assign(
       files,
-      packNodePackage(dep, trellisRoot, seen, requireFn),
+      packNodePackage(dep, trellisRoot, seen, requireFn, prune),
     );
   }
   return files;
@@ -139,11 +153,16 @@ export function packNodePackage(
 export function packNodeModules(
   trellisRoot: string,
   stubsDir: string,
+  options: { prune?: boolean } = {},
 ): Record<string, PackedFile> {
+  const prune = options.prune ?? true;
   const deps = Object.keys(sandboxPackageJson().dependencies);
   const files: Record<string, PackedFile> = {};
   for (const dep of deps) {
-    Object.assign(files, packNodePackage(dep, trellisRoot));
+    Object.assign(
+      files,
+      packNodePackage(dep, trellisRoot, new Set<string>(), undefined, prune),
+    );
   }
   Object.assign(
     files,
@@ -153,25 +172,41 @@ export function packNodeModules(
 }
 
 export function resolveSandboxAssetsDir(trellisRoot: string): string {
+  // Candidates are derived from `trellisRoot` first, because it is the package
+  // root in both layouts (repo checkout during dev, install dir in production)
+  // and — unlike `import.meta.url` — is unaffected by how esbuild chunks the
+  // bundle. This function gets hoisted into a shared `dist/chunk-*.js`, so
+  // `moduleDir` is `<pkg>/dist`, not `<pkg>/dist/wc`; the moduleDir entries
+  // below are last-resort fallbacks only.
   const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-  // Prefer repo source during dev; published package only ships dist/wc/assets.
   const candidates = [
-    path.join(trellisRoot, 'src/wc/assets'),
-    path.join(moduleDir, 'assets'),
+    path.join(trellisRoot, 'src/wc/assets'), // repo source during dev
+    path.join(trellisRoot, 'dist/wc/assets'), // published package
+    path.join(moduleDir, 'assets'), // unbundled dist/wc/pack.js
+    path.join(moduleDir, 'wc/assets'), // hoisted into dist/chunk-*.js
   ];
   for (const candidate of candidates) {
     if (fs.existsSync(path.join(candidate, 'index.html'))) return candidate;
   }
-  throw new Error('WebContainer sandbox assets not found (index.html)');
+  throw new Error(
+    `WebContainer sandbox assets not found (index.html). Looked in:\n` +
+      candidates.map((c) => `  - ${c}`).join('\n') +
+      `\nRun \`npm run build\` if this is a source checkout.`,
+  );
 }
 
 export function buildSandboxBootstrap(
   trellisRoot: string,
-  assetsDir?: string,
+  optionsOrAssetsDir?: string | SandboxPackOptions,
 ): SandboxBootstrap {
+  const options: SandboxPackOptions =
+    typeof optionsOrAssetsDir === 'string'
+      ? { assetsDir: optionsOrAssetsDir }
+      : (optionsOrAssetsDir ?? {});
+
   const distDir = path.join(trellisRoot, 'dist');
   const binPath = path.join(trellisRoot, 'bin/trellis.mjs');
-  const resolvedAssets = assetsDir ?? resolveSandboxAssetsDir(trellisRoot);
+  const resolvedAssets = options.assetsDir ?? resolveSandboxAssetsDir(trellisRoot);
 
   if (!fs.existsSync(distDir)) {
     throw new Error('dist/ not found — run: npm run build');
@@ -186,10 +221,14 @@ export function buildSandboxBootstrap(
   ).version as string;
 
   return {
-    packageJson: sandboxPackageJson(),
+    // The sandbox `package.json` carries the real Trellis version so that
+    // `trellis --version` inside the sandbox is attributable to a release.
+    packageJson: sandboxPackageJson(version),
     binTrellis: fs.readFileSync(binPath, 'utf8'),
-    dist: packDist(distDir),
-    nodeModules: packNodeModules(trellisRoot, path.join(resolvedAssets, 'stubs')),
+    dist: packDist(distDir, { sourcemaps: options.sourcemaps }),
+    nodeModules: packNodeModules(trellisRoot, path.join(resolvedAssets, 'stubs'), {
+      prune: options.prune,
+    }),
     clientHtml: fs.existsSync(clientHtmlPath)
       ? fs.readFileSync(clientHtmlPath, 'utf8')
       : null,
