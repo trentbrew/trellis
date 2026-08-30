@@ -1,0 +1,39 @@
+name: WC Sandbox E2E
+
+# Opt-in: slow WebContainer boot test (~5–10 min). Not on default CI.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src/wc/**'
+      - 'test/wc/**'
+      - 'playwright.wc.config.cjs'
+      - 'test/webcontainer/**'
+      - '.github/workflows/wc-sandbox-e2e.yml'
+
+jobs:
+  wc-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build
+        run: bun run build
+
+      - name: Vitest (wc pack + init)
+        run: npm run test:wc:init
+
+      - name: Playwright WC boot e2e
+        run: npm run test:wc:e2e

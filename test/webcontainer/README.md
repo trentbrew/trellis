@@ -34,6 +34,15 @@ WC_E2E=1 npm run test:wc:e2e   # Playwright — full WC boot on :14321 (WC_E2E_P
 
 **Ports:** `just wc-sandbox` / `trellis sandbox serve` default to **:4321**. Playwright e2e uses **:14321** (`WC_E2E_PORT`) so e2e can run while a dev server is on 4321.
 
+## CI
+
+Opt-in workflow **WC Sandbox E2E** (`.github/workflows/wc-sandbox-e2e.yml`):
+
+- **Manual:** GitHub Actions → *WC Sandbox E2E* → *Run workflow*
+- **Auto on PR** when paths touch `src/wc/`, `test/wc/`, or `playwright.wc.config.cjs`
+
+Not part of default `ci.yml` (slow + Chromium download).
+
 ## Architecture
 
 | Module | Role |
