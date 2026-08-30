@@ -2518,6 +2518,7 @@ for (const event of scanEvents) {
     title: string,
     opts?: issueMod.IssueCreateOptions,
   ): Promise<VcsOp> {
+    this.syncIntegrationFromDisk();
     const op = await issueMod.createIssue(
       this._ctx(),
       this.config.rootPath,
@@ -3257,6 +3258,19 @@ for (const event of scanEvents) {
     if (this.ingestion) {
       this.ingestion.setLastOpHash(this.getActiveJournal().getLastOp()?.hash);
     }
+  }
+
+  /**
+   * Re-read the integration journal from disk before minting ops. Long-lived
+   * engine instances (or a second process) may have appended since we loaded;
+   * without this, concurrent writers fork on the same previousHash and replay
+   * drops sibling issueCreate ops.
+   */
+  private syncIntegrationFromDisk(): void {
+    if (this.activeLaneId) return;
+    this.opLog.load();
+    this.refreshMaterializedStore(this.opLog.readAll());
+    this.syncIngestionLastOpHash();
   }
 
   /**

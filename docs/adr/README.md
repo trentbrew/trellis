@@ -19,6 +19,7 @@ Decisions for the **Agent Lane** program (`trellis lane`). Status: **accepted**
 | [0038](./0038-git-authoritative-file-tier.md)            | Git-authoritative file tier              | Git sole byte authority; op-log demoted to non-materializing provenance (accepted, Phase 1 implemented) |
 | [0039](./0039-no-vendor-kernel-backends-compatibility-bridge.md) | No vendor kernel backends | Compatibility bridge (hosted Trellis, relays, git, export); vendor BaaS is a non-goal for `KernelBackend` |
 | [0040](./0040-lane-boundary-oss-and-hosted-platform.md) | Lane boundary, OSS, hosted Platform | Non-compete on BaaS; open engine; Studio + Platform sibling SKUs; Rox-shaped horizontal agent SaaS |
+| [0041](./0041-adoption-signal-without-silent-telemetry.md) | Adoption signal without silent telemetry | npm downloads not internal signal; GitHub traffic / external issues / trends / direct asks; opt-in usage only |
 
 Desk issue: **TRL-35** (W0), **TRL-36** (W1). Plan:
 `TRELLIS/tooling/planning/agent-lanes.md`.

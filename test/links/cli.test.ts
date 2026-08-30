@@ -56,9 +56,9 @@ No wiki links here.
 `,
   );
 
-  // Initialize TrellisVCS repo
+  // Initialize TrellisVCS repo (index workspace so refs CLI sees markdown files)
   engine = new TrellisVcsEngine({ rootPath: repoPath });
-  await engine.initRepo();
+  await engine.initRepo({ indexWorkspace: true });
 
   // Create an issue so TRL-5 resolves
   await engine.createIssue('Add Python parser', {

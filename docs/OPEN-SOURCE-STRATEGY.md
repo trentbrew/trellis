@@ -38,6 +38,14 @@ Open layer → adoption + trust + a canonical reference implementation → comme
 
 This is a standard open-core structure, not a special case — but say it in those terms early, because "we open-sourced everything" without the second half sounds like giving away the business.
 
+## Adoption signal (not npm downloads)
+
+At early scale, **npm download counts are not adoption signal** (CI, mirrors,
+one-time installs, and real users look the same). Internal planning should use
+owner-only GitHub traffic, external issues/discussions, star/watcher trends over
+time, and direct asks. **No silent telemetry:** if usage signal is ever
+collected, it must be opt-in and documented (see [ADR 0041](./adr/0041-adoption-signal-without-silent-telemetry.md)).
+
 ## One thing to decide per-repo, not in this doc
 
 Whether a given open repo is "maintained" (issues triaged, PRs reviewed) or "here's the code, PRs welcome, no promises." Say which, in the README, so expectations are set going in — this is a bandwidth question, not a positioning one, and it's worth answering separately for Trellis (core, probably maintained) versus something like Trellis TUI (probably not, for now).

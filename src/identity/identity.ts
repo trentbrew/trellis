@@ -190,8 +190,13 @@ export function toPublicIdentity(identity: IdentityConfig): PublicIdentity {
 // key. Per-repo .trellis/identity.json remains as the legacy location.
 // ---------------------------------------------------------------------------
 
+/** `~/.trellis` — honors `HOME` override (tests, containers). */
+export function trellisUserDir(): string {
+  return join(process.env.HOME ?? homedir(), '.trellis');
+}
+
 export function personIdentityDir(): string {
-  return join(homedir(), '.trellis');
+  return trellisUserDir();
 }
 
 export function personIdentityPath(): string {

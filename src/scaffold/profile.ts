@@ -14,8 +14,8 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { homedir } from 'os';
 import { createInterface } from 'readline';
+import { trellisUserDir } from '../identity/identity.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,7 +39,7 @@ export interface UserProfile {
 // ---------------------------------------------------------------------------
 
 function getProfileDir(): string {
-  return join(homedir(), '.trellis');
+  return trellisUserDir();
 }
 
 function getProfilePath(): string {

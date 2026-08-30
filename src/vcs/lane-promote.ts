@@ -109,7 +109,6 @@ export const ISSUE_COORDINATION_ATTRS = new Set([
   'issueType',
   'createdAt',
   'createdBy',
-  'title',
   'priority',
   'assignee',
 ]);

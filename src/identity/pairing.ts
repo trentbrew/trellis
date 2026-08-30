@@ -15,13 +15,13 @@ import {
   readdirSync,
 } from 'fs';
 import { join } from 'path';
-import { homedir } from 'node:os';
 import {
   createIdentity,
   loadIdentity,
   resolveRepoIdentity,
   signMessage,
   verifySignature,
+  trellisUserDir,
   type IdentityConfig,
 } from './identity.js';
 import type { IdentityResolver } from './signing-middleware.js';
@@ -182,7 +182,7 @@ function newId(prefix: string): string {
  * (`.trellis/devices`) is still read as a fallback and migrated up once.
  */
 export function personDevicesDir(): string {
-  return join(homedir(), '.trellis', 'devices');
+  return join(trellisUserDir(), 'devices');
 }
 
 function devicesDir(trellisDir: string): string {
