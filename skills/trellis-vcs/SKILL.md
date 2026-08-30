@@ -169,6 +169,17 @@ manually.
 Promote before `trellis issue close` if the lane has unpromoted ops — **or** let
 close auto-promote (default since 3.2.4).
 
+**Pre-close gate:** run `trellis lane status` and `trellis lane promote <id> --dry-run --explain`
+before close. Close refuses when auto-promote hits blocking conflicts.
+
+**Promote coordination metadata:** integration head wins on `status`, `description`,
+`labels`, and claim fields — stale lane journal facts on those attrs are skipped
+(pipeline labels like `needs-e2e` on integration are not blocked by lane replay).
+
+**Lane coherence:** when `lane status` shows `spread > 1` (mixed issues/domains),
+split before promote/close: `trellis lane split --name <domain>`. One bound issue
+per wedge — do not journal TRL-35/TRL-22 ops on a TRL-46 lane.
+
 ### Issue claim lock (Phase 2)
 
 One active lane/session per in-progress issue:

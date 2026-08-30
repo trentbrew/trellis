@@ -21,6 +21,7 @@ export type {
   TrellisDbRemoteOptions,
   UploadResult,
 } from './sdk.browser.js';
+export type { TrellisDbClient } from './sdk.js';
 
 export { Signal, BatchSignal } from './reactive.js';
 
@@ -79,6 +80,6 @@ export function defaultLocalConfig(
 function browserConfigError(feature: string): Error {
   return new Error(
     `${feature} is only available in Node. ` +
-      'Browser apps should construct `new TrellisDb({ url })` directly.',
+    'Browser apps should construct `new TrellisDb({ url })` directly.',
   );
 }

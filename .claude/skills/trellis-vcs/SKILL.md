@@ -74,7 +74,10 @@ This shows AST-level changes (symbolAdd, symbolRemove, symbolRename) instead of 
 trellis issue start TRL-1              # branch + lane (use --no-lane to skip)
 trellis lane enter <lane-id>
 trellis lane promote <lane-id>         # replay onto integration — do before close
+trellis lane promote <lane-id> --dry-run --explain   # gate before close/ship
 trellis lane promote <lane-id> --require-test   # gate on .trellis/tests.json promote.require
+trellis lane status                    # coherence spread > 1 → split before promote
+trellis lane split --name <domain>     # fresh domain lane when journal mixed issues
 export TRELLIS_LANE_ID=lane-…          # subprocess agents auto-enter
 ```
 
@@ -136,5 +139,7 @@ If the TrellisVCS MCP server is connected, use tool calls instead of CLI:
 - **Prefer semantic diffs** for TypeScript/JavaScript changes
 - **Ops are immutable** — they are never rewritten, rebased, or deleted
 - **Lane isolation** — with `TRELLIS_LANE_ID` set, writes go to the lane journal; promote before closing issues
+- **Promote coordination metadata** — on promote, integration wins for `status`, `description`, `labels`, and claim fields; stale lane journal facts on those attrs are skipped (not blocking conflicts)
+- **Lane coherence** — `trellis lane status` warns when journal spans >1 issue/domain; run `trellis lane split` before promote/close
 - **Worktree cwd** — when `worktreeBind` is on, edit under the lane worktree path from `lane status`
 - **Protocol audit** — use `trellis protocol send` for durable handoffs; `trellis whereami` on re-entry

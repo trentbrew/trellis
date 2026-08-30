@@ -889,13 +889,21 @@ clientB.close();
       function nestFiles(flatMap) {
         const tree = {};
         for (const [relPath, content] of Object.entries(flatMap)) {
+          const fileContents =
+            content &&
+            typeof content === 'object' &&
+            content.binary
+              ? Uint8Array.from(atob(content.binary), (c) => c.charCodeAt(0))
+              : content;
           const parts = relPath.split('/');
           let node = tree;
           for (let i = 0; i < parts.length - 1; i++) {
             node[parts[i]] ??= { directory: {} };
             node = node[parts[i]].directory;
           }
-          node[parts[parts.length - 1]] = { file: { contents: content } };
+          node[parts[parts.length - 1]] = {
+            file: { contents: fileContents },
+          };
         }
         return tree;
       }
@@ -944,7 +952,12 @@ clientB.close();
           }),
         );
         const code = await proc.exit;
-        if (code !== 0) throw new Error(`${label} failed (exit ${code})`);
+        if (code !== 0) {
+          const tail = out.trim().split('\n').slice(-8).join('\n');
+          throw new Error(
+            `${label} failed (exit ${code})${tail ? `\n${tail}` : ''}`,
+          );
+        }
         return out;
       }
 
@@ -989,10 +1002,15 @@ clientB.close();
                 '# Trellis WebContainer Demo\n\nEdit files here — the causal stream tracks every change.\n',
             },
           },
+          ...nestFiles(bootstrap.nodeModules ?? {}),
         });
 
-        statusEl.textContent = 'Installing dependencies…';
-        await spawnLogged('npm install', 'npm', ['install']);
+        if (!bootstrap.nodeModules) {
+          statusEl.textContent = 'Installing dependencies…';
+          await spawnLogged('npm install', 'npm', ['install']);
+        } else {
+          writeSdk('Using host-vendored node_modules (no npm install)', 'line-info');
+        }
         await ensureTrellisCli();
 
         wcBadge.textContent = `WebContainer · v${trellisVersion}`;
@@ -1028,6 +1046,8 @@ clientB.close();
           ...CLI.slice(1),
           'init',
           '--no-interactive',
+          '--identity',
+          'skip',
           '--framework',
           'node',
         ]);

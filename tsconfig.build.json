@@ -12,9 +12,13 @@
     "declarationMap": true,
     "sourceMap": true,
     "resolveJsonModule": true,
-    "noEmit": false
+    "noEmit": false,
+    "jsx": "react-jsx"
   },
-  "include": ["src/**/*.ts"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ],
   "exclude": [
     "node_modules",
     "dist",
@@ -22,6 +26,6 @@
     "vscode-extension",
     "trellis-core",
     "src/server/inspector",
-    "src/react"
+    "src/cli/extension-cli.ts"
   ]
 }

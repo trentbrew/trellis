@@ -102,6 +102,16 @@ export const ISSUE_COORDINATION_ATTRS = new Set([
   'startedAt',
   /** Strategist/protocol describe on integration; lane journal describe is orientation noise. */
   'description',
+  /** Pipeline labels (needs-e2e, needs-design, …) on integration; lane label replay is coordination noise. */
+  'labels',
+  /** Issue bootstrap metadata — integration owns creation; lanes may link parent/child without blocking. */
+  'type',
+  'issueType',
+  'createdAt',
+  'createdBy',
+  'title',
+  'priority',
+  'assignee',
 ]);
 
 // ---------------------------------------------------------------------------
