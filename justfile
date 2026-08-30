@@ -811,9 +811,9 @@ wc-sandbox-build:
   just build
   bash apps/wc-sandbox/scripts/build.sh
 
-# Deploy WebContainer demo to Vercel (from apps/wc-sandbox/)
-wc-sandbox-deploy:
-  cd apps/wc-sandbox && vercel --prod
+# Deploy WebContainer demo to Vercel (prebuilt — works without Git connection)
+wc-sandbox-deploy *args:
+  bash apps/wc-sandbox/scripts/vercel-prebuilt.sh --prod {{args}}
 
 # React / Vue / Svelte presence + chat + text (relay-backed cross-browser sync)
 universal-presence port="4100" relay_port="8231" open="1":
