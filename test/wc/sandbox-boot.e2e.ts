@@ -5,7 +5,7 @@ const WC_E2E = process.env.WC_E2E === '1';
 test.describe('WC CLI sandbox boot', () => {
   test.skip(!WC_E2E, 'Set WC_E2E=1 to run WebContainer sandbox boot (slow)');
 
-  test('boots trellis init + terminal on :4321', async ({ page }) => {
+  test('boots trellis init + terminal on WC e2e port', async ({ page }) => {
     await page.goto('/');
 
     await expect(page.locator('#status')).toContainText('Ready', {

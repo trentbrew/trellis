@@ -283,6 +283,11 @@
         padding: 3px 8px;
         font-size: 10px;
       }
+      .btn.sm.on {
+        background: #1f6feb33;
+        border-color: #1f6feb;
+        color: #58a6ff;
+      }
 
       /* SDK panel */
       .btn {
@@ -624,6 +629,14 @@
             >
               Examples → CLI
             </button>
+            <button
+              class="btn sm"
+              id="graph-ops-toggle"
+              type="button"
+              title="Show causal ops from .trellis/ops.json"
+            >
+              Ops
+            </button>
             <button class="btn sm" id="examples-toggle-btn" type="button">
               Examples
             </button>
@@ -738,6 +751,7 @@ import '../../bin/trellis.mjs';
         milestone: '#3fb950',
         issue: '#fbbf24',
         branch: '#a78bfa',
+        op: '#6e7681',
         default: '#63637a',
       };
       const TYPE_RADIUS = {
@@ -745,8 +759,10 @@ import '../../bin/trellis.mjs';
         milestone: 9,
         issue: 8,
         branch: 6,
+        op: 3,
         default: 5,
       };
+      const SHOW_OPS_KEY = 'trellis-wc-show-ops';
 
       let wc = null;
       let shellProcess = null;
@@ -768,6 +784,8 @@ import '../../bin/trellis.mjs';
       const graphExamplesEl = document.getElementById('graph-examples');
       const examplesToggleBtn = document.getElementById('examples-toggle-btn');
       const examplesRunBtn = document.getElementById('examples-run-btn');
+      const graphOpsToggle = document.getElementById('graph-ops-toggle');
+      let showOpsInGraph = localStorage.getItem(SHOW_OPS_KEY) === '1';
       const sdkOutput = document.getElementById('sdk-output');
       const runBtn = document.getElementById('run-btn');
       const resetBtn = document.getElementById('reset-script-btn');
@@ -1087,7 +1105,34 @@ clientB.close();
         return ops;
       }
 
-      function buildGraphFromOps(ops) {
+      function shortOpKind(kind) {
+        return (kind ?? 'op').replace(/^vcs:/, '');
+      }
+
+      function opNodeId(op, index) {
+        return `op:${op.hash ?? index}`;
+      }
+
+      /** Entity id an op primarily affects, when known. */
+      function opTargetEntityId(op) {
+        const v = op.vcs ?? {};
+        const kind = op.kind ?? '';
+        if (v.issueId) return `issue:${v.issueId}`;
+        if (
+          (kind === 'vcs:branchCreate' || kind === 'vcs:branchAdvance') &&
+          v.branchName
+        ) {
+          return `branch:${v.branchName}`;
+        }
+        if (v.filePath) return `file:${v.filePath}`;
+        if (kind === 'vcs:milestoneCreate') {
+          return `milestone:${v.milestoneId ?? op.hash}`;
+        }
+        return null;
+      }
+
+      function buildGraphFromOps(ops, options = {}) {
+        const { showOps = false } = options;
         const nodes = [];
         const edges = [];
         const nodeIds = new Set();
@@ -1181,6 +1226,36 @@ clientB.close();
             nodes.push({ id, label: b.name, type: 'branch', meta: b });
             nodeIds.add(id);
           }
+        }
+
+        if (showOps) {
+          let prevOpId = null;
+          ops.forEach((op, index) => {
+            const id = opNodeId(op, index);
+            nodes.push({
+              id,
+              label: shortOpKind(op.kind),
+              type: 'op',
+              meta: { kind: op.kind, hash: op.hash, timestamp: op.timestamp },
+            });
+            nodeIds.add(id);
+            if (prevOpId) {
+              edges.push({
+                source: prevOpId,
+                target: id,
+                type: 'causal',
+              });
+            }
+            prevOpId = id;
+            const targetId = opTargetEntityId(op);
+            if (targetId && nodeIds.has(targetId)) {
+              edges.push({
+                source: id,
+                target: targetId,
+                type: 'op_effect',
+              });
+            }
+          });
         }
 
         return {
@@ -1336,6 +1411,20 @@ clientB.close();
         runInTerminal('trellis examples'),
       );
 
+      function syncOpsToggleUi() {
+        graphOpsToggle.classList.toggle('on', showOpsInGraph);
+        graphOpsToggle.setAttribute('aria-pressed', String(showOpsInGraph));
+      }
+
+      graphOpsToggle.addEventListener('click', () => {
+        showOpsInGraph = !showOpsInGraph;
+        localStorage.setItem(SHOW_OPS_KEY, showOpsInGraph ? '1' : '0');
+        syncOpsToggleUi();
+        graphState = null;
+        pollGraph();
+      });
+      syncOpsToggleUi();
+
       function startGraphPolling() {
         if (graphPollTimer) return;
         graphBadge.hidden = false;
@@ -1348,10 +1437,14 @@ clientB.close();
         try {
           const raw = await wc.fs.readFile(OPS_PATH, 'utf-8');
           const ops = parseOpsFile(raw);
-          const data = buildGraphFromOps(ops);
+          const data = buildGraphFromOps(ops, { showOps: showOpsInGraph });
           renderGraph(data);
           renderExamplesPanel(data.summary);
-          graphStats.textContent = `${data.nodes.length} nodes · ${data.edges.length} edges · ${ops.length} ops`;
+          const entityNodes = data.nodes.filter((n) => n.type !== 'op').length;
+          const opNodes = data.nodes.length - entityNodes;
+          graphStats.textContent = showOpsInGraph
+            ? `${entityNodes} entities · ${opNodes} ops · ${data.edges.length} edges`
+            : `${data.nodes.length} nodes · ${data.edges.length} edges · ${ops.length} ops`;
           graphUpdated.textContent = `updated ${new Date().toLocaleTimeString()}`;
           graphEmpty.style.display = data.nodes.length ? 'none' : 'flex';
           if (!data.nodes.length) {
@@ -1370,6 +1463,7 @@ clientB.close();
 
       function renderGraph(data) {
         const signature = JSON.stringify({
+          ops: showOpsInGraph,
           n: data.nodes.map((n) => n.id).sort(),
           e: data.edges.map((e) => `${e.source}|${e.target}|${e.type}`).sort(),
         });
@@ -1430,9 +1524,18 @@ clientB.close();
             if (d.type === 'milestone_file') return '#3fb95044';
             if (d.type === 'issue_branch') return '#fbbf2444';
             if (d.type === 'wikilink') return '#58a6ff55';
+            if (d.type === 'causal') return '#6e768166';
+            if (d.type === 'op_effect') return '#8b949e55';
             return '#30363d';
           })
-          .attr('stroke-width', (d) => (d.type === 'wikilink' ? 1.2 : 0.8));
+          .attr('stroke-width', (d) => {
+            if (d.type === 'wikilink') return 1.2;
+            if (d.type === 'causal') return 0.6;
+            return 0.8;
+          })
+          .attr('stroke-dasharray', (d) =>
+            d.type === 'op_effect' ? '3,2' : null,
+          );
 
         const nodeSel = g
           .append('g')
@@ -1465,7 +1568,7 @@ clientB.close();
         const labelSel = g
           .append('g')
           .selectAll('text')
-          .data(nodes.filter((n) => n.type !== 'file'))
+          .data(nodes.filter((n) => n.type !== 'file' && n.type !== 'op'))
           .join('text')
           .text((d) =>
             d.label.length > 24 ? `${d.label.slice(0, 24)}…` : d.label,
@@ -1512,7 +1615,10 @@ clientB.close();
 
         const legend = document.createElement('div');
         legend.className = 'graph-legend';
-        legend.innerHTML = ['milestone', 'issue', 'file', 'branch']
+        const legendTypes = showOpsInGraph
+          ? ['milestone', 'issue', 'file', 'branch', 'op']
+          : ['milestone', 'issue', 'file', 'branch'];
+        legend.innerHTML = legendTypes
           .map(
             (t) =>
               `<div class="legend-item"><div class="legend-dot" style="background:${TYPE_COLORS[t]}"></div>${t}</div>`,

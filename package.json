@@ -443,7 +443,7 @@
     "test:wc": "node test/webcontainer/server.mjs",
     "test:wc:init": "vitest run test/wc",
     "build:wc-sandbox": "bash apps/wc-sandbox/scripts/build.sh",
-    "test:wc:e2e": "WC_E2E=1 playwright install chromium && WC_E2E=1 playwright test -c playwright.wc.config.cjs",
+    "test:wc:e2e": "WC_E2E=1 WC_E2E_PORT=14321 playwright install chromium && WC_E2E=1 WC_E2E_PORT=14321 playwright test -c playwright.wc.config.cjs",
     "prepublishOnly": "npm run test && npm run build",
     "smoke:wedge": "esbuild demo/wedge-smoke/gallery.ts --bundle --format=esm --outfile=demo/wedge-smoke/gallery.js --target=es2022"
   },
