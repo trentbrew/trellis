@@ -36,6 +36,9 @@ payload by 70%.**
 - **Fix: declare missing runtime deps** (`@tanstack/table-core`, ProseMirror
   packages for `editor` / `table` cores) so `npm run build` succeeds on a clean
   `npm ci` install.
+- **Fix: `npm run test` on clean `npm ci`.** `better-sqlite3` was optional peer
+  only — not installed by default, breaking 129 kernel/schema tests. Added to
+  `devDependencies` for CI and `prepublishOnly`.
 
 ## trellis [4.0.1] — 2026-08-30
 
