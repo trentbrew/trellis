@@ -6,6 +6,7 @@ import chalk from 'chalk';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { buildSandboxBootstrap } from '../wc/pack.js';
 import { startSandboxHost } from '../wc/host.js';
 import { resolveRepoRoot } from './repo-path.js';
 
@@ -54,14 +55,35 @@ export function registerSandboxCommands(program: import('commander').Command): v
     });
 
   sandbox
+    .command('pack')
+    .description('Write WebContainer bootstrap JSON for static deploy (Vercel)')
+    .option('-P, --path <path>', 'Trellis package root (default: auto-detect)', '.')
+    .option('-o, --output <file>', 'Output file (default: stdout)')
+    .action((opts) => {
+      const trellisRoot = findTrellisPackageRoot(opts.path);
+      const bootstrap = buildSandboxBootstrap(trellisRoot);
+      const json = JSON.stringify(bootstrap);
+      if (opts.output) {
+        fs.mkdirSync(path.dirname(path.resolve(opts.output)), { recursive: true });
+        fs.writeFileSync(opts.output, json);
+        const mb = (Buffer.byteLength(json) / (1024 * 1024)).toFixed(2);
+        console.error(`wrote ${opts.output} (${mb} MB)`);
+      } else {
+        process.stdout.write(json);
+      }
+    });
+
+  sandbox
     .command('help')
     .description('Show sandbox usage')
     .action(() => {
       console.log(`
   trellis sandbox serve [--port 4321]
+  trellis sandbox pack -o public/bootstrap.json
 
   Opens a browser terminal running the Trellis CLI inside StackBlitz WebContainer.
   Host-vendored node_modules + native stubs avoid in-browser npm install.
+  \`pack\` writes bootstrap JSON for static deploy (Vercel).
 
   Legacy alias: npm run test:wc
 `);

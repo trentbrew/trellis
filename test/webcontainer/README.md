@@ -5,7 +5,7 @@ Browser Trellis CLI + live graph (StackBlitz WebContainer).
 ## Run
 
 ```bash
-just sandbox
+just wc-sandbox
 # or
 trellis sandbox serve
 # or
@@ -13,6 +13,16 @@ npm run test:wc
 ```
 
 Requires `npm run build` first.
+
+## Vercel deploy
+
+```bash
+just wc-sandbox-build          # → apps/wc-sandbox/public/
+cd apps/wc-sandbox && vercel   # first deploy (link project)
+just wc-sandbox-deploy         # subsequent prod deploys
+```
+
+Set the Vercel project **Root Directory** to `apps/wc-sandbox`.
 
 ## Tests
 
