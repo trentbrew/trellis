@@ -1,7 +1,7 @@
 {
   "name": "trellis",
-  "version": "4.0.0",
-  "description": "Agentic State Engine \u2014 event-sourced causal graph with branching, decision traces, and realtime sync for AI-native applications",
+  "version": "4.0.1",
+  "description": "Agentic State Engine — event-sourced causal graph with branching, decision traces, and realtime sync for AI-native applications",
   "type": "module",
   "main": "./dist/index.js",
   "author": "Trent Brew <tbrew@turtle.tech>",
