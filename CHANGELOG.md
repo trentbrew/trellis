@@ -28,6 +28,11 @@ payload by 70%.**
   `trellis sandbox pack --no-prune` and `--sourcemaps`.
 - `buildSandboxBootstrap(root, options)` accepts `{ assetsDir, sourcemaps,
   prune }`; the previous positional `assetsDir` string still works.
+- **Fix: `trellis@4.0.1` was uninstallable with pnpm and bun.** Runtime
+  `dependencies` carried `@trellis.computer/ui: file:../trellis-ui/packages/core`
+  even though the admin UI is vendored into `dist/ui/@trellis.computer/ui/dist/`
+  at build time. Moved to `devDependencies`; `prepublishOnly` now rejects
+  file/link/workspace specifiers in runtime deps.
 
 ## trellis [4.0.1] — 2026-08-30
 

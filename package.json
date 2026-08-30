@@ -444,14 +444,14 @@
     "test:wc:init": "vitest run test/wc",
     "build:wc-sandbox": "bash apps/wc-sandbox/scripts/build.sh",
     "test:wc:e2e": "WC_E2E=1 WC_E2E_PORT=14321 playwright install chromium && WC_E2E=1 WC_E2E_PORT=14321 playwright test -c playwright.wc.config.cjs",
-    "prepublishOnly": "npm run test && npm run build",
+    "validate:publish": "node scripts/validate-npm-publish.mjs",
+    "prepublishOnly": "npm run validate:publish && npm run test && npm run build",
     "smoke:wedge": "esbuild demo/wedge-smoke/gallery.ts --bundle --format=esm --outfile=demo/wedge-smoke/gallery.js --target=es2022"
   },
   "dependencies": {
     "@inquirer/prompts": "^8.2.2",
     "@modelcontextprotocol/sdk": "^1.6.0",
     "@number0/iroh": "^1.1.0",
-    "@trellis.computer/ui": "file:../trellis-ui/packages/core",
     "chalk": "^5.4.1",
     "commander": "^13.1.0",
     "opencode-ai": "^1.3.5",
@@ -486,6 +486,7 @@
     }
   },
   "devDependencies": {
+    "@trellis.computer/ui": "file:../trellis-ui/packages/core",
     "@playwright/test": "^1.60.0",
     "@types/node": "^20.0.0",
     "@types/react": "^19.1.2",
