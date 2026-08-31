@@ -17,5 +17,9 @@ test.describe('WC CLI sandbox boot', () => {
     await expect(page.locator('#graph-badge')).toContainText('Graph live', {
       timeout: 30_000,
     });
+    await expect(page.locator('#terminal-command-strip .command-chip').first()).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.locator('#terminal-command-strip')).toContainText('status');
   });
 });

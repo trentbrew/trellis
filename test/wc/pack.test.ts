@@ -20,6 +20,15 @@ describe('wc pack', () => {
     expect(assets).toMatch(/src\/wc\/assets$/);
   });
 
+  it('ships terminal command strip in sandbox shell', () => {
+    const assets = resolveSandboxAssetsDir(trellisRoot);
+    const html = fs.readFileSync(path.join(assets, 'index.html'), 'utf8');
+    expect(html).toContain('id="terminal-command-strip"');
+    expect(html).toContain('class="command-chip"');
+    const css = fs.readFileSync(path.join(assets, 'sandbox-shell.css'), 'utf8');
+    expect(css).toContain('.command-strip');
+  });
+
   // Regression: the published package has no `src/`, so resolution must fall
   // back to `dist/wc/assets`. This previously threw because the only fallback
   // was derived from `import.meta.url`, which esbuild hoists to `<pkg>/dist`.

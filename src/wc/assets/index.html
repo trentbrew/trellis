@@ -71,18 +71,43 @@
 
       <main class="workspace">
       <section class="panel active" id="panel-cli" role="tabpanel">
-        <div class="split-host" data-split="h" data-split-id="cli-main">
+        <div class="split-host split-host--pane-gap" data-split="h" data-split-id="cli-main">
           <div class="split-pane">
             <div class="dock-pane">
               <div class="pane-toolbar">
                 <div class="pane-toolbar__meta">
                   <span class="pane-toolbar__label">Terminal</span>
                   <span class="pane-toolbar__sep" aria-hidden="true"></span>
+                  <button
+                    class="btn sm"
+                    id="examples-run-btn"
+                    type="button"
+                    title="Run trellis examples in the CLI"
+                  >
+                    Examples → CLI
+                  </button>
+                  <button
+                    class="btn sm"
+                    id="graph-ops-toggle"
+                    type="button"
+                    title="Show causal ops from .trellis/ops.json"
+                  >
+                    Ops
+                  </button>
+                  <button class="btn sm" id="examples-toggle-btn" type="button">
+                    Examples
+                  </button>
+                  <span class="pane-toolbar__sep" aria-hidden="true"></span>
                   <span class="pane-toolbar__detail">repo root</span>
-                  <span class="pane-toolbar__detail"><code>trellis status</code></span>
                 </div>
               </div>
               <div class="pane-body">
+                <div
+                  id="terminal-command-strip"
+                  class="command-strip"
+                  role="toolbar"
+                  aria-label="Suggested commands"
+                ></div>
                 <div id="terminal-container"></div>
               </div>
             </div>
@@ -111,25 +136,6 @@
                       >
                     </div>
                     <div class="pane-toolbar__actions">
-                      <button
-                        class="btn sm"
-                        id="examples-run-btn"
-                        type="button"
-                        title="Run trellis examples in the CLI"
-                      >
-                        Examples → CLI
-                      </button>
-                      <button
-                        class="btn sm"
-                        id="graph-ops-toggle"
-                        type="button"
-                        title="Show causal ops from .trellis/ops.json"
-                      >
-                        Ops
-                      </button>
-                      <button class="btn sm" id="examples-toggle-btn" type="button">
-                        Examples
-                      </button>
                       <span class="pane-toolbar__detail" id="graph-updated"></span>
                     </div>
                   </div>
@@ -164,7 +170,7 @@
       </section>
 
       <section class="panel" id="panel-sdk" role="tabpanel">
-        <div class="split-host" data-split="h" data-split-id="sdk-main">
+        <div class="split-host split-host--pane-gap" data-split="h" data-split-id="sdk-main">
           <div class="split-pane">
             <div class="dock-pane">
               <div class="pane-toolbar">
@@ -416,6 +422,7 @@ import '../../bin/trellis.mjs';
       const graphStats = document.getElementById('graph-stats');
       const graphUpdated = document.getElementById('graph-updated');
       const graphEmpty = document.getElementById('graph-empty');
+      const commandStripEl = document.getElementById('terminal-command-strip');
       const graphExamplesEl = document.getElementById('graph-examples');
       const cliGraphSplit = document.getElementById('cli-graph-split');
       const examplesToggleBtn = document.getElementById('examples-toggle-btn');
@@ -530,8 +537,12 @@ clientB.close();
         });
       });
 
+      function stripAnsi(text) {
+        return String(text).replace(/\x1b\[[0-9;]*m/g, '');
+      }
+
       function writeSdk(text, cls = 'line-stdout') {
-        for (const line of String(text).split('\n')) {
+        for (const line of stripAnsi(text).split('\n')) {
           const div = document.createElement('div');
           div.className = cls;
           div.textContent = line;
@@ -562,65 +573,42 @@ clientB.close();
         return tree;
       }
 
-      // Monaco's theme API accepts hex only. The shell stylesheet defines its
-      // palette in oklch(), which getComputedStyle reports back verbatim, so
-      // every colour has to be normalised before it reaches defineTheme().
-      // A canvas 2d context parses any CSS colour and reports it as hex
-      // (or rgba() when it carries alpha).
-      const colorProbeCtx = document.createElement('canvas').getContext('2d');
-
-      function toHexColor(value, fallback = '#000000') {
-        const raw = String(value ?? '').trim();
-        if (!raw) return fallback;
-        if (/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(raw)) return raw;
-        try {
-          colorProbeCtx.fillStyle = '#000000';
-          colorProbeCtx.fillStyle = raw;
-          const parsed = String(colorProbeCtx.fillStyle);
-          if (parsed.startsWith('#')) return parsed;
-          const rgb = parsed.match(/rgba?\(([^)]+)\)/i);
-          if (rgb) {
-            const parts = rgb[1].split(',').map((p) => p.trim());
-            const hex = parts
-              .slice(0, 3)
-              .map((p) => Math.max(0, Math.min(255, Math.round(Number.parseFloat(p))))
-                .toString(16)
-                .padStart(2, '0'))
-              .join('');
-            const alpha = parts[3] === undefined
-              ? ''
-              : Math.max(0, Math.min(255, Math.round(Number.parseFloat(parts[3]) * 255)))
-                  .toString(16)
-                  .padStart(2, '0');
-            return `#${hex}${alpha === 'ff' ? '' : alpha}`;
-          }
-        } catch {
-          /* fall through to fallback */
-        }
-        return fallback;
+      function shellHexVar(name, fallback) {
+        const value = getComputedStyle(document.documentElement)
+          .getPropertyValue(name)
+          .trim();
+        return /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
       }
 
-      function cssVarColor(name, fallback = '#000000') {
-        const probe = document.createElement('span');
-        probe.style.color = `var(${name})`;
-        document.body.appendChild(probe);
-        const color = getComputedStyle(probe).color;
-        probe.remove();
-        return toHexColor(color, fallback);
+      function hexNoHash(hex) {
+        return hex.replace(/^#/, '');
       }
 
       function initMonacoTheme() {
-        const background = cssVarColor('--color-background');
-        const foreground = cssVarColor('--color-foreground');
-        const muted = cssVarColor('--color-muted-foreground');
-        const border = cssVarColor('--color-border');
+        const background = shellHexVar('--monaco-background', '#262626');
+        const foreground = shellHexVar('--monaco-foreground', '#fafafa');
+        const muted = shellHexVar('--monaco-muted', '#a3a3a3');
+        const fg = hexNoHash(foreground);
         monaco.editor.defineTheme('trellis-shell', {
           base: 'vs-dark',
           inherit: true,
           rules: [
-            { token: 'comment', foreground: '708090' },
-            { token: 'string', foreground: '7ec8a4' },
+            { token: '', foreground: fg },
+            { token: 'comment', foreground: '8b949e', fontStyle: 'italic' },
             { token: 'keyword', foreground: '8b9cf6' },
+            { token: 'string', foreground: '7ec8a4' },
+            { token: 'number', foreground: '79b8ff' },
+            { token: 'regexp', foreground: '7ec8a4' },
+            { token: 'type', foreground: '79b8ff' },
+            { token: 'type.identifier', foreground: '79b8ff' },
+            { token: 'class', foreground: '79b8ff' },
+            { token: 'function', foreground: 'd2a8ff' },
+            { token: 'variable', foreground: fg },
+            { token: 'variable.predefined', foreground: '79b8ff' },
+            { token: 'identifier', foreground: fg },
+            { token: 'delimiter', foreground: 'c9d1d9' },
+            { token: 'delimiter.bracket', foreground: 'c9d1d9' },
+            { token: 'operator', foreground: 'c9d1d9' },
           ],
           colors: {
             'editor.background': background,
@@ -628,14 +616,20 @@ clientB.close();
             'editorLineNumber.foreground': muted,
             'editorLineNumber.activeForeground': foreground,
             'editorGutter.background': background,
-            'editor.selectionBackground': '#264f78aa',
-            'editor.inactiveSelectionBackground': '#264f7844',
-            'editorCursor.foreground': cssVarColor('--blue'),
-            'editor.lineHighlightBackground': '#ffffff08',
-            'editorWidget.background': cssVarColor('--color-card'),
-            'editorWidget.border': border,
-            'input.background': cssVarColor('--color-muted'),
-            'input.border': border,
+            'editor.selectionBackground': shellHexVar(
+              '--monaco-selection',
+              '#3d4f6f',
+            ),
+            'editor.inactiveSelectionBackground': '#3d4f6f66',
+            'editorCursor.foreground': foreground,
+            'editor.lineHighlightBackground': shellHexVar(
+              '--monaco-line-highlight',
+              '#ffffff0a',
+            ),
+            'editorWidget.background': shellHexVar('--monaco-widget-bg', '#343434'),
+            'editorWidget.border': shellHexVar('--monaco-border', '#ffffff14'),
+            'input.background': shellHexVar('--monaco-input-bg', '#434343'),
+            'input.border': shellHexVar('--monaco-border', '#ffffff14'),
           },
         });
       }
@@ -663,7 +657,10 @@ clientB.close();
             try {
               initMonacoTheme();
               const shellStyles = getComputedStyle(document.documentElement);
-              const fontSize = Number.parseFloat(shellStyles.fontSize) || 13;
+              const fontSize =
+                Number.parseFloat(
+                  shellStyles.getPropertyValue('--editor-font-size'),
+                ) || 12;
               const fontFamily = shellStyles
                 .getPropertyValue('--font-mono')
                 .trim()
@@ -1107,6 +1104,57 @@ clientB.close();
         return { sections, eql };
       }
 
+      function chipLabel(cmd) {
+        const stripped = cmd.replace(/^trellis\s+/, '');
+        if (stripped.length <= 32) return stripped;
+        return `${stripped.slice(0, 29)}…`;
+      }
+
+      function buildStripCommands(summary) {
+        const { sections } = buildExamplesFromSummary(summary);
+        const seen = new Set();
+        const out = [];
+        const add = (cmd) => {
+          if (!cmd || seen.has(cmd)) return;
+          seen.add(cmd);
+          out.push(cmd);
+        };
+
+        add('trellis status');
+        add('trellis issue list');
+        for (const issue of summary.issues.slice(0, 2)) {
+          add(`trellis issue show ${issue.id}`);
+        }
+        add('trellis milestone list');
+        add('trellis log');
+        add('trellis examples');
+        add('trellis -h');
+
+        for (const section of sections) {
+          for (const cmd of section.commands) {
+            if (out.length >= 10) break;
+            add(cmd);
+          }
+          if (out.length >= 10) break;
+        }
+
+        return out.slice(0, 10);
+      }
+
+      function renderCommandStrip(summary) {
+        if (!commandStripEl) return;
+        const cmds = buildStripCommands(summary);
+        commandStripEl.innerHTML = cmds
+          .map(
+            (cmd) =>
+              `<button type="button" class="command-chip" data-cmd="${cmd.replace(/"/g, '&quot;')}" title="Run: ${cmd.replace(/"/g, '&quot;')}">${chipLabel(cmd)}</button>`,
+          )
+          .join('');
+        commandStripEl.querySelectorAll('.command-chip').forEach((btn) => {
+          btn.addEventListener('click', () => runInTerminal(btn.dataset.cmd));
+        });
+      }
+
       function renderExamplesPanel(summary) {
         const { sections, eql } = buildExamplesFromSummary(summary);
         graphExamplesEl.innerHTML = [
@@ -1177,6 +1225,7 @@ clientB.close();
           const ops = parseOpsFile(raw);
           const data = buildGraphFromOps(ops, { showOps: showOpsInGraph });
           renderGraph(data);
+          renderCommandStrip(data.summary);
           renderExamplesPanel(data.summary);
           const entityNodes = data.nodes.filter((n) => n.type !== 'op').length;
           const opNodes = data.nodes.length - entityNodes;
@@ -1384,18 +1433,30 @@ clientB.close();
       }
 
       // ─── Terminal ────────────────────────────────────────────────────────────────
+      function shellTerminalTheme() {
+        const probe = document.createElement('div');
+        probe.style.background = 'var(--color-background)';
+        probe.style.color = 'var(--color-foreground)';
+        document.body.appendChild(probe);
+        const computed = getComputedStyle(probe);
+        const background = computed.backgroundColor || '#1a1a1a';
+        const foreground = computed.color || '#fafafa';
+        probe.remove();
+        return {
+          background,
+          foreground,
+          cursor: '#58a6ff',
+          selectionBackground: '#264f78',
+        };
+      }
+
       async function startShell() {
         terminal = new Terminal({
           cursorBlink: true,
           convertEol: true,
-          fontFamily: "'Cascadia Code', 'Fira Code', Consolas, monospace",
+          fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace",
           fontSize: 13,
-          theme: {
-            background: '#010409',
-            foreground: '#e6edf3',
-            cursor: '#58a6ff',
-            selectionBackground: '#264f78',
-          },
+          theme: shellTerminalTheme(),
         });
         fitAddon = new FitAddon();
         terminal.loadAddon(fitAddon);
@@ -1436,7 +1497,7 @@ clientB.close();
           [
             `\x1b[1;36mTrellis WebContainer\x1b[0m v${trellisVersion}`,
             '  Graph updates live on the right →',
-            '  Try: \x1b[1mtrellis -h\x1b[0m · \x1b[1mtrellis examples\x1b[0m · \x1b[1mtrellis status\x1b[0m',
+            '  Chips above ↑ or try: \x1b[1mtrellis status\x1b[0m · \x1b[1mtrellis issue list\x1b[0m',
             '',
           ].join('\r\n'),
         );
@@ -1593,6 +1654,12 @@ clientB.close();
         await bootFilesystem();
         await initRepo();
         await startShell();
+        renderCommandStrip({
+          issues: [],
+          milestones: [],
+          branches: [],
+          files: [],
+        });
         startGraphPolling();
         startMpPolling();
         setStatus('Ready');
