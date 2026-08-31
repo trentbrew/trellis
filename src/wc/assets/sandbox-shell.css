@@ -57,6 +57,17 @@
   --scrollbar-size: 5px;
   --scrollbar-thumb: oklch(1 0 0 / 10%);
   --scrollbar-thumb-hover: oklch(1 0 0 / 20%);
+
+  /* Monaco reads hex only — keep these in sync with the oklch palette above */
+  --editor-font-size: 12px;
+  --monaco-background: #262626;
+  --monaco-foreground: #fafafa;
+  --monaco-muted: #a3a3a3;
+  --monaco-selection: #3d4f6f;
+  --monaco-line-highlight: #ffffff0a;
+  --monaco-widget-bg: #343434;
+  --monaco-input-bg: #434343;
+  --monaco-border: #ffffff14;
 }
 
 * {
@@ -282,6 +293,17 @@ body.is-resizing-v {
   flex: 0 0 50%;
 }
 
+.split-host--pane-gap[data-split='h'] > .split-pane:nth-child(3) {
+  margin-left: calc(var(--editor-pane-gap) - 1px);
+}
+
+.split-host--pane-gap[data-split='h'] > .split-resizer {
+  flex: 0 0 1px;
+  width: 1px;
+  min-width: 1px;
+  margin: 0;
+}
+
 .split-host[data-split='v'] > .split-pane:first-child {
   flex: 1 1 0;
 }
@@ -425,6 +447,7 @@ body.is-resizing-v .split-resizer::after {
 .pane-toolbar__meta {
   flex: 1 1 auto;
   overflow: hidden;
+  gap: 0.25rem;
 }
 
 .pane-toolbar__actions {
@@ -466,9 +489,10 @@ body.is-resizing-v .split-resizer::after {
 }
 
 .pane-toolbar .btn.sm {
-  width: 1.625rem;
+  min-width: 1.625rem;
   height: 1.625rem;
-  padding: 0;
+  padding: 0 6px;
+  width: auto;
   border-radius: calc(var(--radius) - 4px);
   font-size: 10px;
 }
@@ -525,15 +549,69 @@ body.is-resizing-v .split-resizer::after {
   overflow: hidden;
 }
 
+.command-strip {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in oklch, var(--color-background) 92%, transparent);
+  flex-shrink: 0;
+  scrollbar-width: thin;
+}
+
+.command-strip:empty {
+  display: none;
+}
+
+.command-chip {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.3;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-muted);
+  color: var(--color-foreground);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-color 0.12s ease,
+    color 0.12s ease,
+    background 0.12s ease;
+}
+
+.command-chip:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: color-mix(in oklch, var(--blue) 10%, var(--color-muted));
+}
+
+.command-chip:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+}
+
 #terminal-container {
   flex: 1;
   min-height: 0;
   padding: 4px 6px;
-  background: color-mix(in oklch, var(--color-background) 80%, black);
+  background: var(--color-background);
 }
 
 #terminal-container .xterm {
   height: 100%;
+}
+
+#terminal-container .xterm-viewport,
+#terminal-container .xterm-screen,
+#terminal-container .xterm,
+#terminal-container .xterm canvas {
+  background-color: var(--color-background) !important;
 }
 
 #graph-container {
@@ -541,7 +619,7 @@ body.is-resizing-v .split-resizer::after {
   min-height: 0;
   position: relative;
   overflow: hidden;
-  background: color-mix(in oklch, var(--color-background) 80%, black);
+  background: var(--color-background);
 }
 
 #graph-container svg {
@@ -674,7 +752,7 @@ body.is-resizing-v .split-resizer::after {
 #monaco-container {
   flex: 1;
   min-height: 0;
-  background: var(--color-background);
+  background: var(--monaco-background);
 }
 
 #sdk-output {
