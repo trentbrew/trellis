@@ -25,6 +25,14 @@ async function main() {
   );
   const port = portArg ? parseInt(portArg, 10) : 3333;
 
+  // `--path` pins the repository root regardless of the spawn cwd. Tools
+  // resolve their default `path: '.'` against the process cwd, so apply it
+  // before the server (and the decision recorder) capture the root.
+  const pathArg = process.argv.find(
+    (arg, i) => i > 0 && process.argv[i - 1] === '--path',
+  );
+  if (pathArg) process.chdir(pathArg);
+
   const server = createTrellisMcpServer();
 
   if (httpMode) {
