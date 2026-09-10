@@ -17,7 +17,7 @@ import { resolve } from 'path';
 import { TrellisVcsEngine } from '../engine.js';
 import { HookRegistry } from '../decisions/index.js';
 import { wrapToolHandler } from '../decisions/auto-capture.js';
-import type { DecisionRecorder } from '../decisions/auto-capture.js';
+import type { DecisionRecorder, ToolHandler } from '../decisions/auto-capture.js';
 import { PROVENANCE } from '../core/persist/canonical-op.js';
 import {
   assembleContextPack,
@@ -52,6 +52,35 @@ export function createTrellisMcpServer(): McpServer {
     name: 'trellis-harness',
     version: '0.1.0',
   });
+
+  // -----------------------------------------------------------------------
+  // Decision auto-capture
+  //
+  // Every MCP tool invocation becomes a `vcs:decisionRecord` op, giving
+  // agent harnesses an auditable trace of what was asked and what ran.
+  // The recorder resolves the repository from the server's working
+  // directory — launch from the repo root (index.ts applies `--path`).
+  // `exclude` can trim noisy read-only tools later; for now capture all.
+  // -----------------------------------------------------------------------
+  const recorder = createRecorder(process.cwd());
+  const register = server.registerTool.bind(server) as (
+    name: string,
+    config: unknown,
+    handler: (args: unknown, extra: unknown) => unknown,
+  ) => unknown;
+  server.registerTool = ((
+    name: string,
+    config: unknown,
+    handler: (args: unknown, extra: unknown) => unknown,
+  ) =>
+    register(
+      name,
+      config,
+      wrapToolHandler(name, handler as ToolHandler, {
+        hooks: hookRegistry,
+        recorder,
+      }) as unknown as (args: unknown, extra: unknown) => unknown,
+    )) as unknown as typeof server.registerTool;
 
   // -----------------------------------------------------------------------
   // Tool: trellis_status
