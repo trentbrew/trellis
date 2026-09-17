@@ -184,16 +184,25 @@ describe('canToolRun — tool shapes', () => {
   });
 
   it('tolerates a missing cwd (falls back to process cwd)', () => {
-    // The test process runs inside this Trellis repo, so the fallback must
-    // resolve the process cwd and apply the git rules against it — not crash.
-    const d = canToolRun({
-      tool: 'bash',
-      args: { command: 'git reset --hard' },
-      cwd: '',
-    });
-    expect(d.allow).toBe(false);
-    if (!d.allow && 'deny' in d) {
-      expect(d.reason).toMatch(/git mutations/);
+    // The fallback must resolve the process cwd and apply the git rules against
+    // it — not crash. Point cwd at a Trellis repo explicitly: `.trellis/` is
+    // gitignored, so a fresh CI checkout is not one. Plain reassignment (not a
+    // spy) works under both vitest and `bun test`.
+    const root = makeTrellisRepo();
+    const originalCwd = process.cwd;
+    process.cwd = () => root;
+    try {
+      const d = canToolRun({
+        tool: 'bash',
+        args: { command: 'git reset --hard' },
+        cwd: '',
+      });
+      expect(d.allow).toBe(false);
+      if (!d.allow && 'deny' in d) {
+        expect(d.reason).toMatch(/git mutations/);
+      }
+    } finally {
+      process.cwd = originalCwd;
     }
   });
 });
