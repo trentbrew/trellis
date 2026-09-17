@@ -16,7 +16,13 @@ import {
   createPublicKey,
   type KeyObject,
 } from 'crypto';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  chmodSync,
+} from 'fs';
 import { join, dirname } from 'path';
 import { homedir } from 'os';
 
@@ -137,15 +143,44 @@ export function verifySignature(
 
 const IDENTITY_FILE = 'identity.json';
 
+/** Owner-only mode for directories that hold key material. */
+const SECRET_DIR_MODE = 0o700;
+/** Owner-only mode for files that hold key material. */
+const SECRET_FILE_MODE = 0o600;
+
+/** Create (or tighten) a directory for key material to owner-only. */
+export function ensureSecretDir(dir: string): void {
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true, mode: SECRET_DIR_MODE });
+  }
+  tightenSecret(dir, SECRET_DIR_MODE);
+}
+
+/** Tighten an existing path to `mode`. Best-effort where POSIX modes don't apply. */
+export function tightenSecret(p: string, mode = SECRET_FILE_MODE): void {
+  try {
+    chmodSync(p, mode);
+  } catch {
+    /* not a POSIX platform, or not writable */
+  }
+}
+
+/**
+ * Write key material with owner-only permissions. `mode` on `writeFileSync`
+ * applies only when the file is created, so an existing file is tightened
+ * explicitly too.
+ */
+export function writeSecretFile(filePath: string, data: string): void {
+  ensureSecretDir(dirname(filePath));
+  writeFileSync(filePath, data, { encoding: 'utf-8', mode: SECRET_FILE_MODE });
+  tightenSecret(filePath);
+}
+
 /**
  * Save an identity to the local .trellis directory.
  */
 export function saveIdentity(trellisDir: string, identity: IdentityConfig): void {
-  const filePath = join(trellisDir, IDENTITY_FILE);
-  if (!existsSync(dirname(filePath))) {
-    mkdirSync(dirname(filePath), { recursive: true });
-  }
-  writeFileSync(filePath, JSON.stringify(identity, null, 2), 'utf-8');
+  writeSecretFile(join(trellisDir, IDENTITY_FILE), JSON.stringify(identity, null, 2));
 }
 
 /**
@@ -154,6 +189,8 @@ export function saveIdentity(trellisDir: string, identity: IdentityConfig): void
 export function loadIdentity(trellisDir: string): IdentityConfig | null {
   const filePath = join(trellisDir, IDENTITY_FILE);
   if (!existsSync(filePath)) return null;
+  // Self-heal key files written before permissions were enforced.
+  tightenSecret(filePath);
   try {
     return JSON.parse(readFileSync(filePath, 'utf-8')) as IdentityConfig;
   } catch {
