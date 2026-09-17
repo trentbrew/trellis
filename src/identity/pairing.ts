@@ -5,7 +5,7 @@
  * private key. OOB string payloads: start → join → approve → accept.
  */
 
-import { randomBytes, createHash } from 'crypto';
+import { randomBytes, createHash, createPublicKey } from 'crypto';
 import {
   existsSync,
   readFileSync,
@@ -62,7 +62,7 @@ export interface JoinResponse {
 }
 
 /** Slice C — device identity metadata (docs/planning/device-registry-and-sprite-pairing.md). */
-export type DeviceKind = 'desktop' | 'cli' | 'cloud-sprite';
+export type DeviceKind = 'desktop' | 'cli' | 'cloud-sprite' | 'sandbox';
 export type DeviceTransport = 'ws' | 'http' | 'iroh';
 export type DeviceSyncState = 'idle' | 'syncing' | 'behind' | 'diverged' | 'offline';
 
@@ -364,6 +364,120 @@ export function registerDevice(
   registry.devices.push(full);
   saveRegistry(trellisDir, registry);
   return full;
+}
+
+/**
+ * Provision a device whose key pair was generated on the device itself
+ * (e.g. a sandbox VM), without the QR handshake. The host holding the identity
+ * root registers the device's *public* key and issues a root-signed
+ * `DeviceAuthorization`. The private key never leaves the device, and any peer
+ * that knows the root public key can verify the delegation with
+ * `verifyDeviceAuthorization`, not just this host's registry.
+ */
+export function provisionDevice(
+  trellisDir: string,
+  opts: {
+    devicePublicKey: string;
+    deviceId?: string;
+    deviceLabel?: string;
+    kind?: DeviceKind;
+    transport?: DeviceTransport;
+    expiresAt?: string;
+  },
+): { signed: SignedDeviceAuthorization; record: DeviceRecord; fingerprint: string } {
+  const identity = resolveRepoIdentity(trellisDir);
+  if (!identity) {
+    throw new Error(
+      'No identity — onboard first (`trellis init` first-run) or run `trellis identity init`',
+    );
+  }
+  assertEd25519PublicKey(opts.devicePublicKey);
+  if (opts.devicePublicKey === identity.publicKey) {
+    throw new Error('Refusing to provision the identity root key as a device');
+  }
+  const deviceId = opts.deviceId ?? newId('dev_');
+  if (!/^dev_[A-Za-z0-9_-]{1,96}$/.test(deviceId) || deviceId === ROOT_DEVICE_ID) {
+    throw new Error(`Invalid device id: ${deviceId} (expected dev_[A-Za-z0-9_-]+)`);
+  }
+
+  const authorization: DeviceAuthorization = {
+    v: 1,
+    deviceId,
+    identityEntityId: identity.entityId,
+    did: identity.did,
+    devicePublicKey: opts.devicePublicKey,
+    deviceLabel: opts.deviceLabel,
+    kind: opts.kind,
+    transport: opts.transport,
+    issuedAt: new Date().toISOString(),
+    ...(opts.expiresAt ? { expiresAt: opts.expiresAt } : {}),
+    issuerDeviceId: ROOT_DEVICE_ID,
+    challengeId: `provision:${newId('pr_')}`,
+  };
+  const signature = signMessage(canonicalJson(authorization), identity.privateKey);
+  const signed: SignedDeviceAuthorization = { authorization, signature };
+
+  const registry = ensureRegistryFromIdentity(trellisDir, identity);
+  const record: DeviceRecord = {
+    deviceId,
+    devicePublicKey: opts.devicePublicKey,
+    deviceLabel: opts.deviceLabel,
+    authorizedAt: authorization.issuedAt,
+    issuerDeviceId: ROOT_DEVICE_ID,
+    challengeId: authorization.challengeId,
+    kind: opts.kind,
+    transport: opts.transport,
+  };
+  registry.devices = registry.devices.filter((d) => d.deviceId !== deviceId);
+  registry.devices.push(record);
+  saveRegistry(trellisDir, registry);
+
+  return { signed, record, fingerprint: deviceFingerprint(opts.devicePublicKey) };
+}
+
+/**
+ * Verify a signed device authorization against the identity root public key.
+ * Checks the signature, that the authorization is for `identityEntityId`
+ * (when given), and expiry. Revocation is a registry fact and is checked by
+ * the resolver, not here.
+ */
+export function verifyDeviceAuthorization(
+  signed: SignedDeviceAuthorization,
+  rootPublicKey: string,
+  opts?: { identityEntityId?: string; now?: Date },
+): { ok: true } | { ok: false; reason: string } {
+  const { authorization, signature } = signed ?? ({} as SignedDeviceAuthorization);
+  if (!authorization || typeof signature !== 'string') {
+    return { ok: false, reason: 'malformed authorization' };
+  }
+  if (authorization.v !== 1) return { ok: false, reason: `unsupported version ${authorization.v}` };
+  if (opts?.identityEntityId && authorization.identityEntityId !== opts.identityEntityId) {
+    return { ok: false, reason: 'authorization is for a different identity' };
+  }
+  let valid = false;
+  try {
+    valid = verifySignature(canonicalJson(authorization), signature, rootPublicKey);
+  } catch {
+    valid = false;
+  }
+  if (!valid) return { ok: false, reason: 'invalid authorization signature' };
+  if (authorization.expiresAt && new Date(authorization.expiresAt) <= (opts?.now ?? new Date())) {
+    return { ok: false, reason: 'authorization expired' };
+  }
+  return { ok: true };
+}
+
+function assertEd25519PublicKey(publicKeyBase64: string): void {
+  try {
+    const key = createPublicKey({
+      key: Buffer.from(publicKeyBase64, 'base64'),
+      format: 'der',
+      type: 'spki',
+    });
+    if (key.asymmetricKeyType !== 'ed25519') throw new Error('not ed25519');
+  } catch {
+    throw new Error('devicePublicKey must be a base64 SPKI DER Ed25519 public key');
+  }
 }
 
 export function resolveDevicePublicKey(
