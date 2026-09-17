@@ -21,7 +21,8 @@
  */
 
 import { execFile } from 'child_process';
-import { existsSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, writeFileSync, mkdirSync, rmSync } from 'fs';
+import { writeSecretFile } from '../identity/identity.js';
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { promisify } from 'util';
@@ -208,12 +209,18 @@ export async function installSpriteDeviceKey(
 ): Promise<void> {
   const remoteDir = '/home/sprite/trellis-db/.trellis/devices';
   const staged = join(resolve(process.cwd(), '.trellis-deploy'), 'sprite-device.json');
-  if (!existsSync(dirname(staged))) mkdirSync(dirname(staged), { recursive: true });
-  writeFileSync(staged, JSON.stringify(local, null, 2));
+  // The staged file holds the device private key: owner-only, and removed as
+  // soon as it has been copied (TRL-455 follow-up).
+  writeSecretFile(staged, JSON.stringify(local, null, 2));
 
-  onProgress(`Installing device key on sprite ${name}...`);
-  await runSpriteExec(name, `mkdir -p ${remoteDir}`);
-  await runSpriteCopy(staged, name, `${remoteDir}/local.json`);
+  try {
+    onProgress(`Installing device key on sprite ${name}...`);
+    await runSpriteExec(name, `mkdir -p ${remoteDir}`);
+    await runSpriteCopy(staged, name, `${remoteDir}/local.json`);
+    await runSpriteExec(name, `chmod 700 ${remoteDir} && chmod 600 ${remoteDir}/local.json`);
+  } finally {
+    rmSync(staged, { force: true });
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -13,9 +13,10 @@ import {
   ensurePersonIdentity,
 } from './identity.js';
 import {
-  registerDevice,
+  provisionDevice,
   type DeviceRecord,
   type LocalDeviceKey,
+  type SignedDeviceAuthorization,
 } from './pairing.js';
 
 export interface ProvisionedSpriteDevice {
@@ -23,6 +24,8 @@ export interface ProvisionedSpriteDevice {
   local: LocalDeviceKey;
   /** Registry record on the user's machine. */
   record: DeviceRecord;
+  /** Root-signed authorization; any peer with the root public key can verify it. */
+  signed: SignedDeviceAuthorization;
 }
 
 /**
@@ -52,7 +55,8 @@ export function provisionSpriteDeviceKey(
     createdAt: new Date().toISOString(),
   };
 
-  const record = registerDevice(trellisDir, {
+  // Root-signed, so peers other than this host can verify the delegation.
+  const { record, signed } = provisionDevice(trellisDir, {
     deviceId: local.deviceId,
     devicePublicKey: local.publicKey,
     deviceLabel: local.deviceLabel,
@@ -60,5 +64,5 @@ export function provisionSpriteDeviceKey(
     transport: 'ws',
   });
 
-  return { local, record };
+  return { local, record, signed };
 }
