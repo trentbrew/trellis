@@ -4,6 +4,27 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [Unreleased]
+
+**Provision devices that hold their own keys, and finish owner-only key handling.**
+
+- **`trellis pair provision --public-key <spki> [--label] [--kind sandbox] [--device-id dev_…] [--expires] [--json]`.**
+  Registers a device whose key pair was generated on the device (e.g. a sandbox
+  VM) and issues a root-signed `DeviceAuthorization`, without the QR
+  handshake. The private key never leaves the device. Ops minted there are
+  signed `signedBy: <identity>`, `signedWith: <deviceId>` and resolve through
+  the registry like any paired device. New `provisionDevice()` and
+  `verifyDeviceAuthorization()` exports; new `sandbox` device kind.
+- **Sprite provisioning now returns a signed authorization,** so peers other
+  than the provisioning machine can verify the delegation (previously registry-only).
+- **Fix: `trellis deploy` staged the sprite's device private key at
+  `.trellis-deploy/sprite-device.json` with default permissions and never removed
+  it.** It is now written 0600, chmodded 0700/0600 on the sprite, and deleted after
+  the copy (TRL-455 follow-up).
+- **`trellis identity export --out <file>`** writes the identity (which includes the
+  private key) to an owner-only file; printing to stdout now warns on stderr.
+- Private keys are written owner-only everywhere (TRL-455).
+
 ## trellis [4.0.3] — 2026-09-17
 
 **Every locally minted op is signed by the local identity, and a global install

@@ -18,6 +18,7 @@ export {
   hasPersonIdentity,
   ensurePersonIdentity,
   resolveRepoIdentity,
+  writeSecretFile,
 } from './identity.js';
 
 export type { IdentityConfig, PublicIdentity } from './identity.js';
@@ -37,6 +38,8 @@ export {
   listDevices,
   revokeDevice,
   registerDevice,
+  provisionDevice,
+  verifyDeviceAuthorization,
   loadRegistry,
   loadLocalDevice,
   resolveDevicePublicKey,
