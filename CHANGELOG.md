@@ -4,9 +4,10 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
-## trellis [Unreleased]
+## trellis [4.0.4] — 2026-09-17
 
-**Provision devices that hold their own keys, and finish owner-only key handling.**
+**Provision devices that hold their own keys, finish owner-only key handling,
+and restore CI.**
 
 - **`trellis pair provision --public-key <spki> [--label] [--kind sandbox] [--device-id dev_…] [--expires] [--json]`.**
   Registers a device whose key pair was generated on the device (e.g. a sandbox
@@ -24,6 +25,17 @@ site copy.
 - **`trellis identity export --out <file>`** writes the identity (which includes the
   private key) to an owner-only file; printing to stdout now warns on stderr.
 - Private keys are written owner-only everywhere (TRL-455).
+- **Fix: `trellis studio` failed on Windows with "Could not find `turtlecode`".**
+  Since 4.0.3 `turtlecode` is an optional peer, so Studio usually falls back to
+  `npx turtlecode`; Node cannot spawn `npx.cmd` without a shell on Windows. The
+  fallback now spawns through a shell there, matching the skills command.
+- **CI installs again.** `@trellis.computer/ui` was a `file:../trellis-ui`
+  devDependency that only resolved with a sibling checkout, so every CI, bench,
+  smoke, and publish workflow failed at install since 2026-08-30. The two built
+  admin UI files are vendored in `src/ui/@trellis.computer/ui/dist` (byte-identical
+  to 4.0.3's) and refreshed with `npm run sync:ui`.
+- Test: the authority cwd-fallback test no longer assumes the checkout is a
+  Trellis repo.
 
 ## trellis [4.0.3] — 2026-09-17
 
