@@ -56,6 +56,8 @@ import {
   pairAccept,
   listDevices,
   revokeDevice,
+  provisionDevice,
+  writeSecretFile,
   deviceFingerprint,
   decodePayload,
   renderPairingQr,
@@ -3246,6 +3248,7 @@ program
   .option('--email <email>', 'Email for new identity')
   .option('--json <json>', 'Identity JSON for import')
   .option('--local', 'Write/read the legacy per-repo identity, not the person key')
+  .option('--out <file>', 'export: write the identity (with private key) to an owner-only file instead of stdout')
   .action(async (action, opts) => {
     const rootPath = resolve(opts.path);
     const trellisDir = join(rootPath, '.trellis');
@@ -3297,7 +3300,18 @@ program
         process.exit(1);
       }
       // Private key is included on purpose — export is the cross-VM path
-      // (ADR 0032 §3): the same person key on every VM.
+      // (ADR 0032 §3): the same person key on every VM. Prefer --out: stdout
+      // lands in scrollback, logs, and agent transcripts.
+      if (opts.out) {
+        writeSecretFile(resolve(opts.out), JSON.stringify(identity, null, 2));
+        console.error(chalk.green(`✓ Identity written to ${opts.out} (mode 0600, contains the private key)`));
+        return;
+      }
+      console.error(
+        chalk.yellow(
+          '! This output contains your private key. Prefer `--out <file>`; avoid pasting it into chats, issues, or agent sessions.',
+        ),
+      );
       console.log(JSON.stringify(identity, null, 2));
       return;
     }
@@ -3386,16 +3400,20 @@ function stateColor(state: string, _label: string): string {
 program
   .command('pair')
   .description(
-    'Device pairing under local Ed25519 identity (ADR 0020). Subcommands: start, join, approve, accept, list, show, revoke',
+    'Device pairing under local Ed25519 identity (ADR 0020). Subcommands: start, join, approve, accept, provision, list, show, revoke',
   )
-  .argument('<action>', 'start | join | approve | accept | list | show | revoke')
+  .argument('<action>', 'start | join | approve | accept | provision | list | show | revoke')
   .argument(
     '[payload]',
     'Challenge / join / auth payload (or deviceId for revoke)',
   )
   .option('-p, --path <path>', 'Repository path', '.')
   .option('--label <label>', 'Device label (join)')
-  .option('--kind <kind>', 'Device kind (join): desktop, cli, cloud-sprite')
+  .option('--kind <kind>', 'Device kind (join, provision): desktop, cli, cloud-sprite, sandbox')
+  .option('--public-key <key>', 'Device public key, base64 SPKI DER Ed25519 (provision)')
+  .option('--device-id <id>', 'Device id to assign, dev_… (provision; default random)')
+  .option('--expires <iso>', 'Authorization expiry, ISO 8601 (provision)')
+  .option('--json', 'Machine-readable output (provision)')
   .option('--transport <transport>', 'Device transport (join): ws, http, iroh')
   .option('--push <url>', 'Notify a peer via WS after revoke (device-revoked signal)')
   .option('--yes', 'Confirm approve after reviewing fingerprint')
@@ -3586,6 +3604,47 @@ program
         console.log(
           `  ${chalk.dim('Fingerprint:')} ${deviceFingerprint(rec.devicePublicKey)}`,
         );
+        return;
+      }
+
+      if (action === 'provision') {
+        // Register a device key generated on the device itself (e.g. a sandbox
+        // VM) and emit a root-signed authorization. No QR handshake: the
+        // caller already holds this identity and trusts the device channel.
+        if (!opts.publicKey) {
+          console.error(
+            chalk.red(
+              'Usage: trellis pair provision --public-key <base64-spki> [--label L] [--kind sandbox] [--device-id dev_…] [--expires ISO] [--json]',
+            ),
+          );
+          process.exit(1);
+        }
+        const kinds = ['desktop', 'cli', 'cloud-sprite', 'sandbox'];
+        if (opts.kind && !kinds.includes(opts.kind)) {
+          console.error(chalk.red(`Unknown device kind: ${opts.kind} (${kinds.join(', ')})`));
+          process.exit(1);
+        }
+        try {
+          const { signed, record, fingerprint } = provisionDevice(trellisDir, {
+            devicePublicKey: opts.publicKey,
+            deviceId: opts.deviceId,
+            deviceLabel: opts.label,
+            kind: opts.kind as any,
+            transport: opts.transport as any,
+            expiresAt: opts.expires,
+          });
+          if (opts.json) {
+            console.log(JSON.stringify({ signed, record, fingerprint }));
+          } else {
+            console.log(chalk.green(`✓ Provisioned ${record.deviceId}`));
+            console.log(`  ${chalk.dim('Label:')}       ${record.deviceLabel ?? chalk.dim('-')}`);
+            console.log(`  ${chalk.dim('Kind:')}        ${record.kind ?? 'cli'}`);
+            console.log(`  ${chalk.dim('Fingerprint:')} ${fingerprint}`);
+          }
+        } catch (err: any) {
+          console.error(chalk.red(err.message));
+          process.exit(1);
+        }
         return;
       }
 
