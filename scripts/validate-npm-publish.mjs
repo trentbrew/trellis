@@ -1,6 +1,7 @@
 /**
  * Guard against shipping file:/link: runtime deps — they break pnpm/bun installs.
- * UI is vendored into dist/ui at build time; @trellis.computer/ui stays dev-only.
+ * The admin UI bundle is vendored in src/ui/@trellis.computer/ui/dist and copied into
+ * dist/ui at build time (refresh with `npm run sync:ui`).
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
