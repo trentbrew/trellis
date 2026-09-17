@@ -77,3 +77,6 @@ examples/**/dist/
 examples/**/.data/
 examples/graph-nav/.graph-nav-db/
 .trellis/
+
+# Vendored admin UI bundle (see `npm run sync:ui`); `dist/` above would hide it.
+!src/ui/@trellis.computer/ui/dist/
