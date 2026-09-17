@@ -28,6 +28,7 @@ import { createVcsOp, isVcsOpKind, verifyVcsOpHash } from './vcs/ops.js';
 import { enforceIngestAuthorization } from './identity/capability.js';
 import { getSigningMaterial } from './identity/pairing.js';
 import { peerKeyResolver } from './identity/peer-key-resolver.js';
+import { signOp } from './identity/signing-middleware.js';
 import type { IdentityResolver } from './identity/signing-middleware.js';
 import { PROVENANCE } from './core/persist/canonical-op.js';
 import type { OpProvenance } from './core/persist/canonical-op.js';
@@ -250,6 +251,13 @@ export interface IntegrateOpsResult {
   applied: number;
   skipped: number;
   rejected: IntegrateOpRejection[];
+}
+
+/** A VCS payload without its signature envelope (`signature`, `signedBy`, `signedWith`). */
+function withoutSignature(vcs: VcsOp['vcs']): NonNullable<VcsOp['vcs']> {
+  if (!vcs) return {};
+  const { signature: _signature, signedBy: _signedBy, signedWith: _signedWith, ...rest } = vcs;
+  return rest as NonNullable<VcsOp['vcs']>;
 }
 
 export class TrellisVcsEngine {
@@ -933,6 +941,7 @@ for (const event of scanEvents) {
           await this.applyOp(op, {
             skipBranchAdvance: true,
             skipOwnershipCheck: true,
+            foreign: true,
           });
           known.add(op.hash);
           applied++;
@@ -3285,6 +3294,19 @@ for (const event of scanEvents) {
    * lanes must hash identically, or peers lose dedup and cherry-pick rewrites
    * identity. `laneId` is outside the preimage by construction.
    */
+  /**
+   * Sign a locally minted op with this engine's signing material (device key
+   * first, then identity root; see `getSigningMaterial`). No-op for
+   * identity-less repos and for ops already signed at mint (capability ops).
+   * `signOp` updates `op.hash` in place, so callers holding the op see the
+   * signed hash, and the next op chains from it via the journal.
+   */
+  private async signLocalOp(op: VcsOp): Promise<VcsOp> {
+    const material = this.signingMaterial;
+    if (!material || op.vcs?.signature) return op;
+    return signOp(op, material.privateKey, material.identityEntityId, material.signedWith);
+  }
+
   private stampLaneId(op: VcsOp): void {
     if (!this.activeLaneId) return;
     op.laneId = this.activeLaneId;
@@ -3311,16 +3333,26 @@ for (const event of scanEvents) {
     if (inLane && forceIntegration) {
       const intLast = this.opLog.getLastOp();
       if (intLast?.hash !== op.previousHash && isVcsOpKind(op.kind)) {
+        // Re-minting changes previousHash, which the signature covers: drop
+        // the stale envelope so the op is re-signed below.
         opToApply = await createVcsOp(op.kind, {
           agentId: op.agentId,
           previousHash: intLast?.hash,
-          vcs: op.vcs ?? {},
+          vcs: withoutSignature(op.vcs),
         });
       }
     }
 
     if (inLane && !forceIntegration) {
       this.stampLaneId(opToApply);
+    }
+
+    // ADR 0020 / 0032: every op minted on this machine carries the local
+    // identity's signature, so peers attribute it by `vcs.signedBy` (a key
+    // check) instead of the self-asserted `agentId` (ADR 0022 §4). Ops that
+    // arrived through ingest keep their own envelope.
+    if (!opts?.foreign) {
+      opToApply = await this.signLocalOp(opToApply);
     }
 
     // TRL-117 AC4: reject silent writes into another agent's live lane files.
