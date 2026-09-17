@@ -19,6 +19,12 @@ export interface ApplyOpOptions {
    * ingest, workspace index). Live agent writes must not set this.
    */
   skipOwnershipCheck?: boolean;
+  /**
+   * The op was minted elsewhere and arrived through sync ingest
+   * (`integrateOps`). It keeps its own signature envelope: re-signing would
+   * change its hash and break the peer's causal chain.
+   */
+  foreign?: boolean;
 }
 
 export interface EngineContext {
