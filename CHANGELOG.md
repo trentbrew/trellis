@@ -4,7 +4,7 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
-## trellis [Unreleased]
+## trellis [4.0.3] — 2026-09-17
 
 **Every locally minted op is signed by the local identity, and a global install
 drops from 1.3 GB to 85 MB.**
