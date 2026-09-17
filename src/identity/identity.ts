@@ -12,6 +12,7 @@ import {
   generateKeyPairSync,
   sign,
   verify,
+  createPrivateKey,
   createPublicKey,
   type KeyObject,
 } from 'crypto';
@@ -244,8 +245,9 @@ export function resolveRepoIdentity(trellisDir: string): IdentityConfig | null {
 // Helpers
 // ---------------------------------------------------------------------------
 
+// A static import: `require` is undefined when this module runs as native ESM
+// (tsx, vitest-spawned CLIs); only the esbuild bundle injected a shim for it.
 function createPrivateKeyFromDer(der: Buffer): KeyObject {
-  const { createPrivateKey } = require('crypto');
   return createPrivateKey({
     key: der,
     format: 'der',
