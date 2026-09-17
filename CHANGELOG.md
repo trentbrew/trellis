@@ -4,6 +4,35 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [Unreleased]
+
+**Every locally minted op is signed by the local identity, and a global install
+drops from 1.3 GB to 85 MB.**
+
+- **Ops are signed at the engine's single apply path (ADR 0020 / 0032).** With a
+  device key or identity on disk, `applyOp` signs every op minted on this
+  machine, so peers attribute it by `vcs.signedBy` (a key check) instead of the
+  self-asserted `agentId` (ADR 0022 §4 gap). Previously only capability ops
+  (grant/zone) were signed; `trellis entity create` and friends wrote unsigned
+  `agent:$USER` ops even in repos with an identity. Ops arriving through
+  `integrateOps` are marked `foreign` and keep their own envelope. Identity-less
+  repos are unchanged.
+- **Fix: lane/integration re-mints kept a stale signature.** Re-minting an op onto
+  a new `previousHash` preserved `vcs.signature`, which covers `previousHash`, so
+  the op no longer verified. The envelope is now dropped and the op re-signed.
+- **Fix: signing threw `require is not defined` outside the esbuild bundle.**
+  `createPrivateKeyFromDer` called `require('crypto')`, which only worked because
+  the bundle injected a shim; tsx and native-ESM runs (the CLI test harness)
+  failed as soon as an op was signed. It now uses a static import.
+- **`opencode-ai`, `turtlecode`, `@huggingface/transformers`, and
+  `@xenova/transformers` are optional peer dependencies.** They were regular or
+  optional dependencies, so every install pulled the agent harness, both musl and
+  glibc turtlecode backends, and onnxruntime; `npm i -g --omit=optional` did not
+  skip them. Measured on ARM64 Linux: 1.3 GB → 85 MB, ~27 s → 7 s. All call sites
+  already degrade gracefully: `trellis code` asks to `npm i -g opencode-ai`,
+  Studio falls back to `npx turtlecode`, and semantic search asks to install
+  `@huggingface/transformers`.
+
 ## trellis [4.0.2] — 2026-08-30
 
 **Fixes `trellis sandbox pack` from an installed package, and cuts the sandbox
