@@ -4,6 +4,19 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [4.0.5] — 2026-09-17
+
+**Re-release of 4.0.4 from the tagged tree.**
+
+The 4.0.4 tarball on npm was published from a stale working copy, so it shipped
+none of the changes below and none of 4.0.3's signing work — a regression for
+anyone who installed it. 4.0.5 is the `v4.0.4` tag plus the publish-workflow
+fix, and `trellis@4.0.4` is deprecated on npm. There are no source changes
+beyond the version bump.
+
+- CI: the publish gate runs on Node 22, which the client SDK requires
+  (`fs.globSync`, global `WebSocket`).
+
 ## trellis [4.0.4] — 2026-09-17
 
 **Provision devices that hold their own keys, finish owner-only key handling,
