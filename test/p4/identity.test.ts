@@ -9,7 +9,7 @@ import {
   toPublicIdentity,
   type IdentityConfig,
 } from '../../src/identity/identity.js';
-import { mkdirSync, rmSync } from 'fs';
+import { mkdirSync, rmSync, statSync, chmodSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -151,5 +151,39 @@ describe('identity storage', () => {
     expect(pub.publicKey).toBe(id.publicKey);
     expect(pub.did).toBe(id.did);
     expect((pub as any).privateKey).toBeUndefined();
+  });
+
+  // POSIX file modes; Windows has no equivalent.
+  const posix = process.platform !== 'win32';
+  const mode = (p: string) => statSync(p).mode & 0o777;
+
+  test.skipIf(!posix)('saveIdentity writes the private key owner-only', () => {
+    saveIdentity(currentTestDir, createIdentity({ displayName: 'Secret' }));
+    expect(mode(join(currentTestDir, 'identity.json'))).toBe(0o600);
+  });
+
+  test.skipIf(!posix)('saveIdentity tightens an existing world-readable identity', () => {
+    const file = join(currentTestDir, 'identity.json');
+    const id = createIdentity({ displayName: 'Legacy' });
+    saveIdentity(currentTestDir, id);
+    chmodSync(file, 0o644);
+
+    saveIdentity(currentTestDir, id);
+    expect(mode(file)).toBe(0o600);
+  });
+
+  test.skipIf(!posix)('saveIdentity tightens an existing world-readable directory', () => {
+    chmodSync(currentTestDir, 0o755);
+    saveIdentity(currentTestDir, createIdentity({ displayName: 'Secret' }));
+    expect(mode(currentTestDir)).toBe(0o700);
+  });
+
+  test.skipIf(!posix)('loadIdentity remediates a world-readable identity', () => {
+    const file = join(currentTestDir, 'identity.json');
+    saveIdentity(currentTestDir, createIdentity({ displayName: 'Legacy' }));
+    chmodSync(file, 0o644);
+
+    loadIdentity(currentTestDir);
+    expect(mode(file)).toBe(0o600);
   });
 });

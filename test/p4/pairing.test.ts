@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdtempSync, rmSync, existsSync, readFileSync } from 'fs';
+import { mkdtempSync, rmSync, existsSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import {
@@ -20,6 +20,7 @@ import {
   revokeDevice,
   loadRegistry,
   loadLocalDevice,
+  saveLocalDevice,
   resolveDevicePublicKey,
   resolvePublicKeys,
   getSigningMaterial,
@@ -269,6 +270,26 @@ describe('pairing revoke', () => {
     };
     const batch = await verifyOpBatch([op], resolver);
     expect(batch[0].valid).toBe(false);
+  });
+});
+
+describe('device key file permissions', () => {
+  const posix = process.platform !== 'win32';
+  const mode = (p: string) => statSync(p).mode & 0o777;
+
+  test.skipIf(!posix)('saveLocalDevice writes the device private key owner-only', () => {
+    const { trellisDir } = tempTrellis();
+    saveLocalDevice(trellisDir, {
+      deviceId: 'dev-test',
+      identityEntityId: 'identity:did:key:zTest',
+      did: 'did:key:zTest',
+      publicKey: 'public',
+      privateKey: 'private',
+      createdAt: new Date().toISOString(),
+    });
+
+    expect(mode(personDevicesDir())).toBe(0o700);
+    expect(mode(join(personDevicesDir(), 'local.json'))).toBe(0o600);
   });
 });
 

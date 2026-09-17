@@ -8,7 +8,6 @@
 import { randomBytes, createHash } from 'crypto';
 import {
   existsSync,
-  mkdirSync,
   readFileSync,
   writeFileSync,
   unlinkSync,
@@ -22,6 +21,9 @@ import {
   signMessage,
   verifySignature,
   trellisUserDir,
+  ensureSecretDir,
+  writeSecretFile,
+  tightenSecret,
   type IdentityConfig,
 } from './identity.js';
 import type { IdentityResolver } from './signing-middleware.js';
@@ -211,15 +213,13 @@ function challengesDir(trellisDir: string): string {
 }
 
 function ensureDevicesDir(trellisDir: string): void {
-  const d = devicesDir(trellisDir);
-  if (!existsSync(d)) mkdirSync(d, { recursive: true });
-  const c = challengesDir(trellisDir);
-  if (!existsSync(c)) mkdirSync(c, { recursive: true });
+  ensureSecretDir(devicesDir(trellisDir));
+  ensureSecretDir(challengesDir(trellisDir));
 }
 
 function ensurePersonDevicesDir(): string {
   const d = personDevicesDir();
-  if (!existsSync(d)) mkdirSync(d, { recursive: true });
+  ensureSecretDir(d);
   return d;
 }
 
@@ -247,7 +247,7 @@ function migrateUp(from: string, to: string): void {
   }
   try {
     ensurePersonDevicesDir();
-    writeFileSync(to, raw);
+    writeSecretFile(to, raw);
   } catch {
     /* best-effort */
   }
@@ -268,17 +268,19 @@ export function loadRegistry(trellisDir: string): DeviceRegistry | null {
 export function saveRegistry(trellisDir: string, registry: DeviceRegistry): void {
   const { person, repo } = registryPaths(trellisDir);
   ensurePersonDevicesDir();
-  writeFileSync(person, JSON.stringify(registry, null, 2));
+  writeSecretFile(person, JSON.stringify(registry, null, 2));
   // Keep a legacy repo-scope copy in sync (same identity) so old readers see
   // revocations; never write a repo copy for a different identity.
   const repoReg = readJson<DeviceRegistry>(repo);
   if (repoReg && repoReg.identityEntityId === registry.identityEntityId) {
-    writeFileSync(repo, JSON.stringify(registry, null, 2));
+    writeSecretFile(repo, JSON.stringify(registry, null, 2));
   }
 }
 
 export function loadLocalDevice(trellisDir: string): LocalDeviceKey | null {
   const { person, repo } = localPaths(trellisDir);
+  // Self-heal device key files written before permissions were enforced.
+  for (const p of [person, repo]) if (existsSync(p)) tightenSecret(p);
   const personLocal = readJson<LocalDeviceKey>(person);
   if (personLocal) return personLocal;
   migrateUp(repo, person);
@@ -289,9 +291,9 @@ export function saveLocalDevice(trellisDir: string, local: LocalDeviceKey): void
   // Never write into identity.json
   const { person, repo } = localPaths(trellisDir);
   ensurePersonDevicesDir();
-  writeFileSync(person, JSON.stringify(local, null, 2));
+  writeSecretFile(person, JSON.stringify(local, null, 2));
   if (existsSync(repo)) {
-    writeFileSync(repo, JSON.stringify(local, null, 2));
+    writeSecretFile(repo, JSON.stringify(local, null, 2));
   }
 }
 
