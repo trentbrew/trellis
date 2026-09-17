@@ -6377,6 +6377,10 @@ program
       stdio: 'inherit',
       cwd: rootPath,
       env: process.env,
+      // turtlecode is an optional peer since 4.0.3, so the npx fallback is a
+      // normal path. On Windows `npx` is `npx.cmd`, which Node only spawns
+      // through a shell (otherwise ENOENT/EINVAL).
+      shell: !turtlecodeBin && process.platform === 'win32',
     });
 
     child.on('error', (err: NodeJS.ErrnoException) => {
