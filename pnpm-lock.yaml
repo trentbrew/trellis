@@ -17,9 +17,6 @@ importers:
       '@number0/iroh':
         specifier: ^1.1.0
         version: 1.1.0
-      '@trellis.computer/ui':
-        specifier: file:../trellis-ui/packages/core
-        version: file:../trellis-ui/packages/core(@tiptap/extension-list@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))(trellis@3.4.2(@types/node@20.19.41)(better-sqlite3@11.10.0)(react@19.2.7)(vue@3.5.35(typescript@5.9.3))(zod@3.25.76))
       better-sqlite3:
         specifier: ^11.0.0
         version: 11.10.0
@@ -1805,11 +1802,6 @@ packages:
 
   '@tiptap/starter-kit@3.29.2':
     resolution: {integrity: sha512-oTu0tysiqk4zgjEtxRHjAQgxUKaAevZwueOWwSWubHdokqp7SpcbE5n9USJv89HKuTUDm3GjnQH6q8HNn/2DsA==}
-
-  '@trellis.computer/ui@file:../trellis-ui/packages/core':
-    resolution: {directory: ../trellis-ui/packages/core, type: directory}
-    peerDependencies:
-      trellis: '>=3.4.0'
 
   '@tybys/wasm-util@0.10.2':
     resolution: {integrity: sha512-RoBvJ2X0wuKlWFIjrwffGw1IqZHKQqzIchKaadZZfnNpsAYp2mM0h36JtPCjNDAHGgYez/15uMBpfGwchhiMgg==}
@@ -5023,44 +5015,6 @@ snapshots:
       '@tiptap/extensions': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)
       '@tiptap/pm': 3.29.2
 
-  '@trellis.computer/ui@file:../trellis-ui/packages/core(@tiptap/extension-list@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))(trellis@3.4.2(@types/node@20.19.41)(better-sqlite3@11.10.0)(react@19.2.7)(vue@3.5.35(typescript@5.9.3))(zod@3.25.76))':
-    dependencies:
-      '@tiptap/core': 3.29.2(@tiptap/pm@3.29.2)
-      '@tiptap/extension-blockquote': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)
-      '@tiptap/extension-bold': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))
-      '@tiptap/extension-bullet-list': 3.29.2(@tiptap/extension-list@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))
-      '@tiptap/extension-code': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))
-      '@tiptap/extension-hard-break': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))
-      '@tiptap/extension-heading': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))
-      '@tiptap/extension-italic': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))
-      '@tiptap/extension-ordered-list': 3.29.2(@tiptap/extension-list@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))
-      '@tiptap/extension-paragraph': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))
-      '@tiptap/extension-strike': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))
-      '@tiptap/pm': 3.29.2
-      '@tiptap/starter-kit': 3.29.2
-      trellis: 3.4.2(@types/node@20.19.41)(better-sqlite3@11.10.0)(react@19.2.7)(vue@3.5.35(typescript@5.9.3))(zod@3.25.76)
-    transitivePeerDependencies:
-      - '@tiptap/extension-list'
-
-  '@trellis.computer/ui@file:../trellis-ui/packages/core(@tiptap/extension-list@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))(trellis@file:(@tiptap/extension-list@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))(@types/node@25.9.2)(better-sqlite3@11.10.0)(react@19.2.7)(vue@3.5.35(typescript@6.0.3))(zod@3.25.76))':
-    dependencies:
-      '@tiptap/core': 3.29.2(@tiptap/pm@3.29.2)
-      '@tiptap/extension-blockquote': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)
-      '@tiptap/extension-bold': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))
-      '@tiptap/extension-bullet-list': 3.29.2(@tiptap/extension-list@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))
-      '@tiptap/extension-code': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))
-      '@tiptap/extension-hard-break': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))
-      '@tiptap/extension-heading': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))
-      '@tiptap/extension-italic': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))
-      '@tiptap/extension-ordered-list': 3.29.2(@tiptap/extension-list@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))
-      '@tiptap/extension-paragraph': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))
-      '@tiptap/extension-strike': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))
-      '@tiptap/pm': 3.29.2
-      '@tiptap/starter-kit': 3.29.2
-      trellis: file:(@tiptap/extension-list@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))(@types/node@25.9.2)(better-sqlite3@11.10.0)(react@19.2.7)(vue@3.5.35(typescript@6.0.3))(zod@3.25.76)
-    transitivePeerDependencies:
-      - '@tiptap/extension-list'
-
   '@tybys/wasm-util@0.10.2':
     dependencies:
       tslib: 2.8.1
@@ -6892,7 +6846,6 @@ snapshots:
       '@inquirer/prompts': 8.5.2(@types/node@25.9.2)
       '@modelcontextprotocol/sdk': 1.29.0(zod@3.25.76)
       '@number0/iroh': 1.1.0
-      '@trellis.computer/ui': file:../trellis-ui/packages/core(@tiptap/extension-list@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))(trellis@file:(@tiptap/extension-list@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))(@types/node@25.9.2)(better-sqlite3@11.10.0)(react@19.2.7)(vue@3.5.35(typescript@6.0.3))(zod@3.25.76))
       chalk: 5.6.2
       commander: 13.1.0
       opencode-ai: 1.15.13
