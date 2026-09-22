@@ -116,8 +116,22 @@ export type {
   ValidationResult,
 } from './ontology/index.js';
 
+// LLM (DevTools bridge)
+export { createDevtoolsLLMProvider } from '../llm/devtools-provider.js';
+export type {
+  DevtoolsBackend,
+  DevtoolsLLMProviderOptions,
+} from '../llm/devtools-provider.js';
+
 // Agent system
 export { AgentHarness } from './agents/index.js';
+export {
+  registerTypedGraphTools,
+  listEntitiesFiltered,
+  entityView,
+  LIST_ENTITIES_SCHEMA,
+  GET_ENTITY_SCHEMA,
+} from './agents/index.js';
 export type {
   AgentDef,
   ToolDef,
@@ -127,6 +141,9 @@ export type {
   DecisionTrace,
   RunStatus,
   AgentHarnessConfig,
+  ListEntitiesInput,
+  GetEntityInput,
+  TypedGraphToolIds,
 } from './agents/index.js';
 
 // Plugin system
