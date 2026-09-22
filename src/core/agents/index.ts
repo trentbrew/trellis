@@ -5,6 +5,18 @@
  */
 
 export { AgentHarness } from './harness.js';
+export {
+  registerTypedGraphTools,
+  listEntitiesFiltered,
+  entityView,
+  LIST_ENTITIES_SCHEMA,
+  GET_ENTITY_SCHEMA,
+} from './typed-graph-tools.js';
+export type {
+  ListEntitiesInput,
+  GetEntityInput,
+  TypedGraphToolIds,
+} from './typed-graph-tools.js';
 export { WorkerPool } from './worker-pool.js';
 export { DAGScheduler, detectCycle } from './dag-scheduler.js';
 export { evaluateCondition, evaluateEdge } from './edge-evaluator.js';
