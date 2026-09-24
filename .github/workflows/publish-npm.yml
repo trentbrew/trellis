@@ -1,0 +1,33 @@
+name: Publish npm (Manual Fallback)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run tests
+        run: bun test test/vcs test/git test/p2 test/p3 test/p4 test/p5 test/p6 test/p7 test/engine.test.ts test/links/ test/embeddings/ test/decisions/ test/issue.test.ts
+
+      - name: Build
+        run: bun run build
+
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
