@@ -9,6 +9,7 @@
  */
 
 import { z } from 'zod';
+import { zodKind } from '../../schema/zod-kind.js';
 
 // ---------------------------------------------------------------------------
 // Constraint Map — which component props are constrained by which token types
@@ -84,13 +85,13 @@ export const ROLE_ALIASES: Record<string, string[]> = {
 export function extractEnumValues(schema: z.ZodType): string[] | null {
   let current: z.ZodType = schema;
 
-  // Unwrap nullable/optional wrappers
-  while (current instanceof z.ZodNullable || current instanceof z.ZodOptional) {
+  // Unwrap nullable/optional wrappers (by kind: props may use the app's zod copy)
+  while (zodKind(current) === 'ZodNullable' || zodKind(current) === 'ZodOptional') {
     current = (current as any)._def.innerType;
   }
 
   // Check for ZodEnum
-  if (current instanceof z.ZodEnum) {
+  if (zodKind(current) === 'ZodEnum') {
     return (current as any)._def.values as string[];
   }
 
@@ -143,7 +144,7 @@ export function constrainComponentDef(
   if (!constraints) return def;
 
   // Only ZodObject props can be narrowed
-  if (!(def.props instanceof z.ZodObject)) return def;
+  if (zodKind(def.props) !== 'ZodObject') return def;
 
   const shape = { ...(def.props as z.ZodObject<any>).shape };
   let modified = false;

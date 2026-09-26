@@ -175,13 +175,16 @@ validation.** As shipped, per-collection validation enforces nothing beyond `tit
    different copy, so every non-title field registers as `valueType: json`, which is never type-checked.
    Observed in the running kernel: the collection schema's `f_… : json`; also `trellis:Transaction.amount: json`
    and `trellis:Task.status: json` (enum options lost). Validation is effectively off for **all**
-   app-defined types, not only collections. Fix: switch on `_def.typeName` (`ZodFirstPartyTypeKind`), which
-   works across copies, or re-export the bundled `z` from `trellis/schema`.
-2. **Remote `registerType` never updates.** `sdk.ts` swallows `409` in remote mode, while local mode calls
-   `updateOntology`. The server already has `PATCH /ontologies/:id` (`server.ts:460`). Observed: the schema
-   kept its first label ("Untitled database records") after the collection was renamed. Fix: on 409, `PATCH`.
-   This mostly answers open question 2: the per-collection schema can stay client-registered once
-   re-registration works.
+   app-defined types, not only collections. **Fixed (2026-09-26):** `src/schema/zod-kind.ts` reads
+   `_def.typeName` (`ZodFirstPartyTypeKind`), which is identical in every copy. It's used by `define.ts`,
+   `forms/core/validate.ts` (ZodError detection) and `plugins/brand/constraints.ts`. The regression test
+   uses zod's CJS build as a real second copy (`test/schema/define-foreign-zod.test.ts`). Follow-up worth
+   considering: mark `zod` external in the esbuild step so apps share one copy.
+2. ~~**Remote `registerType` never updates.**~~ **Withdrawn (2026-09-26): misdiagnosed.** Since 3.2.5 (TRL-76)
+   `POST /ontologies` upserts an existing schema and returns 200, so the SDK's 409 branch never fires against
+   a current server (covered by `test/schema/register-type.test.ts`). The stale label was a FINANCE bug: it
+   re-registered only when *fields* changed, never on rename. That's fixed in the app. Open question 2 is
+   answered: client-registered per-collection schemas stay in sync.
 3. **The update-only validation gap is unconfirmed either way.** A string written to a number field was
    accepted on create *and* update. Defect 1 fully explains that, so the `type`-fact gap in
    `schema-middleware.ts:47-59` needs a re-test after defect 1 is fixed.

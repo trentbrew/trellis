@@ -34,6 +34,7 @@
  */
 import { z } from 'zod';
 import type { Atom } from '../core/store/eav-store.js';
+import { zodKind } from './zod-kind.js';
 import type {
   AttrType,
   AttributeDef,
@@ -285,12 +286,10 @@ export function defineType<
 function unwrap(zt: z.ZodTypeAny): z.ZodTypeAny {
   let t = zt;
   // Peel ZodOptional / ZodNullable / ZodDefault to reach the leaf type.
+  // Kinds, not `instanceof`: schemas usually come from the app's own zod copy.
   for (let i = 0; i < 8; i++) {
-    if (
-      t instanceof z.ZodOptional ||
-      t instanceof z.ZodNullable ||
-      t instanceof z.ZodDefault
-    ) {
+    const kind = zodKind(t);
+    if (kind === 'ZodOptional' || kind === 'ZodNullable' || kind === 'ZodDefault') {
       const inner = (t._def as { innerType?: z.ZodTypeAny }).innerType;
       if (!inner) break;
       t = inner;
@@ -308,32 +307,35 @@ function zodToSpec(
 ): PropertyValueSpecification {
   const required = !zt.isOptional();
   const base = unwrap(zt);
+  const kind = zodKind(base);
+  const enumValues = (schema: z.ZodTypeAny) =>
+    ((schema._def as { values?: readonly string[] }).values ?? []).slice() as Atom[];
 
   let valueType: PropertyType = 'rich_text';
   let selectOptions: Atom[] | undefined;
 
   if (isTitle) {
     valueType = 'title';
-  } else if (base instanceof z.ZodString) {
-    const checks = (base._def.checks ?? []) as { kind: string }[];
+  } else if (kind === 'ZodString') {
+    const checks = ((base._def as { checks?: { kind: string }[] }).checks ?? []);
     if (checks.some((c) => c.kind === 'email')) valueType = 'email';
     else if (checks.some((c) => c.kind === 'url')) valueType = 'url';
     else if (checks.some((c) => c.kind === 'datetime')) valueType = 'date';
     else valueType = 'rich_text';
-  } else if (base instanceof z.ZodNumber) {
+  } else if (kind === 'ZodNumber') {
     valueType = 'number';
-  } else if (base instanceof z.ZodBoolean) {
+  } else if (kind === 'ZodBoolean') {
     valueType = 'checkbox';
-  } else if (base instanceof z.ZodDate) {
+  } else if (kind === 'ZodDate') {
     valueType = 'date';
-  } else if (base instanceof z.ZodEnum) {
+  } else if (kind === 'ZodEnum') {
     valueType = 'select';
-    selectOptions = (base.options as readonly string[]).slice() as Atom[];
-  } else if (base instanceof z.ZodArray) {
+    selectOptions = enumValues(base);
+  } else if (kind === 'ZodArray') {
     const el = unwrap((base._def as { type: z.ZodTypeAny }).type);
     valueType = 'multi_select';
-    if (el instanceof z.ZodEnum) {
-      selectOptions = (el.options as readonly string[]).slice() as Atom[];
+    if (zodKind(el) === 'ZodEnum') {
+      selectOptions = enumValues(el);
     }
   } else {
     valueType = 'json';
