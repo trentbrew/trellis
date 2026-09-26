@@ -1,6 +1,12 @@
 import { describe, test, expect } from 'vitest';
 import { dirname as nodeDirname } from 'path';
+import { EAVStore } from '../../src/core/store/eav-store.js';
 import { decompose } from '../../src/vcs/decompose.js';
+import {
+  enrichFileOp,
+  isMintedDirEntityId,
+  isMintedFileEntityId,
+} from '../../src/vcs/file-entity.js';
 import type { VcsOp } from '../../src/vcs/types.js';
 
 function makeOp(kind: string, vcs: Record<string, any>): VcsOp {
@@ -11,6 +17,30 @@ function makeOp(kind: string, vcs: Record<string, any>): VcsOp {
     agentId: 'agent:test',
     vcs,
   };
+}
+
+function applyFileOp(store: EAVStore, op: VcsOp): VcsOp {
+  const enriched = enrichFileOp(store, op);
+  const result = decompose(enriched);
+  if (result.deleteFacts.length > 0) store.deleteFacts(result.deleteFacts);
+  if (result.deleteLinks.length > 0) store.deleteLinks(result.deleteLinks);
+  if (result.addFacts.length > 0) store.addFacts(result.addFacts);
+  if (result.addLinks.length > 0) store.addLinks(result.addLinks);
+  return enriched;
+}
+
+function filePaths(store: EAVStore, entityId: string): string[] {
+  return store
+    .getFactsByEntity(entityId)
+    .filter((f) => f.a === 'path')
+    .map((f) => String(f.v));
+}
+
+function contentHashes(store: EAVStore, entityId: string): string[] {
+  return store
+    .getFactsByEntity(entityId)
+    .filter((f) => f.a === 'contentHash')
+    .map((f) => String(f.v));
 }
 
 describe('decompose', () => {
@@ -240,6 +270,78 @@ describe('decompose', () => {
  * `vcs.filePath` ever holds. Node's Windows/UNC/absolute rules are out of scope
  * by construction, not by oversight.
  */
+describe('TRL-456 minted file identity', () => {
+  test('rename then re-add at original path yields two distinct FileNode entities', () => {
+    const store = new EAVStore();
+    const add1 = applyFileOp(
+      store,
+      makeOp('vcs:fileAdd', {
+        filePath: 'a.ts',
+        contentHash: 'sha256:H1',
+      }),
+    );
+    const id1 = add1.vcs!.fileEntityId!;
+    expect(isMintedFileEntityId(id1)).toBe(true);
+
+    applyFileOp(
+      store,
+      makeOp('vcs:fileRename', {
+        filePath: 'b.ts',
+        oldFilePath: 'a.ts',
+        fileEntityId: id1,
+      }),
+    );
+
+    const add2 = applyFileOp(
+      store,
+      makeOp('vcs:fileAdd', {
+        filePath: 'a.ts',
+        contentHash: 'sha256:H2',
+      }),
+    );
+    const id2 = add2.vcs!.fileEntityId!;
+
+    expect(id2).not.toBe(id1);
+    expect(filePaths(store, id1)).toEqual(['b.ts']);
+    expect(filePaths(store, id2)).toEqual(['a.ts']);
+    expect(contentHashes(store, id1)).toEqual(['sha256:H1']);
+    expect(contentHashes(store, id2)).toEqual(['sha256:H2']);
+    expect(store.getFactsByEntity('file:a.ts')).toHaveLength(0);
+    expect(store.getFactsByEntity('file:b.ts')).toHaveLength(0);
+  });
+
+  test('fileRename mints a distinct parent DirectoryNode for the new path', () => {
+    const store = new EAVStore();
+    const add = applyFileOp(
+      store,
+      makeOp('vcs:fileAdd', {
+        filePath: 'pkg/a.ts',
+        contentHash: 'sha256:H1',
+      }),
+    );
+    const oldDir = add.vcs!.dirEntityId!;
+    expect(isMintedDirEntityId(oldDir)).toBe(true);
+
+    const renamed = applyFileOp(
+      store,
+      makeOp('vcs:fileRename', {
+        filePath: 'moved/a.ts',
+        oldFilePath: 'pkg/a.ts',
+        fileEntityId: add.vcs!.fileEntityId,
+        oldDirEntityId: oldDir,
+      }),
+    );
+    const newDir = renamed.vcs!.newDirEntityId!;
+
+    expect(newDir).not.toBe(oldDir);
+    expect(isMintedDirEntityId(newDir)).toBe(true);
+    expect(filePaths(store, oldDir)).toEqual(['pkg']);
+    expect(filePaths(store, newDir)).toEqual(['moved']);
+    expect(store.getFactsByEntity('dir:pkg')).toHaveLength(0);
+    expect(store.getFactsByEntity('dir:moved')).toHaveLength(0);
+  });
+});
+
 describe('dir facts use a browser-safe dirname', () => {
   const repoPaths = [
     'src/vcs/decompose.ts',

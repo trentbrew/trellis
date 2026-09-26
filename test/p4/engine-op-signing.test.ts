@@ -4,7 +4,7 @@
  * own envelope.
  */
 import { describe, test, expect, beforeEach, afterEach } from 'vitest';
-import { mkdirSync, rmSync, mkdtempSync, readFileSync } from 'fs';
+import { mkdirSync, rmSync, mkdtempSync, readFileSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { TrellisVcsEngine } from '../../src/engine.js';
@@ -109,6 +109,52 @@ describe('engine signs locally minted ops', () => {
     expect(result.rejected).toHaveLength(0);
     const stored = journal().find((o) => o.hash === originalHash);
     expect(stored).toBeDefined();
+    expect(stored!.vcs?.signedBy).toBe(peer.entityId);
+    expect(await verifyOp(stored!, peer.publicKey)).toBe(true);
+  });
+
+  // TRL-456: minted file ids are stamped on the payload, so they must be in
+  // place before signing — not added afterwards by re-minting an unsigned op.
+  test('file ops are signed, and the signature covers the minted entity ids', async () => {
+    writeFileSync(join(TEST_ROOT, 'a.ts'), 'export const a = 1\n');
+    const identity = createIdentity({ displayName: 'Sandbox' });
+    mkdirSync(join(TEST_ROOT, '.trellis'), { recursive: true });
+    saveIdentity(join(TEST_ROOT, '.trellis'), identity);
+    const engine = new TrellisVcsEngine({ rootPath: TEST_ROOT });
+    await engine.initRepo({ indexWorkspace: true });
+
+    const ops = journal();
+    const fileAdds = ops.filter((o) => o.kind === 'vcs:fileAdd');
+    expect(fileAdds).toHaveLength(1);
+    const add = fileAdds[0]!;
+    expect(add.vcs?.fileEntityId).toMatch(/^file:f_[0-9a-f]{32}$/);
+    expect(add.vcs?.dirEntityId).toMatch(/^dir:d_[0-9a-f]{32}$/);
+    expect(add.vcs?.signedBy).toBe(identity.entityId);
+    expect(await verifyOp(add, identity.publicKey)).toBe(true);
+    expect(await verifyVcsOpHash(add)).toBe(true);
+    for (let i = 1; i < ops.length; i++) {
+      expect(ops[i]!.previousHash).toBe(ops[i - 1]!.hash);
+    }
+  });
+
+  test('id-less file ops from pre-TRL-456 peers are not rewritten', async () => {
+    const { engine } = await engineWithIdentity();
+    const peer = createIdentity({ displayName: 'Old peer' });
+    const last = journal().at(-1)!;
+    const op = await createVcsOp('vcs:fileAdd', {
+      agentId: 'agent:peer',
+      previousHash: last.hash,
+      vcs: { filePath: 'peer.ts', contentHash: 'sha256:peer' },
+    });
+    await signOp(op, peer.privateKey, peer.entityId);
+    const originalHash = op.hash;
+
+    const result = await engine.integrateOps([structuredClone(op)]);
+
+    expect(result.rejected).toHaveLength(0);
+    const stored = journal().find((o) => o.hash === originalHash);
+    expect(stored).toBeDefined();
+    expect(stored!.vcs?.fileEntityId).toBeUndefined();
     expect(stored!.vcs?.signedBy).toBe(peer.entityId);
     expect(await verifyOp(stored!, peer.publicKey)).toBe(true);
   });

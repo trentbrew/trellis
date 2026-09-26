@@ -120,6 +120,14 @@ export interface VcsPayload {
   // File operations
   filePath?: string;
   oldFilePath?: string;
+  /** Minted FileNode id (TRL-456). Omitted on legacy ops → path-derived fallback. */
+  fileEntityId?: string;
+  /** Parent DirectoryNode for fileAdd / fileDelete. */
+  dirEntityId?: string;
+  /** fileRename: previous parent directory entity. */
+  oldDirEntityId?: string;
+  /** fileRename: new parent directory entity. */
+  newDirEntityId?: string;
   contentHash?: string;
   oldContentHash?: string;
   size?: number;
@@ -378,10 +386,12 @@ export function branchHeadEntity(
   return `branch:${branchName}@${principal}`;
 }
 
+/** @deprecated Use minted ids + {@link resolveFileEntityIdByPath}. Legacy graphs only. */
 export function fileEntityId(path: string): string {
   return `file:${path}`;
 }
 
+/** @deprecated Use minted ids + {@link resolveDirEntityIdByPath}. Legacy graphs only. */
 export function dirEntityId(path: string): string {
   return `dir:${path}`;
 }

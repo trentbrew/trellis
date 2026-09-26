@@ -39,6 +39,9 @@ function mockCtx(): ResolverContext {
     getMilestoneIds: () => [],
     getSymbolNames: (fp) =>
       fp === 'src/engine.ts' ? ['createIssue', 'TrellisVcsEngine'] : [],
+    hasDecision: () => false,
+    getDecisionTitle: () => undefined,
+    getFileEntityId: (path) => `file:${path}`,
   };
 }
 

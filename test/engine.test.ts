@@ -341,8 +341,13 @@ describe('TrellisVcsEngine', () => {
     const links = store.getLinksByAttribute('contains');
     expect(links.length).toBeGreaterThan(0);
 
-    // src directory should contain src/index.ts
-    const srcLinks = links.filter((l) => l.e1 === 'dir:src');
+    const srcDirFacts = store.getFactsByValue('path', 'src');
+    const srcDirId = srcDirFacts.find((f) =>
+      store.getFactsByEntity(f.e).some((ef) => ef.a === 'type' && ef.v === 'DirectoryNode'),
+    )?.e;
+    expect(srcDirId).toBeTruthy();
+
+    const srcLinks = links.filter((l) => l.e1 === srcDirId);
     expect(srcLinks.length).toBeGreaterThanOrEqual(2);
   });
 

@@ -40,6 +40,7 @@
 | ADR 0022: Zone-scoped capability model (read authorization + per-writer refs) | draft | [adr/0022-zone-capability-model.md](./adr/0022-zone-capability-model.md) |
 | ADR 0023: Encryption-at-rest for zone keys | draft | [adr/0023-zone-encryption-at-rest.md](./adr/0023-zone-encryption-at-rest.md) |
 | ADR 0024: Ambient agent presence (stigmergy layer) | draft | [adr/0024-ambient-agent-presence.md](./adr/0024-ambient-agent-presence.md) |
+| ADR 0046: Agent forum (stigmergy Layer 2) | draft | [adr/0046-agent-forum.md](./adr/0046-agent-forum.md) |
 | ADR 0025: DSL-first, then sync transport (frozen-contract rule + bounded Iroh spike) | draft | [adr/0025-dsl-first-then-sync.md](./adr/0025-dsl-first-then-sync.md) |
 | ADR 0026: An intent vocabulary — issue types, cycles, and what stays retrospective | draft | [adr/0026-intent-vocabulary-issue-types-and-cycles.md](./adr/0026-intent-vocabulary-issue-types-and-cycles.md) |
 | ADR 0027: Realtime Full-State Sync | draft | [adr/0027-realtime-full-state-sync.md](./adr/0027-realtime-full-state-sync.md) |
