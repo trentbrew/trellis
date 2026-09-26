@@ -10,6 +10,10 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { WorkerPool, DAGScheduler } from '../core/agents/index.js';
+import {
+  configureAgentHarness,
+  isLlmConfigured,
+} from '../core/agents/bootstrap.js';
 import type { TenantPool } from '../server/tenancy.js';
 
 // ---------------------------------------------------------------------------
@@ -17,26 +21,40 @@ import type { TenantPool } from '../server/tenancy.js';
 // ---------------------------------------------------------------------------
 
 const pools = new Map<string, WorkerPool>();
+const poolInit = new Map<string, Promise<WorkerPool>>();
 const schedulers = new Map<string, DAGScheduler>();
 
-function getPool(tenantId: string, pool: TenantPool): WorkerPool {
-  let wp = pools.get(tenantId);
-  if (!wp) {
-    wp = new WorkerPool(
-      () => pool.preload(tenantId),
-      undefined,
-      { concurrency: 2, pollIntervalMs: 500 },
-    );
-    wp.start();
-    pools.set(tenantId, wp);
+async function initPool(tenantId: string, tenantPool: TenantPool): Promise<WorkerPool> {
+  const existing = pools.get(tenantId);
+  if (existing) return existing;
+
+  let pending = poolInit.get(tenantId);
+  if (!pending) {
+    pending = (async () => {
+      const kernel = await tenantPool.preload(tenantId);
+      const llmOn = isLlmConfigured();
+      const { harness } = await configureAgentHarness({
+        kernel,
+        llm: llmOn ? undefined : false,
+      });
+      const wp = new WorkerPool(kernel, harness, {
+        concurrency: 2,
+        pollIntervalMs: 500,
+        simulate: !llmOn,
+      });
+      wp.start();
+      pools.set(tenantId, wp);
+      return wp;
+    })();
+    poolInit.set(tenantId, pending);
   }
-  return wp;
+  return pending;
 }
 
-function getScheduler(tenantId: string, pool: TenantPool): DAGScheduler {
+async function getScheduler(tenantId: string, pool: TenantPool): Promise<DAGScheduler> {
   let sc = schedulers.get(tenantId);
   if (!sc) {
-    sc = new DAGScheduler(getPool(tenantId, pool));
+    sc = new DAGScheduler(await initPool(tenantId, pool));
     schedulers.set(tenantId, sc);
   }
   return sc;
@@ -85,6 +103,7 @@ export function resetAgentExecState(): void {
   for (const sc of schedulers.values()) sc.dispose();
   for (const wp of pools.values()) wp.stop();
   pools.clear();
+  poolInit.clear();
   schedulers.clear();
 }
 
@@ -103,7 +122,7 @@ export function registerAgentExecTools(server: McpServer, tenantPool: TenantPool
     async ({ tenantId }) => {
       try {
         const tid = tenantId ?? 'default';
-        const wp = getPool(tid, tenantPool);
+        const wp = await initPool(tid, tenantPool);
         return jsonText(wp.getStatus());
       } catch (err) {
         return text(err instanceof Error ? err.message : String(err));
@@ -124,7 +143,7 @@ export function registerAgentExecTools(server: McpServer, tenantPool: TenantPool
     async ({ agentId, input, tenantId }) => {
       try {
         const tid = tenantId ?? 'default';
-        const wp = getPool(tid, tenantPool);
+        const wp = await initPool(tid, tenantPool);
         const runId = await wp.enqueue(agentId, input);
         return text(runId);
       } catch (err) {
@@ -145,7 +164,7 @@ export function registerAgentExecTools(server: McpServer, tenantPool: TenantPool
     async ({ runId, tenantId }) => {
       try {
         const tid = tenantId ?? 'default';
-        const wp = getPool(tid, tenantPool);
+        const wp = await initPool(tid, tenantPool);
         await wp.cancel(runId);
         return text(`Cancelled: ${runId}`);
       } catch (err) {
@@ -166,7 +185,7 @@ export function registerAgentExecTools(server: McpServer, tenantPool: TenantPool
     async ({ runId, tenantId }) => {
       try {
         const tid = tenantId ?? 'default';
-        const wp = getPool(tid, tenantPool);
+        const wp = await initPool(tid, tenantPool);
         await wp.pause(runId);
         return text(`Paused: ${runId}`);
       } catch (err) {
@@ -187,7 +206,7 @@ export function registerAgentExecTools(server: McpServer, tenantPool: TenantPool
     async ({ runId, tenantId }) => {
       try {
         const tid = tenantId ?? 'default';
-        const wp = getPool(tid, tenantPool);
+        const wp = await initPool(tid, tenantPool);
         await wp.resume(runId);
         return text(`Resumed: ${runId}`);
       } catch (err) {
@@ -205,7 +224,7 @@ export function registerAgentExecTools(server: McpServer, tenantPool: TenantPool
     async ({ tenantId }) => {
       try {
         const tid = tenantId ?? 'default';
-        const wp = getPool(tid, tenantPool);
+        const wp = await initPool(tid, tenantPool);
         return jsonText({
           queued: wp.getQueue(),
           active: wp.getActiveJobs(),
@@ -232,7 +251,7 @@ export function registerAgentExecTools(server: McpServer, tenantPool: TenantPool
     async ({ workflow, tenantId }) => {
       try {
         const tid = tenantId ?? 'default';
-        const sc = getScheduler(tid, tenantPool);
+        const sc = await getScheduler(tid, tenantPool);
         const runId = await sc.run(workflow);
         return text(runId);
       } catch (err) {

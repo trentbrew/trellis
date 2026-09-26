@@ -91,7 +91,7 @@ describe('AgentHarness LLM + typed graph tools', () => {
       status: 'active',
       systemPrompt: 'Use list_entities and get_entity only.',
       tools: [toolIds.listEntities, toolIds.getEntity],
-      maxTokens: 5,
+      maxTurns: 5,
     });
   });
 

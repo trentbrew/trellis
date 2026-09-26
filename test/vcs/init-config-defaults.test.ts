@@ -1,5 +1,5 @@
 import { describe, test, expect, afterEach } from 'vitest';
-import { readFileSync, rmSync, mkdirSync, writeFileSync } from 'fs';
+import { readFileSync, rmSync, mkdirSync, writeFileSync, renameSync } from 'fs';
 import { join } from 'path';
 import { TrellisVcsEngine } from '../../src/engine.js';
 
@@ -8,6 +8,7 @@ const TEST_ROOT = '/tmp/trellis-init-config-defaults';
 describe('initRepo coordination defaults', () => {
   afterEach(() => {
     rmSync(TEST_ROOT, { recursive: true, force: true });
+    rmSync(`${TEST_ROOT}-renamed`, { recursive: true, force: true });
   });
 
   test('persists worktreeBind + git.syncOnPromote without requiring .git', async () => {
@@ -41,5 +42,30 @@ describe('initRepo coordination defaults', () => {
     );
     expect(config.lanes?.worktreeBind).toBe(true);
     expect(config.git?.syncOnPromote).toBe(true);
+  });
+
+  test('open() rebinds rootPath after the repo directory is renamed', async () => {
+    mkdirSync(TEST_ROOT, { recursive: true });
+    const engine = new TrellisVcsEngine({ rootPath: TEST_ROOT });
+    await engine.initRepo({ indexWorkspace: false });
+
+    const before = JSON.parse(
+      readFileSync(join(TEST_ROOT, '.trellis', 'config.json'), 'utf-8'),
+    );
+    expect(before.rootPath).toBe(TEST_ROOT);
+    expect(before.createdAt).toBeDefined();
+
+    const renamed = `${TEST_ROOT}-renamed`;
+    renameSync(TEST_ROOT, renamed);
+
+    const healed = new TrellisVcsEngine({ rootPath: renamed });
+    healed.open();
+
+    const after = JSON.parse(
+      readFileSync(join(renamed, '.trellis', 'config.json'), 'utf-8'),
+    );
+    expect(after.rootPath).toBe(renamed);
+    expect(after.createdAt).toBe(before.createdAt);
+    expect(after.ignorePatterns).toEqual(before.ignorePatterns);
   });
 });

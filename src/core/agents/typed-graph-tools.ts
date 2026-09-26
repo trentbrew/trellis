@@ -117,7 +117,7 @@ export async function registerTypedGraphTools(
     async (input) => {
       const { id } = input as GetEntityInput;
       const rec = kernel.getEntity(id);
-      if (!rec) return { success: false, error: `unknown entity: ${id}` };
+      if (!rec) return { success: false, output: null, error: `unknown entity: ${id}` };
       return { success: true, output: entityView(rec) };
     },
   );

@@ -1,0 +1,61 @@
+{
+  "timestamp": "2026-09-24T01:44:00Z",
+  "build": {
+    "pnpm_build": {
+      "success": false,
+      "error": "Broken pnpm-lock.yaml — Failed to parse suffix: Empty path after `file:` scheme"
+    },
+    "npm_run_build": {
+      "success": "partial",
+      "esbuild": true,
+      "tsc_declarations": false,
+      "tsc_errors": [
+        "src/core/agents/typed-graph-tools.ts(117,5): ToolResult output property required on failure branch",
+        "src/plan/origins.ts(222,16): Property 'path' does not exist on type 'never'",
+        "src/scaffold/profile.ts(246,24): preferences Partial<> incompatible with UserProfile"
+      ],
+      "cli_bundle": "dist/cli/index.js (478.1kb) — usable"
+    },
+    "esbuild_cli_fallback": {
+      "attempted": true,
+      "success": false,
+      "error": "No loader configured for .node files (@number0/iroh-darwin-arm64)"
+    }
+  },
+  "cli": {
+    "local": {
+      "command": "HOME=/Users/trentbrew node bin/trellis.mjs profile context --budget 200",
+      "exit_code": 0,
+      "output": "Name: trentbrew\nPreferences: verbosity=balanced, tone=peer"
+    },
+    "global_before_fix": {
+      "command": "HOME=/Users/trentbrew trellis profile context --budget 200",
+      "blocked_by_cursor_hook": true,
+      "note": "Bare trellis blocked in local checkout; global pointed to stale Sep-17 install without profile command"
+    },
+    "global_after_fix": {
+      "command": "HOME=/Users/trentbrew /Users/trentbrew/.bun/bin/trellis profile context --budget 200",
+      "exit_code": 0,
+      "output": "Name: trentbrew\nPreferences: verbosity=balanced, tone=peer"
+    }
+  },
+  "hook_injection": {
+    "command": "HOME=/Users/trentbrew TRELLIS_PROFILE_CONTEXT_ARM=session node -e buildSessionStartContext(...)",
+    "before_global_fix": {
+      "hasProfileSection": false,
+      "errors": ["error: unknown command 'profile' (x2)"]
+    },
+    "after_global_fix": {
+      "hasProfileSection": true,
+      "sample": "\n\nName: trentbrew\nPreferences: verbosity=balanced, tone=peer\n"
+    }
+  },
+  "global_fix": {
+    "action": "bun install -g /Users/trentbrew/TURTLE/Projects/TRELLIS/trellis-node",
+    "result": "Global trellis symlinked to local repo bin/trellis.mjs",
+    "global_path": "/Users/trentbrew/.bun/bin/trellis",
+    "linked_to": "/Users/trentbrew/TURTLE/Projects/TRELLIS/trellis-node/bin/trellis.mjs",
+    "npm_link_global": "failed — npm error ELINKGLOBAL (use --local)",
+    "pnpm_link_global": "failed — pnpm link has no --global flag"
+  }
+}

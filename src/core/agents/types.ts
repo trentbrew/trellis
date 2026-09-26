@@ -21,6 +21,8 @@ import type { ContextManager } from '../../context/types.js';
 export interface AgentDef {
   id: string;
   name: string;
+  /** Pipeline role (core:Agent.role — required when schema middleware is active). */
+  role?: string;
   description?: string;
   model?: string;
   provider?: string;
@@ -29,7 +31,10 @@ export interface AgentDef {
   capabilities: string[];
   tools: string[];
   temperature?: number;
+  /** Per-completion token cap, passed to the provider as `max_tokens`. */
   maxTokens?: number;
+  /** Upper bound on model turns in `runAgentTask` (default 10). */
+  maxTurns?: number;
 }
 
 // ---------------------------------------------------------------------------
