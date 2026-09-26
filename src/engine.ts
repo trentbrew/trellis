@@ -1584,6 +1584,8 @@ for (const event of scanEvents) {
     laneOps?: VcsOp[];
     /** When true, sync even if git.syncOnPromote is false. */
     force?: boolean;
+    /** Commit only these repo-relative paths; omit to commit the whole tree. */
+    paths?: string[];
   }): Promise<GitSyncResult> {
     if (!laneWorktreeMod.isGitRepo(this.config.rootPath)) {
       return { committed: false, pushed: false, filesMaterialized: 0 };
@@ -1619,6 +1621,7 @@ for (const event of scanEvents) {
       remote: this.config.git?.remote ?? 'origin',
       message,
       push: opts?.push,
+      paths: opts?.paths,
     });
 
     if (sync.committed && sync.commitHash) {
@@ -1653,7 +1656,9 @@ for (const event of scanEvents) {
    * 1. Auto-commit the lane worktree (the agent's actual bytes) onto its
    *    `lane/<shortId>` branch.
    * 2. Merge that branch into the integration head of the main worktree.
-   * 3. Root sync: commit any remaining root dirt + push when configured.
+   * 3. Root sync: commit the lane's own paths still dirty in the root (lanes
+   *    without a worktree edit there) + push when configured. Other root dirt
+   *    belongs to other agents or the human and is never swept in.
    *
    * A git merge conflict fails the delivery — git is the authority, so a
    * conflicted merge cannot be papered over with a synthesized file state.
@@ -1705,8 +1710,12 @@ for (const event of scanEvents) {
       }
     }
 
-    // Root delivery: commit any remaining dirty root bytes + push.
-    return this.syncGitIntegration({ message, force: true });
+    const lanePaths = opts.laneOps.flatMap((op) =>
+      [op.vcs?.filePath, op.vcs?.oldFilePath].filter(
+        (path): path is string => typeof path === 'string' && path.length > 0,
+      ),
+    );
+    return this.syncGitIntegration({ message, force: true, paths: lanePaths });
   }
 
   /**
@@ -2743,10 +2752,12 @@ for (const event of scanEvents) {
         const message = issue?.title
           ? `${id}: ${issue.title}`
           : `${id}: issue close`;
+        // Promote already committed the lane's paths; only push here.
         const gitSync = await this.syncGitIntegration({
           message,
           push: true,
           force: true,
+          paths: [],
         });
         return { ...result, gitSync, promoteResult };
       }
