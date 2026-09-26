@@ -451,8 +451,9 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
     'create_collection_record',
     {
       description:
-        'Create a Playground CollectionRecord row (shows in Collections UI). ' +
-        'Sets collectionId to collectionMeta:<slug> so recordBelongsToCollection matches. ' +
+        'Create a CollectionRecord row in a user-defined collection (ADR 0045). ' +
+        'Sets collectionId to collectionMeta:<slug>; the kernel validates the row against ' +
+        "that collection's schema (…/collections/<slug>/Record) when one is registered. " +
         'Optionally ensureCollection to create CollectionMeta when the collection is missing.',
       inputSchema: {
         collectionSlug: z

@@ -196,3 +196,31 @@ validation.** As shipped, per-collection validation enforces nothing beyond `tit
    is accepted as a clear. Covered by `test/schema/collection-record-validation.test.ts`.
 
 Minor: there is no `GET /ontologies/:id`. An empty `PATCH` was the only way to read a registered schema back.
+
+## Addendum — Phase 2: kernel promotion (2026-09-26)
+
+Done. The spike's defects are fixed (`1a618f6`, `e8b2f8d`, plus `aa65534` for a regression the zod fix
+exposed: array values were rejected as `multi_select`). User collections are kernel types.
+
+- **`core/ontology/collections.ts`** (zod-free, loaded with `CORE_ONTOLOGY`) holds three system-tier schemas:
+  `trellis:CollectionMeta`, `trellis:CollectionRecord` and `trellis:CollectionField`. It also holds the shared
+  helpers: `collectionMetaId`, `collectionSlug`, `collectionSchemaId`, `parseCollectionOptions`,
+  `COLLECTION_FIELD_TYPES`, `RESERVED_RECORD_KEYS` and `compileCollectionSchema`. The schema middleware and
+  the MCP tool now use these helpers instead of private copies.
+- **`trellis/schema`** exports typed `defineType` handles for the same three types.
+  `test/schema/collections.test.ts` asserts they produce exactly the kernel's schemas.
+- **`@id`s are `trellis:*`, not `core:*`.** Every other system type uses `core:`. These use `trellis:`
+  because that is what `defineType` emits and what clients already register (the FINANCE spike), so
+  nothing registered today is shadowed or orphaned.
+- **Open question 1 is decided: fields are `CollectionField` entities**, one per column, not JSON on the meta.
+  That matches FINANCE and turtleOS ADR-0018's preference (queryable, per-field history).
+- **Open question 2 is decided: clients register the per-collection schema**, compiled by the shared
+  `compileCollectionSchema`, so every client produces the same schema. Re-registration upserts.
+- **Option membership is not enforced by the kernel.** A picker adds an option and selects it in one
+  gesture, so the row can land before the recompiled schema. Values are still type-checked.
+- The glossary's "demo-only" entries now point to the new **User collections** section.
+
+Remaining phases: 3 (migrate fractal-playground and realtime-app, whose own copies live under
+`DEMO_NS`, to these types with option ids), 4 (`core:Tag`) and 5 (CMS). FINANCE adopts the kernel types
+when a release carries them: its `Field` type becomes `CollectionField`, and its compiler calls
+`compileCollectionSchema`.

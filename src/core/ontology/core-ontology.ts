@@ -9,6 +9,7 @@
  */
 
 import type { SchemaDefinition, PropertyValueSpecification } from './types.js';
+import { COLLECTION_SCHEMAS } from './collections.js';
 
 const VERSION = '1.0.0';
 type PVS = PropertyValueSpecification;
@@ -735,6 +736,7 @@ export const CORE_ONTOLOGY: SchemaDefinition[] = [
   handoff,
   pipeline,
   pipelinePhase,
+  ...COLLECTION_SCHEMAS,
 ];
 
 /**

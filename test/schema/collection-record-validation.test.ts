@@ -11,7 +11,7 @@ import { fileURLToPath } from 'url';
 import type { z } from 'zod';
 import { TrellisDb } from '../../src/client/sdk.js';
 import { defaultLocalConfig } from '../../src/client/config.js';
-import { defineType } from '../../src/schema/define.js';
+import { compileCollectionSchema, defineType } from '../../src/schema/index.js';
 import { startServer } from '../../src/server/server.js';
 import type { TrellisHttpServer } from '../../src/server/server-shared.js';
 import { TenantPool } from '../../src/server/tenancy.js';
@@ -33,26 +33,13 @@ beforeAll(async () => {
   server = await startServer({ port: 0, config: defaultLocalConfig(DB_PATH), pool });
   client = new TrellisDb({ url: `http://127.0.0.1:${server.port}` });
 
-  const CollectionRecord = defineType(
-    'CollectionRecord',
-    { collectionId: foreign.string(), title: foreign.string() },
-    { title: 'title', extends: 'core:Record' },
+  // CollectionMeta/CollectionRecord ship with the kernel (system tier): nothing to
+  // register but this collection's own schema, compiled from its field rows.
+  await client.registerType(
+    compileCollectionSchema({ id: COLLECTION_ID, title: 'Reading list' }, [
+      { collection: COLLECTION_ID, key: 'pages', label: 'Pages', valueType: 'number', order: 1 },
+    ]),
   );
-  const PerCollection = defineType(
-    'CollectionRecord',
-    {
-      collectionId: foreign.string(),
-      title: foreign.string(),
-      pages: foreign.number().optional(),
-    },
-    { title: 'title', extends: 'core:Record' },
-  );
-  await client.registerType(CollectionRecord);
-  await client.registerType({
-    ...PerCollection.definition,
-    '@id': `trellis:user/collections/${SLUG}/Record`,
-    label: 'Reading list records',
-  });
 });
 
 afterAll(async () => {

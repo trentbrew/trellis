@@ -15,7 +15,7 @@ these; they do not replace them.
 | **Record** | `core:Record` | Data row with `title`, `description`, `status`. Base for most user schemas. |
 | **Document** | `core:Document` | Rich content (`content`, `mimeType`, `fileUrl`). |
 | **Event** | `core:Event` | Time-bound row (`startDate`, `endDate`, …). |
-| **Collection** | `core:Collection` | **Container metadata** in the graph: title, icon, and a `recordType` relation pointing at which Record subtype lives in the bucket. Not the same as a CMS table or a list API. |
+| **Collection** | `core:Collection` | **Folder**: optional grouping of entities (including user collections) in the graph. Not a table — that's **User collection** below (ADR 0045). Its `schema`/`recordType` fields are deprecated for table use. |
 | **Tag** | `core:Tag` | Classification entity (kernel sense). |
 
 **Hierarchy (simplified):** `Thing` → `Record` → (`Document` \| `Event` \| *user types*).
@@ -40,6 +40,18 @@ Defined in the same `core-ontology.ts`.
 | **DecisionTrace** | `trellis:DecisionTrace` | Decision recorded during an agent run. Links to `belongsToRun` (AgentRun) and `madeBy` (Agent). |
 | **DAGRun** | `trellis:DAGRun` | DAG workflow run tracking step-level state (workflowId, status, steps JSON). |
 | **WorkerPool Task** | `trellis:WorkerPoolTask` | Queued or active task in a WorkerPool (agentId, runId, status, timestamps). |
+
+## User collections (`tier: system`, ADR 0045)
+
+"A table a person makes at runtime." Defined in `core/ontology/collections.ts`, loaded with
+`CORE_ONTOLOGY`; typed handles and helpers in `trellis/schema`.
+
+| Term | `@id` | Meaning |
+|------|-------|---------|
+| **User collection** | `trellis:CollectionMeta` | A table's header (`title`, `slug`, icon, color, description). Id is `collectionMeta:<slug>` — explicit, case-sensitive. |
+| **Collection field** | `trellis:CollectionField` | One column: `collection`, stable `key` (row attribute, never renamed), `label`, `valueType`, `options` (JSON `{ id, label, color? }[]`), `order`. |
+| **Collection record** | `trellis:CollectionRecord` | One row of any user collection, scoped by `collectionId`. Rows store field keys and option **ids**; labels are derived. |
+| **Collection schema** | `trellis:user/collections/<slug>/Record` | Per-collection row schema compiled by `compileCollectionSchema`; the schema middleware resolves it from `collectionId` to validate rows (creates and updates). |
 
 ## User / app layer
 
@@ -79,8 +91,7 @@ Names that must not be mistaken for kernel primitives.
 
 | Term | What it is |
 |------|------------|
-| **CollectionMeta** | User-defined table header (name, slug, icon, color, description). `subClassOf: core:Record`. |
-| **CollectionRecord** | Row in a collection; scoped by `collectionId`. Fractal wedge + platform status read this type. |
+| **CollectionMeta** / **CollectionRecord** | *(promoted)* — now kernel system types; see **User collections** (ADR 0045). The demos still define their own copies under `DEMO_NS` until they migrate (ADR 0045 phase 3). |
 | **MyCustomEntity** | *(removed)* — superseded by **CollectionRecord**. |
 | **MyCustomEntityTag** | *(removed)* — tag join demo retired with collections v1. |
 | **Thing** (fractal UI) | Representation contract: same graph identity, many shells at different **vantages**. Not a graph `type` string. |
@@ -92,8 +103,9 @@ Names that must not be mistaken for kernel primitives.
 |------|----------------|-------------|
 | **framework** | JS UI library | **UI framework** (React, Vue, Svelte) — never a graph type |
 | **framework** | Old demo entity type | **MyCustomEntity** (removed) |
-| **collection** | Kernel container type | **core:Collection** |
-| **collection** | User-visible table | **CMS collection** or **typed list** |
+| **collection** | Folder / grouping | **core:Collection** |
+| **collection** | Table a person made | **User collection** (`CollectionMeta`) |
+| **collection** | Published content table | **CMS collection** |
 | **collection** | `collection.ts` helper | **entity repository** (legacy) |
 | **thing** | Graph root type | **core:Thing** |
 | **thing** | Fractal widget | **Thing shell** / **vantage render** |
@@ -103,7 +115,9 @@ Names that must not be mistaken for kernel primitives.
 ```
 defineType('Invoice', …)     →  Type (schema)
 registerType + create        →  Entity instances
-cms.collection('invoice')    →  Collection (product): named table + publish rules
+CollectionMeta + CollectionField  →  User collection: a table a person makes (ADR 0045)
+CollectionRecord             →  Its rows (one type, scoped by collectionId)
+cms.collection('invoice')    →  CMS collection: named table + publish rules (converges later)
 core:Collection entity       →  Optional grouping/folder in the graph
 entitiesStore(client, Type)  →  Live list (SDK), not a separate ontology primitive
 ```

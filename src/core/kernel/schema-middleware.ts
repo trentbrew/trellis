@@ -17,6 +17,7 @@ import type {
 } from '../ontology/types.js';
 import type { Atom, Fact } from '../store/eav-store.js';
 import { buildOntologyIndex } from './boot-middleware.js';
+import { collectionSlug, isCollectionSchemaId } from '../ontology/collections.js';
 
 export interface SchemaMiddlewareConfig {
   /** Live ontology index — refreshed per op so schema edits apply immediately. */
@@ -129,20 +130,12 @@ export function createSchemaMiddleware(
   };
 }
 
-function collectionSlugFromCollectionId(collectionId: string): string | null {
-  const prefix = 'collectionMeta:';
-  if (!collectionId.startsWith(prefix)) return null;
-  const slug = collectionId.slice(prefix.length).trim();
-  return slug || null;
-}
-
 function findPerCollectionRecordSchema(
   slug: string,
   ontologies: Map<string, SchemaDefinition>,
 ): SchemaDefinition | undefined {
-  const suffix = `/collections/${slug}/Record`;
   for (const schema of ontologies.values()) {
-    if (schema['@id'].endsWith(suffix)) return schema;
+    if (isCollectionSchemaId(schema['@id'], slug)) return schema;
   }
   return undefined;
 }
@@ -162,7 +155,7 @@ function resolveSchemaForEntity(
       (fact) => fact.e === entityId && fact.a === 'collectionId',
     );
     const slug = collectionIdFact
-      ? collectionSlugFromCollectionId(String(collectionIdFact.v))
+      ? collectionSlug(String(collectionIdFact.v))
       : null;
     if (slug) {
       const perCollection = findPerCollectionRecordSchema(slug, ontologies);
