@@ -156,3 +156,34 @@ its status: it's labelled a demo when it's the model the kernel actually enforce
    workspace yet.
 5. **`laneId` on `CollectionRecord`.** Is it a data field or a VCS concern? It probably belongs to the lane layer, not
    the row.
+
+## Addendum — Phase 1 spike results (2026-09-26)
+
+The FINANCE spike is done: `client-svelte` `a46f593` (storage) and `8ebdf25` (UI races). User databases now
+store as `CollectionMeta` (explicit `collectionMeta:<uuid>` id) + `Field` entities, uniform `CollectionRecord`
+rows scoped by `collectionId`, and a per-collection schema registered as
+`trellis:user/collections/<uuid>/Record`. Options are `{ id, label, color }`, and rows store the id (verified in
+the graph: `f_cqimp7: "o_gw3820"`). The exit scenario passed live: create, rename, add properties, inline
+options, pick an existing option, number field, board grouped by option. The browse layer changed only by two
+generic manifest fields, `scope` and `typeKey`. Nothing above the compiler knows the storage moved.
+
+The spike also found three kernel defects. **Phase 2 must fix them before relying on per-collection
+validation.** As shipped, per-collection validation enforces nothing beyond `title`.
+
+1. **`defineType` loses every Zod type when the app has its own Zod.** `zodToSpec` (`src/schema/define.ts`)
+   uses `instanceof z.ZodNumber` and similar checks against the Zod bundled into `dist/`. An app's `zod` is a
+   different copy, so every non-title field registers as `valueType: json`, which is never type-checked.
+   Observed in the running kernel: the collection schema's `f_… : json`; also `trellis:Transaction.amount: json`
+   and `trellis:Task.status: json` (enum options lost). Validation is effectively off for **all**
+   app-defined types, not only collections. Fix: switch on `_def.typeName` (`ZodFirstPartyTypeKind`), which
+   works across copies, or re-export the bundled `z` from `trellis/schema`.
+2. **Remote `registerType` never updates.** `sdk.ts` swallows `409` in remote mode, while local mode calls
+   `updateOntology`. The server already has `PATCH /ontologies/:id` (`server.ts:460`). Observed: the schema
+   kept its first label ("Untitled database records") after the collection was renamed. Fix: on 409, `PATCH`.
+   This mostly answers open question 2: the per-collection schema can stay client-registered once
+   re-registration works.
+3. **The update-only validation gap is unconfirmed either way.** A string written to a number field was
+   accepted on create *and* update. Defect 1 fully explains that, so the `type`-fact gap in
+   `schema-middleware.ts:47-59` needs a re-test after defect 1 is fixed.
+
+Minor: there is no `GET /ontologies/:id`. An empty `PATCH` was the only way to read a registered schema back.
