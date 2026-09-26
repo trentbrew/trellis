@@ -23,6 +23,11 @@ export interface SchemaMiddlewareConfig {
   getOntologies: () => Map<string, SchemaDefinition>;
   /** Whether to block on validation errors (default: true) */
   strict?: boolean;
+  /**
+   * Stored facts for an entity. Lets update-only ops — which carry no `type` fact —
+   * be validated against the entity's schema. Without it they are not validated.
+   */
+  getEntityFacts?: (entityId: string) => Fact[];
 }
 
 export function createSchemaMiddleware(
@@ -79,6 +84,37 @@ export function createSchemaMiddleware(
           );
           if (!hasValue) {
             errors.push(`Missing required field: ${fieldSpec.name} on entity ${entityId}`);
+          }
+        }
+      }
+
+      // Update-only ops: entities touched without a `type` fact in this op. Resolve the
+      // schema from stored facts (the op's own facts win, e.g. a new `collectionId`),
+      // then type-check the changed values. Required fields aren't re-checked: an
+      // update carries only what changed. `''` is how clients clear a value.
+      if (config.getEntityFacts) {
+        const touched = new Set(
+          op.facts.map((fact) => fact.e).filter((entityId) => !entities.has(entityId)),
+        );
+        for (const entityId of touched) {
+          const stored = config.getEntityFacts(entityId);
+          const typeFact = stored.find((fact) => fact.a === 'type');
+          if (!typeFact) continue;
+          const changed = new Set(
+            op.facts.filter((fact) => fact.e === entityId).map((fact) => fact.a),
+          );
+          const merged = [
+            ...stored.filter((fact) => !changed.has(fact.a)),
+            ...op.facts.filter((fact) => fact.e === entityId),
+          ];
+          const schema = resolveSchemaForEntity(String(typeFact.v), entityId, merged, ontologies);
+          if (!schema) continue;
+          for (const fact of op.facts) {
+            if (fact.e !== entityId || fact.v === '') continue;
+            const fieldSpec = schema.fields.find((field) => field.name === fact.a);
+            if (!fieldSpec) continue;
+            const validationError = validateValue(fact.a, fact.v, fieldSpec);
+            if (validationError) errors.push(validationError);
           }
         }
       }

@@ -188,5 +188,11 @@ validation.** As shipped, per-collection validation enforces nothing beyond `tit
 3. **The update-only validation gap is unconfirmed either way.** A string written to a number field was
    accepted on create *and* update. Defect 1 fully explains that, so the `type`-fact gap in
    `schema-middleware.ts:47-59` needs a re-test after defect 1 is fixed.
+   **Confirmed and fixed (2026-09-26):** with defect 1 fixed, create rejected a bad value but `update()`
+   accepted it. The schema middleware now takes an optional `getEntityFacts` (wired in
+   `attachStandardMiddleware`). For entities an op touches without a `type` fact, it resolves the schema from
+   stored facts, with the op's facts winning (so a changed `collectionId` validates against its new
+   collection), and type-checks the changed values. Required fields aren't re-checked on updates, and `''`
+   is accepted as a clear. Covered by `test/schema/collection-record-validation.test.ts`.
 
 Minor: there is no `GET /ontologies/:id`. An empty `PATCH` was the only way to read a registered schema back.
