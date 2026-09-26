@@ -333,9 +333,16 @@ function zodToSpec(
     selectOptions = enumValues(base);
   } else if (kind === 'ZodArray') {
     const el = unwrap((base._def as { type: z.ZodTypeAny }).type);
-    valueType = 'multi_select';
-    if (zodKind(el) === 'ZodEnum') {
+    const elKind = zodKind(el);
+    // Only string-like arrays are multi-selects (validated per element as strings);
+    // arrays of numbers/objects stay opaque json.
+    if (elKind === 'ZodEnum') {
+      valueType = 'multi_select';
       selectOptions = enumValues(el);
+    } else if (elKind === 'ZodString') {
+      valueType = 'multi_select';
+    } else {
+      valueType = 'json';
     }
   } else {
     valueType = 'json';

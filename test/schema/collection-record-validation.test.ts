@@ -93,6 +93,22 @@ describe('CollectionRecord per-collection validation', () => {
     await expect(client.update(id, { pages: '' })).resolves.toBeUndefined();
   });
 
+  it('accepts multi-select arrays and checks each element', async () => {
+    const Tagged = defineType(
+      'TaggedThing',
+      {
+        title: foreign.string(),
+        tags: foreign.array(foreign.enum(['bug', 'feature'])).optional(),
+      },
+      { title: 'title' },
+    );
+    await client.registerType(Tagged);
+    const id = await client.create('TaggedThing', { title: 'ok', tags: ['bug', 'feature'] });
+    await expect(client.update(id, { tags: ['feature'] })).resolves.toBeUndefined();
+    await expect(client.update(id, { tags: ['nope'] })).rejects.toThrow(/tags/);
+    await expect(client.create('TaggedThing', { title: 'bad', tags: ['bug', 42] })).rejects.toThrow(/tags/);
+  });
+
   it('stays open-world for attributes the schema does not declare', async () => {
     const id = await client.create('CollectionRecord', { collectionId: COLLECTION_ID, title: 'Solaris' });
     await expect(client.update(id, { f_unknown: 'anything' })).resolves.toBeUndefined();
