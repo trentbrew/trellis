@@ -9,7 +9,8 @@
  * @module trellis/forms/core
  */
 
-import { z, type ZodTypeAny } from 'zod';
+import type { ZodTypeAny } from 'zod';
+import { isZodError } from '../../schema/zod-kind.js';
 import type { FormFieldConfig } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -24,8 +25,9 @@ async function validateWithZod(
     await fieldSchema.parseAsync(value);
     return null;
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      return err.errors[0]?.message ?? 'Invalid value';
+    // Not `instanceof z.ZodError`: the field schema may come from the app's zod copy.
+    if (isZodError(err)) {
+      return err.issues[0]?.message ?? 'Invalid value';
     }
     return 'Validation failed';
   }
