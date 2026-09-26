@@ -25,6 +25,7 @@ import type {
   DatalogRule,
 } from './types.js';
 import { isVariable, isLiteral } from './types.js';
+import { loadStoreRules } from './rules.js';
 
 // ---------------------------------------------------------------------------
 // Result type
@@ -44,6 +45,10 @@ export class QueryEngine {
   private rules: Map<string, DatalogRule[]> = new Map();
   /** Rule relations computed during the current execute() (store is fixed for a query). */
   private relations: Map<string, Map<string, Atom[]>> = new Map();
+  /** Rules stored as graph entities (ADR 0047 §2), loaded per execute(). */
+  private storeRules: Map<string, DatalogRule[]> = new Map();
+  /** Stored rules that failed to parse, by rule name: reported when a query uses them. */
+  private invalidStoreRules: Map<string, string> = new Map();
   /** Relations of the rule component being solved right now (read by recursive calls). */
   private solving: Map<string, Map<string, Atom[]>> | null = null;
   /** Semi-naive: the one rule occurrence that reads last round's new tuples. */
@@ -68,6 +73,14 @@ export class QueryEngine {
   execute(query: Query): QueryResult {
     const start = performance.now();
     this.relations = new Map();
+    const stored = loadStoreRules(this.store);
+    this.storeRules = new Map();
+    for (const { rule } of stored.rules) {
+      const list = this.storeRules.get(rule.name) ?? [];
+      list.push(rule);
+      this.storeRules.set(rule.name, list);
+    }
+    this.invalidStoreRules = stored.invalid;
 
     // Evaluate patterns
     let results = this._evaluatePatterns(query.where, [new Map()]);
@@ -290,6 +303,11 @@ export class QueryEngine {
     return out;
   }
 
+  /** Clauses of a rule: registered in code plus stored as `Rule` entities. */
+  private _rulesFor(name: string): DatalogRule[] {
+    return [...(this.rules.get(name) ?? []), ...(this.storeRules.get(name) ?? [])];
+  }
+
   /** Positive rule-application patterns in a body (including inside `or`). */
   private _positiveSites(patterns: Pattern[], out: RuleApplication[] = []): RuleApplication[] {
     for (const pat of patterns) {
@@ -307,7 +325,7 @@ export class QueryEngine {
       const n = stack.pop()!;
       if (seen.has(n)) continue;
       seen.add(n);
-      for (const r of this.rules.get(n) ?? []) for (const d of this._ruleDeps(r.body).pos) stack.push(d);
+      for (const r of this._rulesFor(n)) for (const d of this._ruleDeps(r.body).pos) stack.push(d);
     }
     return seen;
   }
@@ -325,11 +343,13 @@ export class QueryEngine {
     if (this.solving?.has(name)) return this.solving.get(name)!;
     const cached = this.relations.get(name);
     if (cached) return cached;
-    if (!this.rules.has(name)) return new Map();
+    const invalid = this.invalidStoreRules.get(name);
+    if (invalid) throw new Error(`rule "${name}" is stored but invalid — ${invalid}`);
+    if (!this._rulesFor(name).length) return new Map();
 
     const component = this._positiveClosure(name);
     for (const rule of component) {
-      for (const def of this.rules.get(rule) ?? []) {
+      for (const def of this._rulesFor(rule)) {
         for (const neg of this._ruleDeps(def.body).neg) {
           if (component.has(neg) || [...this._positiveClosure(neg)].some((r) => component.has(r))) {
             throw new Error(`rule "${rule}" negates "${neg}", which depends on "${rule}" — unstratified negation is not supported`);
@@ -372,11 +392,11 @@ export class QueryEngine {
     try {
       // Round 0: every body against the (empty or cached) relations.
       let delta = fresh();
-      for (const rule of component) for (const def of this.rules.get(rule) ?? []) derive(rule, def, delta);
+      for (const rule of component) for (const def of this._rulesFor(rule)) derive(rule, def, delta);
       merge(delta);
       // Semi-naive rounds: each recursive occurrence reads only last round's
       // new tuples; any new derivation must use at least one of them.
-      const sites = [...component].flatMap((rule) => (this.rules.get(rule) ?? []).flatMap((def) =>
+      const sites = [...component].flatMap((rule) => this._rulesFor(rule).flatMap((def) =>
         this._positiveSites(def.body).filter((site) => component.has(site.name)).map((site) => ({ rule, def, site }))))
       while ([...delta.values()].some((rel) => rel.size)) {
         const next = fresh();

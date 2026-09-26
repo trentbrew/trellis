@@ -10,6 +10,7 @@
  * @module trellis/core
  */
 
+import { createRuleMiddleware } from './rule-middleware.js';
 import { EAVStore } from '../store/eav-store.js';
 import type { Fact, FactMeta, Link, Atom } from '../store/eav-store.js';
 import { hashKernelOp, OP_PREIMAGE_VERSION } from '../persist/canonical-op.js';
@@ -100,7 +101,8 @@ export class TrellisKernel {
     this.store = new EAVStore();
     this.backend = config.backend;
     this.agentId = config.agentId;
-    this.middleware = config.middleware ?? [];
+    // Rule validation is core semantics (ADR 0047 §2), not an opt-in.
+    this.middleware = [createRuleMiddleware({ getStore: () => this.store }), ...(config.middleware ?? [])];
     this.snapshotThreshold = config.snapshotThreshold ?? 0;
     this.autoReplay = config.autoReplay ?? true;
     this.defaultProvenance = config.provenance ?? {
