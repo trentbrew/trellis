@@ -189,6 +189,16 @@ function validateValue(
 
   const actualType = typeof value;
 
+  // A multi-select value arrives as one fact holding an array (createEntity doesn't
+  // split arrays); validate each element as the option string it is.
+  if (spec.valueType === 'multi_select' && Array.isArray(value)) {
+    for (const element of value as unknown[]) {
+      const error = validateValue(fieldName, element as Atom, spec);
+      if (error) return error;
+    }
+    return null;
+  }
+
   switch (spec.valueType) {
     case 'title':
     case 'rich_text':

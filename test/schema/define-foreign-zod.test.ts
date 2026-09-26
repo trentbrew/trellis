@@ -23,6 +23,8 @@ function specs(zod: typeof z) {
       read: zod.boolean().default(false),
       status: zod.enum(['todo', 'done']),
       tags: zod.array(zod.enum(['a', 'b'])).optional(),
+      labels: zod.array(zod.string()).optional(),
+      scores: zod.array(zod.number()).optional(),
       meta: zod.record(zod.string()).optional(),
     },
     { title: 'title' },
@@ -49,6 +51,8 @@ describe('defineType with a foreign zod copy', () => {
     expect(fields.read?.valueType).toBe('checkbox');
     expect(fields.status).toMatchObject({ valueType: 'select', selectOptions: ['todo', 'done'] });
     expect(fields.tags).toMatchObject({ valueType: 'multi_select', selectOptions: ['a', 'b'] });
+    expect(fields.labels?.valueType).toBe('multi_select');
+    expect(fields.scores?.valueType).toBe('json');
     expect(fields.meta?.valueType).toBe('json');
   });
 
