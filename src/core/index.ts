@@ -126,11 +126,20 @@ export type {
 // Agent system
 export { AgentHarness } from './agents/index.js';
 export {
+  configureAgentHarness,
+  ensureReaderAgent,
+  isLlmConfigured,
+  resolveLlmOptionsFromEnv,
+  DEFAULT_READER_AGENT_ID,
   registerTypedGraphTools,
   listEntitiesFiltered,
   entityView,
   LIST_ENTITIES_SCHEMA,
   GET_ENTITY_SCHEMA,
+} from './agents/index.js';
+export type {
+  ConfiguredHarness,
+  ConfigureAgentHarnessOptions,
 } from './agents/index.js';
 export type {
   AgentDef,

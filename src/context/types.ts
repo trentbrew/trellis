@@ -66,6 +66,18 @@ export interface ContextPackWaiting {
   preview: string;
 }
 
+export interface ContextPackUser {
+  name: string;
+  verbosity: string;
+  tone: string;
+  style?: string;
+  learnings: Array<{
+    id: string;
+    fact: string;
+    category?: string;
+  }>;
+}
+
 export interface ContextPack {
   version: 1;
   vantage: ContextVantage;
@@ -84,6 +96,7 @@ export interface ContextPack {
   decisions: ContextPackRef[];
   links: ContextPackRef[];
   policyRefs: ContextPackRef[];
+  user: ContextPackUser | null;
 }
 
 export interface ContextPackOptions {

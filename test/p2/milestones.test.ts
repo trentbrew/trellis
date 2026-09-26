@@ -1,27 +1,30 @@
 import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { TrellisVcsEngine } from '../../src/engine.js';
 import { mkdirSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
 import { join } from 'path';
-
-const TEST_ROOT = '/tmp/trellis-p2-milestone-test';
 
 describe('Milestones', () => {
   let engine: TrellisVcsEngine;
+  let testRoot: string;
 
   beforeEach(async () => {
-    rmSync(TEST_ROOT, { recursive: true, force: true });
-    mkdirSync(TEST_ROOT, { recursive: true });
+    testRoot = join(
+      tmpdir(),
+      `trellis-p2-milestone-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    );
+    mkdirSync(testRoot, { recursive: true });
 
     // Create some files so the engine has ops to work with
-    writeFileSync(join(TEST_ROOT, 'a.ts'), 'export const a = 1;');
-    writeFileSync(join(TEST_ROOT, 'b.ts'), 'export const b = 2;');
+    writeFileSync(join(testRoot, 'a.ts'), 'export const a = 1;');
+    writeFileSync(join(testRoot, 'b.ts'), 'export const b = 2;');
 
-    engine = new TrellisVcsEngine({ rootPath: TEST_ROOT });
+    engine = new TrellisVcsEngine({ rootPath: testRoot });
     await engine.initRepo({ indexWorkspace: true });
   });
 
   afterEach(() => {
-    rmSync(TEST_ROOT, { recursive: true, force: true });
+    rmSync(testRoot, { recursive: true, force: true });
   });
 
   test('createMilestone creates a milestone op', async () => {
@@ -74,7 +77,7 @@ describe('Milestones', () => {
   test('milestones persist across open()', async () => {
     await engine.createMilestone('persisted');
 
-    const engine2 = new TrellisVcsEngine({ rootPath: TEST_ROOT });
+    const engine2 = new TrellisVcsEngine({ rootPath: testRoot });
     engine2.open();
 
     const milestones = engine2.listMilestones();

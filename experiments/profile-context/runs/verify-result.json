@@ -1,0 +1,48 @@
+{
+  "ok": true,
+  "checks": [
+    {
+      "name": "formatter_nonempty",
+      "pass": true,
+      "detail": 141
+    },
+    {
+      "name": "formatter_has_prefs",
+      "pass": true
+    },
+    {
+      "name": "formatter_has_learning",
+      "pass": true
+    },
+    {
+      "name": "arm_default_off",
+      "pass": true
+    },
+    {
+      "name": "session_injects",
+      "pass": true
+    },
+    {
+      "name": "off_no_inject",
+      "pass": true
+    },
+    {
+      "name": "l1_session_rubric",
+      "pass": true,
+      "detail": "15/15"
+    },
+    {
+      "name": "l1_off_lower",
+      "pass": true,
+      "detail": "8 vs 15"
+    },
+    {
+      "name": "l1_session_includes_profile",
+      "pass": true
+    },
+    {
+      "name": "l1_off_omits_profile",
+      "pass": true
+    }
+  ]
+}

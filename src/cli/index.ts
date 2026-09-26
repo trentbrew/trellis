@@ -32,8 +32,17 @@ import {
   builtinOntologies,
 } from '../core/ontology/index.js';
 import { buildRAGContext } from '../embeddings/auto-embed.js';
-import { buildView, STATUS_ORDER, type IssueGroup } from './views.js';
-import type { IssueInfo } from '../vcs/issue.js';
+import {
+  formatCriterionStatus as fmtCriterionStatus,
+  formatEntity,
+  formatEntityList,
+  formatFactList,
+  formatIssue,
+  formatIssueList,
+  formatLinkList,
+  formatPriority as fmtPriority,
+  formatQueryResult,
+} from '../format/index.js';
 import type { IdentityConfig } from '../identity/identity.js';
 import { VectorStore } from '../embeddings/store.js';
 import { embed } from '../embeddings/model.js';
@@ -104,6 +113,10 @@ import { registerPublishCommands } from './publish-cli.js';
 import { registerOpsCommands } from './ops-cli.js';
 import { registerWorkflowCommands } from './workflow-cli.js';
 import { registerPipelineCommands } from './pipeline-cli.js';
+import { registerAgentCommands } from './agent-cli.js';
+import { registerProfileCommands } from './profile-cli.js';
+import { registerEvalCommands } from './eval-cli.js';
+import { registerPlanCommands } from './plan-cli.js';
 import { registerSandboxCommands } from './sandbox-cli.js';
 
 export type IdeType =
@@ -2043,50 +2056,9 @@ function printClusterSummary(c: {
 // trellis issue
 // ---------------------------------------------------------------------------
 
-function formatIssueStatus(status: string | undefined): string {
-  switch (status) {
-    case 'backlog':
-      return chalk.gray('backlog');
-    case 'queue':
-      return chalk.blue('queue');
-    case 'in_progress':
-      return chalk.yellow('in_progress');
-    case 'paused':
-      return chalk.magenta('paused');
-    case 'closed':
-      return chalk.green('closed');
-    default:
-      return chalk.dim(status ?? 'unknown');
-  }
-}
-
-function formatPriority(p: string | undefined): string {
-  switch (p) {
-    case 'critical':
-      return chalk.red('critical');
-    case 'high':
-      return chalk.yellow('high');
-    case 'medium':
-      return chalk.cyan('medium');
-    case 'low':
-      return chalk.dim('low');
-    default:
-      return chalk.dim(p ?? '');
-  }
-}
-
-function formatCriterionStatus(status: string | undefined): string {
-  switch (status) {
-    case 'passed':
-      return chalk.green('✓ passed');
-    case 'failed':
-      return chalk.red('✗ failed');
-    case 'pending':
-      return chalk.dim('○ pending');
-    default:
-      return chalk.dim(status ?? 'pending');
-  }
-}
+const formatPriority = (p: string | undefined) => fmtPriority(p, chalk);
+const formatCriterionStatus = (status: string | undefined) =>
+  fmtCriterionStatus(status, chalk);
 
 const issueCmd = program
   .command('issue')
@@ -2236,144 +2208,21 @@ async function listIssuesAction(opts: any): Promise<void> {
     }
   }
 
-  if (issues.length === 0) {
-    if (opts.json) {
-      console.log(JSON.stringify({ issues: [] }, null, 2));
-    } else {
-      console.log(chalk.dim('No issues found.'));
-    }
-    return;
-  }
-
   // Agent contract: stable, color-free JSON regardless of --view.
-  if (opts.json) {
-    console.log(
-      JSON.stringify(
-        {
-          issues: issues.map((i) => ({
-            id: i.id,
-            title: i.title ?? null,
-            status: i.status ?? null,
-            priority: i.priority ?? null,
-            labels: i.labels ?? [],
-            assignee: i.assignee ?? null,
-            parentId: i.parentId ?? null,
-            isBlocked: i.isBlocked,
-            blockedBy: i.blockedBy ?? [],
-            startedAt: i.startedAt ?? null,
-            createdAt: i.createdAt ?? null,
-            closedAt: i.closedAt ?? null,
-            criteria: (i.criteria ?? []).map((c) => ({
-              id: c.id,
-              status: c.status ?? null,
-              description: c.description ?? null,
-            })),
-          })),
-        },
-        null,
-        2,
-      ),
-    );
-    return;
-  }
-
-  const view = opts.view as 'list' | 'table' | 'kanban';
-  const groups = buildView(issues, {
+  const lines = formatIssueList(issues, {
+    view: opts.view,
     sort: opts.sort,
     groupBy: opts.groupBy,
+    json: opts.json,
+    style: chalk,
   });
-
-  if (view === 'kanban') {
-    renderKanban(groups);
-  } else if (view === 'table') {
-    renderTable(groups);
-  } else {
-    renderList(groups, opts.all || opts.remote);
-  }
+  console.log(lines.join('\n'));
 }
 
 // Bare `trellis issue` defaults to listing (agent DX parity with other entities).
 issueCmd.action(async (opts) => {
   await listIssuesAction({ ...opts, path: opts.path ?? '.' });
 });
-
-/**
- * Kanban: one column per status (backlog → closed), issues listed inside.
- * Remote scoping already narrowed `issues`; we re-derive columns here.
- */
-function renderKanban(groups: IssueGroup[]): void {
-  // When grouped by something other than status, fall back to a grouped list.
-  const flatten = groups.flatMap((g) => g.rows.map((r) => r.issue));
-  const byStatus = new Map<string, IssueInfo[]>();
-  for (const issue of flatten) {
-    const s = issue.status ?? 'unknown';
-    if (!byStatus.has(s)) byStatus.set(s, []);
-    byStatus.get(s)!.push(issue);
-  }
-  const columns = STATUS_ORDER.filter((s) => byStatus.has(s));
-  for (const status of columns) {
-    const col = byStatus.get(status)!;
-    console.log(
-      `\n${formatIssueStatus(status)} ${chalk.dim(`(${col.length})`)}`,
-    );
-    for (const issue of col) {
-      console.log(
-        `  ${chalk.bold(issue.id)} ${issue.title ?? ''}${formatRowTail(issue)}`,
-      );
-    }
-  }
-}
-
-function formatRowTail(issue: IssueInfo): string {
-  const parts: string[] = [];
-  if (issue.labels?.length)
-    parts.push(chalk.dim(` [${issue.labels.join(',')}]`));
-  if (issue.assignee) parts.push(chalk.dim(` → ${issue.assignee}`));
-  if (issue.claimedLaneId) parts.push(chalk.dim(` ⤷ ${issue.claimedLaneId}`));
-  if (issue.isBlocked) parts.push(chalk.yellow(' 🔒 blocked'));
-  if (issue.criteria?.length) {
-    const passed = issue.criteria.filter((c) => c.status === 'passed').length;
-    parts.push(chalk.dim(` (${passed}/${issue.criteria.length} AC)`));
-  }
-  return parts.join('');
-}
-
-function renderTable(groups: IssueGroup[]): void {
-  const showGroup = groups.length > 1 || groups[0]?.key !== 'all';
-  for (const group of groups) {
-    if (showGroup) {
-      console.log(
-        `\n${chalk.bold(group.label)} ${chalk.dim(`(${group.rows.length})`)}`,
-      );
-    }
-    for (const row of group.rows) {
-      const i = row.issue;
-      const ac = row.ac
-        ? chalk.dim(` ${row.ac.passed}/${row.ac.total} AC`)
-        : '';
-      console.log(
-        `  ${formatPriority(i.priority)} ${chalk.bold(i.id)} ${formatIssueStatus(i.status)} ${i.title ?? ''}${ac}${formatRowTail(i)}`,
-      );
-    }
-  }
-}
-
-function renderList(groups: IssueGroup[], remoteScoped: boolean): void {
-  const showGroup = groups.length > 1 || groups[0]?.key !== 'all';
-  for (const group of groups) {
-    if (showGroup) {
-      console.log(
-        `\n${chalk.bold(group.label)} ${chalk.dim(`(${group.rows.length})`)}`,
-      );
-    }
-    for (const row of group.rows) {
-      const i = row.issue;
-      console.log(
-        `  ${formatPriority(i.priority)} ${chalk.bold(i.id)} ${formatIssueStatus(i.status)} ${i.title ?? ''}${formatRowTail(i)}`,
-      );
-    }
-  }
-}
 
 issueCmd
   .command('show')
@@ -2394,72 +2243,7 @@ issueCmd
       throw new Error(`Issue not found: ${id}`);
     }
 
-    console.log(chalk.bold(`${issue.id}: ${issue.title ?? '(untitled)'}\n`));
-    if (issue.description) {
-      console.log(`  ${chalk.dim(issue.description)}\n`);
-    }
-    console.log(
-      `  ${chalk.dim('Status:')}    ${formatIssueStatus(issue.status)}`,
-    );
-    console.log(
-      `  ${chalk.dim('Priority:')}  ${formatPriority(issue.priority)}`,
-    );
-    if ((issue.labels?.length ?? 0) > 0) {
-      console.log(`  ${chalk.dim('Labels:')}    ${issue.labels.join(', ')}`);
-    }
-    if (issue.assignee) {
-      console.log(`  ${chalk.dim('Assignee:')}  ${issue.assignee}`);
-    }
-    if (issue.parentId) {
-      console.log(`  ${chalk.dim('Parent:')}    ${issue.parentId}`);
-    }
-    if (issue.branchName) {
-      console.log(`  ${chalk.dim('Branch:')}    ${issue.branchName}`);
-    }
-    if (issue.claimedLaneId) {
-      const claimParts = [issue.claimedLaneId];
-      if (issue.claimedSessionId) {
-        claimParts.push(`session ${issue.claimedSessionId}`);
-      }
-      if (issue.claimedAt) {
-        claimParts.push(formatRelativeTime(issue.claimedAt));
-      }
-      console.log(`  ${chalk.dim('Claim:')}     ${claimParts.join(' · ')}`);
-    }
-    if ((issue.blockedBy?.length ?? 0) > 0) {
-      console.log(
-        `  ${chalk.dim('Blocked by:')} ${issue.blockedBy.map((b) => chalk.yellow(b)).join(', ')}`,
-      );
-    }
-    if ((issue.blocking?.length ?? 0) > 0) {
-      console.log(
-        `  ${chalk.dim('Blocking:')}  ${issue.blocking.map((b) => chalk.cyan(b)).join(', ')}`,
-      );
-    }
-    if (issue.createdAt) {
-      console.log(
-        `  ${chalk.dim('Created:')}   ${formatRelativeTime(issue.createdAt)}`,
-      );
-    }
-    if (issue.startedAt) {
-      console.log(
-        `  ${chalk.dim('Started:')}   ${formatRelativeTime(issue.startedAt)}`,
-      );
-    }
-    if (issue.closedAt) {
-      console.log(
-        `  ${chalk.dim('Closed:')}    ${formatRelativeTime(issue.closedAt)}`,
-      );
-    }
-
-    if ((issue.criteria?.length ?? 0) > 0) {
-      console.log(`\n  ${chalk.bold('Acceptance Criteria:')}`);
-      for (const c of issue.criteria) {
-        const desc = c.description ?? c.id;
-        const cmd = c.command ? chalk.dim(` (${c.command})`) : '';
-        console.log(`    ${formatCriterionStatus(c.status)} ${desc}${cmd}`);
-      }
-    }
+    console.log(formatIssue(issue, { style: chalk }).join('\n'));
 
     if (!issueDocExists(rootPath, issue.id)) {
       console.log(
@@ -4219,6 +4003,7 @@ entityCmd
 
 entityCmd
   .command('get')
+  .alias('show')
   .description('Get an entity by ID')
   .argument('<id>', 'Entity ID')
   .option('-p, --path <path>', 'Repository path', '.')
@@ -4236,32 +4021,9 @@ entityCmd
         process.exit(1);
       }
 
-      if (opts.json) {
-        const obj: Record<string, any> = { id: entity.id, type: entity.type };
-        for (const f of entity.facts) {
-          if (f.a !== 'type') obj[f.a] = f.v;
-        }
-        obj._links = entity.links.map((l) => ({
-          attribute: l.a,
-          target: l.e2,
-          source: l.e1,
-        }));
-        console.log(JSON.stringify(obj, null, 2));
-        return;
-      }
-
-      console.log(chalk.bold(`${entity.type}: ${entity.id}\n`));
-      for (const f of entity.facts) {
-        console.log(`  ${chalk.dim(f.a.padEnd(20))} ${f.v}`);
-      }
-      if (entity.links.length > 0) {
-        console.log(`\n  ${chalk.bold('Links:')}`);
-        for (const l of entity.links) {
-          const dir = l.e1 === id ? '→' : '←';
-          const other = l.e1 === id ? l.e2 : l.e1;
-          console.log(`    ${dir} ${chalk.dim(l.a)} ${other}`);
-        }
-      }
+      console.log(
+        formatEntity(entity, { json: opts.json, style: chalk }).join('\n'),
+      );
     });
   });
 
@@ -4337,34 +4099,13 @@ entityCmd
             Object.keys(filters).length > 0 ? filters : undefined,
           );
 
-      if (opts.json) {
-        const out = entities.map((e) => {
-          const obj: Record<string, any> = { id: e.id, type: e.type };
-          for (const f of e.facts) {
-            if (f.a !== 'type') obj[f.a] = f.v;
-          }
-          return obj;
-        });
-        console.log(JSON.stringify(out, null, 2));
-        return;
-      }
-
-      if (entities.length === 0) {
-        console.log(chalk.dim('No entities found.'));
-        return;
-      }
-
-      const typeLabel = opts.type ? ` (type: ${opts.type})` : '';
-      console.log(chalk.bold(`Entities (${entities.length})${typeLabel}\n`));
-      for (const e of entities) {
-        const labelFact =
-          e.facts.find((f) => f.a === 'title') ??
-          e.facts.find((f) => f.a === 'name');
-        const name = labelFact ? ` ${chalk.white(String(labelFact.v))}` : '';
-        console.log(
-          `  ${chalk.cyan(e.type.padEnd(16))} ${chalk.bold(e.id)}${name}`,
-        );
-      }
+      console.log(
+        formatEntityList(entities, {
+          type: opts.type,
+          json: opts.json,
+          style: chalk,
+        }).join('\n'),
+      );
     });
   });
 
@@ -4455,25 +4196,9 @@ factCmd
         facts = store.getAllFacts();
       }
 
-      if (opts.json) {
-        console.log(JSON.stringify(facts, null, 2));
-        return;
-      }
-
-      if (facts.length === 0) {
-        console.log(chalk.dim('No facts found.'));
-        return;
-      }
-
-      console.log(chalk.bold(`Facts (${facts.length})\n`));
-      for (const f of facts.slice(0, 100)) {
-        console.log(
-          `  ${chalk.cyan(f.e.padEnd(24))} ${chalk.dim(f.a.padEnd(20))} ${f.v}`,
-        );
-      }
-      if (facts.length > 100) {
-        console.log(chalk.dim(`  … +${facts.length - 100} more`));
-      }
+      console.log(
+        formatFactList(facts, { json: opts.json, style: chalk }).join('\n'),
+      );
     });
   });
 
@@ -4558,25 +4283,9 @@ linkCmd
         links = store.getAllLinks();
       }
 
-      if (opts.json) {
-        console.log(JSON.stringify(links, null, 2));
-        return;
-      }
-
-      if (links.length === 0) {
-        console.log(chalk.dim('No links found.'));
-        return;
-      }
-
-      console.log(chalk.bold(`Links (${links.length})\n`));
-      for (const l of links.slice(0, 100)) {
-        console.log(
-          `  ${chalk.cyan(l.e1)} —[${chalk.dim(l.a)}]→ ${chalk.cyan(l.e2)}`,
-        );
-      }
-      if (links.length > 100) {
-        console.log(chalk.dim(`  … +${links.length - 100} more`));
-      }
+      console.log(
+        formatLinkList(links, { json: opts.json, style: chalk }).join('\n'),
+      );
     });
   });
 
@@ -4666,33 +4375,9 @@ program
       }
 
       const result = queryEngine.execute(q!);
-
-      if (opts.json) {
-        console.log(JSON.stringify(result.bindings, null, 2));
-      } else {
-        if (result.count === 0) {
-          console.log(chalk.dim('No results.'));
-        } else {
-          // Determine columns
-          const cols =
-            result.bindings.length > 0 ? Object.keys(result.bindings[0]) : [];
-
-          // Print header
-          console.log(chalk.bold(cols.map((c) => `?${c}`).join('\t')));
-          console.log(chalk.dim('─'.repeat(cols.length * 20)));
-
-          // Print rows
-          for (const row of result.bindings) {
-            console.log(cols.map((c) => String(row[c] ?? '')).join('\t'));
-          }
-
-          console.log(
-            chalk.dim(
-              `\n${result.count} result(s) in ${result.executionTime.toFixed(1)}ms`,
-            ),
-          );
-        }
-      }
+      console.log(
+        formatQueryResult(result, { json: opts.json, style: chalk }).join('\n'),
+      );
     });
   });
 
@@ -6883,6 +6568,10 @@ registerPublishCommands(program);
 registerOpsCommands(program);
 registerWorkflowCommands(program);
 registerPipelineCommands(program);
+registerAgentCommands(program);
+registerProfileCommands(program);
+registerEvalCommands(program);
+registerPlanCommands(program);
 registerSandboxCommands(program);
 
 /** Read all of stdin as a string (used by `identity import`). */

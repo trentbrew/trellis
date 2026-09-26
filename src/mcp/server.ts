@@ -24,6 +24,13 @@ import {
   serializePack,
 } from '../context/pack.js';
 import { ContextPackFocusError } from '../context/types.js';
+import {
+  appendLearning,
+  getProfile,
+  type ProfileLearningCategory,
+} from '../scaffold/profile.js';
+import { inferProjectContext } from '../scaffold/infer.js';
+import { writeAgentScaffold } from '../scaffold/write.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1316,6 +1323,90 @@ export function createTrellisMcpServer(): McpServer {
       return text(
         `Decision chain for ${entityId} (${chain.length} decisions):\n${lines.join('\n')}`,
       );
+    },
+  );
+
+  // -----------------------------------------------------------------------
+  // Tool: trellis_profile_get
+  // -----------------------------------------------------------------------
+  server.registerTool(
+    'trellis_profile_get',
+    {
+      description:
+        'Read the global user profile (~/.trellis/profile.json) including agent-captured learnings.',
+      inputSchema: {},
+    },
+    async () => {
+      const profile = getProfile();
+      if (!profile) {
+        return text('No profile exists yet. Run trellis init to create one.');
+      }
+      return text(JSON.stringify(profile, null, 2));
+    },
+  );
+
+  // -----------------------------------------------------------------------
+  // Tool: trellis_profile_learn
+  // -----------------------------------------------------------------------
+  server.registerTool(
+    'trellis_profile_learn',
+    {
+      description:
+        'Append a durable learning about the user to ~/.trellis/profile.json. Core profile fields are not modified.',
+      inputSchema: {
+        fact: z.string().describe('One-sentence fact to remember about the user'),
+        category: z
+          .enum(['preference', 'context', 'style', 'skill', 'other'])
+          .optional()
+          .describe('Learning category'),
+        source: z
+          .string()
+          .optional()
+          .describe('Provenance (e.g. issue:TRL-5, conversation id)'),
+        addedBy: z
+          .string()
+          .optional()
+          .describe('Agent or actor id recording this learning'),
+        path: z
+          .string()
+          .optional()
+          .describe(
+            'When set and path is a Trellis repo, refresh .trellis/agents/AGENTS.md',
+          ),
+      },
+    },
+    async ({ fact, category, source, addedBy, path }) => {
+      try {
+        const profile = appendLearning({
+          fact,
+          category: category as ProfileLearningCategory | undefined,
+          source,
+          addedBy,
+        });
+        const latest = profile.learnings?.[profile.learnings.length - 1];
+
+        if (path) {
+          const absPath = resolve(path);
+          if (TrellisVcsEngine.isRepo(absPath)) {
+            const context = await inferProjectContext(absPath);
+            writeAgentScaffold(absPath, { profile, context });
+          }
+        }
+
+        return text(
+          JSON.stringify(
+            {
+              ok: true,
+              id: latest?.id,
+              learnings: profile.learnings?.length ?? 0,
+            },
+            null,
+            2,
+          ),
+        );
+      } catch (err) {
+        return text(`Error: ${(err as Error).message}`);
+      }
     },
   );
 

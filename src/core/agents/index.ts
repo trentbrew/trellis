@@ -6,6 +6,17 @@
 
 export { AgentHarness } from './harness.js';
 export {
+  configureAgentHarness,
+  ensureReaderAgent,
+  isLlmConfigured,
+  resolveLlmOptionsFromEnv,
+  DEFAULT_READER_AGENT_ID,
+} from './bootstrap.js';
+export type {
+  ConfiguredHarness,
+  ConfigureAgentHarnessOptions,
+} from './bootstrap.js';
+export {
   registerTypedGraphTools,
   listEntitiesFiltered,
   entityView,
@@ -18,6 +29,7 @@ export type {
   TypedGraphToolIds,
 } from './typed-graph-tools.js';
 export { WorkerPool } from './worker-pool.js';
+export type { HarnessFactory } from './worker-pool.js';
 export { DAGScheduler, detectCycle } from './dag-scheduler.js';
 export { evaluateCondition, evaluateEdge } from './edge-evaluator.js';
 export { evaluateGate } from './gate-keeper.js';

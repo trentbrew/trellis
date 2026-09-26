@@ -1,0 +1,22 @@
+{
+  "ok": false,
+  "sessionHook": {
+    "hasProfileSection": false,
+    "hasUserName": true,
+    "contextLen": 5297,
+    "profileBlockSample": null
+  },
+  "sessionHookOk": false,
+  "offHook": {
+    "hasProfileSection": false
+  },
+  "offHookOk": true,
+  "cli": {
+    "ok": false,
+    "error": "Error: Command failed: bun ./bin/trellis.mjs profile context --budget 200\nerror: unknown command 'profile'\n"
+  },
+  "globalCli": {
+    "ok": false,
+    "error": "Error: Command failed: trellis profile context --budget 200 2>&1"
+  }
+}

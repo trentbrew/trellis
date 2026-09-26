@@ -28,6 +28,23 @@ import type {
 /** ADR 0021: the harness *is* the AI actor — every op it mints is an agent assertion. */
 const AGENT_CTX = { provenance: PROVENANCE.agent };
 
+const DEFAULT_MAX_TURNS = 10;
+
+function numericFact(facts: Array<{ a: string; v: unknown }>, attr: string): number | undefined {
+  const v = facts.find((f) => f.a === attr)?.v;
+  return typeof v === 'number' ? v : undefined;
+}
+
+/** Model-emitted tool arguments are untrusted JSON; malformed input becomes `{}`. */
+function parseToolArguments(raw: string | undefined): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(raw || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 export class AgentHarness {
   private kernel: TrellisKernel;
   private toolHandlers: Map<string, ToolHandler> = new Map();
@@ -87,7 +104,7 @@ export class AgentHarness {
     }
 
     let turnCount = 0;
-    const maxTurns = agent.maxTokens ?? 10; // Simple heuristic for now
+    const maxTurns = agent.maxTurns ?? DEFAULT_MAX_TURNS;
 
     try {
       while (turnCount < maxTurns) {
@@ -101,6 +118,7 @@ export class AgentHarness {
         const response = await this.config.llmProvider.complete(messages as any, {
           model: agent.model,
           temperature: agent.temperature,
+          ...(agent.maxTokens !== undefined ? { max_tokens: agent.maxTokens } : {}),
           tools: this._getAvailableTools(agent.tools),
         });
 
@@ -112,7 +130,7 @@ export class AgentHarness {
           let planPending = false;
 
           for (const call of message.tool_calls) {
-            const result = await this.invokeTool(runId, call.function.name, JSON.parse(call.function.arguments));
+            const result = await this.invokeTool(runId, call.function.name, parseToolArguments(call.function.arguments));
 
             if (context) {
               context.addMessage({
@@ -177,10 +195,14 @@ export class AgentHarness {
     const id = def.id ?? `agent:${def.name.toLowerCase().replace(/\s+/g, '-')}`;
     await this.kernel.createEntity(id, 'Agent', {
       name: def.name,
+      ...(def.role ? { role: def.role } : {}),
       ...(def.description ? { description: def.description } : {}),
       ...(def.model ? { model: def.model } : {}),
       ...(def.provider ? { provider: def.provider } : {}),
       ...(def.systemPrompt ? { systemPrompt: def.systemPrompt } : {}),
+      ...(def.temperature !== undefined ? { temperature: def.temperature } : {}),
+      ...(def.maxTokens !== undefined ? { maxTokens: def.maxTokens } : {}),
+      ...(def.maxTurns !== undefined ? { maxTurns: def.maxTurns } : {}),
       status: def.status ?? 'active',
     }, undefined, AGENT_CTX);
 
@@ -212,6 +234,7 @@ export class AgentHarness {
     return {
       id: entity.id,
       name: String(entity.facts.find((f) => f.a === 'name')?.v ?? ''),
+      role: entity.facts.find((f) => f.a === 'role')?.v as string | undefined,
       description: entity.facts.find((f) => f.a === 'description')?.v as
         | string
         | undefined,
@@ -225,6 +248,9 @@ export class AgentHarness {
       status:
         (entity.facts.find((f) => f.a === 'status')?.v as AgentDef['status']) ??
         'active',
+      temperature: numericFact(entity.facts, 'temperature'),
+      maxTokens: numericFact(entity.facts, 'maxTokens'),
+      maxTurns: numericFact(entity.facts, 'maxTurns'),
       capabilities: capLinks.map((l) => l.e2),
       tools: toolLinks.map((l) => l.e2),
     };

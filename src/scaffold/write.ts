@@ -15,7 +15,7 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import type { ProjectContext } from './infer.js';
-import type { UserProfile } from './profile.js';
+import { formatLearningsMarkdown, type UserProfile } from './profile.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -218,6 +218,7 @@ function renderAgentsMd(
   const userStyle = profile?.style || '(not specified)';
   const userVerbosity = profile?.preferences?.verbosity ?? 'balanced';
   const userTone = profile?.preferences?.tone ?? 'peer';
+  const learningsBlock = formatLearningsMarkdown(profile);
 
   const projectName = context.name ?? '(unnamed)';
   const projectDomain =
@@ -246,7 +247,7 @@ function renderAgentsMd(
 
 ---
 
-## About This Project
+${learningsBlock}## About This Project
 
 | Field | Value |
 |-------|-------|
@@ -584,6 +585,12 @@ if [ -f ".trellis/config.json" ] || [ -f "$(trellis_harness_vcs_path)/.trellis/c
   ISSUES_COUNT=$(trellis_harness_active_issue_count)
   OPS_OUTPUT="{\\"count\\":\${OPS_COUNT}}"
   ISSUES_OUTPUT="{\\"count\\":\${ISSUES_COUNT},\\"status\\":\\"in_progress\\"}"
+  PROFILE_ARM="\${TRELLIS_PROFILE_CONTEXT_ARM:-off}"
+  PROFILE_BLOCK=""
+  if [ "$PROFILE_ARM" != "off" ] && [ "$PROFILE_ARM" != "pack" ]; then
+    PROFILE_BUDGET="\${TRELLIS_PROFILE_CONTEXT_BUDGET:-800}"
+    PROFILE_BLOCK=$(trellis profile context --budget "$PROFILE_BUDGET" 2>/dev/null || true)
+  fi
 
   case "$OUTPUT" in
     "agent-stop")
@@ -607,6 +614,11 @@ EOF
       echo "🌿 Trellis Context ($ORIGIN):"
       echo "  Recent ops: $OPS_COUNT"
       echo "  Active issues: $ISSUES_COUNT"
+      if [ -n "$PROFILE_BLOCK" ]; then
+        echo ""
+        echo "👤 User profile ($PROFILE_ARM):"
+        echo "$PROFILE_BLOCK"
+      fi
       echo ""
       ;;
   esac

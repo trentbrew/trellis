@@ -4,6 +4,33 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [4.0.6] — 2026-09-26
+
+**Agent profile memory, plan artifact capture, harness CLI, and a shared
+terminal format layer for turtleOS shells.**
+
+- **`trellis profile`** — global user profile at `~/.trellis/profile.json` with
+  `learn`, `forget`, `set`, `show`, `seed`, and budgeted `profile context` for
+  hooks. Learnings inject into `.trellis/agents/AGENTS.md` via
+  `formatLearningsMarkdown`. Arm via `TRELLIS_PROFILE_CONTEXT_ARM`
+  (`off` | `session` | `pack` | `both`; default `off`).
+- **`trellis plan`** — repo-canonical plan artifacts per ADR 0044:
+  `origins`, `scaffold`, `capture`, `link` targeting `docs/plans/<issue>-plan.md`
+  with IDE provenance (Cursor, Claude, OpenCode, Antigravity, Gemini, Codex).
+- **`trellis agent`** — harness run/status surface wired to typed graph tools
+  (`get_entity`, `list_entities`) and bootstrap from env.
+- **`trellis eval profile-context`** — frozen-corpus runner for profile injection
+  experiments (TRL-335).
+- **`trellis/format` export** — shared terminal formatters (`formatIssue`,
+  `formatEntity`, `ansi`, …) for CLI and embedded shells (turtleOS `tsh`).
+- **Context pack** — optional user-profile slice when
+  `TRELLIS_PROFILE_CONTEXT_ARM` includes `pack`.
+- **MCP** — agent-exec and server paths extended for harness-backed graph reads.
+- **`createKernelBackend`** — runtime factory covers sql.js / Bun / better-sqlite3
+  selection (WebContainer and turtleOS guests).
+- **Tests** — profile/plan CLI suites; milestone tests use isolated temp dirs;
+  profile CLI tests shell-quote multi-word arguments.
+
 ## trellis [4.0.5] — 2026-09-17
 
 **Re-release of 4.0.4 from the tagged tree.**

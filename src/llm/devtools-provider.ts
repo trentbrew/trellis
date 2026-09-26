@@ -1,9 +1,11 @@
 /**
  * Bridge trellis-node LLMProvider to DevTools `ai` createLLMProvider (TRL-10).
  *
- * DevTools lives at Projects/DevTools/ai in the Campus monorepo. Tests inject
- * `importCreateLLMProvider`; production callers may set DEVTOOLS_AI_PROVIDER
- * to an absolute module path.
+ * The inference layer (`@turtle.tech/inference`) lives beside trellis-node in the
+ * `~/TURTLE/os/` meta-workspace, so the default resolves to `../inference` from
+ * this repo's root. Tests inject `importCreateLLMProvider`; other callers
+ * (including installs from npm, where the sibling doesn't exist) set
+ * DEVTOOLS_AI_PROVIDER to a module path or package name.
  */
 
 import type {
@@ -27,8 +29,9 @@ export type DevtoolsLLMProviderOptions = {
   }>;
 };
 
+// src/llm/ → trellis-node/ → os/ ; the sibling repo is os/inference.
 const DEFAULT_DEVTOOLS_AI = new URL(
-  '../../../../DevTools/ai/src/llm/provider.ts',
+  '../../../inference/src/llm/provider.ts',
   import.meta.url,
 );
 

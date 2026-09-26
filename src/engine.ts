@@ -18,7 +18,7 @@ import {
   writeFileSync,
 } from 'fs';
 import { readFile } from 'fs/promises';
-import { join, dirname } from 'path';
+import { join, dirname, resolve } from 'path';
 import { EAVStore } from './core/store/eav-store.js';
 import type { Fact, Link } from './core/store/eav-store.js';
 import { FileWatcher, type ScanProgress } from './watcher/fs-watcher.js';
@@ -418,6 +418,21 @@ export class TrellisVcsEngine {
     return persistedConfig;
   }
 
+  /**
+   * Patch only the persisted `rootPath` key, leaving every other key (and
+   * unknown/harness keys) untouched. Used to heal a stale path after the
+   * repo directory was renamed or moved.
+   */
+  private rebindPersistedRootPath(): void {
+    const configPath = join(this.config.rootPath, '.trellis', 'config.json');
+    const existing = this.readPersistedConfig();
+    if (!existing) return;
+    writeFileSync(
+      configPath,
+      JSON.stringify({ ...existing, rootPath: this.config.rootPath }, null, 2),
+    );
+  }
+
   private async indexExistingFiles(opts?: {
     onProgress?: (progress: InitProgress) => void;
   }): Promise<IndexWorkspaceResult> {
@@ -615,6 +630,22 @@ let opsCreated = 0;
       }
       if (persisted.project) {
         this.config.project = persisted.project;
+      }
+
+      // Self-heal: if the repo directory was renamed or moved since init, the
+      // persisted `rootPath` is stale. The engine always resolves its own root
+      // from the real filesystem, so rebind the stored path to match and keep
+      // `.trellis/config.json` truthful for humans and tools that read it.
+      // Best-effort — never fail `open()` because the rebind write failed.
+      if (
+        persisted.rootPath &&
+        resolve(persisted.rootPath) !== resolve(this.config.rootPath)
+      ) {
+        try {
+          this.rebindPersistedRootPath();
+        } catch {
+          /* config stays stale; engine continues on the live path */
+        }
       }
     }
 

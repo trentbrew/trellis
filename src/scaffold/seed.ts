@@ -11,7 +11,7 @@ import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import type { ProjectContext } from './infer.js';
 import type { UserProfile } from './profile.js';
-import { loadProfile } from './profile.js';
+import { formatLearningsMarkdown, loadProfile } from './profile.js';
 import { inferProjectContext } from './infer.js';
 import type { IdeType } from './write.js';
 
@@ -133,6 +133,7 @@ function renderSeedAgentsMd(
   const userSkills = profile?.skills?.length
     ? profile.skills.join(', ')
     : '(not specified)';
+  const learningsBlock = formatLearningsMarkdown(profile);
 
   return `# Trellis Agent Context
 
@@ -151,7 +152,7 @@ function renderSeedAgentsMd(
 
 ---
 
-## About This Project
+${learningsBlock}## About This Project
 
 | Field | Value |
 |-------|-------|

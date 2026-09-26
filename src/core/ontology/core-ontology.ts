@@ -458,6 +458,7 @@ const agent: SchemaDefinition = {
     f('systemPrompt', 'rich_text'),
     f('temperature', 'number'),
     f('maxTokens', 'number'),
+    f('maxTurns', 'number'),
     f('workflow', 'relation', {
       relation: { targetSchema: 'core:Workflow', cardinality: 'one' },
     }),

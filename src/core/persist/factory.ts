@@ -2,8 +2,9 @@
  * Kernel backend factory.
  *
  * Picks the right `KernelBackend` for the host runtime:
- *   - Node + better-sqlite3 loadable → BetterSqliteKernelBackend
- *   - Otherwise                      → SqlJsKernelBackend (pure WASM)
+ *   - Bun                             → SqliteKernelBackend (built-in bun:sqlite)
+ *   - Node + better-sqlite3 loadable  → BetterSqliteKernelBackend
+ *   - Otherwise                       → SqlJsKernelBackend (pure WASM)
  *
  * Use this when you want runtime portability (e.g. WebContainer, browser,
  * restricted Node hosts). Callers that construct a specific backend directly
@@ -14,12 +15,14 @@
 
 import type { KernelBackend } from './backend.js';
 
+export type KernelBackendKind = 'better-sqlite' | 'bun-sqlite' | 'sqljs';
+
 export interface CreateKernelBackendOptions {
   /**
    * Override automatic detection. Useful for tests and for environments
    * where the runtime check would pick the wrong backend.
    */
-  backend?: 'better-sqlite' | 'sqljs';
+  backend?: KernelBackendKind;
   /** Forwarded to `SqlJsKernelBackend` when that backend is selected. */
   sqljs?: { autoFlushEvery?: number };
 }
@@ -28,13 +31,20 @@ export async function createKernelBackend(
   dbPath: string,
   opts: CreateKernelBackendOptions = {},
 ): Promise<KernelBackend> {
-  const choice = opts.backend ?? detectBackend();
+  const choice = opts.backend ?? detectKernelBackendKind();
 
   if (choice === 'better-sqlite') {
     const { BetterSqliteKernelBackend } = await import(
       './better-sqlite-backend.js'
     );
     const backend = new BetterSqliteKernelBackend(dbPath);
+    backend.init();
+    return backend;
+  }
+
+  if (choice === 'bun-sqlite') {
+    const { SqliteKernelBackend } = await import('./sqlite-backend.js');
+    const backend = new SqliteKernelBackend(dbPath);
     backend.init();
     return backend;
   }
@@ -48,7 +58,21 @@ export async function createKernelBackend(
   return backend;
 }
 
-function detectBackend(): 'better-sqlite' | 'sqljs' {
+function isBunRuntime(): boolean {
+  return (
+    typeof process !== 'undefined' &&
+    Boolean((process as NodeJS.Process).versions?.bun)
+  );
+}
+
+/** Runtime backend selection (exported for tests). */
+export function detectKernelBackendKind(): KernelBackendKind {
+  // better-sqlite3's native addon is not loadable under Bun even when the
+  // package resolves — use the built-in bun:sqlite backend instead.
+  if (isBunRuntime()) {
+    return 'bun-sqlite';
+  }
+
   try {
     const { createRequire } = require('module');
     const req = createRequire(import.meta.url);

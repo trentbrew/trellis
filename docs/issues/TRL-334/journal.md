@@ -12,6 +12,13 @@
   `test/sync/sync-checkpoint.test.ts` (not full `test/sync` — Bun-only sqlite
   reader tests stay on the p7/bun path).
 
+## 2026-09-23 — Harness bootstrap + CLI + MCP wiring
+
+- `configureAgentHarness()` — kernel → typed tools → optional DevTools LLM.
+- `trellis agent list|ensure-default|run` — first production CLI entrypoint.
+- MCP `agent-exec` WorkerPool now preloads configured harness (simulate when no
+  `TRELLIS_LLM_*` / `DEVTOOLS_AI_PROVIDER` env).
+
 ## 2026-09-15 — Spec refresh (architect)
 
 - Re-scoped TRL-334 into four executor slices; parent TRL-333 goals unchanged.

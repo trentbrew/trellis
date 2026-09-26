@@ -29,6 +29,10 @@ export interface WorkerTask {
   error?: string;
 }
 
+export type HarnessFactory = (
+  kernel: TrellisKernel,
+) => AgentHarness | Promise<AgentHarness>;
+
 export interface WorkerPoolConfig {
   /** Maximum concurrent agent runs (default 1). */
   concurrency: number;
@@ -38,6 +42,8 @@ export interface WorkerPoolConfig {
   persistToGraph?: boolean;
   /** Simulate execution — complete tasks without LLM. Useful for testing and external executors. */
   simulate?: boolean;
+  /** Build harness with typed tools + LLM when not passed explicitly. */
+  harnessFactory?: HarnessFactory;
 }
 
 export type WorkerPoolEvent =
@@ -108,7 +114,10 @@ export class WorkerPool {
 
   private async _ensureHarness(): Promise<AgentHarness> {
     if (!this.harness) {
-      this.harness = new AgentHarness(await this._ensureKernel());
+      const kernel = await this._ensureKernel();
+      this.harness = this.config.harnessFactory
+        ? await this.config.harnessFactory(kernel)
+        : new AgentHarness(kernel);
     }
     return this.harness;
   }

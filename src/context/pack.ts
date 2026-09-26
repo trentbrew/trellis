@@ -12,11 +12,18 @@ import {
   findWaitingOnYou,
   getActiveContext,
 } from '../protocol/whereami.js';
+import {
+  formatProfileContextText,
+  getProfile,
+  shouldInjectProfileInPack,
+  type UserProfile,
+} from '../scaffold/profile.js';
 import type {
   ContextPack,
   ContextPackFocus,
   ContextPackOptions,
   ContextPackRef,
+  ContextPackUser,
   ContextPackWaiting,
   ContextVantage,
 } from './types.js';
@@ -287,6 +294,30 @@ export function clampPackToBudget(
     if (current.estimatedTokens <= budgetTokens) return current;
   }
 
+  // 7b. user learnings — drop from end
+  while (
+    current.user &&
+    current.user.learnings.length > 0 &&
+    current.estimatedTokens > budgetTokens
+  ) {
+    current = {
+      ...current,
+      user: {
+        ...current.user,
+        learnings: current.user.learnings.slice(0, -1),
+      },
+    };
+    mark();
+  }
+  if (current.estimatedTokens <= budgetTokens) return current;
+
+  // 7c. drop user slice
+  if (current.user) {
+    current = { ...current, user: null };
+    mark();
+    if (current.estimatedTokens <= budgetTokens) return current;
+  }
+
   // 6. links — drop from end
   while (
     current.links.length > 0 &&
@@ -374,6 +405,40 @@ export function clampPackToBudget(
   return current;
 }
 
+function buildContextPackUser(
+  profile: UserProfile | null,
+  budgetTokens: number,
+): ContextPackUser | null {
+  if (!profile) return null;
+
+  const charBudget = Math.min(
+    1200,
+    Math.max(120, Math.floor(budgetTokens * 2)),
+  );
+  const text = formatProfileContextText(profile, {
+    budgetChars: charBudget,
+    learningsLimit: 6,
+  });
+  if (!text) return null;
+
+  const learnings = [...(profile.learnings ?? [])]
+    .sort((a, b) => Date.parse(b.addedAt) - Date.parse(a.addedAt))
+    .slice(0, 6)
+    .map((l) => ({
+      id: l.id,
+      fact: clip(l.fact, 120),
+      category: l.category,
+    }));
+
+  return {
+    name: clip(profile.name, 48),
+    verbosity: profile.preferences.verbosity,
+    tone: profile.preferences.tone,
+    style: profile.style ? clip(profile.style, 80) : undefined,
+    learnings,
+  };
+}
+
 export function assembleContextPack(
   engine: TrellisVcsEngine,
   opts: ContextPackOptions,
@@ -414,6 +479,9 @@ export function assembleContextPack(
     decisions: buildDecisions(engine, focusId, vantage),
     links,
     policyRefs: [],
+    user: shouldInjectProfileInPack()
+      ? buildContextPackUser(getProfile(), budgetTokens)
+      : null,
   };
 
   // Mark truncated if we already clipped AC descriptions etc.
@@ -502,6 +570,24 @@ export function formatContextPackText(pack: ContextPack): string {
   } else {
     for (const p of pack.policyRefs) {
       lines.push(`${p.id}${p.summary ? ` · ${p.summary}` : ''}`);
+    }
+  }
+
+  lines.push('', '## user');
+  if (!pack.user) {
+    lines.push('(none)');
+  } else {
+    lines.push(
+      `${pack.user.name} · verbosity=${pack.user.verbosity} · tone=${pack.user.tone}`,
+    );
+    if (pack.user.style) lines.push(`style: ${pack.user.style}`);
+    if (pack.user.learnings.length === 0) {
+      lines.push('learnings: (none)');
+    } else {
+      for (const l of pack.user.learnings) {
+        const tag = l.category ? `[${l.category}] ` : '';
+        lines.push(`  - ${tag}${l.fact}`);
+      }
     }
   }
 
