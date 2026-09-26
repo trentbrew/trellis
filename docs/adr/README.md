@@ -22,6 +22,7 @@ Decisions for the **Agent Lane** program (`trellis lane`). Status: **accepted**
 | [0041](./0041-adoption-signal-without-silent-telemetry.md) | Adoption signal without silent telemetry | npm downloads not internal signal; GitHub traffic / external issues / trends / direct asks; opt-in usage only |
 | [0044](./0044-plan-artifact-capture.md) | Plan artifact capture | Cross-IDE plan mode → `docs/plans/` + `trellis plan capture` |
 | [0046](./0046-agent-forum.md) | Agent forum | Repo-scoped passive broadcast (`trellis forum`); testimony-based evidence, no scoring in v1 (proposed; amends 0024 L2) |
+| [0047](./0047-datalog-logic-layer.md) | Datalog as the logic layer | Correct recursion (semi-naive, stratified; implemented), `Rule` entities, provenance, one IR for every surface incl. future Cypher; not Prolog (proposed) |
 
 Desk issue: **TRL-35** (W0), **TRL-36** (W1). Plan:
 `TRELLIS/tooling/planning/agent-lanes.md`.

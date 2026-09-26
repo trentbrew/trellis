@@ -602,3 +602,126 @@ describe('DatalogRuntime', () => {
     expect(result.count).toBe(4);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Recursive rules: bottom-up (semi-naive) evaluation
+//
+// The previous top-down evaluator ran rule bodies with a copy of the caller's
+// bindings, so a recursive call saw its own body variables pre-bound: every
+// recursive rule silently stopped after two hops (a 40-node chain returned 2
+// results; all-pairs on a 10-node chain returned 19 of 55). The existing
+// fixtures only had two-hop chains.
+// ---------------------------------------------------------------------------
+
+describe('Datalog recursion', () => {
+  const q = (where: Query['where'], select: string[]): Query =>
+    ({ select, where, filters: [], aggregates: [], orderBy: [], limit: 0, offset: 0 });
+
+  function chain(n: number, attr = 'next'): EAVStore {
+    const store = new EAVStore();
+    store.addLinks(Array.from({ length: n }, (_, i) => ({ e1: `n:${i}`, a: attr, e2: `n:${i + 1}` })));
+    return store;
+  }
+
+  it('follows a 40-hop chain from a fixed source', () => {
+    const rt = new DatalogRuntime(chain(40));
+    rt.registerTransitiveClosure('reach', 'next');
+    const r = rt.getEngine().execute(q([{ kind: 'rule', name: 'reach', args: [literal('n:0'), variable('y')] }], ['y']));
+    expect(r.count).toBe(40);
+  });
+
+  it('computes all pairs on a chain (n(n+1)/2)', () => {
+    const rt = new DatalogRuntime(chain(10));
+    rt.registerTransitiveClosure('reach', 'next');
+    const r = rt.getEngine().execute(q([{ kind: 'rule', name: 'reach', args: [variable('x'), variable('y')] }], ['x', 'y']));
+    expect(r.count).toBe(55);
+  });
+
+  it('terminates on cycles with the complete answer', () => {
+    const store = new EAVStore();
+    store.addLinks([
+      { e1: 'n:a', a: 'next', e2: 'n:b' },
+      { e1: 'n:b', a: 'next', e2: 'n:c' },
+      { e1: 'n:c', a: 'next', e2: 'n:a' },
+    ]);
+    const rt = new DatalogRuntime(store);
+    rt.registerTransitiveClosure('reach', 'next');
+    const r = rt.getEngine().execute(q([{ kind: 'rule', name: 'reach', args: [literal('n:a'), variable('y')] }], ['y']));
+    expect(r.bindings.map((b) => b.y).sort()).toEqual(['n:a', 'n:b', 'n:c']);
+    // same variable twice: nodes on a cycle reach themselves
+    const self = rt.getEngine().execute(q([{ kind: 'rule', name: 'reach', args: [variable('x'), variable('x')] }], ['x']));
+    expect(self.bindings.map((b) => b.x).sort()).toEqual(['n:a', 'n:b', 'n:c']);
+  });
+
+  it('does not capture caller variables that share a name with rule-body variables', () => {
+    // transitiveClosureRules uses ?z internally; the caller uses ?z too.
+    const rt = new DatalogRuntime(chain(5));
+    rt.registerTransitiveClosure('reach', 'next');
+    const r = rt.getEngine().execute(q([{ kind: 'rule', name: 'reach', args: [literal('n:0'), variable('z')] }], ['z']));
+    expect(r.count).toBe(5);
+  });
+
+  it('handles left recursion', () => {
+    const rt = new DatalogRuntime(chain(6));
+    rt.addRule({ name: 'reach', params: ['x', 'y'], body: [{ kind: 'link', source: variable('x'), attribute: literal('next'), target: variable('y') }], filters: [] });
+    rt.addRule({ name: 'reach', params: ['x', 'y'], body: [
+      { kind: 'rule', name: 'reach', args: [variable('x'), variable('m')] },
+      { kind: 'link', source: variable('m'), attribute: literal('next'), target: variable('y') },
+    ], filters: [] });
+    const r = rt.getEngine().execute(q([{ kind: 'rule', name: 'reach', args: [literal('n:0'), variable('y')] }], ['y']));
+    expect(r.count).toBe(6);
+  });
+
+  it('handles mutual recursion (even/odd path lengths)', () => {
+    const rt = new DatalogRuntime(chain(4));
+    const link = (s: string, t: string) => ({ kind: 'link' as const, source: variable(s), attribute: literal('next'), target: variable(t) });
+    rt.addRule({ name: 'odd', params: ['x', 'y'], body: [link('x', 'y')], filters: [] });
+    rt.addRule({ name: 'odd', params: ['x', 'y'], body: [link('x', 'm'), { kind: 'rule', name: 'even', args: [variable('m'), variable('y')] }], filters: [] });
+    rt.addRule({ name: 'even', params: ['x', 'y'], body: [link('x', 'm'), { kind: 'rule', name: 'odd', args: [variable('m'), variable('y')] }], filters: [] });
+    const at = (rule: string) => rt.getEngine()
+      .execute(q([{ kind: 'rule', name: rule, args: [literal('n:0'), variable('y')] }], ['y']))
+      .bindings.map((b) => b.y).sort();
+    expect(at('odd')).toEqual(['n:1', 'n:3']);
+    expect(at('even')).toEqual(['n:2', 'n:4']);
+  });
+
+  it('supports stratified negation over a rule', () => {
+    const store = chain(2);
+    store.addLinks([{ e1: 'n:x', a: 'next', e2: 'n:y' }]);
+    for (const id of ['n:0', 'n:1', 'n:2', 'n:x', 'n:y']) store.addFacts([{ e: id, a: 'type', v: 'Node' }]);
+    const rt = new DatalogRuntime(store);
+    rt.registerTransitiveClosure('reach', 'next');
+    rt.addRule({ name: 'unreachable', params: ['n'], body: [
+      { kind: 'fact', entity: variable('n'), attribute: literal('type'), value: literal('Node') },
+      { kind: 'not', pattern: { kind: 'rule', name: 'reach', args: [literal('n:0'), variable('n')] } },
+    ], filters: [] });
+    const r = rt.getEngine().execute(q([{ kind: 'rule', name: 'unreachable', args: [variable('n')] }], ['n']));
+    expect(r.bindings.map((b) => b.n).sort()).toEqual(['n:0', 'n:x', 'n:y']);
+  });
+
+  it('rejects negation through recursion instead of answering wrongly', () => {
+    const rt = new DatalogRuntime(chain(2));
+    rt.addRule({ name: 'p', params: ['x'], body: [
+      { kind: 'link', source: variable('x'), attribute: literal('next'), target: variable('y') },
+      { kind: 'not', pattern: { kind: 'rule', name: 'p', args: [variable('y')] } },
+    ], filters: [] });
+    expect(() => rt.getEngine().execute(q([{ kind: 'rule', name: 'p', args: [variable('x')] }], ['x']))).toThrow(/unstratified negation/);
+  });
+
+  it('rejects a rule whose params its body does not bind', () => {
+    const rt = new DatalogRuntime(chain(2));
+    rt.addRule({ name: 'bad', params: ['x', 'unused'], body: [
+      { kind: 'link', source: variable('x'), attribute: literal('next'), target: variable('y') },
+    ], filters: [] });
+    expect(() => rt.getEngine().execute(q([{ kind: 'rule', name: 'bad', args: [variable('x'), variable('u')] }], ['x']))).toThrow(/\?unused is not bound/);
+  });
+
+  it('stays fast on long chains (semi-naive, indexed joins)', () => {
+    const rt = new DatalogRuntime(chain(500));
+    rt.registerTransitiveClosure('reach', 'next');
+    const t0 = performance.now();
+    const r = rt.getEngine().execute(q([{ kind: 'rule', name: 'reach', args: [literal('n:0'), variable('y')] }], ['y']));
+    expect(r.count).toBe(500);
+    expect(performance.now() - t0).toBeLessThan(5000); // was minutes under a naive fixpoint
+  });
+});

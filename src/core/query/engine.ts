@@ -42,7 +42,14 @@ export interface QueryResult {
 
 export class QueryEngine {
   private rules: Map<string, DatalogRule[]> = new Map();
-  private maxRuleDepth = 32;
+  /** Rule relations computed during the current execute() (store is fixed for a query). */
+  private relations: Map<string, Map<string, Atom[]>> = new Map();
+  /** Relations of the rule component being solved right now (read by recursive calls). */
+  private solving: Map<string, Map<string, Atom[]>> | null = null;
+  /** Semi-naive: the one rule occurrence that reads last round's new tuples. */
+  private deltaSite: { pattern: RuleApplication, delta: Map<string, Atom[]> } | null = null;
+  /** Join indexes per relation, by bound-position signature, valid while the size is unchanged. */
+  private joinIndexes = new WeakMap<Map<string, Atom[]>, Map<string, { size: number, index: Map<string, Atom[][]> }>>();
 
   constructor(private store: EAVStore) {}
 
@@ -60,6 +67,7 @@ export class QueryEngine {
   /** Execute a query against the store. */
   execute(query: Query): QueryResult {
     const start = performance.now();
+    this.relations = new Map();
 
     // Evaluate patterns
     let results = this._evaluatePatterns(query.where, [new Map()]);
@@ -223,54 +231,170 @@ export class QueryEngine {
     return this._dedup(results);
   }
 
-  private _evalRuleApplication(
-    p: RuleApplication,
-    bindings: Bindings[],
-    depth = 0,
-  ): Bindings[] {
-    if (depth > this.maxRuleDepth) return [];
-    const ruleDefs = this.rules.get(p.name);
-    if (!ruleDefs) return [];
-
+  /**
+   * A rule application joins the caller's bindings with the rule's relation.
+   *
+   * Relations are computed bottom-up to a fixpoint (see _relation). The old
+   * top-down evaluator evaluated rule bodies with a copy of the caller's
+   * bindings, so a recursive call saw its own body variables pre-bound
+   * (variable capture): transitive closure stopped after two hops, silently.
+   */
+  private _evalRuleApplication(p: RuleApplication, bindings: Bindings[]): Bindings[] {
+    const relation = this.deltaSite?.pattern === p ? this.deltaSite.delta : this._relation(p.name);
     const results: Bindings[] = [];
+    // Index the relation by the argument positions each binding has bound,
+    // so a join is a lookup rather than a full scan. Indexes are reused while
+    // the relation hasn't grown.
+    let indexes = this.joinIndexes.get(relation);
+    if (!indexes) this.joinIndexes.set(relation, (indexes = new Map()));
     for (const b of bindings) {
-      for (const rule of ruleDefs) {
-        // Bind rule params from application args
-        const ruleBindings = new Map(b);
+      const resolved = p.args.map((arg) => this._resolve(arg, b));
+      const bound = resolved.map((v, i) => (v !== undefined ? i : -1)).filter((i) => i >= 0);
+      const sig = bound.join(',');
+      let entry = indexes.get(sig)
+      if (!entry || entry.size !== relation.size) {
+        const index = new Map<string, Atom[][]>();
+        for (const tuple of relation.values()) {
+          const k = JSON.stringify(bound.map((i) => tuple[i]));
+          const list = index.get(k);
+          if (list) list.push(tuple);
+          else index.set(k, [tuple]);
+        }
+        entry = { size: relation.size, index };
+        indexes.set(sig, entry);
+      }
+      const index = entry.index;
+      for (const tuple of index.get(JSON.stringify(bound.map((i) => resolved[i]))) ?? []) {
         let ok = true;
-        for (let i = 0; i < rule.params.length && i < p.args.length; i++) {
-          const resolved = this._resolve(p.args[i], b);
-          if (resolved !== undefined) {
-            ruleBindings.set(rule.params[i], resolved);
-          } else if (isVariable(p.args[i])) {
-            // Leave unbound — will be bound by body
-          }
+        const nb = new Map(b);
+        for (let i = 0; i < p.args.length && ok; i++) {
+          if (resolved[i] !== undefined || !isVariable(p.args[i])) continue;
+          const name = (p.args[i] as { name: string }).name;
+          const seen = nb.get(name);
+          if (seen === undefined) nb.set(name, tuple[i]);
+          else ok = seen === tuple[i]; // same variable twice: reach(?x, ?x)
         }
-        if (!ok) continue;
-
-        // Evaluate body
-        let bodyResults = this._evaluatePatterns(rule.body, [ruleBindings]);
-
-        // Apply rule filters
-        for (const f of rule.filters) {
-          bodyResults = bodyResults.filter((rb) => this._evalFilter(f, rb));
-        }
-
-        // Map back rule param bindings to the application arg variables
-        for (const rb of bodyResults) {
-          const nb = new Map(b);
-          for (let i = 0; i < rule.params.length && i < p.args.length; i++) {
-            if (isVariable(p.args[i])) {
-              const val = rb.get(rule.params[i]);
-              if (val !== undefined)
-                nb.set((p.args[i] as { name: string }).name, val);
-            }
-          }
-          results.push(nb);
-        }
+        if (ok) results.push(nb);
       }
     }
     return this._dedup(results);
+  }
+
+  /** Rule names a pattern list applies, split by whether they appear under `not`. */
+  private _ruleDeps(patterns: Pattern[], negated = false, out = { pos: new Set<string>(), neg: new Set<string>() }) {
+    for (const pat of patterns) {
+      if (pat.kind === 'rule') (negated ? out.neg : out.pos).add(pat.name);
+      else if (pat.kind === 'not') this._ruleDeps([pat.pattern], true, out);
+      else if (pat.kind === 'or') for (const br of pat.branches) this._ruleDeps(br, negated, out);
+    }
+    return out;
+  }
+
+  /** Positive rule-application patterns in a body (including inside `or`). */
+  private _positiveSites(patterns: Pattern[], out: RuleApplication[] = []): RuleApplication[] {
+    for (const pat of patterns) {
+      if (pat.kind === 'rule') out.push(pat);
+      else if (pat.kind === 'or') for (const br of pat.branches) this._positiveSites(br, out);
+    }
+    return out;
+  }
+
+  /** Rules reachable from `name` through positive (non-negated) applications. */
+  private _positiveClosure(name: string): Set<string> {
+    const seen = new Set<string>();
+    const stack = [name];
+    while (stack.length) {
+      const n = stack.pop()!;
+      if (seen.has(n)) continue;
+      seen.add(n);
+      for (const r of this.rules.get(n) ?? []) for (const d of this._ruleDeps(r.body).pos) stack.push(d);
+    }
+    return seen;
+  }
+
+  /**
+   * The full relation of a rule, as tuples of its params, computed bottom-up:
+   * evaluate every body of the rule's component (the rules it reaches through
+   * positive applications) with fresh bindings, add new tuples, and repeat
+   * until nothing changes. Terminates (finite store, no function symbols),
+   * handles cycles, left and mutual recursion. Rules negated from the
+   * component are solved first (stratification); negating a rule that depends
+   * back on the component is rejected rather than answered wrongly.
+   */
+  private _relation(name: string): Map<string, Atom[]> {
+    if (this.solving?.has(name)) return this.solving.get(name)!;
+    const cached = this.relations.get(name);
+    if (cached) return cached;
+    if (!this.rules.has(name)) return new Map();
+
+    const component = this._positiveClosure(name);
+    for (const rule of component) {
+      for (const def of this.rules.get(rule) ?? []) {
+        for (const neg of this._ruleDeps(def.body).neg) {
+          if (component.has(neg) || [...this._positiveClosure(neg)].some((r) => component.has(r))) {
+            throw new Error(`rule "${rule}" negates "${neg}", which depends on "${rule}" — unstratified negation is not supported`);
+          }
+          this._relation(neg); // solve the lower stratum first
+        }
+      }
+    }
+
+    const outer = this.solving;
+    const outerDelta = this.deltaSite;
+    const current = new Map<string, Map<string, Atom[]>>();
+    for (const rule of component) current.set(rule, this.relations.get(rule) ?? new Map());
+    this.solving = current;
+
+    /** Evaluate one body; collect tuples not yet in the rule's relation. */
+    const derive = (rule: string, def: DatalogRule, into: Map<string, Map<string, Atom[]>>) => {
+      let rows = this._evaluatePatterns(def.body, [new Map()]);
+      for (const f of def.filters) rows = rows.filter((rb) => this._evalFilter(f, rb));
+      for (const rb of rows) {
+        const tuple = def.params.map((param) => rb.get(param));
+        if (tuple.some((v) => v === undefined)) {
+          const missing = def.params.filter((param) => rb.get(param) === undefined);
+          throw new Error(`rule "${rule}": param ${missing.map((m) => `?${m}`).join(', ')} is not bound by its body`);
+        }
+        const key = JSON.stringify(tuple);
+        if (!current.get(rule)!.has(key)) into.get(rule)!.set(key, tuple as Atom[]);
+      }
+    };
+    const fresh = () => new Map([...component].map((r) => [r, new Map<string, Atom[]>()]));
+    const merge = (delta: Map<string, Map<string, Atom[]>>) => {
+      let any = false;
+      for (const [rule, rel] of delta) {
+        for (const [k, t] of rel) current.get(rule)!.set(k, t);
+        if (rel.size) any = true;
+      }
+      return any;
+    };
+
+    try {
+      // Round 0: every body against the (empty or cached) relations.
+      let delta = fresh();
+      for (const rule of component) for (const def of this.rules.get(rule) ?? []) derive(rule, def, delta);
+      merge(delta);
+      // Semi-naive rounds: each recursive occurrence reads only last round's
+      // new tuples; any new derivation must use at least one of them.
+      const sites = [...component].flatMap((rule) => (this.rules.get(rule) ?? []).flatMap((def) =>
+        this._positiveSites(def.body).filter((site) => component.has(site.name)).map((site) => ({ rule, def, site }))))
+      while ([...delta.values()].some((rel) => rel.size)) {
+        const next = fresh();
+        for (const { rule, def, site } of sites) {
+          const d = delta.get(site.name)!;
+          if (!d.size) continue;
+          this.deltaSite = { pattern: site, delta: d };
+          try { derive(rule, def, next) } finally { this.deltaSite = null }
+        }
+        merge(next);
+        delta = next;
+      }
+    } finally {
+      this.solving = outer;
+      this.deltaSite = outerDelta;
+    }
+    for (const [rule, rel] of current) this.relations.set(rule, rel);
+    return current.get(name)!;
   }
 
   // -------------------------------------------------------------------------
