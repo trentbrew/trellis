@@ -116,3 +116,12 @@ Goal-directed search ("what would have to change for `laptopUsable` to hold?") i
 2. Rule source format: EQL-S rule text only, or also a structured (JSON) body for agents that build rules?
 3. Provenance: keep the first derivation only, or all derivations (bounded) for "every reason this holds"?
 4. Do aggregates inside recursive rules need support (e.g. shortest path), or stay non-recursive?
+
+## Addendum — 2026-09-26: decision 2 implemented
+
+- **Type:** `core:Rule` (label `Rule`) with `source` (required EQL-S rule text), `description`, `enabled`. Several `Rule` entities may define clauses of one rule name; they union with code-registered rules of that name.
+- **Engine:** `execute()` loads enabled `Rule` entities from the store (`src/core/query/rules.ts`). A stored rule that fails to parse doesn't break unrelated queries; a query that uses it fails with the entity and parse error. This means `kernel.query()`, which previously had no rules at all (only `DatalogRuntime` instances did), now sees every stored rule.
+- **Write-time validation:** `createRuleMiddleware` is always installed first in `TrellisKernel` and rejects a write that creates or edits a rule so that it doesn't parse, has no `source`, has a param its body never binds, or makes negation go through recursion (checked statically with an SCC pass over the rule graph). Only problems a write *introduces* block it.
+- **Two write paths:** the VCS engine's store writes (`trellis` CLI in a repo) don't run kernel middleware. `trellis rule add/enable` runs the same program check itself; other VCS-path writes of `Rule` entities (sync, `entity create -t Rule`) are caught by the engine when a query uses them, not at write time. Closing that gap means running the rule check on VCS store ops too.
+- **CLI:** `trellis rule list | add <source> [--id] [-d] | rm <id> | enable <id> | disable <id>`.
+- **Tests:** `test/core/rule-entities.test.ts` (kernel queries use stored rules, enable/disable, every rejection case, edits, stratified negation across rules, non-rule writes untouched; static checks).

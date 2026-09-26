@@ -111,6 +111,10 @@ import { registerSyncCommands } from './sync-cli.js';
 import { registerRegistryCommands } from './registry-cli.js';
 import { registerPublishCommands } from './publish-cli.js';
 import { registerOpsCommands } from './ops-cli.js';
+import { parseRule } from '../core/query/parser.js';
+import { loadStoreRules, RULE_TYPE, validateRules } from '../core/query/rules.js';
+import type { DatalogRule } from '../core/query/types.js';
+import type { Atom, EAVStore } from '../core/store/eav-store.js';
 import { registerWorkflowCommands } from './workflow-cli.js';
 import { registerPipelineCommands } from './pipeline-cli.js';
 import { registerAgentCommands } from './agent-cli.js';
@@ -4201,6 +4205,134 @@ factCmd
       );
     });
   });
+
+// ---------------------------------------------------------------------------
+// trellis rule — Datalog rules stored as graph entities (ADR 0047 §2)
+// ---------------------------------------------------------------------------
+
+const ruleCmd = program
+  .command('rule')
+  .description('Datalog rules stored in the graph (used by every query)');
+
+/** Rule entities in a store, with parse status. */
+function listRuleEntities(store: EAVStore) {
+  const last = (id: string, a: string) => {
+    const fs = store.getFactsByEntity(id).filter((f) => f.a === a);
+    return fs.length ? fs[fs.length - 1]!.v : undefined;
+  };
+  return store.getFactsByValue('type', RULE_TYPE).map((f) => {
+    const source = String(last(f.e, 'source') ?? '');
+    let name: string | undefined;
+    let error: string | undefined;
+    try { name = parseRule(source).name; } catch (err) { error = err instanceof Error ? err.message : String(err); }
+    return { id: f.e, name, source, enabled: last(f.e, 'enabled') !== false, description: last(f.e, 'description'), error };
+  });
+}
+
+/** Errors a changed program would introduce (same checks as the kernel's rule middleware). */
+function ruleProgramErrors(store: EAVStore, change: { drop?: string; add?: DatalogRule }): string[] {
+  const current = loadStoreRules(store).rules;
+  const before = new Set(validateRules(current.map((r) => r.rule)));
+  const next = current.filter((r) => r.entityId !== change.drop).map((r) => r.rule);
+  if (change.add) next.push(change.add);
+  return validateRules(next).filter((e) => !before.has(e));
+}
+
+ruleCmd
+  .command('list')
+  .description('List stored rules')
+  .option('--json', 'Output as JSON')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (opts: any) => {
+    await withGraphStore(resolveRepoRoot(opts.path), async ({ mode, engine, kernel }) => {
+      const rules = listRuleEntities(mode === 'vcs' && engine ? engine.getEavStore() : kernel!.getStore());
+      if (opts.json) return console.log(JSON.stringify(rules, null, 2));
+      if (!rules.length) return console.log(chalk.dim('No rules. Add one: trellis rule add \'reach(?x, ?y) :- (?x "next" ?y)\''));
+      for (const r of rules) {
+        const state = r.error ? chalk.red('invalid') : r.enabled ? chalk.green('on') : chalk.dim('off');
+        console.log(`  ${state.padEnd(16)} ${chalk.bold(r.id)}  ${r.source}${r.error ? chalk.red(`  — ${r.error}`) : ''}`);
+      }
+    });
+  });
+
+ruleCmd
+  .command('add')
+  .description('Add a rule clause (EQL-S rule text); validated before it is written')
+  .argument('<source>', 'e.g. \'reach(?x, ?y) :- (?x "next" ?z), reach(?z, ?y)\'')
+  .option('--id <id>', 'Entity id (default rule:<name>, rule:<name>-2, …)')
+  .option('-d, --description <text>', 'What the rule means')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (source: string, opts: any) => {
+    let rule: DatalogRule;
+    try { rule = parseRule(source); } catch (err) {
+      console.error(chalk.red(`Rule does not parse: ${err instanceof Error ? err.message : String(err)}`));
+      process.exit(1);
+    }
+    await withGraphStore(resolveRepoRoot(opts.path), async ({ mode, engine, kernel }) => {
+      const store = mode === 'vcs' && engine ? engine.getEavStore() : kernel!.getStore();
+      const errors = ruleProgramErrors(store, { add: rule });
+      if (errors.length) {
+        console.error(chalk.red(`Invalid rule: ${errors.join('; ')}`));
+        process.exit(1);
+      }
+      let id = opts.id as string | undefined;
+      if (!id) {
+        id = `rule:${rule.name}`;
+        for (let n = 2; store.getFactsByEntity(id).length; n++) id = `rule:${rule.name}-${n}`;
+      }
+      const attrs: Record<string, Atom> = { source };
+      if (opts.description) attrs.description = String(opts.description);
+      if (mode === 'vcs' && engine) await engine.createStoreEntity(id, RULE_TYPE, attrs);
+      else await kernel!.createEntity(id, RULE_TYPE, attrs);
+      console.log(chalk.green(`✓ Rule ${chalk.bold(id)}: ${source}`));
+    });
+  });
+
+ruleCmd
+  .command('rm')
+  .description('Delete a stored rule clause')
+  .argument('<id>', 'Rule entity id')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (id: string, opts: any) => {
+    await withGraphStore(resolveRepoRoot(opts.path), async ({ mode, engine, kernel }) => {
+      const store = mode === 'vcs' && engine ? engine.getEavStore() : kernel!.getStore();
+      if (!store.getFactsByEntity(id).some((f) => f.a === 'type' && f.v === RULE_TYPE)) {
+        console.error(chalk.red(`No rule ${id}`));
+        process.exit(1);
+      }
+      if (mode === 'vcs' && engine) await engine.deleteStoreEntity(id);
+      else await kernel!.deleteEntity(id);
+      console.log(chalk.green(`✓ Removed rule ${chalk.bold(id)}`));
+    });
+  });
+
+for (const [verb, enabled] of [['enable', true], ['disable', false]] as const) {
+  ruleCmd
+    .command(verb)
+    .description(`${enabled ? 'Enable' : 'Disable'} a stored rule clause`)
+    .argument('<id>', 'Rule entity id')
+    .option('-p, --path <path>', 'Repository path', '.')
+    .action(async (id: string, opts: any) => {
+      await withGraphStore(resolveRepoRoot(opts.path), async ({ mode, engine, kernel }) => {
+        const store = mode === 'vcs' && engine ? engine.getEavStore() : kernel!.getStore();
+        const found = listRuleEntities(store).find((r) => r.id === id);
+        if (!found) {
+          console.error(chalk.red(`No rule ${id}`));
+          process.exit(1);
+        }
+        if (enabled && !found.error) {
+          const errors = ruleProgramErrors(store, { drop: id, add: parseRule(found.source) });
+          if (errors.length) {
+            console.error(chalk.red(`Can't enable: ${errors.join('; ')}`));
+            process.exit(1);
+          }
+        }
+        if (mode === 'vcs' && engine) await engine.updateStoreEntity(id, { enabled });
+        else await kernel!.updateEntity(id, { enabled });
+        console.log(chalk.green(`✓ ${enabled ? 'Enabled' : 'Disabled'} ${chalk.bold(id)}`));
+      });
+    });
+}
 
 // ---------------------------------------------------------------------------
 // trellis link

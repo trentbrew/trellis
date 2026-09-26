@@ -122,6 +122,26 @@ const collection: SchemaDefinition = {
 };
 
 /**
+ * core:Rule — a Datalog rule stored as graph data (ADR 0047 §2).
+ * `source` is EQL-S rule text; several Rule entities may define clauses of
+ * the same rule name. Validated on write by the rule middleware.
+ */
+const rule: SchemaDefinition = {
+  '@id': 'core:Rule',
+  '@type': 'trellis:Schema',
+  version: VERSION,
+  tier: 'core',
+  subClassOf: 'core:Thing',
+  label: 'Rule',
+  icon: 'lucide:function-square',
+  fields: [
+    f('source', 'rich_text', { required: true }),
+    f('description', 'rich_text'),
+    f('enabled', 'checkbox'),
+  ],
+};
+
+/**
  * core:Tag — Classification/labeling entities.
  */
 const tag: SchemaDefinition = {
@@ -717,6 +737,7 @@ export const CORE_ONTOLOGY: SchemaDefinition[] = [
   event,
   collection,
   tag,
+  rule,
   workspace,
   app,
   member,
