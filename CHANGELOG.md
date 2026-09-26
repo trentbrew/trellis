@@ -4,6 +4,19 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [4.0.7] — 2026-09-26
+
+**Minted FileNode / DirectoryNode ids (TRL-456).**
+
+- **Fix:** path-derived `file:<path>` ids merged distinct files after rename +
+  re-add at the original path. `fileAdd` now mints stable ids (`file:f_*`,
+  `dir:d_*`) on the op payload; path is a mutable attribute with an EAV index.
+- **`resolveFileEntityIdForPath`** / **`ResolverContext.getFileEntityId`** for
+  wiki links, chunker, and semantic parsers — legacy `file:<path>` fallback on
+  old graphs.
+- **Migration:** `docs/migrations/file-entity-ids.md` — replay-compatible, no
+  op rewrite required.
+
 ## trellis [4.0.6] — 2026-09-26
 
 **Agent profile memory, plan artifact capture, harness CLI, and a shared
