@@ -31,6 +31,8 @@ export type {
   TrellisType,
 } from './define.js';
 
+export * from './collections.js';
+
 export type { FieldSyncTier } from '../core/ontology/types.js';
 export {
   effectiveFieldSync,

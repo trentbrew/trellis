@@ -5,6 +5,7 @@
  */
 
 import type { MiddlewareContext } from '../core/kernel/middleware.js';
+import { collectionMetaId, collectionSlug } from '../core/ontology/collections.js';
 import { PROVENANCE } from '../core/persist/canonical-op.js';
 import type { AuthContext } from '../server/auth.js';
 import {
@@ -104,16 +105,11 @@ export function handleMcpError(err: unknown) {
   return null;
 }
 
-/** Stable CollectionMeta id used by Playground (`collectionMeta:<slug>`). */
-export const COLLECTION_META_PREFIX = 'collectionMeta:' as const;
+/** Stable CollectionMeta id (`collectionMeta:<slug>`) — see core/ontology/collections. */
+export { COLLECTION_META_PREFIX } from '../core/ontology/collections.js';
 
 export function collectionMetaIdFromSlug(slug: string): string {
-  const trimmed = slug.trim();
-  if (!trimmed) {
-    throw new Error('collection slug is required');
-  }
-  if (trimmed.startsWith(COLLECTION_META_PREFIX)) return trimmed;
-  return `${COLLECTION_META_PREFIX}${trimmed}`;
+  return collectionMetaId(slug);
 }
 
 export function resolveCollectionId(opts: {
@@ -130,7 +126,5 @@ export function resolveCollectionId(opts: {
 }
 
 export function collectionSlugFromMetaId(collectionId: string): string | null {
-  if (!collectionId.startsWith(COLLECTION_META_PREFIX)) return null;
-  const slug = collectionId.slice(COLLECTION_META_PREFIX.length).trim();
-  return slug || null;
+  return collectionSlug(collectionId);
 }
