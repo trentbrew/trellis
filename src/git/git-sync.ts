@@ -6,7 +6,7 @@
  * optionally pushes. The op-log is not consulted for file content.
  */
 
-import { execSync } from 'child_process';
+import { execFileSync, execSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { isGitRepo } from '../vcs/lane-worktree.js';
@@ -25,6 +25,13 @@ export interface GitSyncOptions {
   push?: boolean;
   /** Skip commit when working tree matches HEAD (default true). */
   skipIfClean?: boolean;
+  /**
+   * Commit only these repo-relative paths (adds, edits and deletions); every
+   * other working-tree change is left unstaged and uncommitted. The checkout
+   * is shared with other agents and the human, so automated syncs must pass
+   * the paths they own. Omit to commit the whole working tree.
+   */
+  paths?: string[];
 }
 
 export interface GitSyncResult {
@@ -110,6 +117,43 @@ function git(rootPath: string, command: string): string {
   }).trim();
 }
 
+/** Argv form: paths like `src/routes/[workspace]/+page.svelte` need no shell quoting. */
+function gitArgv(rootPath: string, args: string[]): string {
+  return execFileSync('git', ['-C', rootPath, ...args], {
+    encoding: 'utf-8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+  }).trim();
+}
+
+/** Pathspec that matches the path exactly (no glob on `[workspace]`, `*`, …). */
+function literal(path: string): string {
+  return `:(literal)${path}`;
+}
+
+/**
+ * Stage exactly `paths` and return the ones that ended up staged. A path that is
+ * neither on disk nor tracked (created then removed) or is gitignored is skipped.
+ */
+function stagePaths(rootPath: string, paths: string[]): string[] {
+  const unique = [...new Set(paths.filter((path) => path.length > 0))];
+  for (const path of unique) {
+    try {
+      gitArgv(rootPath, ['add', '-A', '--', literal(path)]);
+    } catch {
+      // untracked-and-missing or ignored — nothing to commit for it
+    }
+  }
+  if (unique.length === 0) return [];
+  const staged = gitArgv(rootPath, [
+    'diff',
+    '--cached',
+    '--name-only',
+    '--',
+    ...unique.map(literal),
+  ]);
+  return staged.split('\n').filter((line) => line.trim().length > 0);
+}
+
 function escapeMessage(msg: string): string {
   return msg.replace(/"/g, '\\"');
 }
@@ -157,11 +201,18 @@ export function syncIntegrationToGit(
     }
   }
 
-  git(opts.rootPath, 'add -A');
-  const status = git(opts.rootPath, 'status --porcelain');
-  const stagedCount = status
-    .split('\n')
-    .filter((line) => line.trim().length > 0).length;
+  let scopedPaths: string[] | undefined;
+  let stagedCount: number;
+  if (opts.paths) {
+    scopedPaths = stagePaths(opts.rootPath, opts.paths);
+    stagedCount = scopedPaths.length;
+  } else {
+    git(opts.rootPath, 'add -A');
+    const status = git(opts.rootPath, 'status --porcelain');
+    stagedCount = status
+      .split('\n')
+      .filter((line) => line.trim().length > 0).length;
+  }
 
   if (opts.skipIfClean !== false && stagedCount === 0) {
     let pushed = false;
@@ -176,10 +227,23 @@ export function syncIntegrationToGit(
   }
 
   const subject = opts.message.split('\n')[0] ?? 'trellis sync';
-  git(
-    opts.rootPath,
-    `commit -m "${escapeMessage(subject)}" -m "${escapeMessage(opts.message)}"`,
-  );
+  if (scopedPaths) {
+    // `commit -- <paths>` commits only these, even if something else is staged.
+    gitArgv(opts.rootPath, [
+      'commit',
+      '-m',
+      subject,
+      '-m',
+      opts.message,
+      '--',
+      ...scopedPaths.map(literal),
+    ]);
+  } else {
+    git(
+      opts.rootPath,
+      `commit -m "${escapeMessage(subject)}" -m "${escapeMessage(opts.message)}"`,
+    );
+  }
   const commitHash = git(opts.rootPath, 'rev-parse HEAD');
 
   let pushed = false;

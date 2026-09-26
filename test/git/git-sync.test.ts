@@ -85,6 +85,108 @@ describe('git-sync', () => {
     expect(git(TEST_ROOT, 'show HEAD:src/synced.ts')).toBe('hello sync');
   });
 
+  test('syncIntegrationToGit with paths commits only those, leaving other dirt alone', () => {
+    // Someone else's in-progress work in the shared checkout.
+    writeFileSync(join(TEST_ROOT, 'README.md'), '# edited by someone else\n');
+    writeFileSync(join(TEST_ROOT, 'wip-untracked.ts'), 'not mine');
+    // The lane's own work, including a bracketed SvelteKit route path.
+    mkdirSync(join(TEST_ROOT, 'src/routes/[workspace]'), { recursive: true });
+    writeFileSync(join(TEST_ROOT, 'src/routes/[workspace]/+page.svelte'), 'mine');
+    writeFileSync(join(TEST_ROOT, 'src/mine.ts'), 'mine too');
+
+    const result = syncIntegrationToGit({
+      rootPath: TEST_ROOT,
+      message: 'TRL-9: scoped',
+      paths: [
+        'src/routes/[workspace]/+page.svelte',
+        'src/mine.ts',
+        'src/created-then-deleted.ts',
+      ],
+    });
+
+    expect(result.committed).toBe(true);
+    expect(result.filesMaterialized).toBe(2);
+    expect(git(TEST_ROOT, 'show --name-only --format= HEAD').split('\n').sort()).toEqual([
+      'src/mine.ts',
+      'src/routes/[workspace]/+page.svelte',
+    ]);
+    // Foreign work: still on disk, still uncommitted, not even staged.
+    expect(readFileSync(join(TEST_ROOT, 'README.md'), 'utf-8')).toBe(
+      '# edited by someone else\n',
+    );
+    expect(git(TEST_ROOT, 'show HEAD:README.md')).toBe('# test');
+    expect(
+      git(TEST_ROOT, 'status --porcelain')
+        .split('\n')
+        .map((line) => line.trim())
+        .sort(),
+    ).toEqual(['?? wip-untracked.ts', 'M README.md']);
+  });
+
+  test('syncIntegrationToGit with paths commits deletions and ignores unrelated staged files', () => {
+    writeFileSync(join(TEST_ROOT, 'gone.ts'), 'x');
+    git(TEST_ROOT, 'add gone.ts');
+    git(TEST_ROOT, 'commit -m "add gone"');
+    rmSync(join(TEST_ROOT, 'gone.ts'));
+    writeFileSync(join(TEST_ROOT, 'staged-by-human.ts'), 'human');
+    git(TEST_ROOT, 'add staged-by-human.ts');
+
+    const result = syncIntegrationToGit({
+      rootPath: TEST_ROOT,
+      message: 'TRL-9: delete',
+      paths: ['gone.ts'],
+    });
+
+    expect(result.committed).toBe(true);
+    expect(git(TEST_ROOT, 'show --name-status --format= HEAD')).toBe('D\tgone.ts');
+    expect(git(TEST_ROOT, 'status --porcelain')).toBe('A  staged-by-human.ts');
+  });
+
+  test('syncIntegrationToGit with empty paths commits nothing', () => {
+    writeFileSync(join(TEST_ROOT, 'README.md'), '# dirty\n');
+    const head = git(TEST_ROOT, 'rev-parse HEAD');
+    const result = syncIntegrationToGit({
+      rootPath: TEST_ROOT,
+      message: 'noop',
+      paths: [],
+    });
+    expect(result.committed).toBe(false);
+    expect(git(TEST_ROOT, 'rev-parse HEAD')).toBe(head);
+    expect(git(TEST_ROOT, 'status --porcelain')).toBe('M README.md');
+  });
+
+  test('lane promote commits the lane’s files, never other root dirt', async () => {
+    const engine = new TrellisVcsEngine({
+      rootPath: TEST_ROOT,
+      git: { syncOnPromote: true },
+    });
+    await engine.initRepo({ indexWorkspace: false });
+    engine.open();
+    await engine.indexWorkspace(); // integration baseline: README.md, .gitignore
+
+    const lane = await engine.createLane({ name: 'scoped-promote' });
+    await engine.enterLane(lane.id);
+    mkdirSync(join(TEST_ROOT, 'src'), { recursive: true });
+    writeFileSync(join(TEST_ROOT, 'src/lane-file.ts'), 'lane work');
+    await engine.indexWorkspace();
+    await engine.leaveLane();
+
+    // Appears after the lane's work was journaled: another agent's WIP.
+    writeFileSync(join(TEST_ROOT, 'other-agent.ts'), 'wip');
+    writeFileSync(join(TEST_ROOT, 'README.md'), '# human edit\n');
+
+    const result = await engine.promoteLane(lane.id);
+    expect(result.promoted).toBe(true);
+
+    const committed = git(TEST_ROOT, 'show --name-only --format= HEAD');
+    expect(committed).toContain('src/lane-file.ts');
+    expect(committed).not.toContain('other-agent.ts');
+    expect(committed).not.toContain('README.md');
+    expect(existsSync(join(TEST_ROOT, 'other-agent.ts'))).toBe(true);
+    expect(git(TEST_ROOT, 'status --porcelain')).toContain('?? other-agent.ts');
+    expect(git(TEST_ROOT, 'status --porcelain')).toMatch(/^\s?M README\.md$/m);
+  });
+
   test('syncIntegrationToGit never overwrites disk with op-log state', async () => {
     const engine = new TrellisVcsEngine({
       rootPath: TEST_ROOT,
