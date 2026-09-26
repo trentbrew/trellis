@@ -243,13 +243,16 @@ export function handleFileDeletion(
   registry: StaleRefRegistry,
   filePath: string,
   causeOpHash?: string,
+  entityId?: string,
 ): StaleRef | null {
-  const entityId = `file:${filePath}`;
-  const sources = getBacklinks(index, entityId);
+  const resolvedEntityId = entityId ?? `file:${filePath}`;
+  const sources = getBacklinks(index, resolvedEntityId);
 
   if (sources.length === 0) return null;
 
-  return registry.markStale(entityId, 'deleted', sources, { causeOpHash });
+  return registry.markStale(resolvedEntityId, 'deleted', sources, {
+    causeOpHash,
+  });
 }
 
 // ---------------------------------------------------------------------------

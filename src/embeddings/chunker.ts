@@ -113,10 +113,14 @@ export function chunkMilestone(milestone: {
  * Each H1/H2/H3 section becomes a separate chunk.
  * Sections that exceed MAX_CHUNK_CHARS get sliding-window split.
  */
-export function chunkMarkdown(filePath: string, content: string): ChunkMeta[] {
+export function chunkMarkdown(
+  filePath: string,
+  content: string,
+  entityId?: string,
+): ChunkMeta[] {
   if (!content.trim()) return [];
 
-  const entityId = `file:${filePath}`;
+  const resolvedEntityId = entityId ?? `file:${filePath}`;
   const now = new Date().toISOString();
   const sections = splitByHeadings(content);
   const chunks: ChunkMeta[] = [];
@@ -127,8 +131,8 @@ export function chunkMarkdown(filePath: string, content: string): ChunkMeta[] {
 
     if (section.text.length <= MAX_CHUNK_CHARS) {
       chunks.push({
-        id: `${entityId}:section:${i}`,
-        entityId,
+        id: `${resolvedEntityId}:section:${i}`,
+        entityId: resolvedEntityId,
         content: section.text,
         chunkType: 'markdown',
         filePath,
@@ -139,8 +143,8 @@ export function chunkMarkdown(filePath: string, content: string): ChunkMeta[] {
       const windows = slidingWindow(section.text);
       for (let w = 0; w < windows.length; w++) {
         chunks.push({
-          id: `${entityId}:section:${i}:w${w}`,
-          entityId,
+          id: `${resolvedEntityId}:section:${i}:w${w}`,
+          entityId: resolvedEntityId,
           content: windows[w],
           chunkType: 'markdown',
           filePath,
@@ -197,10 +201,11 @@ export function chunkCodeEntities(
 export function chunkDocComments(
   filePath: string,
   comments: Array<{ line: number; text: string }>,
+  entityId?: string,
 ): ChunkMeta[] {
   if (comments.length === 0) return [];
 
-  const entityId = `file:${filePath}`;
+  const resolvedEntityId = entityId ?? `file:${filePath}`;
   const now = new Date().toISOString();
   const chunks: ChunkMeta[] = [];
 
@@ -209,8 +214,8 @@ export function chunkDocComments(
     if (!comment.text.trim()) continue;
 
     chunks.push({
-      id: `${entityId}:doc:${i}`,
-      entityId,
+      id: `${resolvedEntityId}:doc:${i}`,
+      entityId: resolvedEntityId,
       content: comment.text.slice(0, MAX_CHUNK_CHARS),
       chunkType: 'doc_comment',
       filePath,
@@ -224,17 +229,21 @@ export function chunkDocComments(
 /**
  * Chunk a summary.md or similar short-to-medium text file.
  */
-export function chunkSummary(filePath: string, content: string): ChunkMeta[] {
+export function chunkSummary(
+  filePath: string,
+  content: string,
+  entityId?: string,
+): ChunkMeta[] {
   if (!content.trim()) return [];
 
-  const entityId = `file:${filePath}`;
+  const resolvedEntityId = entityId ?? `file:${filePath}`;
   const now = new Date().toISOString();
 
   if (content.length <= MAX_CHUNK_CHARS) {
     return [
       {
-        id: `${entityId}:summary`,
-        entityId,
+        id: `${resolvedEntityId}:summary`,
+        entityId: resolvedEntityId,
         content,
         chunkType: 'summary_md',
         filePath,
@@ -244,7 +253,7 @@ export function chunkSummary(filePath: string, content: string): ChunkMeta[] {
   }
 
   // Split by headings for longer summaries
-  return chunkMarkdown(filePath, content).map((c) => ({
+  return chunkMarkdown(filePath, content, resolvedEntityId).map((c) => ({
     ...c,
     chunkType: 'summary_md' as ChunkType,
   }));

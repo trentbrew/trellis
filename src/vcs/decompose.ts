@@ -19,8 +19,10 @@ function zoneOwnerPrincipal(zoneId: string): string | null {
   return m ? `identity:${m[1]}` : null;
 }
 import {
-  fileEntityId,
-  dirEntityId,
+  dirEntityIdFromPayload,
+  fileEntityIdFromPayload,
+} from './file-entity.js';
+import {
   issueEntityId,
   criterionEntityId,
   decisionEntityId,
@@ -119,9 +121,9 @@ export function decompose(op: VcsOp): DecomposedOp {
   switch (op.kind) {
     case 'vcs:fileAdd': {
       if (!vcs.filePath) break;
-      const eid = fileEntityId(vcs.filePath);
+      const eid = fileEntityIdFromPayload(vcs, vcs.filePath);
       const dir = dirname(vcs.filePath);
-      const did = dirEntityId(dir === '.' ? '' : dir);
+      const did = dirEntityIdFromPayload(vcs, dir === '.' ? '' : dir);
 
       result.addFacts.push(
         { e: eid, a: 'type', v: 'FileNode' },
@@ -149,7 +151,7 @@ export function decompose(op: VcsOp): DecomposedOp {
 
     case 'vcs:fileModify': {
       if (!vcs.filePath) break;
-      const eid = fileEntityId(vcs.filePath);
+      const eid = fileEntityIdFromPayload(vcs, vcs.filePath);
 
       // Delete old contentHash/size facts, add new ones
       if (vcs.oldContentHash) {
@@ -172,9 +174,9 @@ export function decompose(op: VcsOp): DecomposedOp {
 
     case 'vcs:fileDelete': {
       if (!vcs.filePath) break;
-      const eid = fileEntityId(vcs.filePath);
+      const eid = fileEntityIdFromPayload(vcs, vcs.filePath);
       const dir = dirname(vcs.filePath);
-      const did = dirEntityId(dir === '.' ? '' : dir);
+      const did = dirEntityIdFromPayload(vcs, dir === '.' ? '' : dir);
 
       // Remove file entity facts
       result.deleteFacts.push(
@@ -194,11 +196,19 @@ export function decompose(op: VcsOp): DecomposedOp {
 
     case 'vcs:fileRename': {
       if (!vcs.filePath || !vcs.oldFilePath) break;
-      const eid = fileEntityId(vcs.oldFilePath); // identity preserved
+      const eid = fileEntityIdFromPayload(vcs, vcs.oldFilePath);
       const oldDir = dirname(vcs.oldFilePath);
       const newDir = dirname(vcs.filePath);
-      const oldDid = dirEntityId(oldDir === '.' ? '' : oldDir);
-      const newDid = dirEntityId(newDir === '.' ? '' : newDir);
+      const oldDid = dirEntityIdFromPayload(
+        vcs,
+        oldDir === '.' ? '' : oldDir,
+        'oldDirEntityId',
+      );
+      const newDid = dirEntityIdFromPayload(
+        vcs,
+        newDir === '.' ? '' : newDir,
+        'newDirEntityId',
+      );
 
       // Update path fact
       result.deleteFacts.push({ e: eid, a: 'path', v: vcs.oldFilePath });

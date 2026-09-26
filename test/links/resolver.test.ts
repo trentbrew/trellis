@@ -62,6 +62,7 @@ function mockContext(overrides?: Partial<ResolverContext>): ResolverContext {
       };
       return decisions[id];
     },
+    getFileEntityId: (path) => `file:${path}`,
     ...overrides,
   };
 }

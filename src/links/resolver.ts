@@ -8,6 +8,8 @@
  */
 
 import type { EntityRef, ResolvedRef, RefNamespace } from './types.js';
+import { resolveFileEntityIdForPath } from '../vcs/file-entity.js';
+import type { EAVStore } from '../core/store/eav-store.js';
 
 // ---------------------------------------------------------------------------
 // Resolver Context — interface for engine capabilities
@@ -53,6 +55,12 @@ export interface ResolverContext {
 
   /** Get all symbol names for a file. */
   getSymbolNames(filePath: string): string[];
+
+  /**
+   * Resolve a tracked file path to its FileNode entity id (TRL-456).
+   * Falls back to legacy `file:<path>` when no index entry exists.
+   */
+  getFileEntityId(filePath: string): string;
 }
 
 // ---------------------------------------------------------------------------
@@ -113,7 +121,7 @@ function resolveFile(ref: EntityRef, ctx: ResolverContext): ResolvedRef {
     return {
       ...ref,
       state: 'resolved',
-      entityId: `file:${ref.target}`,
+      entityId: ctx.getFileEntityId(ref.target),
       title: ref.target,
     };
   }
@@ -145,7 +153,7 @@ function resolveSymbol(ref: EntityRef, ctx: ResolverContext): ResolvedRef {
   return {
     ...ref,
     state: 'resolved',
-    entityId: `file:${ref.target}`,
+    entityId: ctx.getFileEntityId(ref.target),
     title: ref.target,
   };
 }
@@ -208,6 +216,7 @@ export interface Enginelike {
   getRootPath(): string;
   getDecision?(id: string): { id: string; toolName: string } | null;
   queryDecisions?(filter?: any): Array<{ id: string; toolName: string }>;
+  getStore?(): EAVStore;
 }
 
 /**
@@ -227,9 +236,15 @@ export function createResolverContext(engine: Enginelike): ResolverContext {
   // Cache milestones
   const milestones = engine.listMilestones();
 
+  const store = engine.getStore?.() ?? null;
+
   return {
     hasTrackedFile(path: string): boolean {
       return trackedSet.has(path);
+    },
+
+    getFileEntityId(filePath: string): string {
+      return resolveFileEntityIdForPath(store, filePath);
     },
 
     getIssueTitle(id: string): string | undefined {

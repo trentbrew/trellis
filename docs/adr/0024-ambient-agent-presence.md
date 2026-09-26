@@ -57,6 +57,10 @@ lane + claim + branch, never sent as a message. Zero-cost, always-current.
 
 ### Layer 2 — Live room + direct message (future)
 
+> **Amended by [ADR 0046](./0046-agent-forum.md):** Layer 2 is now a repo-scoped
+> broadcast forum (`trellis forum`), not direct messages. Directed async messages
+> stay with ADR 0015 handoffs. The sketch below is kept for history.
+
 - Long-running sessions join `RealtimeRoom` so awareness is instantaneous and
   `room.broadcast` enables `trellis message send --to <agent|lane>`.
 - Direct messages stay **async and graph-backed**, extending ADR 0015's handoff

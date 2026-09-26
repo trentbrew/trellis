@@ -76,6 +76,7 @@ import type { ProjectContext } from './scaffold/infer.js';
 
 import { JsonOpLog, LaneOpLog } from './vcs/op-log.js';
 import type { OpLog } from './vcs/op-log.js';
+import * as fileEntityMod from './vcs/file-entity.js';
 import * as laneMod from './vcs/lane.js';
 import type { LaneMeta } from './vcs/lane.js';
 import * as lanePromoteMod from './vcs/lane-promote.js';
@@ -2505,7 +2506,12 @@ for (const event of scanEvents) {
       }),
     );
     if (!parser) return null;
-    return parser.parse(content, filePath);
+    const result = parser.parse(content, filePath);
+    result.fileEntityId = fileEntityMod.resolveFileEntityIdForPath(
+      this.store,
+      filePath,
+    );
+    return result;
   }
 
   /**
@@ -3372,15 +3378,34 @@ for (const event of scanEvents) {
       (inLane && this.isIssueIntegrationOp(op.kind));
 
     let opToApply = op;
+
+    // TRL-456: mint / resolve FileNode ids on the payload before anything
+    // hashes or signs the op, so the signature covers the ids and replay is
+    // stable. Foreign ops are never rewritten: changing their payload would
+    // change their hash and drop the peer's signature. Id-less foreign ops
+    // (pre-TRL-456 peers) decompose with the legacy path-derived fallback,
+    // exactly as the materialize path does on reopen.
+    if (!opts?.foreign) {
+      const enriched = fileEntityMod.enrichFileOp(this.store, opToApply);
+      if (enriched.vcs !== opToApply.vcs && isVcsOpKind(enriched.kind)) {
+        opToApply = await createVcsOp(enriched.kind, {
+          agentId: enriched.agentId,
+          previousHash: enriched.previousHash,
+          vcs: withoutSignature(enriched.vcs),
+        });
+        if (op.laneId) opToApply.laneId = op.laneId;
+      }
+    }
+
     if (inLane && forceIntegration) {
       const intLast = this.opLog.getLastOp();
-      if (intLast?.hash !== op.previousHash && isVcsOpKind(op.kind)) {
+      if (intLast?.hash !== opToApply.previousHash && isVcsOpKind(opToApply.kind)) {
         // Re-minting changes previousHash, which the signature covers: drop
         // the stale envelope so the op is re-signed below.
-        opToApply = await createVcsOp(op.kind, {
-          agentId: op.agentId,
+        opToApply = await createVcsOp(opToApply.kind, {
+          agentId: opToApply.agentId,
           previousHash: intLast?.hash,
-          vcs: withoutSignature(op.vcs),
+          vcs: withoutSignature(opToApply.vcs),
         });
       }
     }
@@ -3527,6 +3552,8 @@ for (const event of scanEvents) {
 
   private replayOp(op: VcsOp): void {
     // Same as applyOp but doesn't persist (ops are already in the log)
+    // Never enrich on replay: minting here would give id-less (legacy) ops a
+    // new random id on every rebuild. Journaled ops already carry their ids.
     const decomposed = decompose(op);
 
     if (decomposed.deleteFacts.length > 0) {
