@@ -224,3 +224,21 @@ Remaining phases: 3 (migrate fractal-playground and realtime-app, whose own copi
 `DEMO_NS`, to these types with option ids), 4 (`core:Tag`) and 5 (CMS). FINANCE adopts the kernel types
 when a release carries them: its `Field` type becomes `CollectionField`, and its compiler calls
 `compileCollectionSchema`.
+
+## Addendum — Phase 3 progress (2026-09-27)
+
+- **Migration helper** (`62809b4`): `migrateCollectionOptions` / `migrateOptionValue` convert legacy option
+  shapes (`string[]`, `{value,label,color}[]`) and stored row values to option ids. Ids are derived from labels
+  (`legacyOptionId`), so concurrent migrations agree and re-running is a no-op. Values that match no option
+  are kept, not dropped.
+- **realtime-app migrated.** It uses the kernel's `CollectionMeta`/`CollectionRecord` handles and no longer
+  registers its own. Its form rules (`title` min 1, `body` max 4000) now live in the app, and new collections
+  get explicit, unique `collectionMeta:<slug>` ids. It has no user fields or options, so it needed no option
+  migration. Its `laneId` row tag is written through an untyped create, since it isn't a kernel field (open
+  question 5). Verified: `collections.e2e.ts` passes (6/6) against the current kernel.
+  - Note: the demo's `trellis` dependency was a dangling pnpm link, because the workspace root is now
+    bun-installed. It was refreshed with `pnpm install --ignore-workspace` inside the demo. pnpm 9 can't run
+    the demo's scripts inside this workspace (`pnpm-workspace.yaml` uses pnpm-10 keys), so `pnpm dev:all`
+    fails until pnpm is upgraded.
+- **fractal-playground: deferred** until its in-progress collections work is committed and a trellis
+  release carries the kernel types. It is still on `trellis ^3.2.0`.

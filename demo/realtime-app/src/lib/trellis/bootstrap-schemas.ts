@@ -2,7 +2,6 @@ import { env } from '$env/dynamic/public';
 import type { TrellisDb } from 'trellis/client/sdk';
 import type { AnyType } from 'trellis/schema';
 import { ChatMessageType } from '$lib/schemas/chat';
-import { CollectionMetaType, CollectionRecordType } from '$lib/schemas/collection';
 import { NavItem, NavSection } from '$lib/schemas/nav';
 
 /**
@@ -19,14 +18,11 @@ export function byOrder<T extends { order: number }>(a: T, b: T) {
 	return a.order - b.order;
 }
 
-/** All durable explorer types — register idempotently from the browser on mount. */
-export const EXPLORER_SCHEMAS: AnyType[] = [
-	NavSection,
-	NavItem,
-	ChatMessageType,
-	CollectionMetaType,
-	CollectionRecordType
-];
+/**
+ * All durable explorer types — register idempotently from the browser on mount.
+ * CollectionMeta/CollectionRecord aren't here: they ship with the kernel (ADR 0045).
+ */
+export const EXPLORER_SCHEMAS: AnyType[] = [NavSection, NavItem, ChatMessageType];
 
 /**
  * Register explorer schemas (idempotent). Graph seed data runs on the sidecar

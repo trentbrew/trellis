@@ -118,7 +118,9 @@
 		if (creating) return;
 		creating = true;
 		try {
-			await recordMut.create({
+			// Untyped create: `laneId` is the demo's lane tag, not a kernel row field
+			// (ADR 0045 open Q5), so the typed mutation doesn't accept it.
+			await client.create('CollectionRecord', {
 				collectionId: collection.id,
 				title,
 				body: body || undefined,
