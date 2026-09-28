@@ -18,6 +18,7 @@ Decisions for the **Agent Lane** program (`trellis lane`). Status: **accepted**
 | [0017](./0017-blob-gc-thermal-decay.md)                  | Blob GC + thermal decay                  | W‑TinyLFU hot cache; hot→cold→OPFS→peer ladder; never-sole-copy invariant |
 | [0038](./0038-git-authoritative-file-tier.md)            | Git-authoritative file tier              | Git sole byte authority; op-log demoted to non-materializing provenance (accepted, Phase 1 implemented) |
 | [0039](./0039-no-vendor-kernel-backends-compatibility-bridge.md) | No vendor kernel backends | Compatibility bridge (hosted Trellis, relays, git, export); vendor BaaS is a non-goal for `KernelBackend` |
+| [0049](./0049-git-bug-compatibility-adapter.md) | git-bug compatibility adapter | Read `refs/bugs/*` in clean-room TS; map git-bug ops → `vcs:issue*`; Trellis canonical (proposed) |
 | [0040](./0040-lane-boundary-oss-and-hosted-platform.md) | Lane boundary, OSS, hosted Platform | Non-compete on BaaS; open engine; Studio + Platform sibling SKUs; Rox-shaped horizontal agent SaaS |
 | [0041](./0041-adoption-signal-without-silent-telemetry.md) | Adoption signal without silent telemetry | npm downloads not internal signal; GitHub traffic / external issues / trends / direct asks; opt-in usage only |
 | [0044](./0044-plan-artifact-capture.md) | Plan artifact capture | Cross-IDE plan mode → `docs/plans/` + `trellis plan capture` |
@@ -39,6 +40,7 @@ Desk issue: **TRL-35** (W0), **TRL-36** (W1). Plan:
 | [0020](./0020-qr-device-pairing.md)                | QR device pairing                      | Delegated device keys under Ed25519 identity; OOB QR/code; magic email non-root (**accepted**, TRL-87/88/92) |
 | [0022](./0022-zone-capability-model.md)            | Zone-scoped capability model           | `CapabilityLevel{None,Reader,Member,Owner}`; zones = immutable `zoneId` + mutable `alias`; per-writer refs; single-owner `integration` (accepted, TRL-102) |
 | [0023](./0023-zone-encryption-at-rest.md)         | Encryption-at-rest for zone keys       | Per-zone AES-256-GCM; key wrapped under argon2id KEK (Ed25519 root); revoke = rotate; relay stores ciphertext only (proposed, TRL-97/102) |
+| [0049](./0049-git-bug-compatibility-adapter.md) | git-bug compatibility adapter        | Read `refs/bugs/*` in clean-room TS; map git-bug ops → `vcs:issue*`; Trellis canonical (proposed) |
 
 ### Product / explorer shell
 
