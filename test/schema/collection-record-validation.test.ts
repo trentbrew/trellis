@@ -38,6 +38,7 @@ beforeAll(async () => {
   await client.registerType(
     compileCollectionSchema({ id: COLLECTION_ID, title: 'Reading list' }, [
       { collection: COLLECTION_ID, key: 'pages', label: 'Pages', valueType: 'number', order: 1 },
+      { collection: COLLECTION_ID, key: 'topics', label: 'Topics', valueType: 'tags', vocabulary: 'tag:vocab', order: 2 },
     ]),
   );
 });
@@ -94,6 +95,19 @@ describe('CollectionRecord per-collection validation', () => {
     await expect(client.update(id, { tags: ['feature'] })).resolves.toBeUndefined();
     await expect(client.update(id, { tags: ['nope'] })).rejects.toThrow(/tags/);
     await expect(client.create('TaggedThing', { title: 'bad', tags: ['bug', 42] })).rejects.toThrow(/tags/);
+  });
+
+  it('stores tags as an array of core:Tag ids, on create and update', async () => {
+    const vocab = await client.create('Tag', { name: 'Topics' }, undefined, { id: 'tag:vocab' });
+    const scifi = await client.create('Tag', { name: 'Sci-fi', parentTag: vocab });
+    const id = await client.create('CollectionRecord', {
+      collectionId: COLLECTION_ID,
+      title: 'Dune',
+      topics: [scifi],
+    });
+    await expect(client.update(id, { topics: [scifi, 'tag:another'] })).resolves.toBeUndefined();
+    const stored = await client.read(id);
+    expect((stored as { topics?: unknown } | null)?.topics).toEqual([scifi, 'tag:another']);
   });
 
   it('stays open-world for attributes the schema does not declare', async () => {

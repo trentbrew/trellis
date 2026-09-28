@@ -49,7 +49,8 @@ Defined in the same `core-ontology.ts`.
 | Term | `@id` | Meaning |
 |------|-------|---------|
 | **User collection** | `trellis:CollectionMeta` | A table's header (`title`, `slug`, icon, color, description). Id is `collectionMeta:<slug>` — explicit, case-sensitive. |
-| **Collection field** | `trellis:CollectionField` | One column: `collection`, stable `key` (row attribute, never renamed), `label`, `valueType`, `options` (JSON `{ id, label, color? }[]`), `order`. |
+| **Collection field** | `trellis:CollectionField` | One column: `collection`, stable `key` (row attribute, never renamed), `label`, `valueType`, `options` (JSON `{ id, label, color? }[]`, field-local), `vocabulary` (root tag id, for `tags` fields), `order`. |
+| **Vocabulary** | `core:Tag` (root) | A shared, user-extensible set of terms: child tags (`parentTag`) of a root tag. `tags` fields store term ids and compile to a relation to `core:Tag`. |
 | **Collection record** | `trellis:CollectionRecord` | One row of any user collection, scoped by `collectionId`. Rows store field keys and option **ids**; labels are derived. |
 | **Collection schema** | `trellis:user/collections/<slug>/Record` | Per-collection row schema compiled by `compileCollectionSchema`; the schema middleware resolves it from `collectionId` to validate rows (creates and updates). |
 

@@ -242,3 +242,29 @@ when a release carries them: its `Field` type becomes `CollectionField`, and its
     fails until pnpm is upgraded.
 - **fractal-playground: deferred** until its in-progress collections work is committed and a trellis
   release carries the kernel types. It is still on `trellis ^3.2.0`.
+
+## Addendum — Scope change and Phase 4: tag vocabularies (2026-09-28)
+
+**fractal-playground is prior art, not a migration target.** Phase 3 no longer includes it. The FINANCE client
+(`lab/apps/FINANCE/client-svelte`) is the app this ADR is proven in. fractal's collections UI (schema editor,
+form layouts, views) stays as reference for what to build there.
+
+**Phase 4 is done** (FINANCE `80754e6`, `0f2d319`; kernel below):
+
+- **A vocabulary is a root `core:Tag`, and its terms are child tags** (`parentTag`). A field that declares a
+  `vocabulary` stores tag ids. The app runtime binds the field's options to the live terms (a getter, so the
+  editor, display, filters and sort need no changes), creates the vocabulary and its seed terms idempotently
+  (explicit ids, one query), and routes the picker's inline "add option" to creating a `Tag`. Fixed enum fields
+  no longer offer "add option" at all.
+- **Projects `Task.tags`** moved from a fixed Zod enum to the "Task tags" vocabulary. The old values are seeded
+  under stable ids (`tag:task-tags.<value>`), and a self-healing migration rewrote existing tasks. On the live
+  graph, 7 tasks were migrated and unknown values are kept.
+- **User databases** gain a **Tags** property type drawing on one shared workspace vocabulary
+  (`tag:vocab.workspace`), so a tag made in one database is available in all of them. Select and
+  multi-select options stay local to their field.
+- **Kernel:** `tags` is a collection field type that compiles to
+  `relation → core:Tag (many)`, and `CollectionField` gains `vocabulary`.
+
+Not done: `core:Record.tags` (still a `multi_select` of strings) is not migrated. It needs a kernel-wide plan,
+because every Record subtype inherits it. FINANCE `Category` also stays its own entity: it carries a budget
+`group` and feeds reports and Plaid categorisation, so folding it into `core:Tag` is a separate decision.

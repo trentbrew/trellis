@@ -67,6 +67,7 @@ export const COLLECTION_FIELD_TYPES = [
   'number',
   'select',
   'multi_select',
+  'tags',
   'date',
   'checkbox',
 ] as const;
@@ -87,6 +88,12 @@ export interface CollectionFieldRow {
   label: string;
   valueType: string;
   options?: string;
+  /**
+   * For `tags` fields: the root `core:Tag` whose child tags are the terms. A shared
+   * vocabulary spans collections and apps (ADR 0045 decision 4); `options` is for
+   * vocabularies local to one field.
+   */
+  vocabulary?: string;
   order: number;
 }
 
@@ -210,7 +217,8 @@ function safeJson(text: string): unknown {
   }
 }
 
-const KERNEL_TYPE: Record<CollectionFieldType, PropertyType> = {
+/** `tags` is a relation to `core:Tag`, compiled separately. */
+const KERNEL_TYPE: Record<Exclude<CollectionFieldType, 'tags'>, PropertyType> = {
   text: 'rich_text',
   number: 'number',
   select: 'select',
@@ -237,14 +245,22 @@ export function compileCollectionSchema(
         !RESERVED_RECORD_KEYS.has(row.key),
     )
     .sort((a, b) => a.order - b.order || a.key.localeCompare(b.key))
-    .map(
-      (row): PropertyValueSpecification => ({
+    .map((row): PropertyValueSpecification => {
+      // Field specs have no label; the display label rides in `description`.
+      if (row.valueType === 'tags') {
+        return {
+          name: row.key,
+          valueType: 'relation',
+          description: row.label,
+          relation: { targetSchema: 'core:Tag', cardinality: 'many' },
+        };
+      }
+      return {
         name: row.key,
-        valueType: KERNEL_TYPE[row.valueType as CollectionFieldType],
-        // Field specs have no label; the display label rides in `description`.
+        valueType: KERNEL_TYPE[row.valueType as Exclude<CollectionFieldType, 'tags'>],
         description: row.label,
-      }),
-    );
+      };
+    });
 
   const title = collection.title?.trim();
   return {
@@ -318,6 +334,7 @@ export const COLLECTION_FIELD_SCHEMA: SchemaDefinition = {
     f('label', 'title', true),
     { name: 'valueType', valueType: 'select', required: true, selectOptions: [...COLLECTION_FIELD_TYPES] } as PropertyValueSpecification,
     f('options', 'rich_text'),
+    f('vocabulary', 'rich_text'),
     f('order', 'number', true),
   ],
 };
