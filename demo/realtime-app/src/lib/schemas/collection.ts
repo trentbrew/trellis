@@ -1,50 +1,26 @@
 /**
  * Collections demo — named tables (CollectionMeta) + rows (CollectionRecord).
- * Product-shaped user schemas; not kernel primitives. See docs/ontology-glossary.md.
+ * These are the kernel's user-collection types (system tier, ADR 0045); the demo
+ * adds only its form rules and the lane it tags rows with.
  */
-import { defineType, type InferType } from 'trellis/schema';
+import {
+	COLLECTION_META_PREFIX,
+	CollectionMeta as KernelCollectionMeta,
+	CollectionRecord as KernelCollectionRecord,
+	type InferType
+} from 'trellis/schema';
 import { z } from 'zod';
 import { MAIN_LANE, type LaneId } from '$lib/trellis/lane';
 
-export const DEMO_NS = 'https://trellis.dev/ns/demo/v1' as const;
-
-const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'color must be #RRGGBB');
-
-export const CollectionMetaType = defineType(
-	'CollectionMeta',
-	{
-		title: z.string().min(1),
-		slug: z.string().min(1).max(64),
-		icon: z.string().optional(),
-		color: hexColor.optional(),
-		description: z.string().max(500).optional(),
-		sortOrder: z.number().int().optional()
-	},
-	{
-		title: 'title',
-		extends: 'core:Record',
-		label: 'Collection'
-	}
-);
-
-export const CollectionRecordType = defineType(
-	'CollectionRecord',
-	{
-		collectionId: z.string().min(1),
-		title: z.string().min(1),
-		body: z.string().max(4000).optional(),
-		sortOrder: z.number().int().optional(),
-		laneId: z.string().optional()
-	},
-	{
-		title: 'title',
-		extends: 'core:Record',
-		label: 'CollectionRecord'
-	}
-);
+export const CollectionMetaType = KernelCollectionMeta;
+export const CollectionRecordType = KernelCollectionRecord;
 
 export type CollectionMeta = InferType<typeof CollectionMetaType>;
-export type CollectionRecord = InferType<typeof CollectionRecordType>;
+/**
+ * `laneId` isn't part of the kernel row (ADR 0045 open Q5: a lane concern, not
+ * row data); the demo still tags rows with it and the open-world graph keeps it.
+ */
+export type CollectionRecord = InferType<typeof CollectionRecordType> & { laneId?: LaneId };
 
 export const LaneQueryInput = z.object({
 	lane: z.string().optional().default(MAIN_LANE)
@@ -137,8 +113,14 @@ export function recordIdPrefix(): string {
 	return 'collectionRecord:';
 }
 
-/** Client-side validation for collection record title + body (L2 forms). */
-const recordFieldsSchema = CollectionRecordType.zod.pick({ title: true, body: true });
+/**
+ * Client-side validation for collection record title + body (L2 forms). Form rules
+ * are the app's: the kernel type only requires `title` to exist.
+ */
+const recordFieldsSchema = z.object({
+	title: z.string().min(1),
+	body: z.string().max(4000).optional()
+});
 
 export function validateRecordFields(input: {
 	title: string;
@@ -154,5 +136,5 @@ export function validateRecordFields(input: {
 }
 
 export function metaIdPrefix(): string {
-	return 'collectionMeta:';
+	return COLLECTION_META_PREFIX;
 }

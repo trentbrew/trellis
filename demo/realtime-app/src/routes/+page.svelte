@@ -3,7 +3,8 @@
 	import { onDestroy, onMount } from 'svelte';
 	import Add from 'carbon-icons-svelte/lib/Add.svelte';
 	import { TrellisDb } from 'trellis/client/sdk';
-	import { entitiesStore, mutations } from 'trellis/svelte/typed';
+	import { collectionMetaId } from 'trellis/schema';
+	import { entitiesStore } from 'trellis/svelte/typed';
 	import { getPlatformStatus } from './platform.remote';
 	import { bootstrapExplorerSchemas, trellisClientUrl } from '$lib/trellis/bootstrap-schemas';
 	import {
@@ -15,7 +16,6 @@
 	import LiveIndicator from '$lib/ui/LiveIndicator.svelte';
 
 	const client = new TrellisDb({ url: trellisClientUrl() });
-	const metaMut = mutations(client, CollectionMetaType);
 	const status = getPlatformStatus();
 
 	let ready = $state(false);
@@ -57,13 +57,18 @@
 		if (!title || creating) return;
 		creating = true;
 		try {
-			const slug = slugify(title);
-			await metaMut.create({
-				title,
-				slug,
-				sortOrder: sorted.length,
-				color: '#0f62fe'
-			});
+			// The slug is the collection's id (`collectionMeta:<slug>`, ADR 0045), so it
+			// must be unique; routes resolve collections by slug too.
+			const base = slugify(title) || 'collection';
+			const taken = new Set(collections.data.map((collection) => collection.slug));
+			let slug = base;
+			for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
+			await client.create(
+				'CollectionMeta',
+				{ title, slug, sortOrder: sorted.length, color: '#0f62fe' },
+				undefined,
+				{ id: collectionMetaId(slug) }
+			);
 			newTitle = '';
 		} finally {
 			creating = false;
