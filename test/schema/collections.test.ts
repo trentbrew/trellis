@@ -161,6 +161,15 @@ describe('compileCollectionSchema', () => {
       ['f_f', 'rich_text'],
     ]);
     expect(schema.fields.find((field) => field.name === 'f_a')?.description).toBe('Pages');
+    // Tags fields are relations to core:Tag, not options.
+    const tagged = compileCollectionSchema(books, [
+      row({ key: 'f_t', label: 'Topics', valueType: 'tags', vocabulary: 'tag:vocab.workspace' }),
+    ]).fields.find((field) => field.name === 'f_t');
+    expect(tagged).toMatchObject({
+      valueType: 'relation',
+      description: 'Topics',
+      relation: { targetSchema: 'core:Tag', cardinality: 'many' },
+    });
     // Option membership is not enforced (the add-and-select race).
     expect(schema.fields.find((field) => field.name === 'f_b')?.selectOptions).toBeUndefined();
   });

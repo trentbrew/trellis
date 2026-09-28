@@ -43,6 +43,7 @@ export const CollectionField = defineType(
     label: z.string(),
     valueType: z.enum(COLLECTION_FIELD_TYPES),
     options: z.string().optional(),
+    vocabulary: z.string().optional(),
     order: z.number(),
   },
   { title: 'label', extends: 'core:Thing', tier: 'system', label: 'Collection Field' },
