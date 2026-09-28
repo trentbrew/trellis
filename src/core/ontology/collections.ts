@@ -124,6 +124,92 @@ export function parseCollectionOptions(raw: string | undefined): CollectionOptio
   }
 }
 
+// ---------------------------------------------------------------------------
+// Migrating legacy string options (ADR 0045 phase 3)
+// ---------------------------------------------------------------------------
+
+/** FNV-1a, base36 — a short, stable id from text (not cryptographic). */
+function stableHash(text: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36).padStart(7, '0');
+}
+
+/**
+ * The id a legacy option gets. Derived from its label, so every client migrating
+ * the same collection mints the same id and re-running is a no-op.
+ */
+export function legacyOptionId(label: string): string {
+  return `o_${stableHash(label.trim().toLowerCase())}`;
+}
+
+/**
+ * Normalize a field's options from any legacy shape — `string[]` (demos, CMS),
+ * `{ value, label, color? }[]` (FINANCE's first shape) — or the current
+ * `{ id, label, color? }[]`. Returns id'd options plus how to map a stored legacy
+ * value (the old string / `value`) to its option id. Existing ids are kept.
+ */
+export function migrateCollectionOptions(raw: unknown): {
+  options: CollectionOption[];
+  idFor: (legacyValue: string) => string | undefined;
+} {
+  const parsed: unknown = typeof raw === 'string' ? safeJson(raw) : raw;
+  const options: CollectionOption[] = [];
+  const byLegacy = new Map<string, string>();
+  const seen = new Set<string>();
+
+  for (const entry of Array.isArray(parsed) ? parsed : []) {
+    let option: CollectionOption | undefined;
+    let legacy: string | undefined;
+    if (typeof entry === 'string') {
+      option = { id: legacyOptionId(entry), label: entry };
+      legacy = entry;
+    } else if (entry && typeof entry === 'object') {
+      const record = entry as Record<string, unknown>;
+      const label = typeof record.label === 'string' ? record.label : undefined;
+      const value = typeof record.value === 'string' ? record.value : undefined;
+      const text = label ?? value;
+      if (!text) continue;
+      const id = typeof record.id === 'string' ? record.id : legacyOptionId(text);
+      option = { id, label: text, ...(typeof record.color === 'string' ? { color: record.color } : {}) };
+      legacy = value ?? label;
+    }
+    if (!option || seen.has(option.id)) continue;
+    seen.add(option.id);
+    options.push(option);
+    if (legacy !== undefined) byLegacy.set(legacy, option.id);
+    byLegacy.set(option.id, option.id);
+  }
+
+  return { options, idFor: (legacyValue) => byLegacy.get(legacyValue) };
+}
+
+/**
+ * A stored select / multi-select value, rewritten to option ids. Values that match
+ * no option are left as they are (never dropped) so nothing is lost silently.
+ */
+export function migrateOptionValue(
+  value: unknown,
+  idFor: (legacyValue: string) => string | undefined,
+): unknown {
+  if (typeof value === 'string') return idFor(value) ?? value;
+  if (Array.isArray(value)) {
+    return value.map((entry) => (typeof entry === 'string' ? (idFor(entry) ?? entry) : entry));
+  }
+  return value;
+}
+
+function safeJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
+
 const KERNEL_TYPE: Record<CollectionFieldType, PropertyType> = {
   text: 'rich_text',
   number: 'number',

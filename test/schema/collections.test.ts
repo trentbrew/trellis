@@ -17,6 +17,9 @@ import {
   collectionSchemaId,
   collectionSlug,
   compileCollectionSchema,
+  legacyOptionId,
+  migrateCollectionOptions,
+  migrateOptionValue,
   parseCollectionOptions,
   type CollectionFieldRow,
 } from '../../src/schema/index.js';
@@ -78,6 +81,44 @@ describe('options', () => {
     expect(parseCollectionOptions('[{"id":"o_1","label":"A","color":"#fff"},{"value":"x","label":"B"}]')).toEqual([
       { id: 'o_1', label: 'A', color: '#fff' },
     ]);
+  });
+});
+
+describe('migrating legacy options', () => {
+  it('mints stable ids from labels, so every client agrees and re-runs are no-ops', () => {
+    expect(legacyOptionId('To read')).toBe(legacyOptionId('  to read '));
+    expect(legacyOptionId('To read')).not.toBe(legacyOptionId('Reading'));
+    expect(legacyOptionId('To read')).toMatch(/^o_[0-9a-z]{7}$/);
+    const first = migrateCollectionOptions(['To read', 'Reading']);
+    const again = migrateCollectionOptions(first.options);
+    expect(again.options).toEqual(first.options);
+  });
+
+  it('accepts string[], {value,label,color}[] and current {id,label,color}[] (also as JSON)', () => {
+    const fromStrings = migrateCollectionOptions(['A', 'B', 'A']);
+    expect(fromStrings.options.map((o) => o.label)).toEqual(['A', 'B']);
+
+    const fromValues = migrateCollectionOptions(
+      JSON.stringify([{ value: 'todo', label: 'To do', color: '#f97316' }]),
+    );
+    expect(fromValues.options).toEqual([{ id: legacyOptionId('To do'), label: 'To do', color: '#f97316' }]);
+    expect(fromValues.idFor('todo')).toBe(legacyOptionId('To do'));
+
+    const current = migrateCollectionOptions([{ id: 'o_keep', label: 'Kept' }]);
+    expect(current.options).toEqual([{ id: 'o_keep', label: 'Kept' }]);
+    expect(current.idFor('o_keep')).toBe('o_keep');
+
+    expect(migrateCollectionOptions('not json').options).toEqual([]);
+    expect(migrateCollectionOptions(undefined).options).toEqual([]);
+  });
+
+  it('rewrites stored values to ids, leaving unknown values intact', () => {
+    const { idFor } = migrateCollectionOptions(['bug', 'feature']);
+    expect(migrateOptionValue('bug', idFor)).toBe(legacyOptionId('bug'));
+    expect(migrateOptionValue(['feature', 'mystery'], idFor)).toEqual([legacyOptionId('feature'), 'mystery']);
+    expect(migrateOptionValue(42, idFor)).toBe(42);
+    // Already migrated values stay put.
+    expect(migrateOptionValue(legacyOptionId('bug'), idFor)).toBe(legacyOptionId('bug'));
   });
 });
 
