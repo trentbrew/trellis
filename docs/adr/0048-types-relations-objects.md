@@ -131,3 +131,26 @@ In turtleOS, agents are people-like actors that can be assignees too (ADR-0018).
    Our per-collection schema validates declared keys only and is open-world otherwise, so it's compatible,
    but the UI needs an "add a property to just this object" affordance.
 3. **Does 4.0.8 ship `CollectionField`?** If it does, phase 3 migrates it; if not, it's replaced first.
+
+## Addendum — Phases 1–2 done (2026-09-28)
+
+**Phase 1** (FINANCE `cf9fb41`): the record page and dialog show a type chip that links to the type, and the
+workspace **Types** page lists every type by app, with property kinds, vocabularies, paste-added properties
+and object counts.
+
+**Phase 2** (FINANCE `635bf8b`):
+- **Relations resolve across apps.** A runtime answers for its own types, then falls back to a resolver
+  installed by the apps layer (the browse layer stays app-agnostic). The resolver finds the app that owns the
+  target type and starts it on first use. The start happens in a microtask, never inside the reaction asking,
+  and a reactive version bump fills labels in afterwards. This closes the "relations can't cross apps" gap.
+- **People are a platform app** on `core:Person` (a typed handle, not registered). Projects no longer
+  defines `Person`. `lead`/`assignee` are unchanged, keep `rel('Person')`, and resolve across apps. Existing
+  Person entities needed no migration. The People database moved from `/projects/people` to
+  `/people/people`, and views saved under the old scope are orphaned.
+- **Not done:** `core:Member` → `Person` (this app has no Member entities; workspace members aren't in the
+  graph yet), and cross-app `@` mentions (search still covers one app).
+
+**Next** (proposed by the user): **types as records.** The Types page becomes a database whose rows are
+types and which open in the dialog stack, with the schema as their properties. It is backed first by a
+source derived from the manifests (read-only for code types), then by the phase 3 graph entities, without
+the UI changing.
