@@ -57,6 +57,9 @@ export {
   collectionSlug,
   compileCollectionSchema,
   isCollectionFieldType,
+  legacyOptionId,
+  migrateCollectionOptions,
+  migrateOptionValue,
   parseCollectionOptions,
 } from '../core/ontology/collections.js';
 export type {
