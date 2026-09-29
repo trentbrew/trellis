@@ -16,6 +16,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { resolve, join, dirname, relative } from 'path';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import {
   scaffoldIssueDoc,
   issueDocExists,
@@ -4136,6 +4137,149 @@ entityCmd
   });
 
 // ---------------------------------------------------------------------------
+// trellis mirror — generated derived index (ADR 0050 d3)
+// ---------------------------------------------------------------------------
+
+function mirrorSlug(p: string): string {
+  return p
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase();
+}
+
+/** Deterministic markdown index derived from the graph. No timestamps. */
+function generateIndex(engine: any): string {
+  const esc = (s: any) => String(s ?? '').replace(/\r?\n/g, ' ').trim();
+  const byId = (a: any, b: any) => String(a.id).localeCompare(String(b.id));
+  const line = (i: any) =>
+    `${i.id}${i.priority ? ` [${i.priority}]` : ''} ${esc(i.title)}`.trimEnd();
+
+  const issues = engine.listIssues();
+  const epics = issues.filter((i: any) => (i.issueType ?? 'issue') === 'epic');
+  const leaves = issues.filter((i: any) => (i.issueType ?? 'issue') !== 'epic');
+  const byStatus: Record<string, any[]> = {};
+  for (const i of leaves) (byStatus[i.status ?? 'unknown'] ??= []).push(i);
+  const order = ['in_progress', 'paused', 'queue', 'backlog', 'closed'];
+  const statuses = Object.keys(byStatus).sort((a, b) => {
+    const ia = order.indexOf(a);
+    const ib = order.indexOf(b);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.localeCompare(b);
+  });
+
+  const cycles = engine
+    .listStoreEntities('Cycle')
+    .map((r: any) => ({ id: r.id, ...cycleAttrs(r) }))
+    .sort(byId);
+  const notes = engine
+    .listStoreEntities('Note')
+    .map((r: any) => ({ id: r.id, ...noteEntityAttrs(r) }))
+    .filter((n: any) => (n.status ?? 'captured') === 'captured')
+    .sort(byId);
+
+  const out: string[] = [];
+  out.push('# Trellis — generated index', '');
+  out.push('> Generated from the graph. Do not edit by hand.', '');
+
+  out.push(`## Epics (${epics.length})`, '');
+  if (epics.length === 0) out.push('_none_');
+  for (const e of epics.sort(byId)) {
+    const open = leaves.filter((l: any) => (l.parentId ?? '') === e.id).length;
+    out.push(`- ${line(e)} — ${open} open leaf${open === 1 ? '' : 's'}`);
+  }
+  out.push('');
+
+  out.push(`## Cycles (${cycles.length})`, '');
+  if (cycles.length === 0) out.push('_none_');
+  for (const c of cycles) {
+    const members = engine
+      .getEavStore()
+      .getLinksByEntityAndAttribute(c.id, 'includes').length;
+    out.push(
+      `- ${c.id} — target ${esc(c.targetDate) || '—'} · ${esc(c.status)} · ${members} issue${members === 1 ? '' : 's'}`,
+    );
+  }
+  out.push('');
+
+  for (const st of statuses) {
+    const group = byStatus[st].sort(byId);
+    out.push(`## ${st} (${group.length})`, '');
+    for (const i of group) out.push(`- ${line(i)}`);
+    out.push('');
+  }
+
+  out.push(`## Notes awaiting triage (${notes.length})`, '');
+  if (notes.length === 0) out.push('_none_');
+  for (const n of notes) out.push(`- ${n.id} — ${esc(n.text)}`);
+  out.push('');
+  return out.join('\n');
+}
+
+program
+  .command('mirror')
+  .description('Generate a derived index from the graph; detect staleness (ADR 0050 d3)')
+  .argument('[path]', 'Mirror file path')
+  .option('--write', 'Write the generated index to <path> and record it')
+  .option('--check', 'Check recorded mirrors for staleness (exit 1 if any differ)')
+  .option('--json', 'Emit machine-readable JSON')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (pathArg: any, opts: any) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    await withGraphStore(rootPath, async ({ mode, engine }) => {
+      if (mode !== 'vcs' || !engine) {
+        console.error(chalk.red('mirror requires a Trellis VCS repo'));
+        process.exit(1);
+      }
+      const content = generateIndex(engine);
+
+      if (opts.check) {
+        const results: any[] = [];
+        for (const rec of engine.listStoreEntities('Mirror')) {
+          const m: Record<string, any> = { id: rec.id, ...cycleAttrs(rec) };
+          let status = 'ok';
+          try {
+            if (readFileSync(String(m.path ?? ''), 'utf8') !== content) status = 'stale';
+          } catch {
+            status = 'missing';
+          }
+          results.push({ path: m.path, status });
+        }
+        const stale = results.some((r) => r.status !== 'ok');
+        if (opts.json) {
+          console.log(JSON.stringify({ mirrors: results, stale }, null, 2));
+        } else if (results.length === 0) {
+          console.log(chalk.dim('No mirrors recorded. Run: trellis mirror <path> --write'));
+        } else {
+          for (const r of results) {
+            console.log(
+              `${r.status === 'ok' ? chalk.green('✓') : chalk.yellow('!')} ${r.path} — ${r.status}`,
+            );
+          }
+        }
+        process.exitCode = stale ? 1 : 0;
+        return;
+      }
+
+      if (opts.write) {
+        if (!pathArg) {
+          console.error(chalk.red('mirror --write requires a <path>'));
+          process.exit(1);
+        }
+        const abs = resolve(rootPath, pathArg);
+        mkdirSync(dirname(abs), { recursive: true });
+        writeFileSync(abs, content, 'utf8');
+        await engine.createStoreEntity(`mirror:${mirrorSlug(pathArg)}`, 'Mirror', {
+          path: abs,
+          generatedAt: new Date().toISOString(),
+        });
+        console.log(`${chalk.green('✓')} wrote ${chalk.bold(pathArg)} (${content.length} bytes)`);
+        return;
+      }
+
+      console.log(content);
+    });
+  });
+
+// ---------------------------------------------------------------------------
 // trellis cadence — derived due-check with teeth (ADR 0050 d4)
 // ---------------------------------------------------------------------------
 
@@ -4180,6 +4324,30 @@ function computeCadence(
       kind: 'note-triage',
       message: `${staleNotes.length} note${staleNotes.length === 1 ? '' : 's'} captured >${noteDays}d ago (trellis note list)`,
     });
+  }
+
+  // Structural: recorded mirrors that no longer match a fresh generation.
+  try {
+    for (const rec of engine.listStoreEntities('Mirror')) {
+      const m: Record<string, any> = { id: rec.id, ...cycleAttrs(rec) };
+      const p = String(m.path ?? '');
+      if (!p) continue;
+      let onDisk: string;
+      try {
+        onDisk = readFileSync(p, 'utf8');
+      } catch {
+        signals.push({ kind: 'mirror-missing', message: `${p} recorded but missing` });
+        continue;
+      }
+      if (onDisk !== generateIndex(engine)) {
+        signals.push({
+          kind: 'mirror-stale',
+          message: `${p} is stale (run: trellis mirror ${p} --write)`,
+        });
+      }
+    }
+  } catch {
+    // fs unavailable — skip the mirror signal
   }
 
   return { due: signals.length > 0, signals };
