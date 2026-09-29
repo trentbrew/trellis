@@ -97,6 +97,7 @@ import {
   writeHeartbeat,
   type PresenceInfo,
 } from './presence.js';
+import { readCensus, censusWorkLabel, type CensusAgent } from './census.js';
 import { requireDestructiveConfirm } from '../vcs/destructive-guard.js';
 import { registerLaneCommands } from './lane.js';
 import { registerAdminCommands } from './admin.js';
@@ -7844,7 +7845,12 @@ function gatherPresence(rootPath: string): PresenceInfo {
     sessionId,
     agentId: identity?.entityId ?? 'unknown',
     displayName: identity?.displayName ?? 'Unknown',
-    client: process.env.TRELLIS_CLIENT ?? 'unknown',
+    client: process.env.TRELLIS_CLIENT ?? process.env.TRELLIS_TRANSPORT ?? 'unknown',
+    harness: process.env.TRELLIS_HARNESS ?? process.env.TRELLIS_TRANSPORT,
+    provider: process.env.TRELLIS_PROVIDER,
+    model: process.env.TRELLIS_MODEL,
+    task: claimedIssueTitle ?? branch,
+    dir: process.cwd(),
     laneId,
     branch,
     claimedIssueId,
@@ -7855,13 +7861,45 @@ function gatherPresence(rootPath: string): PresenceInfo {
   };
 }
 
+/** Render a census listing: harness · identity · model · work · age (ADR 0052). */
+function printCensus(entries: CensusAgent[]): void {
+  if (entries.length === 0) {
+    console.log(chalk.dim('No agents active in this scope.'));
+    return;
+  }
+  console.log(chalk.bold(`Agents active (${entries.length})\n`));
+  for (const e of entries) {
+    const id = e.displayName ?? e.agentId ?? e.id;
+    const model = e.model
+      ? chalk.dim(` ${e.provider ? `${e.provider}/` : ''}${e.model}`)
+      : e.provider
+        ? chalk.dim(` ${e.provider}`)
+        : '';
+    // `~` marks inferred (adapter-derived) identity, not harness-reported.
+    const mark = e.verified ? '' : chalk.dim('~');
+    const lane = e.laneId ? chalk.dim(` ⤷ ${e.laneId}`) : '';
+    const work = censusWorkLabel(e);
+    const workLabel = work ? ` → ${work}` : '';
+    const at = formatRelativeTime(e.lastActivity);
+    const dir = e.dir ? chalk.dim(` · ${e.dir}`) : '';
+    console.log(
+      `  ${chalk.cyan(e.harness)}${mark} ${chalk.bold(id)}${model} ${chalk.dim(`· ${at}`)}${lane}${workLabel}${dir}`,
+    );
+  }
+}
+
 program
   .command('who')
   .description('Show agents currently working in this repo (ambient presence)')
+  .option(
+    '--census',
+    'Merge harness-native activity (opencode DB, Claude Code) with the ledger',
+  )
+  .option('--scope <path>', 'Directory tree to census (defaults to --path)')
   .option('--stale <ms>', 'Staleness window in ms', (v) => parseInt(v, 10))
   .option('--json', 'Emit machine-readable JSON (no color)')
   .option('-p, --path <path>', 'Repository path', '.')
-  .action((opts) => {
+  .action(async (opts) => {
     const rootPath = resolveRepoRoot(opts.path);
     // Refresh our own heartbeat first so `who` always includes the caller.
     let selfId: string | undefined;
@@ -7869,6 +7907,18 @@ program
       const self = gatherPresence(rootPath);
       writeHeartbeat(rootPath, self);
       selfId = self.sessionId;
+    }
+
+    if (opts.census) {
+      const entries = await readCensus(opts.scope ?? opts.path ?? '.', {
+        staleMs: opts.stale,
+      });
+      if (opts.json) {
+        console.log(JSON.stringify({ agents: entries }, null, 2));
+      } else {
+        printCensus(entries);
+      }
+      return;
     }
 
     const peers = readPresence(rootPath, {
@@ -7902,6 +7952,21 @@ program
       console.log(
         `  ${chalk.cyan(p.client)} ${chalk.bold(p.displayName)} ${chalk.dim(`(${p.agentId})`)} ${chalk.dim(`· ${at}`)}${lane}${work}`,
       );
+    }
+  });
+
+program
+  .command('agents')
+  .description('Census agents working in a directory tree (ADR 0052)')
+  .option('--scope <path>', 'Directory tree to census', '.')
+  .option('--stale <ms>', 'Staleness window in ms', (v) => parseInt(v, 10))
+  .option('--json', 'Emit machine-readable JSON (no color)')
+  .action(async (opts) => {
+    const entries = await readCensus(opts.scope ?? '.', { staleMs: opts.stale });
+    if (opts.json) {
+      console.log(JSON.stringify({ agents: entries }, null, 2));
+    } else {
+      printCensus(entries);
     }
   });
 
