@@ -4,6 +4,27 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [4.0.10] — 2026-09-29
+
+**Operator surface: notes, cycles, cadence, mirrors, and report (ADR 0050).**
+
+- **`trellis note`** — operator-scoped capture (`add` / `list` / `show` / `archive`)
+  plus **`note promote`** (note → issue/epic/cycle). Capture is durable and
+  commitment-free; promotion is the deliberate act that creates work.
+- **`trellis wip`** — derived snapshot: active / queue / shipped / next / cycles / notes.
+- **`trellis cycle`** — time-boxed containers with a target date; the deadline lives
+  on the container and membership is a link (ADR 0026 d2).
+- **`trellis telos`** — strategic roots (`add` / `list` / `show` / `root`); epics
+  roll up via `rootedIn` (ADR 0026 d4).
+- **`trellis cadence`** — derived due-check (overdue cycles, note triage debt, stale
+  mirrors) that now **gates `issue close`** (`--force` to override).
+- **`trellis mirror`** — generates a deterministic graph index; `--write` records it
+  and `--check` fails when it drifts from the graph.
+- **`trellis report`** — derived worklog plus epic→telos rollup.
+- **Fix:** downstream `kernel-touch-manifest.json` paths repointed to the current desk
+  layout (`docs/`, `studio/`).
+- ADR 0050 accepted — notes and the derived operator surface.
+
 ## trellis [4.0.7] — 2026-09-26
 
 **Minted FileNode / DirectoryNode ids (TRL-456).**
