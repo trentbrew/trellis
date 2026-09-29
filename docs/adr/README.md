@@ -25,6 +25,7 @@ Decisions for the **Agent Lane** program (`trellis lane`). Status: **accepted**
 | [0046](./0046-agent-forum.md) | Agent forum | Repo-scoped passive broadcast (`trellis forum`); testimony-based evidence, no scoring in v1 (proposed; amends 0024 L2) |
 | [0047](./0047-datalog-logic-layer.md) | Datalog as the logic layer | Correct recursion (semi-naive, stratified; implemented), `Rule` entities, provenance, one IR for every surface incl. future Cypher; not Prolog (proposed) |
 | [0050](./0050-notes-and-derived-operator-surface.md) | Notes and the derived operator surface | Operator-scoped `Note` entity (capture → promote/archive); `wip`/`cadence`/`report` derived from ops+rules; mirrors generated (accepted) |
+| [0051](./0051-session-metrics.md) | Session metrics — usage, cost, latency, errors per lane | Per-turn usage facts on `vcs:chatMessage`; derived `report --usage` rollup; joins `EvalRun` → outcome × cost × process (proposed) |
 
 Desk issue: **TRL-35** (W0), **TRL-36** (W1). Plan:
 `TRELLIS/tooling/planning/agent-lanes.md`.
