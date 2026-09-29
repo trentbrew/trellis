@@ -50,6 +50,7 @@ import { EmbeddingManager } from '../embeddings/search.js';
 import { importFromGit } from '../git/git-importer.js';
 import { exportToGit } from '../git/git-exporter.js';
 import { buildRepoExamples } from './examples.js';
+import { validateIssueCreateTitle } from './issue-create-guard.js';
 import {
   createIdentity,
   saveIdentity,
@@ -2098,6 +2099,12 @@ issueCmd
   )
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (opts) => {
+    const titleCheck = validateIssueCreateTitle(opts.title);
+    if (!titleCheck.ok) {
+      console.error(chalk.red(titleCheck.message));
+      process.exit(1);
+    }
+
     const rootPath = resolveRepoRoot(opts.path);
 
     const engine = new TrellisVcsEngine({
@@ -4110,6 +4117,232 @@ entityCmd
           style: chalk,
         }).join('\n'),
       );
+    });
+  });
+
+// ---------------------------------------------------------------------------
+// trellis note — operator-scoped capture (ADR 0050)
+// ---------------------------------------------------------------------------
+
+function noteEntityAttrs(rec: any): Record<string, any> {
+  return Object.fromEntries((rec.facts ?? []).map((f: any) => [f.a, f.v]));
+}
+
+function printNoteList(records: any[], opts: any): void {
+  const live = records.filter((r) => noteEntityAttrs(r).status !== 'archived');
+  if (opts.json) {
+    console.log(
+      JSON.stringify(
+        { notes: live.map((r) => ({ id: r.id, ...noteEntityAttrs(r) })) },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+  if (live.length === 0) {
+    console.log(chalk.dim('No notes. Capture one: trellis note add "…"'));
+    return;
+  }
+  for (const r of live) {
+    const a = noteEntityAttrs(r);
+    const ts = a.createdAt ? chalk.dim(String(a.createdAt).slice(0, 16)) : '';
+    const tag = a.tags ? chalk.dim(` [${a.tags}]`) : '';
+    console.log(`${chalk.cyan(r.id)}  ${ts}${tag}`);
+    console.log(`  ${a.text ?? ''}`);
+  }
+}
+
+const noteCmd = program
+  .command('note')
+  .description('Capture operator notes — durable, no commitment (ADR 0050)');
+
+noteCmd
+  .command('add')
+  .alias('new')
+  .description('Capture a note')
+  .argument('<text...>', 'Note text')
+  .option('-t, --tag <tags...>', 'Tags')
+  .option('-r, --ref <refs...>', 'Related refs (issue:, doc:, …)')
+  .option('--json', 'Emit machine-readable JSON')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (textParts: any, opts: any) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    const text = (Array.isArray(textParts) ? textParts : [textParts]).join(' ');
+    if (!text) {
+      console.error(chalk.red('Usage: trellis note add "<text>"'));
+      process.exit(1);
+    }
+    const id = `note:${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    const attrs: Record<string, any> = {
+      text,
+      status: 'captured',
+      createdAt: new Date().toISOString(),
+    };
+    if (opts.tag) attrs.tags = (Array.isArray(opts.tag) ? opts.tag : [opts.tag]).join(',');
+    if (opts.ref) attrs.refs = (Array.isArray(opts.ref) ? opts.ref : [opts.ref]).join(',');
+
+    await withGraphStore(rootPath, async ({ mode, engine, kernel }) => {
+      if (mode === 'vcs' && engine) {
+        await engine.createStoreEntity(id, 'Note', attrs);
+      } else {
+        await kernel!.createEntity(id, 'Note', attrs);
+      }
+      if (opts.json) {
+        console.log(JSON.stringify({ id, ...attrs }));
+        return;
+      }
+      console.log(`${chalk.green('✓')} ${chalk.bold(id)}`);
+      console.log(`  ${text}`);
+    });
+  });
+
+noteCmd
+  .command('list')
+  .description('List captured notes')
+  .option('--all', 'Include archived notes')
+  .option('--json', 'Emit machine-readable JSON')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (opts: any) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    await withGraphStore(rootPath, async ({ mode, engine, kernel }) => {
+      const recs =
+        mode === 'vcs' && engine
+          ? engine.listStoreEntities('Note')
+          : kernel!.listEntities('Note');
+      printNoteList(opts.all ? recs : recs, opts);
+    });
+  });
+
+noteCmd
+  .command('show')
+  .description('Show a note')
+  .argument('<id>', 'Note ID')
+  .option('--json', 'Emit machine-readable JSON')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (id: any, opts: any) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    await withGraphStore(rootPath, async ({ mode, engine, kernel }) => {
+      const rec =
+        mode === 'vcs' && engine
+          ? engine.getStoreEntity(id)
+          : kernel!.getEntity(id);
+      if (!rec) {
+        console.error(chalk.red(`Note not found: ${id}`));
+        process.exit(1);
+      }
+      console.log(JSON.stringify({ id: rec.id, ...noteEntityAttrs(rec) }, null, 2));
+    });
+  });
+
+noteCmd
+  .command('archive')
+  .description('Archive a note (retire without promoting)')
+  .argument('<id>', 'Note ID')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (id: any, opts: any) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    await withGraphStore(rootPath, async ({ mode, engine, kernel }) => {
+      if (mode === 'vcs' && engine) {
+        await engine.updateStoreEntity(id, { status: 'archived' });
+      } else {
+        await kernel!.createEntity(id, 'Note', { status: 'archived' });
+      }
+      console.log(`${chalk.green('✓')} archived ${chalk.bold(id)}`);
+    });
+  });
+
+// Bare `trellis note` lists (parity with `trellis decision`).
+noteCmd.action(async (opts: any) => {
+  const rootPath = resolveRepoRoot(opts?.path ?? '.');
+  await withGraphStore(rootPath, async ({ mode, engine, kernel }) => {
+    const recs =
+      mode === 'vcs' && engine
+        ? engine.listStoreEntities('Note')
+        : kernel!.listEntities('Note');
+    printNoteList(recs, opts ?? {});
+  });
+});
+
+// ---------------------------------------------------------------------------
+// trellis wip — derived operator snapshot (ADR 0050)
+// ---------------------------------------------------------------------------
+
+program
+  .command('wip')
+  .description('Derived snapshot — active / queue / shipped / next / notes (ADR 0050)')
+  .option('-d, --days <n>', 'Recently-shipped window in days', '7')
+  .option('-n, --limit <n>', 'Max items per section', '10')
+  .option('--json', 'Emit machine-readable JSON (no color)')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (opts: any) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    const days = parseInt(opts.days, 10) || 7;
+    const limit = parseInt(opts.limit, 10) || 10;
+
+    await withGraphStore(rootPath, async ({ mode, engine, kernel }) => {
+      if (mode !== 'vcs' || !engine) {
+        console.error(chalk.red('trellis wip requires a Trellis VCS repo'));
+        process.exit(1);
+      }
+      const all = engine.listIssues();
+      const cutoff = Date.now() - days * 86400000;
+      const active = all.filter((i) => i.status === 'in_progress');
+      const paused = all.filter((i) => i.status === 'paused');
+      const queued = all.filter((i) => i.status === 'queue');
+      const shipped = all
+        .filter(
+          (i) => i.status === 'closed' && i.closedAt && Date.parse(i.closedAt) >= cutoff,
+        )
+        .sort((a, b) => Date.parse(b.closedAt!) - Date.parse(a.closedAt!));
+      const rank: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+      const next = all
+        .filter(
+          (i) =>
+            i.status === 'backlog' &&
+            !(i as any).isBlocked &&
+            (i.issueType ?? 'issue') !== 'epic',
+        )
+        .sort(
+          (a, b) =>
+            (rank[a.priority ?? 'medium'] ?? 9) - (rank[b.priority ?? 'medium'] ?? 9),
+        )
+        .slice(0, limit);
+      const notes = engine
+        .listStoreEntities('Note')
+        .map((r) => ({ id: r.id, ...noteEntityAttrs(r) }) as Record<string, any>)
+        .filter((n) => n.status !== 'archived');
+
+      if (opts.json) {
+        console.log(
+          JSON.stringify({ active, paused, queued, shipped, next, notes }, null, 2),
+        );
+        return;
+      }
+
+      const line = (i: any) =>
+        `  ${chalk.cyan(i.id)} ${i.priority ? chalk.dim(`[${i.priority}]`) : ''} ${i.title ?? ''}`;
+      console.log(chalk.bold('WIP\n'));
+      console.log(chalk.bold(`Active (${active.length})`));
+      active.slice(0, limit).forEach((i) => console.log(line(i)));
+      if (paused.length) {
+        console.log(chalk.bold(`\nPaused (${paused.length})`));
+        paused.forEach((i) => console.log(line(i)));
+      }
+      if (queued.length) {
+        console.log(chalk.bold(`\nQueue (${queued.length})`));
+        queued.slice(0, limit).forEach((i) => console.log(line(i)));
+      }
+      console.log(chalk.bold(`\nShipped (last ${days}d, ${shipped.length})`));
+      shipped.slice(0, limit).forEach((i) => console.log(line(i)));
+      console.log(chalk.bold(`\nNext (${next.length})`));
+      next.forEach((i) => console.log(line(i)));
+      if (notes.length) {
+        console.log(chalk.bold(`\nNotes awaiting triage (${notes.length})`));
+        notes
+          .slice(0, limit)
+          .forEach((n: any) => console.log(`  ${chalk.cyan(n.id)} ${n.text ?? ''}`));
+      }
     });
   });
 
