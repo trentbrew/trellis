@@ -88,7 +88,7 @@ describe('Proactive Watcher', () => {
   let provider: MockLLMProvider;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-watcher-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-watcher--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'kernel.db')),
       agentId: 'test-agent',

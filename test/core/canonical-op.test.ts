@@ -27,7 +27,7 @@ describe('canonical op hashing (ADR 0021)', () => {
   let kernel: TrellisKernel;
 
   beforeEach(async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-canonical-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-canonical--${process.pid}-${Date.now().toString(36)}`));
     backend = await createKernelBackend(join(tmpDir, 'test.db'));
     kernel = new TrellisKernel({ backend, agentId: 'test-agent' });
     kernel.boot();

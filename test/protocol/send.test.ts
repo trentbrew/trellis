@@ -8,7 +8,7 @@ import {
 } from '../../src/protocol/envelope.js';
 import { findWaitingOnYou } from '../../src/protocol/whereami.js';
 
-const TEST_ROOT = '/tmp/trellis-protocol-send';
+const TEST_ROOT = `/tmp/trellis-protocol-send-${process.pid}-${Date.now().toString(36)}`;
 
 describe('protocol send flow', () => {
   let engine: TrellisVcsEngine;

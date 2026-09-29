@@ -102,7 +102,7 @@ describe('threeWayMerge', () => {
   });
 
   test('only theirs added a file — auto-merged', () => {
-    const testDir = '/tmp/trellis-merge-test-add';
+    const testDir = `/tmp/trellis-merge-test-add-${process.pid}-${Date.now().toString(36)}`;
     rmSync(testDir, { recursive: true, force: true });
     mkdirSync(join(testDir, '.trellis'), { recursive: true });
     const bs = new BlobStore(join(testDir, '.trellis'));
@@ -141,7 +141,7 @@ describe('threeWayMerge', () => {
   });
 
   test('modify-delete conflict', () => {
-    const testDir = '/tmp/trellis-merge-test-md';
+    const testDir = `/tmp/trellis-merge-test-md-${process.pid}-${Date.now().toString(36)}`;
     rmSync(testDir, { recursive: true, force: true });
     mkdirSync(join(testDir, '.trellis'), { recursive: true });
     const bs = new BlobStore(join(testDir, '.trellis'));
@@ -160,7 +160,7 @@ describe('threeWayMerge', () => {
   });
 
   test('modify-modify conflict with text merge', () => {
-    const testDir = '/tmp/trellis-merge-test-mm';
+    const testDir = `/tmp/trellis-merge-test-mm-${process.pid}-${Date.now().toString(36)}`;
     rmSync(testDir, { recursive: true, force: true });
     mkdirSync(join(testDir, '.trellis'), { recursive: true });
     const bs = new BlobStore(join(testDir, '.trellis'));
@@ -183,7 +183,7 @@ describe('threeWayMerge', () => {
   });
 
   test('modify-modify with non-overlapping changes merges cleanly', () => {
-    const testDir = '/tmp/trellis-merge-test-mm-clean';
+    const testDir = `/tmp/trellis-merge-test-mm-clean-${process.pid}-${Date.now().toString(36)}`;
     rmSync(testDir, { recursive: true, force: true });
     mkdirSync(join(testDir, '.trellis'), { recursive: true });
     const bs = new BlobStore(join(testDir, '.trellis'));
@@ -205,7 +205,7 @@ describe('threeWayMerge', () => {
   });
 
   test('add-add conflict', () => {
-    const testDir = '/tmp/trellis-merge-test-aa';
+    const testDir = `/tmp/trellis-merge-test-aa-${process.pid}-${Date.now().toString(36)}`;
     rmSync(testDir, { recursive: true, force: true });
     mkdirSync(join(testDir, '.trellis'), { recursive: true });
     const bs = new BlobStore(join(testDir, '.trellis'));
@@ -225,7 +225,7 @@ describe('threeWayMerge', () => {
   });
 
   test('both sides add identical file — no conflict', () => {
-    const testDir = '/tmp/trellis-merge-test-aa-same';
+    const testDir = `/tmp/trellis-merge-test-aa-same-${process.pid}-${Date.now().toString(36)}`;
     rmSync(testDir, { recursive: true, force: true });
     mkdirSync(join(testDir, '.trellis'), { recursive: true });
     const bs = new BlobStore(join(testDir, '.trellis'));

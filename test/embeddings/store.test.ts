@@ -50,7 +50,7 @@ function makeRecord(
 }
 
 beforeEach(async () => {
-  tempDir = mkdtempSync(join(tmpdir(), 'trellis-vec-'));
+  tempDir = mkdtempSync(join(tmpdir(), `trellis-vec--${process.pid}-${Date.now().toString(36)}`));
   dbPath = join(tempDir, 'embeddings.db');
   store = await VectorStore.create(dbPath);
 });

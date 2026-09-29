@@ -39,7 +39,7 @@ describe('trellis storage CLI', () => {
   let root: string;
 
   beforeAll(async () => {
-    root = mkdtempSync(join(tmpdir(), 'trellis-storage-cli-'));
+    root = mkdtempSync(join(tmpdir(), `trellis-storage-cli--${process.pid}-${Date.now().toString(36)}`));
     root = realpathSync(root);
     const eng = new TrellisVcsEngine({ rootPath: root });
     await eng.initRepo({ indexWorkspace: true });

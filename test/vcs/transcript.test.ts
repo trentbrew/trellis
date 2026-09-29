@@ -12,7 +12,7 @@ import {
 import { isLocalOnlyOpKind } from '../../src/vcs/sync-policy.js';
 
 function makeRepo(transcripts?: { enabled?: boolean; sync?: boolean }): string {
-  const root = mkdtempSync(join(tmpdir(), 'trellis-transcript-'));
+  const root = mkdtempSync(join(tmpdir(), `trellis-transcript--${process.pid}-${Date.now().toString(36)}`));
   mkdirSync(join(root, '.trellis'), { recursive: true });
   writeFileSync(
     join(root, '.trellis', 'config.json'),
@@ -35,7 +35,7 @@ describe('readTranscriptConfig', () => {
   });
 
   it('tolerates a missing config file', () => {
-    const root = mkdtempSync(join(tmpdir(), 'trellis-transcript-none-'));
+    const root = mkdtempSync(join(tmpdir(), `trellis-transcript-none--${process.pid}-${Date.now().toString(36)}`));
     expect(readTranscriptConfig(root)).toEqual({ enabled: false, sync: false });
   });
 });

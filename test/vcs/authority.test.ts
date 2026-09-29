@@ -10,7 +10,7 @@ import {
 import type { ToolInvocation } from '../../src/vcs/authority.js';
 
 function makeTrellisRepo(): string {
-  const root = mkdtempSync(join(tmpdir(), 'trellis-authority-'));
+  const root = mkdtempSync(join(tmpdir(), `trellis-authority--${process.pid}-${Date.now().toString(36)}`));
   mkdirSync(join(root, '.trellis'), { recursive: true });
   writeFileSync(join(root, '.trellis', 'config.json'), JSON.stringify({}));
   return root;
@@ -29,14 +29,14 @@ describe('findTrellisRoot', () => {
   });
 
   it('returns null outside a repo', () => {
-    const root = mkdtempSync(join(tmpdir(), 'trellis-authority-none-'));
+    const root = mkdtempSync(join(tmpdir(), `trellis-authority-none--${process.pid}-${Date.now().toString(36)}`));
     expect(findTrellisRoot(root)).toBeNull();
   });
 });
 
 describe('canToolRun — outside a Trellis tree', () => {
   it('allows anything when no repo root', () => {
-    const root = mkdtempSync(join(tmpdir(), 'trellis-authority-out-'));
+    const root = mkdtempSync(join(tmpdir(), `trellis-authority-out--${process.pid}-${Date.now().toString(36)}`));
     expect(canToolRun(bash('git reset --hard', root))).toEqual({ allow: true });
   });
 });
@@ -76,7 +76,7 @@ describe('canToolRun — git mutation rules', () => {
 
   it('honors git -C target directory resolution', () => {
     const root = makeTrellisRepo();
-    const other = mkdtempSync(join(tmpdir(), 'trellis-authority-gitdir-'));
+    const other = mkdtempSync(join(tmpdir(), `trellis-authority-gitdir--${process.pid}-${Date.now().toString(36)}`));
     // -C into a non-Trellis repo from inside a Trellis repo: allowed
     expect(canToolRun(bash(`git -C ${other} reset`, root)).allow).toBe(true);
     // -C into the Trellis repo itself: denied

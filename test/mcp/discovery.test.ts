@@ -14,7 +14,7 @@ import {
 } from '../../src/mcp/room-registry.js';
 import { startGatewayServer } from '../../src/mcp/gateway-serve.js';
 
-const TMP = join(dirname(fileURLToPath(import.meta.url)), '__tmp_discovery');
+const TMP = join(dirname(fileURLToPath(import.meta.url)), `__tmp_discovery-${process.pid}-${Date.now().toString(36)}`);
 const CONFIG_DIR = join(TMP, 'project');
 
 describe('room registry', () => {

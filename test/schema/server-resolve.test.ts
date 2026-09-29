@@ -29,7 +29,7 @@ describe('hydrateAndResolve (server)', () => {
   let kernel: TrellisKernel;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-server-resolve-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-server-resolve--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'kernel.db')),
       agentId: 'test',

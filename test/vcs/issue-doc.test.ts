@@ -18,7 +18,7 @@ import {
   scaffoldIssueDoc,
 } from '../../src/vcs/issue-doc.js';
 
-const TEST_ROOT = join(tmpdir(), 'trellis-issue-doc');
+const TEST_ROOT = join(tmpdir(), `trellis-issue-doc-${process.pid}-${Date.now().toString(36)}`);
 
 describe('issue doc scaffold', () => {
   let engine: TrellisVcsEngine;

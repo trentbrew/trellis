@@ -4,7 +4,7 @@ import { JsonOpLog } from '../../src/vcs/op-log.js';
 import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs';
 import { join } from 'path';
 
-const TEST_DIR = '/tmp/trellis-test-runner';
+const TEST_DIR = `/tmp/trellis-test-runner-${process.pid}-${Date.now().toString(36)}`;
 
 function writeManifest(
   suites: Record<string, { command: string; description?: string }>,

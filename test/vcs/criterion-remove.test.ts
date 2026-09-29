@@ -17,7 +17,7 @@ import { join } from 'path';
 import { TrellisVcsEngine } from '../../src/engine.js';
 import { verifyVcsOpHash } from '../../src/vcs/ops.js';
 
-const TEST_ROOT = join(tmpdir(), 'trellis-criterion-remove');
+const TEST_ROOT = join(tmpdir(), `trellis-criterion-remove-${process.pid}-${Date.now().toString(36)}`);
 
 describe('criterion removal', () => {
   let engine: TrellisVcsEngine;

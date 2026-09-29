@@ -28,7 +28,7 @@ describe('BetterSqliteKernelBackend', () => {
   let backend: BetterSqliteKernelBackend;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-test-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-test--${process.pid}-${Date.now().toString(36)}`));
     backend = new BetterSqliteKernelBackend(join(tmpDir, 'test.db'));
     backend.init();
   });

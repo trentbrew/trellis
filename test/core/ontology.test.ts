@@ -298,7 +298,7 @@ describe('Validation Middleware', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-ontology-test-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-ontology-test--${process.pid}-${Date.now().toString(36)}`));
   });
 
   it('should allow valid mutations', async () => {

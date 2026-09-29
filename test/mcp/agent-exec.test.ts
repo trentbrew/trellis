@@ -20,7 +20,7 @@ let tmpDir: string;
 let pool: TenantPool;
 
 beforeAll(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), 'trellis-agent-exec-test-'));
+  tmpDir = mkdtempSync(join(tmpdir(), `trellis-agent-exec-test--${process.pid}-${Date.now().toString(36)}`));
   pool = new TenantPool(tmpDir, { backend: { backend: 'sqljs' } });
   await pool.preload();
 });

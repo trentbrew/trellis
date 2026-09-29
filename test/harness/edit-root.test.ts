@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, '../..');
 const HARNESS_CLI = join(REPO_ROOT, 'templates/trellis-harness/trellis-cli.sh');
-const TEST_ROOT = '/tmp/trellis-harness-edit-root';
+const TEST_ROOT = `/tmp/trellis-harness-edit-root-${process.pid}-${Date.now().toString(36)}`;
 
 function bashEval(script: string): string {
   return execSync(script, {

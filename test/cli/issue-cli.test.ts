@@ -25,7 +25,7 @@ describe('trellis issue CLI', () => {
   let root: string;
 
   beforeAll(async () => {
-    root = mkdtempSync(join(tmpdir(), 'trellis-issue-cli-'));
+    root = mkdtempSync(join(tmpdir(), `trellis-issue-cli--${process.pid}-${Date.now().toString(36)}`));
     root = realpathSync(root);
     const eng = new TrellisVcsEngine({ rootPath: root });
     await eng.initRepo();
@@ -139,7 +139,7 @@ describe('trellis list-command consistency (TRL-116)', () => {
   let root: string;
 
   beforeAll(async () => {
-    root = mkdtempSync(join(tmpdir(), 'trellis-list-cli-'));
+    root = mkdtempSync(join(tmpdir(), `trellis-list-cli--${process.pid}-${Date.now().toString(36)}`));
     root = realpathSync(root);
     const eng = new TrellisVcsEngine({ rootPath: root });
     await eng.initRepo();

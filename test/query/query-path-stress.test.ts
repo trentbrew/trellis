@@ -10,7 +10,7 @@ import { TrellisVcsEngine } from '../../src/engine.js';
 import { runQueryStress, formatQueryStressHints } from '../../src/query/stress.js';
 import { QueryEngine, parseSimple } from '../../src/core/query/index.js';
 
-const FIXTURE_ROOT = '/tmp/trellis-query-stress-fixture';
+const FIXTURE_ROOT = `/tmp/trellis-query-stress-fixture-${process.pid}-${Date.now().toString(36)}`;
 
 describe('runQueryStress (fixture)', () => {
   let engine: TrellisVcsEngine;

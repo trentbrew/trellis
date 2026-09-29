@@ -4,7 +4,7 @@ import { mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { HookRegistry } from '../src/decisions/hooks.js';
 
-const TEST_DIR = '/tmp/trellis-decision-test';
+const TEST_DIR = `/tmp/trellis-decision-test-${process.pid}-${Date.now().toString(36)}`;
 
 function setupTestRepo() {
   rmSync(TEST_DIR, { recursive: true, force: true });

@@ -14,5 +14,5 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 process.env.TRELLIS_OPLOG_MIRROR_DIR = mkdtempSync(
-  join(tmpdir(), 'trellis-mirror-test-'),
+  join(tmpdir(), `trellis-mirror-test--${process.pid}-${Date.now().toString(36)}`),
 );

@@ -47,7 +47,7 @@ describe('Auto-Embed Middleware', () => {
   let mw: Awaited<ReturnType<typeof createAutoEmbedMiddleware>>;
 
   beforeEach(async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-autoembed-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-autoembed--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: await createKernelBackend(join(tmpDir, 'kernel.db'), {
         backend: 'sqljs',
@@ -143,7 +143,7 @@ describe('RAG Context Builder', () => {
   let vs: VectorStore;
 
   beforeEach(async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-rag-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-rag--${process.pid}-${Date.now().toString(36)}`));
     vs = await VectorStore.create(join(tmpDir, 'embeddings.db'));
 
     // Seed with some embeddings

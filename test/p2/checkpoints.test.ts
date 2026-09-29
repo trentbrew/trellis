@@ -4,7 +4,7 @@ import { createVcsOp } from '../../src/vcs/ops.js';
 import { mkdirSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
-const TEST_ROOT = '/tmp/trellis-p2-checkpoint-test';
+const TEST_ROOT = `/tmp/trellis-p2-checkpoint-test-${process.pid}-${Date.now().toString(36)}`;
 
 describe('Checkpoints', () => {
   let engine: TrellisVcsEngine;

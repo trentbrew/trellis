@@ -10,7 +10,7 @@ describe('JsonOpLog incremental append', () => {
   let logPath: string;
 
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), 'trellis-oplog-perf-'));
+    root = mkdtempSync(join(tmpdir(), `trellis-oplog-perf--${process.pid}-${Date.now().toString(36)}`));
     logPath = join(root, 'ops.json');
   });
 

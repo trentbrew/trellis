@@ -13,7 +13,7 @@ import { createIdentity, saveIdentity } from '../../src/identity/identity.js';
 import { signOp, verifyOp } from '../../src/identity/signing-middleware.js';
 import type { VcsOp } from '../../src/vcs/types.js';
 
-const TEST_ROOT = join(tmpdir(), 'trellis-engine-op-signing');
+const TEST_ROOT = join(tmpdir(), `trellis-engine-op-signing-${process.pid}-${Date.now().toString(36)}`);
 
 function journal(): VcsOp[] {
   return readFileSync(join(TEST_ROOT, '.trellis', 'ops.json'), 'utf-8')

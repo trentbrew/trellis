@@ -30,7 +30,7 @@ describe('bible genealogy seed', () => {
   let kernel: TrellisKernel;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-bible-seed-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-bible-seed--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'kernel.db')),
       agentId: 'test',

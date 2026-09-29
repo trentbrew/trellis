@@ -30,7 +30,7 @@ import {
 import { createVcsOp } from '../../src/vcs/ops.js';
 
 function tempTrellis(): { root: string; trellisDir: string } {
-  const root = mkdtempSync(join(tmpdir(), 'trellis-pair-'));
+  const root = mkdtempSync(join(tmpdir(), `trellis-pair--${process.pid}-${Date.now().toString(36)}`));
   const trellisDir = join(root, '.trellis');
   return { root, trellisDir };
 }

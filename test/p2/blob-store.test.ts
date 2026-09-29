@@ -4,7 +4,7 @@ import { TrellisVcsEngine } from '../../src/engine.js';
 import { mkdirSync, rmSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
-const TEST_ROOT = '/tmp/trellis-p2-blob-test';
+const TEST_ROOT = `/tmp/trellis-p2-blob-test-${process.pid}-${Date.now().toString(36)}`;
 
 describe('BlobStore', () => {
   let store: BlobStore;
@@ -84,7 +84,7 @@ describe('BlobStore', () => {
 });
 
 describe('BlobStore integration with engine', () => {
-  const REPO_ROOT = '/tmp/trellis-p2-blob-engine-test';
+  const REPO_ROOT = `/tmp/trellis-p2-blob-engine-test-${process.pid}-${Date.now().toString(36)}`;
 
   afterEach(() => {
     rmSync(REPO_ROOT, { recursive: true, force: true });

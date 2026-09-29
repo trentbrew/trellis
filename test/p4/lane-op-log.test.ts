@@ -20,7 +20,7 @@ function stubOp(agentId: string, n: number, previousHash?: string) {
 
 describe('LaneOpLog', () => {
   test('two lane journals append concurrently without cross-contamination', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'trellis-lane-'));
+    const root = mkdtempSync(join(tmpdir(), `trellis-lane--${process.pid}-${Date.now().toString(36)}`));
     const trellisDir = join(root, '.trellis');
 
     const metaA = createLaneMeta(trellisDir, {

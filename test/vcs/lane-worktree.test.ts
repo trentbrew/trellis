@@ -11,7 +11,7 @@ import {
   resolveBaseRef,
 } from '../../src/vcs/lane-worktree.js';
 
-const TEST_ROOT = '/tmp/trellis-lane-worktree';
+const TEST_ROOT = `/tmp/trellis-lane-worktree-${process.pid}-${Date.now().toString(36)}`;
 
 function git(root: string, cmd: string): string {
   return execSync(`git -C "${root}" ${cmd}`, { encoding: 'utf-8' }).trim();

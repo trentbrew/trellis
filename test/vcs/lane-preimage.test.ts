@@ -25,7 +25,7 @@ import { TrellisVcsEngine } from '../../src/engine.js';
 import { createVcsOp, hashVcsOp, verifyVcsOpHash } from '../../src/vcs/ops.js';
 import type { VcsOp } from '../../src/vcs/types.js';
 
-const TEST_ROOT = join(tmpdir(), 'trellis-lane-preimage');
+const TEST_ROOT = join(tmpdir(), `trellis-lane-preimage-${process.pid}-${Date.now().toString(36)}`);
 
 /** Read a lane's own journal off disk — the ops that carry the stamp. */
 function readLaneJournal(laneId: string): VcsOp[] {

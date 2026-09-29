@@ -245,7 +245,7 @@ describe('IdeaGarden', () => {
 // ---------------------------------------------------------------------------
 
 describe('Engine garden integration', () => {
-  const REPO_ROOT = '/tmp/trellis-p5-garden-test';
+  const REPO_ROOT = `/tmp/trellis-p5-garden-test-${process.pid}-${Date.now().toString(36)}`;
 
   afterEach(() => {
     rmSync(REPO_ROOT, { recursive: true, force: true });

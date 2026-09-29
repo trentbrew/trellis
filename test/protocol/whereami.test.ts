@@ -11,8 +11,8 @@ import {
 } from '../../src/protocol/whereami.js';
 import { formatIssueDescription } from '../../src/protocol/envelope.js';
 
-const TEST_ROOT = '/tmp/trellis-protocol-whereami';
-const TEST_ROOT_GIT = '/tmp/trellis-protocol-whereami-git';
+const TEST_ROOT = `/tmp/trellis-protocol-whereami-${process.pid}-${Date.now().toString(36)}`;
+const TEST_ROOT_GIT = `/tmp/trellis-protocol-whereami-git-${process.pid}-${Date.now().toString(36)}`;
 
 function git(root: string, cmd: string): string {
   return execSync(`git -C "${root}" ${cmd}`, { encoding: 'utf-8' }).trim();

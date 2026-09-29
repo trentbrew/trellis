@@ -10,7 +10,7 @@ import {
 import { EAVStore } from '../../src/core/store/eav-store.js';
 import { createVcsOp } from '../../src/vcs/ops.js';
 
-const TEST_ROOT = '/tmp/trellis-p4-lane-materialize';
+const TEST_ROOT = `/tmp/trellis-p4-lane-materialize-${process.pid}-${Date.now().toString(36)}`;
 
 describe('lane materialize helpers', () => {
   test('cloneStore preserves facts', async () => {

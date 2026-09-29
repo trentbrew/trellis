@@ -22,7 +22,7 @@ describe('lazy blobbing', () => {
   let root: string;
 
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), 'trellis-lazy-blob-'));
+    root = mkdtempSync(join(tmpdir(), `trellis-lazy-blob--${process.pid}-${Date.now().toString(36)}`));
   });
 
   afterEach(() => {

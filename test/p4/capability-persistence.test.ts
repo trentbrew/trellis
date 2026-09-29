@@ -30,7 +30,7 @@ import {
   resolveCapability,
 } from '../../src/identity/capability.js';
 
-const TEST_ROOT = join(tmpdir(), 'trellis-capability-persistence');
+const TEST_ROOT = join(tmpdir(), `trellis-capability-persistence-${process.pid}-${Date.now().toString(36)}`);
 
 const OWNER_DID = 'did:key:zowner';
 const OWNER = `identity:${OWNER_DID}`;

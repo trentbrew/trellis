@@ -10,7 +10,7 @@ import {
   CONFIG_FILE,
 } from '../../src/client/config.js';
 
-const TMP = join(import.meta.dir, '__tmp_config_test');
+const TMP = join(import.meta.dir, `__tmp_config_test-${process.pid}-${Date.now().toString(36)}`);
 
 beforeEach(() => {
   if (!existsSync(TMP)) mkdirSync(TMP, { recursive: true });

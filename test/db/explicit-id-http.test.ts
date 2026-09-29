@@ -11,7 +11,7 @@ import { TenantPool } from '../../src/server/tenancy.js';
 import { defaultLocalConfig } from '../../src/client/config.js';
 import type { TrellisHttpServer } from '../../src/server/server-shared.js';
 
-const TMP = join(dirname(fileURLToPath(import.meta.url)), '__tmp_explicit_id');
+const TMP = join(dirname(fileURLToPath(import.meta.url)), `__tmp_explicit_id-${process.pid}-${Date.now().toString(36)}`);
 const DB_PATH = join(TMP, 'data');
 
 let server: TrellisHttpServer;

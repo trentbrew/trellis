@@ -19,7 +19,7 @@ describe('Agent Memory Plugin', () => {
   let pluginRegistry: PluginRegistry;
 
   beforeEach(async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-memory-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-memory--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'kernel.db')),
       agentId: 'test-agent',
@@ -77,7 +77,7 @@ describe('GraphContextManager', () => {
   };
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-gcm-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-gcm--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'kernel.db')),
       agentId: 'test-agent',

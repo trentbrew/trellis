@@ -18,7 +18,7 @@ describe('headless forms HTTP surface', () => {
   let base: string;
 
   beforeEach(async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-forms-http-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-forms-http--${process.pid}-${Date.now().toString(36)}`));
     const dbPath = join(tmpDir, 'data');
     const config = defaultLocalConfig(dbPath);
     pool = new TenantPool(dbPath, { backend: { backend: 'sqljs' } });

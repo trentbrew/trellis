@@ -74,7 +74,7 @@ describe('AgentHarness LLM + typed graph tools', () => {
   let harness: AgentHarness;
 
   beforeEach(async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-harness-llm-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-harness-llm--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'kernel.db')),
       agentId: 'test-agent',

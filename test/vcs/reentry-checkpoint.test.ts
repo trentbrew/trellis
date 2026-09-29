@@ -10,7 +10,7 @@ describe('writeReentryCheckpoint', () => {
   let engine: TrellisVcsEngine;
 
   beforeEach(async () => {
-    root = mkdtempSync(join(tmpdir(), 'trellis-reentry-'));
+    root = mkdtempSync(join(tmpdir(), `trellis-reentry--${process.pid}-${Date.now().toString(36)}`));
     engine = new TrellisVcsEngine({ rootPath: root, agentId: 'agent:test' });
     await engine.initRepo();
   });
@@ -48,7 +48,7 @@ describe('reentryStatus', () => {
   let engine: TrellisVcsEngine;
 
   beforeEach(async () => {
-    root = mkdtempSync(join(tmpdir(), 'trellis-reentry-'));
+    root = mkdtempSync(join(tmpdir(), `trellis-reentry--${process.pid}-${Date.now().toString(36)}`));
     engine = new TrellisVcsEngine({ rootPath: root, agentId: 'agent:test' });
     await engine.initRepo();
   });
@@ -76,7 +76,7 @@ describe('session usage rollup', () => {
   let engine: TrellisVcsEngine;
 
   beforeEach(async () => {
-    root = mkdtempSync(join(tmpdir(), 'trellis-usage-'));
+    root = mkdtempSync(join(tmpdir(), `trellis-usage--${process.pid}-${Date.now().toString(36)}`));
     engine = new TrellisVcsEngine({ rootPath: root, agentId: 'agent:test' });
     await engine.initRepo();
   });

@@ -8,7 +8,7 @@ import { TenantPool } from '../../src/server/tenancy.js';
 
 describe('SubscriptionManager.notify', () => {
   it('pushes updates for embed tenants when WS client.tenantId is null', async () => {
-    const pool = new TenantPool(mkdtempSync(join(tmpdir(), 'trellis-notify-')));
+    const pool = new TenantPool(mkdtempSync(join(tmpdir(), `trellis-notify--${process.pid}-${Date.now().toString(36)}`)));
     const subs = new SubscriptionManager(pool, null, null);
     const sent: string[] = [];
 

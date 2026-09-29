@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 import { writeConfig } from '../../src/client/config.js';
 import { resolveBridgeConfig } from '../../src/mcp/bridge.js';
 
-const TMP = join(dirname(fileURLToPath(import.meta.url)), '__tmp_bridge_tenant');
+const TMP = join(dirname(fileURLToPath(import.meta.url)), `__tmp_bridge_tenant-${process.pid}-${Date.now().toString(36)}`);
 const CONFIG_DIR = join(TMP, 'project');
 
 describe('resolveBridgeConfig tenant', () => {

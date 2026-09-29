@@ -12,7 +12,7 @@ import {
 import { LaneOpLog } from '../../src/vcs/op-log.js';
 import { createVcsOp } from '../../src/vcs/ops.js';
 
-const TEST_ROOT = '/tmp/trellis-lane-gc';
+const TEST_ROOT = `/tmp/trellis-lane-gc-${process.pid}-${Date.now().toString(36)}`;
 
 function git(root: string, cmd: string): string {
   return execSync(`git -C "${root}" ${cmd}`, { encoding: 'utf-8' }).trim();

@@ -4,7 +4,7 @@ import { execSync } from 'child_process';
 import { mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
 
-const TEST_REPO = '/tmp/trellis-git-reader-test';
+const TEST_REPO = `/tmp/trellis-git-reader-test-${process.pid}-${Date.now().toString(36)}`;
 
 function git(args: string) {
   execSync(`git -C "${TEST_REPO}" ${args}`, { encoding: 'utf-8' });

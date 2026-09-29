@@ -15,7 +15,7 @@ import { join } from 'path';
 import { TrellisVcsEngine } from '../../src/engine.js';
 import { ISSUE_TYPES } from '../../src/vcs/types.js';
 
-const TEST_ROOT = join(tmpdir(), 'trellis-issue-type');
+const TEST_ROOT = join(tmpdir(), `trellis-issue-type-${process.pid}-${Date.now().toString(36)}`);
 
 describe('issueType (ADR 0026)', () => {
   let engine: TrellisVcsEngine;

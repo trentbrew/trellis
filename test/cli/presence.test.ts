@@ -26,7 +26,7 @@ function makeInfo(sessionId: string, ageMs: number): PresenceInfo {
 }
 
 describe('presence ledger', () => {
-  const root = mkdtempSync(join(tmpdir(), 'trellis-presence-'));
+  const root = mkdtempSync(join(tmpdir(), `trellis-presence--${process.pid}-${Date.now().toString(36)}`));
   afterEach(() => rmSync(join(root, '.trellis', 'presence'), { recursive: true, force: true }));
 
   it('reads only non-stale records and prunes stale', () => {

@@ -17,7 +17,7 @@ import { startServer } from '../../src/server/server.js';
 import type { TrellisHttpServer } from '../../src/server/server-shared.js';
 import { TenantPool } from '../../src/server/tenancy.js';
 
-const TMP = join(dirname(fileURLToPath(import.meta.url)), '__tmp_mcp_bridge');
+const TMP = join(dirname(fileURLToPath(import.meta.url)), `__tmp_mcp_bridge-${process.pid}-${Date.now().toString(36)}`);
 const DB_PATH = join(TMP, 'data');
 const CONFIG_DIR = join(TMP, 'project');
 

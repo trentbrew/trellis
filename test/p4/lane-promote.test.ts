@@ -12,7 +12,7 @@ import {
 import { BlobStore } from '../../src/vcs/blob-store.js';
 import { BlobResolver } from '../../src/vcs/blob-resolver.js';
 
-const TEST_ROOT = '/tmp/trellis-p4-lane-promote';
+const TEST_ROOT = `/tmp/trellis-p4-lane-promote-${process.pid}-${Date.now().toString(36)}`;
 
 describe('Lane promote', () => {
   let engine: TrellisVcsEngine;
