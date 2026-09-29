@@ -4137,6 +4137,142 @@ entityCmd
   });
 
 // ---------------------------------------------------------------------------
+// trellis report — derived worklog + epic→telos rollup (ADR 0050 P2)
+// ---------------------------------------------------------------------------
+
+function computeReport(engine: any, days: number) {
+  const cutoff = Date.now() - days * 86400000;
+  const tsOf = (s: any) => {
+    const t = Date.parse(String(s ?? ''));
+    return Number.isFinite(t) ? t : 0;
+  };
+  const attrsOf = (rec: any) =>
+    Object.fromEntries((rec.facts ?? []).map((f: any) => [f.a, f.v]));
+  const store = engine.getEavStore();
+
+  const issues = engine.listIssues();
+  const epics = issues.filter((i: any) => (i.issueType ?? 'issue') === 'epic');
+  const leaves = issues.filter((i: any) => (i.issueType ?? 'issue') !== 'epic');
+  const created = issues.filter((i: any) => i.createdAt && tsOf(i.createdAt) >= cutoff);
+  const closed = issues.filter(
+    (i: any) => i.status === 'closed' && i.closedAt && tsOf(i.closedAt) >= cutoff,
+  );
+  const notes = engine
+    .listStoreEntities('Note')
+    .map((r: any) => ({ id: r.id, ...attrsOf(r) }))
+    .filter((n: any) => (n.status ?? 'captured') === 'captured');
+
+  const rootOf = (id: string): string | null =>
+    ((store.getLinksByEntityAndAttribute(id, 'rootedIn')[0] as any)?.e2 ?? null);
+
+  const epicRows = epics
+    .map((e: any) => {
+      const kids = leaves.filter((l: any) => (l.parentId ?? '') === e.id);
+      return {
+        id: e.id,
+        title: e.title,
+        telos: rootOf(e.id),
+        open: kids.filter((k: any) => k.status !== 'closed').length,
+        closed: kids.filter((k: any) => k.status === 'closed').length,
+        total: kids.length,
+      };
+    })
+    .sort((a: any, b: any) => String(a.id).localeCompare(String(b.id)));
+
+  const telosRows = engine
+    .listStoreEntities('Telos')
+    .map((r: any) => ({ id: r.id, ...attrsOf(r) }))
+    .map((t: any) => {
+      const rooted = epicRows.filter((e: any) => e.telos === t.id);
+      return {
+        id: t.id,
+        alias: t.alias ?? null,
+        epics: rooted.length,
+        open: rooted.reduce((n: number, e: any) => n + e.open, 0),
+        closed: rooted.reduce((n: number, e: any) => n + e.closed, 0),
+      };
+    })
+    .sort((a: any, b: any) => String(a.id).localeCompare(String(b.id)));
+
+  const ops = engine.getOps().filter((o: any) => tsOf(o.timestamp) >= cutoff);
+  const byKind: Record<string, number> = {};
+  for (const o of ops) byKind[o.kind] = (byKind[o.kind] ?? 0) + 1;
+
+  return {
+    windowDays: days,
+    activity: {
+      ops: ops.length,
+      issuesCreated: created.length,
+      issuesClosed: closed.length,
+      notesCaptured: notes.length,
+      byKind,
+    },
+    createdIssues: created.map((i: any) => ({ id: i.id, title: i.title, at: i.createdAt })),
+    closedIssues: closed.map((i: any) => ({ id: i.id, title: i.title, at: i.closedAt })),
+    epics: epicRows,
+    unrootedEpics: epicRows.filter((e: any) => !e.telos).map((e: any) => e.id),
+    telos: telosRows,
+  };
+}
+
+program
+  .command('report')
+  .description('Derived worklog + epic→telos rollup (ADR 0050 P2)')
+  .option('-d, --days <n>', 'Window in days', '7')
+  .option('--day', 'Shorthand for a one-day window')
+  .option('--json', 'Emit machine-readable JSON')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (opts: any) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    const days = opts.day ? 1 : parseInt(opts.days, 10) || 7;
+    await withGraphStore(rootPath, async ({ mode, engine }) => {
+      if (mode !== 'vcs' || !engine) {
+        console.error(chalk.red('report requires a Trellis VCS repo'));
+        process.exit(1);
+      }
+      const r = computeReport(engine, days);
+      if (opts.json) {
+        console.log(JSON.stringify(r, null, 2));
+        return;
+      }
+      console.log(chalk.bold(`Report — last ${r.windowDays}d\n`));
+      console.log(chalk.bold('Activity'));
+      console.log(
+        `  ops ${r.activity.ops} · +${r.activity.issuesCreated} issues · -${r.activity.issuesClosed} closed · ${r.activity.notesCaptured} notes captured`,
+      );
+      if (r.createdIssues.length) {
+        console.log(chalk.dim('  created:'));
+        for (const i of r.createdIssues.slice(0, 10)) {
+          console.log(`    ${chalk.cyan(i.id)} ${i.title ?? ''}`);
+        }
+      }
+      if (r.closedIssues.length) {
+        console.log(chalk.dim('  closed:'));
+        for (const i of r.closedIssues.slice(0, 10)) {
+          console.log(`    ${chalk.cyan(i.id)} ${i.title ?? ''}`);
+        }
+      }
+      console.log('');
+      console.log(chalk.bold(`Epics (${r.epics.length})`));
+      for (const e of r.epics) {
+        const root = e.telos ? chalk.dim(`→ ${e.telos}`) : chalk.yellow('unrooted');
+        console.log(
+          `  ${chalk.cyan(e.id)} ${e.title ?? ''} — ${e.open} open / ${e.closed} closed ${root}`,
+        );
+      }
+      if (r.telos.length) {
+        console.log('');
+        console.log(chalk.bold(`Telos (${r.telos.length})`));
+        for (const t of r.telos) {
+          console.log(
+            `  ${chalk.cyan(t.id)} ${t.alias ?? ''} — ${t.epics} epics · ${t.open} open / ${t.closed} closed`,
+          );
+        }
+      }
+    });
+  });
+
+// ---------------------------------------------------------------------------
 // trellis mirror — generated derived index (ADR 0050 d3)
 // ---------------------------------------------------------------------------
 
