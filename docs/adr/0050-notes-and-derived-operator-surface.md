@@ -6,7 +6,7 @@
 > recomputed views over ops + graph (`wip`, `cadence`, `report`) that are never
 > hand-maintained.
 
-**Status:** Proposed
+**Status:** Accepted (2026-09-29; P0–P3 implemented)
 **Date:** 2026-09-29
 **Depends on:** [0018](./0018-explicit-ids-and-field-sync-tiers.md) (field sync
 tiers), [0019](./0019-graph-native-cron.md) (graph-native cron), [0026](./0026-intent-vocabulary-issue-types-and-cycles.md)
