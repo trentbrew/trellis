@@ -4339,7 +4339,7 @@ noteCmd.action(async (opts: any) => {
 
 program
   .command('wip')
-  .description('Derived snapshot — active / queue / shipped / next / notes (ADR 0050)')
+  .description('Derived snapshot — active / queue / shipped / next / cycles / notes (ADR 0050)')
   .option('-d, --days <n>', 'Recently-shipped window in days', '7')
   .option('-n, --limit <n>', 'Max items per section', '10')
   .option('--json', 'Emit machine-readable JSON (no color)')
@@ -4381,10 +4381,33 @@ program
         .listStoreEntities('Note')
         .map((r) => ({ id: r.id, ...noteEntityAttrs(r) }) as Record<string, any>)
         .filter((n) => (n.status ?? 'captured') === 'captured');
+      const cycles = engine
+        .listStoreEntities('Cycle')
+        .map((r) => ({ id: r.id, ...cycleAttrs(r) }) as Record<string, any>)
+        .filter((c) => c.status !== 'closed')
+        .map((c): Record<string, any> => {
+          const target = c.targetDate ? Date.parse(String(c.targetDate)) : NaN;
+          const daysLeft = Number.isFinite(target)
+            ? Math.ceil((target - Date.now()) / 86400000)
+            : null;
+          const members = engine
+            .getEavStore()
+            .getLinksByEntityAndAttribute(c.id, 'includes').length;
+          return { ...c, daysLeft, members };
+        })
+        .sort((a, b) => {
+          const at = a.targetDate ? Date.parse(String(a.targetDate)) : Infinity;
+          const bt = b.targetDate ? Date.parse(String(b.targetDate)) : Infinity;
+          return at - bt;
+        });
 
       if (opts.json) {
         console.log(
-          JSON.stringify({ active, paused, queued, shipped, next, notes }, null, 2),
+          JSON.stringify(
+            { active, paused, queued, shipped, next, cycles, notes },
+            null,
+            2,
+          ),
         );
         return;
       }
@@ -4406,6 +4429,20 @@ program
       shipped.slice(0, limit).forEach((i) => console.log(line(i)));
       console.log(chalk.bold(`\nNext (${next.length})`));
       next.forEach((i) => console.log(line(i)));
+      if (cycles.length) {
+        console.log(chalk.bold(`\nCycles (${cycles.length})`));
+        for (const c of cycles.slice(0, limit)) {
+          const when =
+            c.daysLeft == null
+              ? ''
+              : c.daysLeft < 0
+                ? chalk.red(`${-c.daysLeft}d overdue`)
+                : chalk.dim(`${c.daysLeft}d left`);
+          console.log(
+            `  ${chalk.cyan(c.id)} ${chalk.dim(String(c.targetDate ?? ''))} ${when} ${chalk.dim(`· ${c.members} issue${c.members === 1 ? '' : 's'}`)}`,
+          );
+        }
+      }
       if (notes.length) {
         console.log(chalk.bold(`\nNotes awaiting triage (${notes.length})`));
         notes
