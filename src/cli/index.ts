@@ -4162,8 +4162,12 @@ function computeReport(engine: any, days: number) {
     .map((r: any) => ({ id: r.id, ...attrsOf(r) }))
     .filter((n: any) => (n.status ?? 'captured') === 'captured');
 
-  const rootOf = (id: string): string | null =>
-    ((store.getLinksByEntityAndAttribute(id, 'rootedIn')[0] as any)?.e2 ?? null);
+  const rootOf = (issueId: string): string | null => {
+    const eid = String(issueId).startsWith('issue:')
+      ? String(issueId)
+      : issueEntityId(String(issueId));
+    return (store.getLinksByEntityAndAttribute(eid, 'rootedIn')[0] as any)?.e2 ?? null;
+  };
 
   const epicRows = epics
     .map((e: any) => {
@@ -4860,6 +4864,171 @@ program
       }
     });
   });
+
+// ---------------------------------------------------------------------------
+// trellis telos — strategic roots for epics (ADR 0026 d4 / ADR 0050 P2)
+// ---------------------------------------------------------------------------
+
+function telosSlugId(input: string): string {
+  const raw = input.startsWith('telos:') ? input.slice(6) : input;
+  const slug = raw
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return `telos:${slug}`;
+}
+
+function rootedCounts(engine: any): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const l of engine.getEavStore().getLinksByAttribute('rootedIn') as any[]) {
+    counts[l.e2] = (counts[l.e2] ?? 0) + 1;
+  }
+  return counts;
+}
+
+const telosCmd = program
+  .command('telos')
+  .description('Strategic roots — epics roll up to a telos (ADR 0026 d4)');
+
+telosCmd
+  .command('add')
+  .alias('new')
+  .description('Create a telos')
+  .argument('<alias>', 'Telos alias (becomes telos:<slug>)')
+  .option('--json', 'Emit machine-readable JSON')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (alias: any, opts: any) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    const id = telosSlugId(alias);
+    const attrs: Record<string, any> = { alias, createdAt: new Date().toISOString() };
+    await withGraphStore(rootPath, async ({ mode, engine, kernel }) => {
+      if (mode === 'vcs' && engine) await engine.createStoreEntity(id, 'Telos', attrs);
+      else await kernel!.createEntity(id, 'Telos', attrs);
+      if (opts.json) {
+        console.log(JSON.stringify({ id, ...attrs }));
+        return;
+      }
+      console.log(`${chalk.green('✓')} ${chalk.bold(id)}`);
+    });
+  });
+
+telosCmd
+  .command('list')
+  .description('List telos (with rooted epic counts)')
+  .option('--json', 'Emit machine-readable JSON')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (opts: any) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    await withGraphStore(rootPath, async ({ mode, engine }) => {
+      if (mode !== 'vcs' || !engine) {
+        console.error(chalk.red('telos requires a Trellis VCS repo'));
+        process.exit(1);
+      }
+      const counts = rootedCounts(engine);
+      const rows = engine
+        .listStoreEntities('Telos')
+        .map((r: any) => ({ id: r.id, alias: cycleAttrs(r).alias ?? null, epics: counts[r.id] ?? 0 }))
+        .sort((x: any, y: any) => String(x.id).localeCompare(String(y.id)));
+      if (opts.json) {
+        console.log(JSON.stringify({ telos: rows }, null, 2));
+        return;
+      }
+      if (rows.length === 0) {
+        console.log(chalk.dim('No telos. Create one: trellis telos add <alias>'));
+        return;
+      }
+      for (const t of rows) {
+        console.log(
+          `${chalk.cyan(t.id)}  ${chalk.dim(`${t.epics} epic${t.epics === 1 ? '' : 's'}`)}  ${t.alias ?? ''}`,
+        );
+      }
+    });
+  });
+
+telosCmd
+  .command('show')
+  .description('Show a telos and its rooted epics')
+  .argument('<id>', 'Telos ID (telos:<slug> or bare slug)')
+  .option('--json', 'Emit machine-readable JSON')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (idArg: any, opts: any) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    const id = telosSlugId(idArg);
+    await withGraphStore(rootPath, async ({ mode, engine }) => {
+      if (mode !== 'vcs' || !engine) {
+        console.error(chalk.red('telos requires a Trellis VCS repo'));
+        process.exit(1);
+      }
+      const rec = engine.getStoreEntity(id);
+      if (!rec) {
+        console.error(chalk.red(`Telos not found: ${id}`));
+        process.exit(1);
+      }
+      const links = (engine.getEavStore().getLinksByAttribute('rootedIn') as any[]).filter(
+        (l) => l.e2 === id,
+      );
+      const epics = links
+        .map((l) => {
+          const eid = String(l.e1 ?? '');
+          const issue = eid.startsWith('issue:') ? engine.getIssue(eid.slice(6)) : null;
+          return { id: eid, title: issue?.title ?? '' };
+        })
+        .sort((a, b) => a.id.localeCompare(b.id));
+      const a = cycleAttrs(rec);
+      if (opts.json) {
+        console.log(JSON.stringify({ id, ...a, epics }, null, 2));
+        return;
+      }
+      console.log(chalk.bold(id));
+      console.log(`  ${chalk.dim('alias:')} ${a.alias ?? ''}`);
+      console.log(chalk.bold(`\nEpics (${epics.length})`));
+      for (const e of epics) console.log(`  ${chalk.cyan(e.id)} ${e.title}`);
+    });
+  });
+
+telosCmd
+  .command('root')
+  .description('Root an epic in a telos (epic —[rootedIn]→ telos)')
+  .argument('<epic>', 'Epic issue ID (e.g. TRL-1)')
+  .argument('<telos>', 'Telos ID')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (epic: any, telosArg: any, opts: any) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    const tid = telosSlugId(telosArg);
+    await withGraphStore(rootPath, async ({ mode, engine }) => {
+      if (mode !== 'vcs' || !engine) {
+        console.error(chalk.red('telos requires a Trellis VCS repo'));
+        process.exit(1);
+      }
+      const src = String(epic).startsWith('issue:') ? String(epic) : issueEntityId(String(epic));
+      await engine.addStoreLink(src, 'rootedIn', tid);
+      console.log(`${chalk.green('✓')} ${chalk.bold(src)} —[rootedIn]→ ${chalk.bold(tid)}`);
+    });
+  });
+
+// Bare `trellis telos` lists.
+telosCmd.action(async (opts: any) => {
+  const rootPath = resolveRepoRoot(opts?.path ?? '.');
+  await withGraphStore(rootPath, async ({ mode, engine }) => {
+    if (mode !== 'vcs' || !engine) {
+      console.log(chalk.dim('No telos.'));
+      return;
+    }
+    const counts = rootedCounts(engine);
+    const rows = engine
+      .listStoreEntities('Telos')
+      .map((r: any) => ({ id: r.id, alias: cycleAttrs(r).alias ?? null, epics: counts[r.id] ?? 0 }));
+    if (rows.length === 0) {
+      console.log(chalk.dim('No telos. Create one: trellis telos add <alias>'));
+      return;
+    }
+    for (const t of rows) {
+      console.log(
+        `${chalk.cyan(t.id)}  ${chalk.dim(`${t.epics} epic${t.epics === 1 ? '' : 's'}`)}  ${t.alias ?? ''}`,
+      );
+    }
+  });
+});
 
 // ---------------------------------------------------------------------------
 // trellis cycle — time-boxed intent container (ADR 0026 d2)
