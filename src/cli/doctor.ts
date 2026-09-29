@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import type { Command } from 'commander';
 import { TrellisVcsEngine } from '../engine.js';
 import { loadLaneMeta, listLaneMetas } from '../vcs/lane.js';
-import { readPresence, resolveSessionId } from './presence.js';
+import { readPresence, resolveSessionId } from '../presence/ledger.js';
 import { resolveRepoRoot } from './repo-path.js';
 
 export type OpsFileFormat =
