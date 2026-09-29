@@ -26,7 +26,7 @@
     },
     {
       "id": "trellis-docs",
-      "path": "../../Packages/trellis-docs/www",
+      "path": "../docs",
       "pages": [
         "content/8.changelog.md",
         "content/4.cli/2.commands.md",
@@ -43,7 +43,7 @@
     },
     {
       "id": "turtlecode-ide",
-      "path": "../../Packages/turtlecode/ide",
+      "path": "../studio",
       "sync": [
         {
           "from": "skills/trellis-vcs/SKILL.md",
