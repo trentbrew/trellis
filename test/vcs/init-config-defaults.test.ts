@@ -3,7 +3,8 @@ import { readFileSync, rmSync, mkdirSync, writeFileSync, renameSync } from 'fs';
 import { join } from 'path';
 import { TrellisVcsEngine } from '../../src/engine.js';
 
-const TEST_ROOT = '/tmp/trellis-init-config-defaults';
+// Unique per process — a fixed path raced when two test runs overlapped (flaky release gate).
+const TEST_ROOT = `/tmp/trellis-init-config-defaults-${process.pid}-${Date.now().toString(36)}`;
 
 describe('initRepo coordination defaults', () => {
   afterEach(() => {

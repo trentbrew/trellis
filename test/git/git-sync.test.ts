@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { execSync } from 'child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
 import { join } from 'path';
 import { TrellisVcsEngine } from '../../src/engine.js';
 import { loadLaneMeta } from '../../src/vcs/lane.js';
@@ -9,7 +10,8 @@ import {
   syncIntegrationToGit,
 } from '../../src/git/git-sync.js';
 
-const TEST_ROOT = '/tmp/trellis-git-sync-test';
+// Unique per run — a fixed path raced when two test runs overlapped (flaky release gate).
+let TEST_ROOT = '';
 
 function git(root: string, cmd: string): string {
   return execSync(`git -C "${root}" ${cmd}`, { encoding: 'utf-8' }).trim();
@@ -29,7 +31,7 @@ function initGitRepo(root: string): void {
 
 describe('git-sync', () => {
   beforeEach(async () => {
-    rmSync(TEST_ROOT, { recursive: true, force: true });
+    TEST_ROOT = mkdtempSync(join(tmpdir(), 'trellis-git-sync-'));
     initGitRepo(TEST_ROOT);
   });
 

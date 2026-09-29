@@ -14,7 +14,8 @@ import { laneDir, loadLaneMeta, updateLaneHead } from '../../src/vcs/lane.js';
 import { BlobStore } from '../../src/vcs/blob-store.js';
 import { createVcsOp } from '../../src/vcs/ops.js';
 
-const TEST_ROOT = '/tmp/trellis-phase2-coordination';
+// Unique per process — a fixed path raced when two test runs overlapped (flaky release gate).
+const TEST_ROOT = `/tmp/trellis-phase2-coordination-${process.pid}-${Date.now().toString(36)}`;
 
 function initRepo(root: string): void {
   mkdirSync(root, { recursive: true });
