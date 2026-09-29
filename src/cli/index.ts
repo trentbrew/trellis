@@ -2682,6 +2682,10 @@ issueCmd
     '--require-test',
     'Run promote.require test suites during auto-promote',
   )
+  .option(
+    '--force',
+    'Close even when cadence is due (unreconciled drift)',
+  )
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (id, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
@@ -2691,6 +2695,16 @@ issueCmd
       provenance: PROVENANCE.cli,
     });
     engine.open();
+
+    const cadence = computeCadence(engine);
+    if (cadence.due && !opts.force) {
+      console.error(chalk.yellow('Cadence is due — reconcile before closing:'));
+      for (const s of cadence.signals) {
+        console.error(`  ${chalk.yellow('•')} ${s.message}`);
+      }
+      console.error(chalk.dim('  Close anyway with --force.'));
+      process.exit(1);
+    }
 
     const lane = engine.findLaneForIssue(id);
     if (
@@ -4122,6 +4136,87 @@ entityCmd
   });
 
 // ---------------------------------------------------------------------------
+// trellis cadence — derived due-check with teeth (ADR 0050 d4)
+// ---------------------------------------------------------------------------
+
+function computeCadence(
+  engine: any,
+  opts: { noteDays?: number } = {},
+): { due: boolean; signals: Array<{ kind: string; message: string }> } {
+  const now = Date.now();
+  const signals: Array<{ kind: string; message: string }> = [];
+
+  // Hard signal: open cycles past their target date.
+  for (const rec of engine.listStoreEntities('Cycle')) {
+    const c: Record<string, any> = { id: rec.id, ...cycleAttrs(rec) };
+    if (c.status === 'closed' || !c.targetDate) continue;
+    const t = Date.parse(String(c.targetDate));
+    if (Number.isFinite(t) && t < now) {
+      const overdue = Math.ceil((now - t) / 86400000);
+      const members = engine
+        .getEavStore()
+        .getLinksByEntityAndAttribute(c.id, 'includes').length;
+      signals.push({
+        kind: 'cycle-overdue',
+        message: `${c.id} is ${overdue}d past target (${members} issue${members === 1 ? '' : 's'})`,
+      });
+    }
+  }
+
+  // Advisory: captured notes aging past the triage threshold.
+  const noteDays = opts.noteDays ?? 14;
+  const cutoff = now - noteDays * 86400000;
+  const staleNotes = engine
+    .listStoreEntities('Note')
+    .map((r: any) => ({ id: r.id, ...noteEntityAttrs(r) }))
+    .filter(
+      (n: any) =>
+        (n.status ?? 'captured') === 'captured' &&
+        n.createdAt &&
+        Date.parse(String(n.createdAt)) < cutoff,
+    );
+  if (staleNotes.length) {
+    signals.push({
+      kind: 'note-triage',
+      message: `${staleNotes.length} note${staleNotes.length === 1 ? '' : 's'} captured >${noteDays}d ago (trellis note list)`,
+    });
+  }
+
+  return { due: signals.length > 0, signals };
+}
+
+program
+  .command('cadence')
+  .description('Derived due-check — overdue cycles, note triage debt (ADR 0050)')
+  .option('-d, --note-days <n>', 'Note triage age threshold in days', '14')
+  .option('--json', 'Emit machine-readable JSON')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (opts: any) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    const noteDays = parseInt(opts.noteDays, 10) || 14;
+    await withGraphStore(rootPath, async ({ mode, engine }) => {
+      if (mode !== 'vcs' || !engine) {
+        console.error(chalk.red('cadence requires a Trellis VCS repo'));
+        process.exit(1);
+      }
+      const c = computeCadence(engine, { noteDays });
+      if (opts.json) {
+        console.log(JSON.stringify(c, null, 2));
+      } else if (!c.due) {
+        console.log(chalk.green('✓ Cadence clear — nothing overdue.'));
+      } else {
+        console.log(
+          chalk.yellow(
+            `Cadence due — ${c.signals.length} signal${c.signals.length === 1 ? '' : 's'}:`,
+          ),
+        );
+        for (const s of c.signals) console.log(`  ${chalk.yellow('•')} ${s.message}`);
+      }
+      process.exitCode = c.due ? 1 : 0;
+    });
+  });
+
+// ---------------------------------------------------------------------------
 // trellis note — operator-scoped capture (ADR 0050)
 // ---------------------------------------------------------------------------
 
@@ -4415,6 +4510,16 @@ program
       const line = (i: any) =>
         `  ${chalk.cyan(i.id)} ${i.priority ? chalk.dim(`[${i.priority}]`) : ''} ${i.title ?? ''}`;
       console.log(chalk.bold('WIP\n'));
+      const cadence = computeCadence(engine);
+      if (cadence.due) {
+        console.log(
+          chalk.yellow(
+            `Cadence due (${cadence.signals.length}): ${cadence.signals
+              .map((s: any) => s.message)
+              .join('; ')}\n`,
+          ),
+        );
+      }
       console.log(chalk.bold(`Active (${active.length})`));
       active.slice(0, limit).forEach((i) => console.log(line(i)));
       if (paused.length) {
