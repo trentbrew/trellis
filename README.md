@@ -93,6 +93,8 @@ The `trellis` package exposes focused subpaths:
 | `trellis/schema`                   | `defineType`, typed entities, EQL-S queries |
 | `trellis/{react,vue,svelte}/typed` | Live, schema-typed reads + mutations        |
 | `trellis/realtime`                 | Presence, chat, CRDT text                   |
+| `trellis/presence`                 | Agent presence ledger + live liveness census |
+| `trellis/operator`                 | Derived operator reads (`wip`)               |
 | `trellis/cms`                      | Read content collections over HTTP          |
 | `trellis/server`                   | HTTP + WebSocket DB server                  |
 
