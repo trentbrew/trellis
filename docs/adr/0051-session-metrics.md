@@ -117,3 +117,34 @@ Aggregates may sync; raw message text never leaves the desk by default.
 - **P2:** left-join `EvalRun` → outcome × cost × process table.
 - **P3:** populate the desk harness op-log (`model`/`tool`/`error`) so IDE sessions
   contribute, or scope the experiment to harness-driven lanes.
+
+## Addenda
+
+### 2026-09-29 — review (pre-implementation; proposed amendments)
+
+Review while authoring [0052](./0052-agent-liveness-census.md). Decision text above
+is unchanged; these are amendments to fold in before P0 begins.
+
+1. **Coverage is inverted vs d5.** P0–P2 light up only the CLI `ask`/console path
+   and P3 (the desk op-log stub of d4) is last — but a 2026-09-29 desk census found
+   three working agents, *none* via `ask`. P0–P2 would measure the smallest slice
+   of real work. Promote harness-boundary coverage ahead of the rollup, or state
+   the CLI-only scope explicitly in P0's definition of done.
+2. **`costUsd` should not be a stored fact.** Per d1 it is written per turn; prices
+   are provider- and date-specific, so a stored cost drifts — contradicting d3's
+   derived principle. Store raw token counts + `model`, compute cost in the
+   rollup. The d1 split must include **cache read/write** (opencode already emits
+   `cache_read`/`cache_write`); without them Anthropic-style cost is wrong.
+3. **`latencyMs` semantics must be pinned before P0.** The Consequences already
+   flag per-turn wall-clock vs per-tool as open. Wall-clock on a lane-bound
+   session includes human think-time and is not an efficiency metric — define it
+   as model/tool time, or emit both fields distinctly.
+4. **No session-end boundary.** Rollups are per lane/session but nothing records a
+   session closing, so per-session numbers cannot finalize. Same missing trigger
+   as **TRL-407** (session-end disposition hook); cite and share the hook.
+5. **Privacy wording (d6) is loose.** "Aggregates may sync" should require
+   lane-level or k-anonymous aggregation — per-session cost + timing is
+   behaviorally revealing even without message text.
+
+Coupling: [0052](./0052-agent-liveness-census.md) reuses d5's harness boundary so
+one hook serves presence *and* usage; 0052 P3 depends on this ADR's P3.
