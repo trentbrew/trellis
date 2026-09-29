@@ -20,12 +20,13 @@ Run before every npm publish. Downstream sync uses
 
 ## Publish
 
-- [ ] `just ship` (dry-run) → `just ship --verify` (gates) → `just ship-release`
-- [ ] Or stepwise: `just ship-check` → `npm run test:ship` → `npm run build` →
-      `just sync-downstream`
-- [ ] `npm publish` (from trellis-node, after tests + build) — included in
-      `just ship-release`
-- [ ] Verify `npx trellis@latest --version` shows new version
+- [ ] **`just publish`** — the single kernel ceremony: `ship-check` + `test:ship` +
+      `build` + structural validate, then tag & push → CI (`publish-npm.yml`) publishes
+      with provenance. `--local` to publish from this machine (npm); `--dry-run` for
+      gates only.
+- [ ] **Ecosystem train** (kernel + downstream consumers): `just ship --verify` →
+      `just ship-release` — also syncs studio/turtlecode/cloud pins.
+- [ ] Verify `npx trellis@latest --version` shows the new version
 
 ### Ship report
 

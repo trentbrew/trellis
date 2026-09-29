@@ -404,9 +404,57 @@ ext-validate: ext-build
 # Deploy / Publish
 # ---------------------------------------------------------------------------
 
-# Local npm publish (prefer CI: gh workflow run publish-npm.yml — see tooling/RELEASING.md in desk)
+# One-shot kernel release. Folds gates + build + validate, then publishes.
+#   just publish              # gates → tag & push → CI (publish-npm.yml) publishes with provenance
+#   just publish --local      # publish from this machine (npm; needs auth/OTP), then push the tag
+#   just publish --dry-run    # gates only; no tag, no publish
+# Prefer CI (provenance, no 2FA). See tooling/RELEASING.md and docs/release-checklist.md.
+publish *FLAGS='':
+  #!/usr/bin/env bash
+  set -euo pipefail
+  local_pub=0; dry=0
+  for f in {{FLAGS}}; do
+    case "$f" in
+      --local) local_pub=1 ;;
+      --dry-run) dry=1 ;;
+      *) echo "✗ unknown flag: $f (use --local or --dry-run)"; exit 1 ;;
+    esac
+  done
+  if [ -f .env ]; then set -a; source .env; set +a; fi
+
+  version=$(node -p "require('./package.json').version")
+  tag="v${version}"
+  echo "▸ trellis ${tag}"
+
+  just ship-check
+  bun run test:ship
+  just build
+  CI=1 node scripts/validate-npm-publish.mjs   # structural checks: file/link deps, heavy deps, CHANGELOG==version
+
+  if [ "$dry" = 1 ]; then
+    echo "✓ dry-run: gates passed for ${tag} (no tag, no publish)"
+    exit 0
+  fi
+  if [ -n "$(git status --porcelain)" ]; then
+    echo "✗ working tree is dirty — commit before releasing"
+    exit 1
+  fi
+
+  git push origin HEAD
+  if [ "$local_pub" = 1 ]; then
+    git tag -a "${tag}" -m "trellis ${tag}"
+    TRELLIS_ALLOW_LOCAL_PUBLISH=1 npm publish --access public
+    git push origin "${tag}"
+    echo "✓ published ${tag} locally (npm) and pushed the tag"
+  else
+    git tag -a "${tag}" -m "trellis ${tag}"
+    git push origin "${tag}"
+    echo "✓ pushed ${tag} — CI (publish-npm.yml) will publish with provenance"
+  fi
+
+# Local npm publish (fallback). Prefer `just publish` (CI) — see tooling/RELEASING.md.
 # Full flow: commit → push → test → npm auth → bump → build → validate → npm publish → tag → push → release
-publish level="patch" message="" otp="":
+publish-local level="patch" message="" otp="":
   #!/usr/bin/env bash
   set -euo pipefail
 
