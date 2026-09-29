@@ -76,6 +76,20 @@ describe('trellis issue CLI', () => {
     expect(shown.stdout).toContain('short desc');
   });
 
+  it('rejects flag-like and mistyped create titles', () => {
+    const flagTitle = run(['issue', 'create', '-t', '-h'], root);
+    expect(flagTitle.status).toBe(1);
+    expect(flagTitle.stderr + flagTitle.stdout).toMatch(/issue --help/i);
+
+    const typo = run(['issue', 'create', '-t', 'actuve'], root);
+    expect(typo.status).toBe(1);
+    expect(typo.stderr + typo.stdout).toMatch(/trellis issue active/i);
+
+    const subcmd = run(['issue', 'create', '-t', 'list'], root);
+    expect(subcmd.status).toBe(1);
+    expect(subcmd.stderr + subcmd.stdout).toMatch(/trellis issue list/i);
+  });
+
   it('surfaces errors for missing parent and empty update', () => {
     const badParent = run(['issue', 'create', '-t', 'orphan', '--parent', 'TRL-999'], root);
     expect(badParent.status).toBe(1);
