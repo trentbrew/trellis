@@ -22,6 +22,7 @@ import {
 } from '../vcs/issue-doc.js';
 // @inquirer/prompts is lazy-imported only in init command (saves ~116ms on every other command)
 import { TrellisVcsEngine } from '../engine.js';
+import { issueEntityId } from '../vcs/types.js';
 import { PROVENANCE } from '../core/persist/canonical-op.js';
 import { TrellisKernel } from '../core/kernel/trellis-kernel.js';
 import { SqliteKernelBackend } from '../core/persist/sqlite-backend.js';
@@ -4345,6 +4346,184 @@ program
       }
     });
   });
+
+// ---------------------------------------------------------------------------
+// trellis cycle — time-boxed intent container (ADR 0026 d2)
+// ---------------------------------------------------------------------------
+
+function cycleAttrs(rec: any): Record<string, any> {
+  return Object.fromEntries((rec.facts ?? []).map((f: any) => [f.a, f.v]));
+}
+
+function cycleSlugId(input: string): string {
+  const raw = input.startsWith('cycle:') ? input.slice(6) : input;
+  const slug = raw
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return `cycle:${slug}`;
+}
+
+function printCycleList(rows: any[], opts: any): void {
+  if (opts.json) {
+    console.log(JSON.stringify({ cycles: rows }, null, 2));
+    return;
+  }
+  if (rows.length === 0) {
+    console.log(
+      chalk.dim('No cycles. Create one: trellis cycle create <alias> --target YYYY-MM-DD'),
+    );
+    return;
+  }
+  for (const c of rows) {
+    console.log(
+      `${chalk.cyan(c.id)}  ${chalk.dim(String(c.targetDate ?? ''))}  ${c.status ?? ''}  ${c.alias ?? ''}`,
+    );
+  }
+}
+
+const cycleCmd = program
+  .command('cycle')
+  .description('Time-boxed intent containers — a target date on the container, not the issue (ADR 0026)');
+
+cycleCmd
+  .command('create')
+  .description('Create a cycle')
+  .argument('<alias>', 'Cycle alias (becomes cycle:<slug>)')
+  .requiredOption('-d, --target <date>', 'Target date (deadline lives on the container)')
+  .option('--json', 'Emit machine-readable JSON')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (alias: any, opts: any) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    const id = cycleSlugId(alias);
+    const attrs: Record<string, any> = {
+      alias,
+      targetDate: opts.target,
+      status: 'open',
+      createdAt: new Date().toISOString(),
+    };
+    await withGraphStore(rootPath, async ({ mode, engine, kernel }) => {
+      if (mode === 'vcs' && engine) await engine.createStoreEntity(id, 'Cycle', attrs);
+      else await kernel!.createEntity(id, 'Cycle', attrs);
+      if (opts.json) {
+        console.log(JSON.stringify({ id, ...attrs }));
+        return;
+      }
+      console.log(`${chalk.green('✓')} ${chalk.bold(id)}  ${chalk.dim(`target ${opts.target}`)}`);
+    });
+  });
+
+cycleCmd
+  .command('list')
+  .description('List cycles')
+  .option('--json', 'Emit machine-readable JSON')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (opts: any) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    await withGraphStore(rootPath, async ({ mode, engine, kernel }) => {
+      const recs =
+        mode === 'vcs' && engine
+          ? engine.listStoreEntities('Cycle')
+          : kernel!.listEntities('Cycle');
+      printCycleList(recs.map((r: any) => ({ id: r.id, ...cycleAttrs(r) })), opts);
+    });
+  });
+
+cycleCmd
+  .command('show')
+  .description('Show a cycle and its member issues')
+  .argument('<id>', 'Cycle ID (cycle:<slug> or bare slug)')
+  .option('--json', 'Emit machine-readable JSON')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (idArg: any, opts: any) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    const id = cycleSlugId(idArg);
+    await withGraphStore(rootPath, async ({ mode, engine, kernel }) => {
+      if (mode !== 'vcs' || !engine) {
+        console.error(chalk.red('cycle requires a Trellis VCS repo'));
+        process.exit(1);
+      }
+      const rec = engine.getStoreEntity(id);
+      if (!rec) {
+        console.error(chalk.red(`Cycle not found: ${id}`));
+        process.exit(1);
+      }
+      const members = engine.getEavStore().getLinksByEntityAndAttribute(id, 'includes');
+      const a = cycleAttrs(rec);
+      if (opts.json) {
+        console.log(JSON.stringify({ id, ...a, members }, null, 2));
+        return;
+      }
+      console.log(chalk.bold(id));
+      console.log(`  ${chalk.dim('alias:')}  ${a.alias ?? ''}`);
+      console.log(`  ${chalk.dim('target:')} ${a.targetDate ?? ''}`);
+      console.log(`  ${chalk.dim('status:')} ${a.status ?? ''}`);
+      console.log(chalk.bold(`\nMembers (${members.length})`));
+      for (const m of members as any[]) {
+        const target = String(m.e2 ?? '');
+        const issue = target.startsWith('issue:') ? engine.getIssue(target.slice(6)) : null;
+        console.log(`  ${chalk.cyan(target)}  ${issue?.title ?? ''}`);
+      }
+    });
+  });
+
+cycleCmd
+  .command('add')
+  .description('Add issue(s) to a cycle (membership is a link)')
+  .argument('<cycle>', 'Cycle ID')
+  .argument('<issues...>', 'Issue IDs (e.g. TRL-1)')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (cycleArg: any, issues: any, opts: any) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    const id = cycleSlugId(cycleArg);
+    const list = Array.isArray(issues) ? issues : [issues];
+    await withGraphStore(rootPath, async ({ mode, engine, kernel }) => {
+      if (mode !== 'vcs' || !engine) {
+        console.error(chalk.red('cycle requires a Trellis VCS repo'));
+        process.exit(1);
+      }
+      for (const issue of list) {
+        const target = String(issue).startsWith('issue:')
+          ? String(issue)
+          : issueEntityId(String(issue));
+        await engine.addStoreLink(id, 'includes', target);
+        console.log(`${chalk.green('✓')} ${chalk.bold(id)} —[includes]→ ${chalk.bold(target)}`);
+      }
+    });
+  });
+
+cycleCmd
+  .command('close')
+  .description('Close a cycle')
+  .argument('<id>', 'Cycle ID')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (idArg: any, opts: any) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    const id = cycleSlugId(idArg);
+    await withGraphStore(rootPath, async ({ mode, engine, kernel }) => {
+      if (mode === 'vcs' && engine) {
+        await engine.updateStoreEntity(id, {
+          status: 'closed',
+          closedAt: new Date().toISOString(),
+        });
+      } else {
+        await kernel!.createEntity(id, 'Cycle', { status: 'closed' });
+      }
+      console.log(`${chalk.green('✓')} closed ${chalk.bold(id)}`);
+    });
+  });
+
+// Bare `trellis cycle` lists.
+cycleCmd.action(async (opts: any) => {
+  const rootPath = resolveRepoRoot(opts?.path ?? '.');
+  await withGraphStore(rootPath, async ({ mode, engine, kernel }) => {
+    const recs =
+      mode === 'vcs' && engine
+        ? engine.listStoreEntities('Cycle')
+        : kernel!.listEntities('Cycle');
+    printCycleList(recs.map((r: any) => ({ id: r.id, ...cycleAttrs(r) })), opts ?? {});
+  });
+});
 
 // ---------------------------------------------------------------------------
 // trellis fact
