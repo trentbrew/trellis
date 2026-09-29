@@ -4130,7 +4130,9 @@ function noteEntityAttrs(rec: any): Record<string, any> {
 }
 
 function printNoteList(records: any[], opts: any): void {
-  const live = records.filter((r) => noteEntityAttrs(r).status !== 'archived');
+  const live = opts.all
+    ? records
+    : records.filter((r) => (noteEntityAttrs(r).status ?? 'captured') === 'captured');
   if (opts.json) {
     console.log(
       JSON.stringify(
@@ -4253,6 +4255,72 @@ noteCmd
     });
   });
 
+noteCmd
+  .command('promote')
+  .description('Promote a note into committed work — the deliberate act (ADR 0050)')
+  .argument('<id>', 'Note ID')
+  .option('--issue', 'Create an issue from the note (default)')
+  .option('--epic', 'Create an epic from the note')
+  .option('--cycle <cycle>', 'Add the promoted issue to a cycle')
+  .option('-P, --priority <priority>', 'Priority', 'medium')
+  .option('-l, --labels <labels>', 'Comma-separated labels')
+  .option('--json', 'Emit machine-readable JSON')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .action(async (id: any, opts: any) => {
+    const rootPath = resolveRepoRoot(opts.path);
+    await withGraphStore(rootPath, async ({ mode, engine, kernel }) => {
+      if (mode !== 'vcs' || !engine) {
+        console.error(chalk.red('note promote requires a Trellis VCS repo'));
+        process.exit(1);
+      }
+      const rec = engine.getStoreEntity(id);
+      if (!rec || rec.type !== 'Note') {
+        console.error(chalk.red(`Note not found: ${id}`));
+        process.exit(1);
+      }
+      const a = noteEntityAttrs(rec);
+      if (a.status === 'promoted') {
+        console.error(chalk.yellow(`Note ${id} is already promoted → ${a.promotedTo ?? '?'}`));
+        process.exit(1);
+      }
+      const text = String(a.text ?? '').trim();
+      const title = (text.split('\n')[0] ?? '').replace(/\s+/g, ' ').trim().slice(0, 72) || id;
+      const labels = opts.labels
+        ? opts.labels.split(',').map((l: string) => l.trim()).filter(Boolean)
+        : undefined;
+
+      const op = await engine.createIssue(title, {
+        issueType: opts.epic ? 'epic' : 'issue',
+        priority: opts.priority,
+        labels,
+        description: text,
+      });
+      const issueId = op.vcs?.issueId;
+
+      if (opts.cycle) {
+        await engine.addStoreLink(
+          cycleSlugId(opts.cycle),
+          'includes',
+          issueEntityId(String(issueId)),
+        );
+      }
+
+      await engine.updateStoreEntity(id, {
+        status: 'promoted',
+        promotedTo: String(issueId),
+        promotedAt: new Date().toISOString(),
+      });
+
+      if (opts.json) {
+        console.log(JSON.stringify({ note: id, promotedTo: issueId, cycle: opts.cycle ?? null }));
+        return;
+      }
+      console.log(`${chalk.green('✓')} promoted ${chalk.bold(id)} → ${chalk.bold(String(issueId))}`);
+      console.log(`  ${chalk.dim('Title:')} ${title}`);
+      if (opts.cycle) console.log(`  ${chalk.dim('Cycle:')} ${cycleSlugId(opts.cycle)}`);
+    });
+  });
+
 // Bare `trellis note` lists (parity with `trellis decision`).
 noteCmd.action(async (opts: any) => {
   const rootPath = resolveRepoRoot(opts?.path ?? '.');
@@ -4312,7 +4380,7 @@ program
       const notes = engine
         .listStoreEntities('Note')
         .map((r) => ({ id: r.id, ...noteEntityAttrs(r) }) as Record<string, any>)
-        .filter((n) => n.status !== 'archived');
+        .filter((n) => (n.status ?? 'captured') === 'captured');
 
       if (opts.json) {
         console.log(
