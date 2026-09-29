@@ -38,7 +38,7 @@
       ],
       "versionTable": {
         "file": "content/8.changelog.md",
-        "kernelExpect": "4.0.2"
+        "kernelExpect": "4.0.10"
       }
     },
     {
