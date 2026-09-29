@@ -121,3 +121,14 @@ and the `wip` "notes awaiting triage" line.
 - **P2:** `report` rollup (epic→telos; telos/boulder entities).
 - **P3:** generated mirrors (issue tree / ADR index) and retire the cached
   briefing.
+
+## Addenda
+
+### 2026-09-29 — module boundary for derived reads
+
+d3 says the operator surface is derived, never stored; it did not say *where the
+derived read lives*. Rule adopted (see [0052](./0052-agent-liveness-census.md)):
+a derived read is exported as a package subpath **iff a non-CLI surface needs it
+as data**; otherwise it stays in the CLI. Applied so far: `presence` / `census`
+→ `trellis/presence`; `wip` → `trellis/operator` (`buildWip`). `report` /
+`cadence` are the next candidates once a consumer exists.

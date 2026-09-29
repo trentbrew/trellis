@@ -166,3 +166,18 @@ identically. Precision beats a confident wrong label.
 - **P3:** opt-in desk broadcast of a census snapshot (ADR 0046), and populate the
   desk op-log identity fields (ADR 0051 P3) so census and metrics share one
   capture.
+
+## Addenda
+
+### 2026-09-29 — implementation: one generator, one module boundary
+
+P0/P1 shipped. To make d5 structural rather than conventional, the generator was
+lifted out of `src/cli/` into `src/presence/` (`ledger.ts` + `census.ts`) and
+exported as the `trellis/presence` subpath. The CLI (`trellis who` /
+`trellis agents`) is now just one caller; turtleOS / os-sandbox import
+`readCensus` directly.
+
+The same boundary rule was adopted for the operator surface (ADR 0050): a
+derived read is exported as a subpath **iff another surface needs it as data**;
+commands that merely invoke exported engine APIs stay in the CLI. `wip` was
+lifted to `trellis/operator` (`buildWip`) on that basis.
