@@ -9,7 +9,7 @@ import {
   resolveSessionId,
   DEFAULT_STALE_MS,
   type PresenceInfo,
-} from '../../src/cli/presence.js';
+} from '../../src/presence/ledger.js';
 
 function makeInfo(sessionId: string, ageMs: number): PresenceInfo {
   const t = new Date(Date.now() - ageMs).toISOString();

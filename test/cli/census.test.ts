@@ -9,15 +9,15 @@ import {
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { writeHeartbeat } from '../../src/cli/presence.js';
-import { DEFAULT_STALE_MS } from '../../src/cli/presence.js';
+import { writeHeartbeat } from '../../src/presence/ledger.js';
+import { DEFAULT_STALE_MS } from '../../src/presence/ledger.js';
 import {
   readCensus,
   fromOpencodeDb,
   fromClaudeProjects,
   isUnder,
   type CensusAgent,
-} from '../../src/cli/census.js';
+} from '../../src/presence/census.js';
 
 const require_ = createRequire(import.meta.url);
 

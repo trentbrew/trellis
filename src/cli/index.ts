@@ -96,8 +96,8 @@ import {
   resolveSessionId,
   writeHeartbeat,
   type PresenceInfo,
-} from './presence.js';
-import { readCensus, censusWorkLabel, type CensusAgent } from './census.js';
+} from '../presence/ledger.js';
+import { readCensus, censusWorkLabel, type CensusAgent } from '../presence/census.js';
 import { requireDestructiveConfirm } from '../vcs/destructive-guard.js';
 import { registerLaneCommands } from './lane.js';
 import { registerAdminCommands } from './admin.js';
