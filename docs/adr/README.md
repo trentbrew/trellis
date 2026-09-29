@@ -26,6 +26,8 @@ Decisions for the **Agent Lane** program (`trellis lane`). Status: **accepted**
 | [0047](./0047-datalog-logic-layer.md) | Datalog as the logic layer | Correct recursion (semi-naive, stratified; implemented), `Rule` entities, provenance, one IR for every surface incl. future Cypher; not Prolog (proposed) |
 | [0050](./0050-notes-and-derived-operator-surface.md) | Notes and the derived operator surface | Operator-scoped `Note` entity (capture → promote/archive); `wip`/`cadence`/`report` derived from ops+rules; mirrors generated (accepted) |
 | [0051](./0051-session-metrics.md) | Session metrics — usage, cost, latency, errors per lane | Per-turn usage facts on `vcs:chatMessage`; derived `report --usage` rollup; joins `EvalRun` → outcome × cost × process (proposed) |
+| [0052](./0052-agent-liveness-census.md) | Agent liveness census | One derived "who is working right now" read over presence (0024) + harness-native adapters; liveness = recency; host and turtleOS share one generator; local-only (proposed) |
+| [0053](./0053-admin-operator-api.md) | `trellis admin` as a local operator API | HTTP contract for admin clients (turtleOS `os/admin`); loopback bind + origin allowlist; planning-subset writes only, lifecycle verbs CLI-only; paged ops; `stats` incl. serving build; agents via 0052 census (proposed) |
 
 Desk issue: **TRL-35** (W0), **TRL-36** (W1). Plan:
 `TRELLIS/tooling/planning/agent-lanes.md`.
