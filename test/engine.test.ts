@@ -3,7 +3,8 @@ import { TrellisVcsEngine } from '../src/engine.js';
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 
-const TEST_DIR = '/tmp/trellis-engine-test';
+// Unique per process — a fixed path raced when two test runs overlapped (flaky release gate).
+const TEST_DIR = `/tmp/trellis-engine-test-${process.pid}-${Date.now().toString(36)}`;
 
 function setupTestRepo() {
   rmSync(TEST_DIR, { recursive: true, force: true });
