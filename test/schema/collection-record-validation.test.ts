@@ -18,7 +18,7 @@ import { TenantPool } from '../../src/server/tenancy.js';
 
 const foreign = createRequire(import.meta.url)('zod') as typeof z;
 
-const TMP = join(dirname(fileURLToPath(import.meta.url)), '__tmp_collection_validation');
+const TMP = join(dirname(fileURLToPath(import.meta.url)), `__tmp_collection_validation-${process.pid}-${Date.now().toString(36)}`);
 const DB_PATH = join(TMP, 'data');
 const SLUG = 'reading-list';
 const COLLECTION_ID = `collectionMeta:${SLUG}`;

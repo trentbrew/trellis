@@ -54,7 +54,7 @@ describe('MultiRepoManager', () => {
   let manager: MultiRepoManager;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-multirepo-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-multirepo--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'kernel.db')),
       agentId: 'test',

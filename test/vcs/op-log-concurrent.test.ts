@@ -30,7 +30,7 @@ describe('JsonOpLog durability under concurrent writers', () => {
   let logPath: string;
 
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), 'trellis-oplog-concurrent-'));
+    root = mkdtempSync(join(tmpdir(), `trellis-oplog-concurrent--${process.pid}-${Date.now().toString(36)}`));
     logPath = join(root, 'ops.json');
   });
 

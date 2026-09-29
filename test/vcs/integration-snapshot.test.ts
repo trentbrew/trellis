@@ -9,7 +9,7 @@ import {
 } from '../../src/vcs/integration-snapshot.js';
 import { createVcsOp } from '../../src/vcs/ops.js';
 
-const TEST_ROOT = '/tmp/trellis-integration-snapshot';
+const TEST_ROOT = `/tmp/trellis-integration-snapshot-${process.pid}-${Date.now().toString(36)}`;
 
 describe('integration snapshot persistence', () => {
   beforeEach(() => {

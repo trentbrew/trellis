@@ -78,7 +78,7 @@ function seedKnownSigner(peerRootPath: string, signer: {
   );
 }
 
-const TEST_ROOT = '/tmp/trellis-p7-vcs-op-sync-prototype';
+const TEST_ROOT = `/tmp/trellis-p7-vcs-op-sync-prototype-${process.pid}-${Date.now().toString(36)}`;
 
 // File-scope HOME sandbox: signing + registries resolve person-first (Slice A/B).
 const originalHome = process.env.HOME;

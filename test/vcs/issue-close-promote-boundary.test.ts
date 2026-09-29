@@ -11,7 +11,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { TrellisVcsEngine } from '../../src/engine.js';
 
-const TEST_ROOT = join(tmpdir(), 'trellis-issue-close-promote-boundary');
+const TEST_ROOT = join(tmpdir(), `trellis-issue-close-promote-boundary-${process.pid}-${Date.now().toString(36)}`);
 
 describe('issue close — promote boundary == issue boundary', () => {
   let engine: TrellisVcsEngine;

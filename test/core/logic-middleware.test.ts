@@ -32,7 +32,7 @@ describe('logic middleware — EQL formula enrichment', () => {
   let kernel: TrellisKernel;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-logic-mw-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-logic-mw--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'test.db')),
       agentId: 'test',

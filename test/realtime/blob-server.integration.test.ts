@@ -43,7 +43,7 @@ describe('blob serving on realtime relay', () => {
   });
 
   function freshStore(): BlobStore {
-    trellisDir = mkdtempSync(join(tmpdir(), 'trellis-blob-'));
+    trellisDir = mkdtempSync(join(tmpdir(), `trellis-blob--${process.pid}-${Date.now().toString(36)}`));
     blobStore = new BlobStore(trellisDir);
     return blobStore;
   }

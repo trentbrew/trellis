@@ -17,7 +17,7 @@ import { laneDir, loadLaneMeta, updateLaneHead } from '../../src/vcs/lane.js';
 import { LaneOpLog } from '../../src/vcs/op-log.js';
 import { BlobStore } from '../../src/vcs/blob-store.js';
 
-const TEST_ROOT = '/tmp/trellis-trl117-ownership';
+const TEST_ROOT = `/tmp/trellis-trl117-ownership-${process.pid}-${Date.now().toString(36)}`;
 
 async function appendOwnedFile(
   rootPath: string,

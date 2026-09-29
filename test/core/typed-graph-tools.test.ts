@@ -21,7 +21,7 @@ describe('typed graph tools', () => {
   let harness: AgentHarness;
 
   beforeEach(async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-typed-graph-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-typed-graph--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'kernel.db')),
       agentId: 'test-agent',

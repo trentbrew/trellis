@@ -3,7 +3,7 @@ import { TrellisVcsEngine } from '../src/engine.js';
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 
-const TEST_DIR = '/tmp/trellis-issue-test';
+const TEST_DIR = `/tmp/trellis-issue-test-${process.pid}-${Date.now().toString(36)}`;
 
 function disableAutoIssueCriteria(rootPath: string): void {
   const manifestPath = join(rootPath, '.trellis', 'tests.json');

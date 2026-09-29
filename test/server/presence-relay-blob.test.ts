@@ -40,7 +40,7 @@ describe('startServer presenceRelay blob surface', () => {
   async function boot(
     presenceRelay: PresenceRelayOptions,
   ): Promise<{ port: number }> {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-presence-blob-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-presence-blob--${process.pid}-${Date.now().toString(36)}`));
     const dbPath = join(tmpDir, 'data');
     const config = defaultLocalConfig(dbPath);
     pool = new TenantPool(dbPath, { backend: { backend: 'sqljs' } });
@@ -58,7 +58,7 @@ describe('startServer presenceRelay blob surface', () => {
   }
 
   it('PUT / HEAD / GET /blob round-trip when blobStore is wired', async () => {
-    const blobRoot = mkdtempSync(join(tmpdir(), 'trellis-blob-root-'));
+    const blobRoot = mkdtempSync(join(tmpdir(), `trellis-blob-root--${process.pid}-${Date.now().toString(36)}`));
     const store = new BlobStore(blobRoot);
     const { port } = await boot({
       path: '/rt',
@@ -83,7 +83,7 @@ describe('startServer presenceRelay blob surface', () => {
   });
 
   it('/rt WebSocket upgrade still works alongside /blob', async () => {
-    const blobRoot = mkdtempSync(join(tmpdir(), 'trellis-blob-root-'));
+    const blobRoot = mkdtempSync(join(tmpdir(), `trellis-blob-root--${process.pid}-${Date.now().toString(36)}`));
     const store = new BlobStore(blobRoot);
     const { port } = await boot({
       path: '/rt',

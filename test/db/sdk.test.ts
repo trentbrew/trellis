@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { TrellisDb } from '../../src/client/sdk.js';
 import { writeConfig } from '../../src/client/config.js';
 
-const TMP = join(dirname(fileURLToPath(import.meta.url)), '__tmp_sdk_test');
+const TMP = join(dirname(fileURLToPath(import.meta.url)), `__tmp_sdk_test-${process.pid}-${Date.now().toString(36)}`);
 const DB_PATH = join(TMP, 'data');
 
 beforeEach(() => {

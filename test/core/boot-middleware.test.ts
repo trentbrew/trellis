@@ -25,7 +25,7 @@ describe('attachStandardMiddleware', () => {
   let kernel: TrellisKernel;
 
   test('registers logic-computation middleware once', async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-boot-mw-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-boot-mw--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'test.db')),
       agentId: 'test',
@@ -49,7 +49,7 @@ describe('attachStandardMiddleware', () => {
   });
 
   test('allows numeric createdAt on types that declare it', async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-boot-mw-chat-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-boot-mw-chat--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'test.db')),
       agentId: 'test',

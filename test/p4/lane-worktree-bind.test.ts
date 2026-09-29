@@ -5,7 +5,7 @@ import { join } from 'path';
 import { TrellisVcsEngine } from '../../src/engine.js';
 import { loadLaneMeta } from '../../src/vcs/lane.js';
 
-const TEST_ROOT = '/tmp/trellis-p4-lane-worktree-bind';
+const TEST_ROOT = `/tmp/trellis-p4-lane-worktree-bind-${process.pid}-${Date.now().toString(36)}`;
 
 function git(root: string, cmd: string): string {
   return execSync(`git -C "${root}" ${cmd}`, { encoding: 'utf-8' }).trim();

@@ -10,7 +10,7 @@ describe('resolveRepoRoot', () => {
   let nested: string;
 
   beforeAll(async () => {
-    root = mkdtempSync(join(tmpdir(), 'trellis-cli-root-'));
+    root = mkdtempSync(join(tmpdir(), `trellis-cli-root--${process.pid}-${Date.now().toString(36)}`));
     root = realpathSync(root); // Canonicalize to match resolveRepoRoot behavior
     nested = join(root, 'packages', 'app');
     mkdirSync(nested, { recursive: true });

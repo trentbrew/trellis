@@ -70,7 +70,7 @@ describe('AgentHarness limits and tool arguments', () => {
   let echoInputs: unknown[];
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-harness-limits-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-harness-limits--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'kernel.db')),
       agentId: 'test-agent',

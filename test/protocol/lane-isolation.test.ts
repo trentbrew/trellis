@@ -8,7 +8,7 @@ import { laneDir, loadLaneMeta, updateLaneHead } from '../../src/vcs/lane.js';
 import { LaneOpLog } from '../../src/vcs/op-log.js';
 import { createVcsOp } from '../../src/vcs/ops.js';
 
-const TEST_ROOT = '/tmp/trellis-protocol-lane-isolation';
+const TEST_ROOT = `/tmp/trellis-protocol-lane-isolation-${process.pid}-${Date.now().toString(36)}`;
 
 function git(root: string, cmd: string): string {
   return execSync(`git -C "${root}" ${cmd}`, { encoding: 'utf-8' }).trim();

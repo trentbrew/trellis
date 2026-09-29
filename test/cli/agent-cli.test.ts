@@ -53,7 +53,7 @@ describe('trellis agent CLI', () => {
   let root: string;
 
   beforeAll(async () => {
-    root = mkdtempSync(join(tmpdir(), 'trellis-agent-cli-'));
+    root = mkdtempSync(join(tmpdir(), `trellis-agent-cli--${process.pid}-${Date.now().toString(36)}`));
     root = realpathSync(root);
     const eng = new TrellisVcsEngine({ rootPath: root });
     await eng.initRepo();

@@ -16,7 +16,7 @@ describe('AgentHarness', () => {
   let harness: AgentHarness;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-agent-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-agent--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'kernel.db')),
       agentId: 'test-agent',

@@ -23,7 +23,7 @@ import { liveEntities } from '../../src/client/live.js';
 import { entitiesStore } from '../../src/svelte/schema-hooks.js';
 import { defineType } from '../../src/schema/define.js';
 
-const TMP = join(dirname(fileURLToPath(import.meta.url)), '__tmp_update_sync');
+const TMP = join(dirname(fileURLToPath(import.meta.url)), `__tmp_update_sync-${process.pid}-${Date.now().toString(36)}`);
 const DB_PATH = join(TMP, 'data');
 const Task = defineType('Task', { title: z.string(), done: z.boolean() }, { title: 'title' });
 

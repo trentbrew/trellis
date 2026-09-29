@@ -20,7 +20,7 @@ let repoPath: string;
 let engine: TrellisVcsEngine;
 
 beforeAll(async () => {
-  repoPath = mkdtempSync(join(tmpdir(), 'trellis-refs-cli-'));
+  repoPath = mkdtempSync(join(tmpdir(), `trellis-refs-cli--${process.pid}-${Date.now().toString(36)}`));
 
   // Create some source files and markdown with [[...]] refs
   mkdirSync(join(repoPath, 'src'), { recursive: true });

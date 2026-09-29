@@ -29,7 +29,7 @@ describe('BlobResolver', () => {
   let resolver: BlobResolver;
 
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), 'trellis-blob-resolver-'));
+    root = mkdtempSync(join(tmpdir(), `trellis-blob-resolver--${process.pid}-${Date.now().toString(36)}`));
     trellisDir = join(root, '.trellis');
     mkdirSync(trellisDir, { recursive: true });
     blobStore = new BlobStore(trellisDir);

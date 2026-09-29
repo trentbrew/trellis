@@ -6,7 +6,7 @@ import { TrellisKernel } from '../src/core/kernel/trellis-kernel';
 import { BetterSqliteKernelBackend } from '../src/core/persist/better-sqlite-backend';
 
 test('checkpoint via kernel debug', async () => {
-  const tmpDir = mkdtempSync(join(tmpdir(), 'trellis-test-'));
+  const tmpDir = mkdtempSync(join(tmpdir(), `trellis-test--${process.pid}-${Date.now().toString(36)}`));
   const backend = new BetterSqliteKernelBackend(join(tmpDir, 'kernel.db'));
   const kernel = new TrellisKernel({
     backend,

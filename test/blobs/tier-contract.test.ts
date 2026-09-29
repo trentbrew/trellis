@@ -70,7 +70,7 @@ let diskDir: string | null = null;
 factories.push({
   label: 'disk',
   create: () => {
-    diskDir = mkdtempSync(join(tmpdir(), 'trellis-blob-tier-'));
+    diskDir = mkdtempSync(join(tmpdir(), `trellis-blob-tier--${process.pid}-${Date.now().toString(36)}`));
     return diskTier(new BlobStore(diskDir));
   },
   cleanup: () => {

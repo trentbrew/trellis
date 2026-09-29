@@ -6,7 +6,7 @@ import { TrellisClient } from '../../src/client/vcs-client.js';
 import { MemorySyncRoom } from '../../src/sync/memory-room.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
-const TMP = join(__dirname, '__tmp_vcs_client_test');
+const TMP = join(__dirname, `__tmp_vcs_client_test-${process.pid}-${Date.now().toString(36)}`);
 const REPO_PATH = join(TMP, 'repo');
 
 function sleep(ms: number): Promise<void> {

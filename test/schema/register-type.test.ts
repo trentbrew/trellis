@@ -31,7 +31,7 @@ const CronJobV2 = defineType('CronJobSync', {
   handler: z.string(),
 });
 
-const TMP = join(dirname(fileURLToPath(import.meta.url)), '__tmp_register_type');
+const TMP = join(dirname(fileURLToPath(import.meta.url)), `__tmp_register_type-${process.pid}-${Date.now().toString(36)}`);
 const DB_PATH = join(TMP, 'data');
 
 let server: TrellisHttpServer;

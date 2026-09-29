@@ -20,7 +20,7 @@ import {
 } from '../../src/identity/capability.js';
 import type { VcsOp } from '../../src/vcs/types.js';
 
-const TEST_ROOT = join(tmpdir(), 'trellis-ingest-authz');
+const TEST_ROOT = join(tmpdir(), `trellis-ingest-authz-${process.pid}-${Date.now().toString(36)}`);
 
 const OWNER_DID = 'did:key:zowner';
 const OWNER = `identity:${OWNER_DID}`;
@@ -183,7 +183,7 @@ describe('Phase 3.2 — resolver wired from the local identity', () => {
     );
     expect(authOps).toHaveLength(2);
 
-    const peerRoot = join(tmpdir(), 'trellis-ingest-authz-peer');
+    const peerRoot = join(tmpdir(), `trellis-ingest-authz-peer-${process.pid}-${Date.now().toString(36)}`);
     rmSync(peerRoot, { recursive: true, force: true });
     mkdirSync(peerRoot, { recursive: true });
     cpSync(join(TEST_ROOT, '.trellis'), join(peerRoot, '.trellis'), { recursive: true });

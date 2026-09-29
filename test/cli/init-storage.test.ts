@@ -42,7 +42,7 @@ describe('trellis init storage guardrails', () => {
   let root: string;
 
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), 'trellis-init-storage-'));
+    root = mkdtempSync(join(tmpdir(), `trellis-init-storage--${process.pid}-${Date.now().toString(36)}`));
     root = realpathSync(root);
     writeFileSync(join(root, 'package.json'), '{"name":"tiny"}\n');
     writeFileSync(join(root, 'alpha.txt'), 'a\n');

@@ -16,7 +16,7 @@ describe('Idea Garden', () => {
   let garden: IdeaGarden;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-garden-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-garden--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'kernel.db')),
       agentId: 'test-agent',

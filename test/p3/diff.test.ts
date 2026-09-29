@@ -263,7 +263,7 @@ describe('diffFileStates', () => {
   });
 
   test('produces unified diff with blob store', () => {
-    const testDir = '/tmp/trellis-diff-blob-test';
+    const testDir = `/tmp/trellis-diff-blob-test-${process.pid}-${Date.now().toString(36)}`;
     rmSync(testDir, { recursive: true, force: true });
     mkdirSync(join(testDir, '.trellis'), { recursive: true });
     const bs = new BlobStore(join(testDir, '.trellis'));
@@ -327,7 +327,7 @@ describe('diffOpRange', () => {
 // ---------------------------------------------------------------------------
 
 describe('Engine diff integration', () => {
-  const REPO_ROOT = '/tmp/trellis-p3-diff-engine-test';
+  const REPO_ROOT = `/tmp/trellis-p3-diff-engine-test-${process.pid}-${Date.now().toString(36)}`;
 
   afterEach(() => {
     rmSync(REPO_ROOT, { recursive: true, force: true });

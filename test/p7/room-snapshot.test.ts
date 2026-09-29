@@ -7,7 +7,7 @@ import { TrellisVcsSyncPeer } from '../../src/sync/vcs-sync-peer.js';
 import { MemorySyncRoom } from '../../src/sync/memory-room.js';
 import { PROTOCOL_VERSION } from '../../src/sync/types.js';
 
-const TEST_ROOT = '/tmp/trellis-p7-room-snapshot';
+const TEST_ROOT = `/tmp/trellis-p7-room-snapshot-${process.pid}-${Date.now().toString(36)}`;
 
 async function initPeer(name: string): Promise<TrellisVcsEngine> {
   const rootPath = join(TEST_ROOT, name);

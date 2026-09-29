@@ -16,7 +16,7 @@ import { defaultLocalConfig } from '../../src/client/config.js';
 import type { TrellisHttpServer } from '../../src/server/server-shared.js';
 import { bindingEntityId } from '../../src/schema/entity-projection.js';
 
-const TMP = join(dirname(fileURLToPath(import.meta.url)), '__tmp_graph_nav_sync');
+const TMP = join(dirname(fileURLToPath(import.meta.url)), `__tmp_graph_nav_sync-${process.pid}-${Date.now().toString(36)}`);
 const DB_PATH = join(TMP, 'data');
 
 let server: TrellisHttpServer;

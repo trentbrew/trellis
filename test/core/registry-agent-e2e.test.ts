@@ -13,7 +13,7 @@ describe('Registry Agent Package E2E', () => {
   let kernel: TrellisKernel;
 
   beforeAll(async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-reg-e2e-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-reg-e2e--${process.pid}-${Date.now().toString(36)}`));
     registryDir = join(tmpDir, 'registry');
 
     const backend = await SqlJsKernelBackend.create({ dbPath: ':memory:' });

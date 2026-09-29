@@ -27,7 +27,7 @@ describe('CheckpointMiddleware', () => {
   let checkpointCalls: number[];
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-cpmw-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-cpmw--${process.pid}-${Date.now().toString(36)}`));
     checkpointCalls = [];
 
     const mw = createCheckpointMiddleware({
@@ -117,7 +117,7 @@ describe('Checkpoint Tool', () => {
   let kernel: TrellisKernel;
 
   beforeEach(async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-cpt-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-cpt--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'kernel.db')),
       agentId: 'test-agent',
@@ -166,7 +166,7 @@ describe('Rollback Tool', () => {
   let kernel: TrellisKernel;
 
   beforeEach(async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-rb-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-rb--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'kernel.db')),
       agentId: 'test-agent',
@@ -217,7 +217,7 @@ describe('Deploy Status Tool', () => {
   let kernel: TrellisKernel;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-ds-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-ds--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'kernel.db')),
       agentId: 'test-agent',
@@ -290,7 +290,7 @@ describe('List Ops Tool', () => {
   let kernel: TrellisKernel;
 
   beforeEach(async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-ops-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-ops--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'kernel.db')),
       agentId: 'test-agent',

@@ -9,7 +9,7 @@ describe('deploy stub mode', () => {
   let configDir: string;
 
   beforeEach(() => {
-    configDir = mkdtempSync(join(tmpdir(), 'trellis-deploy-'));
+    configDir = mkdtempSync(join(tmpdir(), `trellis-deploy--${process.pid}-${Date.now().toString(36)}`));
   });
 
   afterEach(() => {

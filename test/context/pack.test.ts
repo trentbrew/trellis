@@ -18,7 +18,7 @@ import {
 } from '../../src/context/types.js';
 import { formatIssueDescription } from '../../src/protocol/envelope.js';
 
-const TEST_ROOT = '/tmp/trellis-context-pack';
+const TEST_ROOT = `/tmp/trellis-context-pack-${process.pid}-${Date.now().toString(36)}`;
 
 describe('assembleContextPack', () => {
   let engine: TrellisVcsEngine;

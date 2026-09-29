@@ -3,7 +3,7 @@ import { TrellisVcsEngine } from '../../src/engine.js';
 import { mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
 
-const TEST_DIR = '/tmp/trellis-decision-autocapture-test';
+const TEST_DIR = `/tmp/trellis-decision-autocapture-test-${process.pid}-${Date.now().toString(36)}`;
 
 function setupTestRepo() {
   rmSync(TEST_DIR, { recursive: true, force: true });

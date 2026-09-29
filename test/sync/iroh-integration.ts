@@ -11,7 +11,7 @@ import { IrohSyncTransport } from '../../src/sync/iroh-transport.js';
 import { TrellisVcsSyncPeer } from '../../src/sync/vcs-sync-peer.js';
 import { TrellisVcsEngine } from '../../src/engine.js';
 
-const TEST_ROOT = '/tmp/trellis-iroh-integration';
+const TEST_ROOT = `/tmp/trellis-iroh-integration-${process.pid}-${Date.now().toString(36)}`;
 
 async function initPeer(
   name: string,

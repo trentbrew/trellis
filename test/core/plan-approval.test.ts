@@ -20,7 +20,7 @@ describe('Plan Approval Plugin', () => {
   let pluginRegistry: PluginRegistry;
 
   beforeEach(async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-plan-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-plan--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'kernel.db')),
       agentId: 'test-agent',
@@ -55,7 +55,7 @@ describe('PlanManager', () => {
   let pm: PlanManager;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'trellis-pm-'));
+    tmpDir = mkdtempSync(join(tmpdir(), `trellis-pm--${process.pid}-${Date.now().toString(36)}`));
     kernel = new TrellisKernel({
       backend: new BetterSqliteKernelBackend(join(tmpDir, 'kernel.db')),
       agentId: 'test-agent',

@@ -5,7 +5,7 @@ import { TrellisVcsEngine } from '../../src/engine.js';
 import { loadLaneMeta } from '../../src/vcs/lane.js';
 import { verifyVcsOpHash } from '../../src/vcs/ops.js';
 
-const TEST_ROOT = '/tmp/trellis-p4-lane-routing';
+const TEST_ROOT = `/tmp/trellis-p4-lane-routing-${process.pid}-${Date.now().toString(36)}`;
 
 describe('Lane journal routing', () => {
   let engine: TrellisVcsEngine;

@@ -12,7 +12,7 @@ describe('deployMcpGateway stub', () => {
   let configDir: string;
 
   beforeEach(() => {
-    configDir = mkdtempSync(join(tmpdir(), 'trellis-gateway-deploy-'));
+    configDir = mkdtempSync(join(tmpdir(), `trellis-gateway-deploy--${process.pid}-${Date.now().toString(36)}`));
   });
 
   afterEach(() => {

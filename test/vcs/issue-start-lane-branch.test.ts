@@ -16,7 +16,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { TrellisVcsEngine } from '../../src/engine.js';
 
-const TEST_ROOT = join(tmpdir(), 'trellis-issue-start-lane-branch');
+const TEST_ROOT = join(tmpdir(), `trellis-issue-start-lane-branch-${process.pid}-${Date.now().toString(36)}`);
 
 describe('issue start — lane and branch are separable', () => {
   let engine: TrellisVcsEngine;

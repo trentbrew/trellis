@@ -4,8 +4,8 @@ import { execSync } from 'child_process';
 import { mkdirSync, writeFileSync, rmSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
-const GIT_REPO = '/tmp/trellis-importer-git';
-const TRELLIS_REPO = '/tmp/trellis-importer-target';
+const GIT_REPO = `/tmp/trellis-importer-git-${process.pid}-${Date.now().toString(36)}`;
+const TRELLIS_REPO = `/tmp/trellis-importer-target-${process.pid}-${Date.now().toString(36)}`;
 
 function git(args: string) {
   execSync(`git -C "${GIT_REPO}" ${args}`, { encoding: 'utf-8' });

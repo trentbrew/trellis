@@ -31,7 +31,7 @@ function initGitRepo(root: string): void {
 
 describe('git-sync', () => {
   beforeEach(async () => {
-    TEST_ROOT = mkdtempSync(join(tmpdir(), 'trellis-git-sync-'));
+    TEST_ROOT = mkdtempSync(join(tmpdir(), `trellis-git-sync--${process.pid}-${Date.now().toString(36)}`));
     initGitRepo(TEST_ROOT);
   });
 

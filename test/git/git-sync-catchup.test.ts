@@ -5,7 +5,7 @@ import { join } from 'path';
 import { TrellisVcsEngine } from '../../src/engine.js';
 import { buildFileStateAtOp } from '../../src/vcs/diff.js';
 
-const TEST_ROOT = '/tmp/trellis-git-sync-catchup';
+const TEST_ROOT = `/tmp/trellis-git-sync-catchup-${process.pid}-${Date.now().toString(36)}`;
 
 function git(root: string, cmd: string): string {
   return execSync(`git -C "${root}" ${cmd}`, { encoding: 'utf-8' }).trim();

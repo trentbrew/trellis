@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { TrellisVcsEngine } from '../../src/engine.js';
 import { mkdirSync, rmSync, existsSync } from 'fs';
 
-const TEST_ROOT = '/tmp/trellis-p2-branch-test';
+const TEST_ROOT = `/tmp/trellis-p2-branch-test-${process.pid}-${Date.now().toString(36)}`;
 
 describe('Branch Management', () => {
   let engine: TrellisVcsEngine;

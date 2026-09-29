@@ -29,7 +29,7 @@ describe('trellis milestone --commit (auto-milestone-commit)', () => {
   let root: string;
 
   beforeAll(async () => {
-    root = mkdtempSync(join(tmpdir(), 'trellis-mm-commit-'));
+    root = mkdtempSync(join(tmpdir(), `trellis-mm-commit--${process.pid}-${Date.now().toString(36)}`));
     root = realpathSync(root);
     // Seed a file BEFORE init so it is snapshotted into the op log.
     writeFileSync(join(root, 'README.md'), '# seed\n');

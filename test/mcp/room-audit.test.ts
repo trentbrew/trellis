@@ -12,7 +12,7 @@ import { startServer } from '../../src/server/server.js';
 import type { TrellisHttpServer } from '../../src/server/server-shared.js';
 import { TenantPool } from '../../src/server/tenancy.js';
 
-const TMP = join(dirname(fileURLToPath(import.meta.url)), '__tmp_mcp_audit');
+const TMP = join(dirname(fileURLToPath(import.meta.url)), `__tmp_mcp_audit-${process.pid}-${Date.now().toString(36)}`);
 const DB_PATH = join(TMP, 'data');
 
 let server: TrellisHttpServer;

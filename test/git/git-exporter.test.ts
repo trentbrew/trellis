@@ -13,9 +13,9 @@ import {
 } from 'fs';
 import { join } from 'path';
 
-const GIT_REPO = '/tmp/trellis-git-export-src';
-const TRELLIS_REPO = '/tmp/trellis-git-export-trellis';
-const EXPORT_REPO = '/tmp/trellis-git-export-dest';
+const GIT_REPO = `/tmp/trellis-git-export-src-${process.pid}-${Date.now().toString(36)}`;
+const TRELLIS_REPO = `/tmp/trellis-git-export-trellis-${process.pid}-${Date.now().toString(36)}`;
+const EXPORT_REPO = `/tmp/trellis-git-export-dest-${process.pid}-${Date.now().toString(36)}`;
 
 function git(cmd: string, cwd: string = GIT_REPO) {
   return execSync(`git -C "${cwd}" ${cmd}`, { encoding: 'utf-8' }).trim();
@@ -154,7 +154,7 @@ describe('exportToGit', () => {
   });
 
   test('reports progress callbacks', async () => {
-    const exportRepo2 = '/tmp/trellis-git-export-dest2';
+    const exportRepo2 = `/tmp/trellis-git-export-dest2-${process.pid}-${Date.now().toString(36)}`;
     rmSync(exportRepo2, { recursive: true, force: true });
 
     const phases: string[] = [];
@@ -176,14 +176,14 @@ describe('exportToGit', () => {
   });
 
   test('handles empty milestone list gracefully', async () => {
-    const emptyRepo = '/tmp/trellis-git-export-empty';
+    const emptyRepo = `/tmp/trellis-git-export-empty-${process.pid}-${Date.now().toString(36)}`;
     rmSync(emptyRepo, { recursive: true, force: true });
     mkdirSync(emptyRepo, { recursive: true });
 
     const engine = new TrellisVcsEngine({ rootPath: emptyRepo });
     await engine.initRepo();
 
-    const exportDest = '/tmp/trellis-git-export-empty-dest';
+    const exportDest = `/tmp/trellis-git-export-empty-dest-${process.pid}-${Date.now().toString(36)}`;
     rmSync(exportDest, { recursive: true, force: true });
 
     const result = await exportToGit({

@@ -109,7 +109,7 @@ let manager: EmbeddingManager;
 let engine: SearchableEngine;
 
 beforeEach(async () => {
-  tempDir = mkdtempSync(join(tmpdir(), 'trellis-search-'));
+  tempDir = mkdtempSync(join(tmpdir(), `trellis-search--${process.pid}-${Date.now().toString(36)}`));
   const dbPath = join(tempDir, 'embeddings.db');
   manager = await EmbeddingManager.create(dbPath, mockEmbed);
   engine = createMockEngine(tempDir);
