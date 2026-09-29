@@ -32,6 +32,19 @@ export interface PresenceInfo {
   displayName: string;
   /** Client/provider: opencode | claude | gemini | codex | unknown. */
   client: string;
+  /**
+   * Harness hosting the session (ADR 0052). Distinct from `client` only in that
+   * it is the canonical census key; falls back to `client` when absent.
+   */
+  harness?: string;
+  /** Model provider, when the harness reports it (e.g. `opencode-go`, `anthropic`). */
+  provider?: string;
+  /** Model id, when the harness reports it (e.g. `deepseek-v4.1-flash`). */
+  model?: string;
+  /** Short human summary of what the session is doing (issue/branch/plan title). */
+  task?: string;
+  /** Workspace subtree the session runs in (distinguishes a sub-repo like `OS/admin`). */
+  dir?: string;
   /** Lane this session is working in, if any. */
   laneId?: string;
   /** Current branch name, if known. */
