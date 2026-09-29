@@ -98,6 +98,7 @@ import {
   type PresenceInfo,
 } from '../presence/ledger.js';
 import { readCensus, censusWorkLabel, type CensusAgent } from '../presence/census.js';
+import { buildWip, noteEntityAttrs, cycleAttrs } from '../operator/wip.js';
 import { requireDestructiveConfirm } from '../vcs/destructive-guard.js';
 import { registerLaneCommands } from './lane.js';
 import { registerAdminCommands } from './admin.js';
@@ -4529,9 +4530,6 @@ program
 // trellis note — operator-scoped capture (ADR 0050)
 // ---------------------------------------------------------------------------
 
-function noteEntityAttrs(rec: any): Record<string, any> {
-  return Object.fromEntries((rec.facts ?? []).map((f: any) => [f.a, f.v]));
-}
 
 function printNoteList(records: any[], opts: any): void {
   const live = opts.all
@@ -4758,52 +4756,10 @@ program
         console.error(chalk.red('trellis wip requires a Trellis VCS repo'));
         process.exit(1);
       }
-      const all = engine.listIssues();
-      const cutoff = Date.now() - days * 86400000;
-      const active = all.filter((i) => i.status === 'in_progress');
-      const paused = all.filter((i) => i.status === 'paused');
-      const queued = all.filter((i) => i.status === 'queue');
-      const shipped = all
-        .filter(
-          (i) => i.status === 'closed' && i.closedAt && Date.parse(i.closedAt) >= cutoff,
-        )
-        .sort((a, b) => Date.parse(b.closedAt!) - Date.parse(a.closedAt!));
-      const rank: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-      const next = all
-        .filter(
-          (i) =>
-            i.status === 'backlog' &&
-            !(i as any).isBlocked &&
-            (i.issueType ?? 'issue') !== 'epic',
-        )
-        .sort(
-          (a, b) =>
-            (rank[a.priority ?? 'medium'] ?? 9) - (rank[b.priority ?? 'medium'] ?? 9),
-        )
-        .slice(0, limit);
-      const notes = engine
-        .listStoreEntities('Note')
-        .map((r) => ({ id: r.id, ...noteEntityAttrs(r) }) as Record<string, any>)
-        .filter((n) => (n.status ?? 'captured') === 'captured');
-      const cycles = engine
-        .listStoreEntities('Cycle')
-        .map((r) => ({ id: r.id, ...cycleAttrs(r) }) as Record<string, any>)
-        .filter((c) => c.status !== 'closed')
-        .map((c): Record<string, any> => {
-          const target = c.targetDate ? Date.parse(String(c.targetDate)) : NaN;
-          const daysLeft = Number.isFinite(target)
-            ? Math.ceil((target - Date.now()) / 86400000)
-            : null;
-          const members = engine
-            .getEavStore()
-            .getLinksByEntityAndAttribute(c.id, 'includes').length;
-          return { ...c, daysLeft, members };
-        })
-        .sort((a, b) => {
-          const at = a.targetDate ? Date.parse(String(a.targetDate)) : Infinity;
-          const bt = b.targetDate ? Date.parse(String(b.targetDate)) : Infinity;
-          return at - bt;
-        });
+      const { active, paused, queued, shipped, next, cycles, notes } = buildWip(
+        engine,
+        { days, limit },
+      );
 
       if (opts.json) {
         console.log(
@@ -5034,10 +4990,6 @@ telosCmd.action(async (opts: any) => {
 // ---------------------------------------------------------------------------
 // trellis cycle — time-boxed intent container (ADR 0026 d2)
 // ---------------------------------------------------------------------------
-
-function cycleAttrs(rec: any): Record<string, any> {
-  return Object.fromEntries((rec.facts ?? []).map((f: any) => [f.a, f.v]));
-}
 
 function cycleSlugId(input: string): string {
   const raw = input.startsWith('cycle:') ? input.slice(6) : input;
