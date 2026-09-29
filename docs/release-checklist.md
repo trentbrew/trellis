@@ -39,4 +39,7 @@ through: `just ship --verify --full-test`).
 ## Post-publish
 
 - [ ] Bump turtlecode opencode trellis dep to `^3.2.5` if using npm mode
-- [ ] Refresh desk `release.json` if present
+- [ ] **Refresh desk `release.json`** (`~/TURTLE/OS/release.json`): set `trellis` +
+      `turtlecode` to the just-published npm versions (**pins = published latest**),
+      then commit the desk. This is the only place cross-repo version drift is
+      visible — leaving it stale hides the drift it exists to surface.
