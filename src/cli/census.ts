@@ -361,15 +361,19 @@ export async function readCensus(
     }
   }
 
-  // Dedupe by identity (session id). Ledger is authoritative and overwrites an
-  // adapter entry with the same id — but two *distinct* sessions in the same
-  // workspace (e.g. two opencode windows) both survive, unlike a (harness,dir)
-  // key, which would collapse them.
+  // Dedupe by identity (session id). Ledger is authoritative and merges *over*
+  // an adapter entry with the same id, field by field — so it wins the identity
+  // fields it reports (displayName/agentId/verified) without discarding adapter
+  // values it omits (e.g. model/provider from the session record). Two distinct
+  // sessions in the same workspace both survive, unlike a (harness,dir) key.
   const byId = new Map<string, CensusAgent>();
   for (const entry of inferred) {
     if (!byId.has(entry.id)) byId.set(entry.id, entry);
   }
-  for (const entry of ledger) byId.set(entry.id, entry);
+  for (const entry of ledger) {
+    const prev = byId.get(entry.id);
+    byId.set(entry.id, prev ? mergeCensusAgent(prev, entry) : entry);
+  }
 
   const merged = [...byId.values()].filter(
     (entry) => now - new Date(entry.lastActivity).getTime() <= staleMs,
@@ -379,6 +383,23 @@ export async function readCensus(
     (a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime(),
   );
   return merged;
+}
+
+/** Overlay `winner` on `base`, keeping base values for fields winner omits. */
+export function mergeCensusAgent(base: CensusAgent, winner: CensusAgent): CensusAgent {
+  const out = { ...base } as CensusAgent;
+  for (const [k, v] of Object.entries(winner)) {
+    if (v !== undefined && v !== null && v !== '') {
+      (out as unknown as Record<string, unknown>)[k] = v;
+    }
+  }
+  out.source = winner.source;
+  out.verified = winner.verified;
+  out.lastActivity =
+    new Date(winner.lastActivity) > new Date(base.lastActivity)
+      ? winner.lastActivity
+      : base.lastActivity;
+  return out;
 }
 
 /** Human label for a census entry's work, or empty. */

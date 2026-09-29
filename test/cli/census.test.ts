@@ -206,6 +206,34 @@ describe('readCensus merge', () => {
     expect(entries.map((e) => e.id).sort()).toEqual(['opencode:ses_a', 'opencode:ses_b']);
   });
 
+  it('ledger merges over adapter, inheriting fields it omits (model)', async () => {
+    const db = join(root, 'opencode.db');
+    makeOpencodeDb(db);
+    writeHeartbeat(scope, {
+      sessionId: 'opencode:ses_live',
+      agentId: 'identity:test',
+      displayName: 'Trent',
+      client: 'opencode',
+      dir: adminDir,
+      status: 'active',
+      startedAt: iso(1000),
+      lastHeartbeat: iso(500),
+    });
+
+    const entries = await readCensus(scope, {
+      opencodeDbPath: db,
+      includeClaude: false,
+      now: NOW,
+    });
+    expect(entries).toHaveLength(1);
+    const e = entries[0];
+    expect(e.source).toBe('ledger');
+    expect(e.verified).toBe(true);
+    expect(e.displayName).toBe('Trent');
+    expect(e.model).toBe('deepseek-v4.1-flash'); // inherited from the adapter
+    expect(e.provider).toBe('opencode-go');
+  });
+
   it('prunes everything stale', async () => {
     const db = join(root, 'opencode.db');
     makeOpencodeDb(db);
