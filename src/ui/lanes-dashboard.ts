@@ -15,7 +15,20 @@ import {
 } from '../vcs/issue-prefix.js';
 import { injectIssuePrefixMeta } from './issue-prefix-meta.js';
 import { startNodeServer } from '../server/node-adapter.js';
-import { buildLanesSnapshot, type LaneRow } from './lanes-snapshot.js';
+import {
+  buildLanesSnapshot,
+  withGlobalIssueScope,
+  type LaneRow,
+} from './lanes-snapshot.js';
+import { runIssueMutation, isIssueMutation } from './issue-mutations.js';
+import {
+  checkLocalAccess,
+  corsHeadersFor,
+  isLoopbackBind,
+  LOOPBACK_BIND,
+  normalizeOrigin,
+  type LocalAccessPolicy,
+} from './local-access.js';
 import { buildCausalGraphSnapshot } from './causal-graph-snapshot.js';
 import { PROVENANCE } from '../core/persist/canonical-op.js';
 import { resolveRuntimeThemeCss } from './theme/resolve-runtime-theme-css.js';
@@ -32,10 +45,16 @@ export interface LanesDashboardOptions {
   pollMs?: number;
   /** esbuild watch + SSE live reload; also enabled by TRELLIS_UI_DEV=1 */
   dev?: boolean;
+  /** Bind address. Default loopback (ADR 0053 d1); anything else exposes the API. */
+  host?: string;
+  /** Origins granted CORS and writes beyond loopback ones (ADR 0053 d1). */
+  allowOrigins?: string[];
 }
 
 export interface LanesDashboardHandle {
   port: number;
+  /** Address actually bound. */
+  host: string;
   stop: () => void;
 }
 
@@ -49,6 +68,8 @@ function findLanesHtml(): string {
     const moduleDir = dirname(fileURLToPath(import.meta.url));
     push(join(moduleDir, 'lanes.html'));
     push(join(moduleDir, '..', 'ui', 'lanes.html'));
+    // Bundled chunk lives in dist/ → dist/ui/lanes.html
+    push(join(moduleDir, 'ui', 'lanes.html'));
   } catch {
     // ignore
   }
@@ -75,6 +96,7 @@ function findUiAsset(name: string): string | null {
     const moduleDir = dirname(fileURLToPath(import.meta.url));
     candidates.push(join(moduleDir, name));
     candidates.push(join(moduleDir, '..', 'ui', name));
+    candidates.push(join(moduleDir, 'ui', name));
   } catch {
     // ignore
   }
@@ -91,6 +113,26 @@ function findUiAsset(name: string): string | null {
   }
   return null;
 }
+
+/**
+ * A browser module prebuilt by `build:admin-ui` (dist/ui/*.js), found only next to
+ * this module — never via cwd, so running from source (tsx) can't pick up a stale
+ * dist and always bundles the live TS instead.
+ */
+function findBuiltUiAsset(name: string): string | null {
+  try {
+    const moduleDir = dirname(fileURLToPath(import.meta.url));
+    for (const p of [join(moduleDir, name), join(moduleDir, 'ui', name)]) {
+      if (existsSync(p)) return p;
+    }
+  } catch {
+    // import.meta.url unavailable
+  }
+  return null;
+}
+
+/** Only plain file names are served from asset directories (no traversal). */
+const ASSET_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
 function resolveDevMode(opts: LanesDashboardOptions): boolean {
   if (opts.dev === true) return true;
@@ -157,9 +199,14 @@ export async function startLanesDashboard(
   let boundPort = requestedPort;
   let viewers = 0;
 
+  // CORS is per-request (see fetchHandler) — never `*` on this API (ADR 0053 d1).
   const headers = {
-    'Access-Control-Allow-Origin': '*',
     'Cache-Control': 'no-store',
+  };
+  const host = opts.host ?? LOOPBACK_BIND;
+  const access: LocalAccessPolicy = {
+    loopbackOnly: isLoopbackBind(host),
+    allowOrigins: (opts.allowOrigins ?? []).map(normalizeOrigin),
   };
 
   // Health indicators for lanes
@@ -210,11 +257,26 @@ export async function startLanesDashboard(
   const snapshot = () =>
     enhancedSnapshot();
 
+  /**
+   * dev: the watch bundle. Built package: the prebuilt dist/ui module (no esbuild or
+   * TS source ships to npm). Source checkout: bundle the TS on request.
+   */
   const serveBundledJs = async (jsName: string, tsName: string): Promise<Response> => {
     if (uiDev) {
       const cached = readDevBundle(devOutDir, jsName);
       if (cached != null) {
         return new Response(cached, {
+          headers: {
+            ...headers,
+            'Content-Type': 'text/javascript; charset=utf-8',
+            'Cache-Control': 'no-cache',
+          },
+        });
+      }
+    } else {
+      const built = findBuiltUiAsset(jsName);
+      if (built) {
+        return new Response(readFileSync(built, 'utf-8'), {
           headers: {
             ...headers,
             'Content-Type': 'text/javascript; charset=utf-8',
@@ -247,13 +309,27 @@ export async function startLanesDashboard(
     }
   };
 
+  /** Local-access gate, then per-request CORS on whatever the route returns. */
   const fetchHandler = async (req: Request): Promise<Response> => {
+    const decision = checkLocalAccess(req, access);
+    if (!decision.ok) {
+      return Response.json({ error: decision.error }, { status: decision.status, headers });
+    }
+    if (req.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: { ...headers, ...corsHeadersFor(decision.corsOrigin, true) },
+      });
+    }
+    const res = await routeRequest(req);
+    const merged = new Headers(res.headers);
+    for (const [k, v] of Object.entries(corsHeadersFor(decision.corsOrigin))) merged.set(k, v);
+    return new Response(res.body, { status: res.status, statusText: res.statusText, headers: merged });
+  };
+
+  const routeRequest = async (req: Request): Promise<Response> => {
     const url = new URL(req.url);
     const path = url.pathname;
-
-    if (req.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers });
-    }
 
     if (uiDev && path === '/__dev/live-reload.js') {
       return new Response(liveReloadClientSource(), {
@@ -305,6 +381,30 @@ export async function startLanesDashboard(
     if (path === '/api/causal-graph') {
       engine.open();
       return Response.json(buildCausalGraphSnapshot(engine), { headers });
+    }
+
+    // Full issue records (description, assignee, parent, criteria, blockers) —
+    // the snapshot's IssueRow is the kanban-card subset.
+    if (path === '/api/issues' && req.method === 'GET') {
+      engine.open();
+      return Response.json(
+        withGlobalIssueScope(engine, () => engine.listIssues()),
+        { headers },
+      );
+    }
+
+    const issueMatch = path.match(/^\/api\/issues\/([^/]+)$/);
+    if (issueMatch && req.method === 'GET') {
+      engine.open();
+      const id = decodeURIComponent(issueMatch[1]);
+      const issue = withGlobalIssueScope(engine, () => engine.getIssue(id));
+      if (!issue) {
+        return new Response(JSON.stringify({ error: `unknown issue: ${id}` }), {
+          status: 404,
+          headers,
+        });
+      }
+      return Response.json(issue, { headers });
     }
 
     const laneOpsMatch = path.match(/^\/api\/lanes\/([^/]+)\/ops$/);
@@ -467,7 +567,7 @@ export async function startLanesDashboard(
     }
 
     // Fractal mark — same asset as fractal-playground /logo.png (CSS mask in admin)
-    if (path === '/logo.png') {
+    if (path === '/logo.png' || path === '/favicon.ico') {
       const logoPath = findUiAsset('logo.png');
       if (!logoPath) {
         return new Response('logo.png not found', { status: 404, headers });
@@ -508,6 +608,34 @@ export async function startLanesDashboard(
         headers: {
           ...headers,
           'Content-Type': 'text/css; charset=utf-8',
+          'Cache-Control': 'no-cache',
+        },
+      });
+    }
+
+    // runtime-theme.css @imports its siblings (foundation, semantic, components);
+    // serve them from the same directory it was resolved from.
+    const themeMatch = path.match(/^\/theme\/([^/]+\.css)$/);
+    if (themeMatch && ASSET_NAME.test(themeMatch[1])) {
+      const name = themeMatch[1];
+      const runtimeCss = resolveRuntimeThemeCss(opts.rootPath);
+      const sibling = runtimeCss ? join(dirname(runtimeCss), name) : null;
+      const cssPath = sibling && existsSync(sibling) ? sibling : findUiAsset(`theme/${name}`);
+      if (!cssPath) return new Response(`theme/${name} not found`, { status: 404, headers });
+      return new Response(readFileSync(cssPath, 'utf-8'), {
+        headers: { ...headers, 'Content-Type': 'text/css; charset=utf-8', 'Cache-Control': 'no-cache' },
+      });
+    }
+
+    // Vendored @trellis.computer/ui web components (admin.html <script type=module>).
+    const uiKitMatch = path.match(/^\/@trellis\.computer\/ui\/dist\/([^/]+\.mjs)$/);
+    if (uiKitMatch && ASSET_NAME.test(uiKitMatch[1])) {
+      const modPath = findUiAsset(`@trellis.computer/ui/dist/${uiKitMatch[1]}`);
+      if (!modPath) return new Response(`${uiKitMatch[1]} not found`, { status: 404, headers });
+      return new Response(readFileSync(modPath, 'utf-8'), {
+        headers: {
+          ...headers,
+          'Content-Type': 'text/javascript; charset=utf-8',
           'Cache-Control': 'no-cache',
         },
       });
@@ -571,9 +699,23 @@ export async function startLanesDashboard(
       }
       const { action, args } = body;
       try {
+        if (isIssueMutation(action)) {
+          // Same engine calls the `trellis issue` CLI makes, so its guards apply.
+          const result = await runIssueMutation(engine, action, args);
+          return new Response(JSON.stringify({ ok: true, ...result }), { headers });
+        }
         if (action === 'promote') {
-          await engine.promoteLane(String(args?.id), { dryRun: false });
-        } else if (action === 'updateLaneMeta') {
+          // Git work on an unauthenticated port — same class as `issue close` (ADR 0053 d3).
+          const id = String(args?.id ?? '<lane>');
+          return new Response(
+            JSON.stringify({
+              error: `promote is CLI-only — run: trellis lane promote ${id}`,
+              command: `trellis lane promote ${id}`,
+            }),
+            { status: 403, headers },
+          );
+        }
+        if (action === 'updateLaneMeta') {
           const id = String(args?.id || '');
           if (!id) {
             return new Response(JSON.stringify({ error: 'id required' }), {
@@ -635,6 +777,7 @@ export async function startLanesDashboard(
 
   const server = await startNodeServer({
     port: requestedPort,
+    hostname: host,
     fetch: fetchHandler,
     websocket: { open: () => { }, message: () => { }, close: () => { } },
   });
@@ -642,6 +785,7 @@ export async function startLanesDashboard(
 
   return {
     port: server.port,
+    host,
     stop: () => {
       void uiDevHandle?.stop();
       server.stop();

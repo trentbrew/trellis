@@ -53,6 +53,7 @@ function findUiAsset(name: string): string | null {
     const moduleDir = dirname(fileURLToPath(import.meta.url));
     candidates.push(join(moduleDir, name));
     candidates.push(join(moduleDir, '..', 'ui', name));
+    candidates.push(join(moduleDir, 'ui', name));
   } catch {
     // ignore
   }

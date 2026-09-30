@@ -2721,9 +2721,10 @@
                   <button
                     type="button"
                     class="lane-promote"
-                    tml-op="promote(lane.id)"
+                    tml-attr-data-lane-id="lane.id"
+                    title="Promote is CLI-only (ADR 0053) — copies the command"
                   >
-                    Promote
+                    Promote…
                   </button>
                 </article>
               </template>
@@ -3067,7 +3068,14 @@
       <div class="dlg-b">
         <div id="dlg-body"></div>
         <div class="dlg-actions">
-          <button type="button" id="dlg-promote" hidden>Promote lane</button>
+          <button
+            type="button"
+            id="dlg-promote"
+            title="Promote is CLI-only (ADR 0053) — copies the command"
+            hidden
+          >
+            Copy promote command
+          </button>
         </div>
       </div>
     </dialog>
@@ -4099,6 +4107,18 @@
         toast.classList.remove('show');
       });
 
+      // Promote does git work, so the HTTP API refuses it (ADR 0053 d3): hand off
+      // the CLI command instead.
+      async function copyPromoteCommand(laneId) {
+        const cmd = `trellis lane promote ${laneId}`;
+        try {
+          await navigator.clipboard.writeText(cmd);
+          showToast(`copied · ${cmd}`);
+        } catch {
+          showToast(`run: ${cmd}`);
+        }
+      }
+
       notifyBtn.addEventListener('click', () => {
         openOplog();
       });
@@ -4160,6 +4180,11 @@
       }
 
       document.getElementById('tml-root').addEventListener('click', (e) => {
+        const promoteBtn = e.target.closest('.lane-promote');
+        if (promoteBtn?.dataset.laneId) void copyPromoteCommand(promoteBtn.dataset.laneId);
+      });
+
+      document.getElementById('tml-root').addEventListener('click', (e) => {
         // Table rows: admin-datatable owns click → inline edit (playground parity).
         if (e.target.closest('#view-table tr[data-kind="lane"]')) return;
         if (
@@ -4208,12 +4233,7 @@
         .getElementById('dlg-promote')
         .addEventListener('click', async () => {
           if (!promoteLaneId) return;
-          try {
-            await shell.op('promote', { id: promoteLaneId });
-            showToast(`promote · ${promoteLaneId}`);
-          } catch {
-            showToast('promote failed');
-          }
+          await copyPromoteCommand(promoteLaneId);
           dlg.close();
         });
 

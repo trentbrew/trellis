@@ -28,7 +28,7 @@ import {
   DEFAULT_STALE_MS,
   readPresence,
   type PresenceInfo,
-} from './presence.js';
+} from './ledger.js';
 
 const require_ = createRequire(import.meta.url);
 

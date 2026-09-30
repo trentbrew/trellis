@@ -29,6 +29,8 @@ function findRuntimeThemeAsset(): string | null {
     candidates.push(join(moduleDir, 'runtime-theme.css'));
     candidates.push(join(moduleDir, '..', name));
     candidates.push(join(moduleDir, '..', 'ui', name));
+    // Bundled chunk lives in dist/ → dist/ui/theme/runtime-theme.css
+    candidates.push(join(moduleDir, 'ui', name));
   } catch {
     // ignore
   }

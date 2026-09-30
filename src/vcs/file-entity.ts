@@ -5,7 +5,6 @@
  * `file:<path>` / `dir:<path>`; new ops carry minted ids on the payload.
  */
 
-import { randomUUID } from 'node:crypto';
 import type { EAVStore } from '../core/store/eav-store.js';
 import type { VcsOp } from './types.js';
 
@@ -26,9 +25,12 @@ export function legacyDirEntityId(path: string): string {
  * 122 random bits (a full v4 UUID, dashes removed). A collision would merge two
  * files into one entity, the very bug minting exists to prevent, so the id
  * must stay unique across every file ever added in a synced graph.
+ *
+ * Web Crypto global, not `node:crypto`: same v4 UUID on Node ≥20 (engines), Bun and
+ * browsers, so browser bundles that reach `decompose` (tml-runtime, admin-shell) build.
  */
 function mintSuffix(): string {
-  return randomUUID().replace(/-/g, '');
+  return globalThis.crypto.randomUUID().replace(/-/g, '');
 }
 
 export function mintFileEntityId(): string {
