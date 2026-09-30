@@ -99,6 +99,7 @@ import {
 } from '../presence/ledger.js';
 import { readCensus, censusWorkLabel, type CensusAgent } from '../presence/census.js';
 import { buildWip, noteEntityAttrs, cycleAttrs } from '../operator/wip.js';
+import { buildCadence, type CadenceSignal } from '../operator/cadence.js';
 import { requireDestructiveConfirm } from '../vcs/destructive-guard.js';
 import { registerLaneCommands } from './lane.js';
 import { registerAdminCommands } from './admin.js';
@@ -4425,49 +4426,8 @@ program
 // trellis cadence — derived due-check with teeth (ADR 0050 d4)
 // ---------------------------------------------------------------------------
 
-function computeCadence(
-  engine: any,
-  opts: { noteDays?: number } = {},
-): { due: boolean; signals: Array<{ kind: string; message: string }> } {
-  const now = Date.now();
-  const signals: Array<{ kind: string; message: string }> = [];
-
-  // Hard signal: open cycles past their target date.
-  for (const rec of engine.listStoreEntities('Cycle')) {
-    const c: Record<string, any> = { id: rec.id, ...cycleAttrs(rec) };
-    if (c.status === 'closed' || !c.targetDate) continue;
-    const t = Date.parse(String(c.targetDate));
-    if (Number.isFinite(t) && t < now) {
-      const overdue = Math.ceil((now - t) / 86400000);
-      const members = engine
-        .getEavStore()
-        .getLinksByEntityAndAttribute(c.id, 'includes').length;
-      signals.push({
-        kind: 'cycle-overdue',
-        message: `${c.id} is ${overdue}d past target (${members} issue${members === 1 ? '' : 's'})`,
-      });
-    }
-  }
-
-  // Advisory: captured notes aging past the triage threshold.
-  const noteDays = opts.noteDays ?? 14;
-  const cutoff = now - noteDays * 86400000;
-  const staleNotes = engine
-    .listStoreEntities('Note')
-    .map((r: any) => ({ id: r.id, ...noteEntityAttrs(r) }))
-    .filter(
-      (n: any) =>
-        (n.status ?? 'captured') === 'captured' &&
-        n.createdAt &&
-        Date.parse(String(n.createdAt)) < cutoff,
-    );
-  if (staleNotes.length) {
-    signals.push({
-      kind: 'note-triage',
-      message: `${staleNotes.length} note${staleNotes.length === 1 ? '' : 's'} captured >${noteDays}d ago (trellis note list)`,
-    });
-  }
-
+function mirrorCadenceSignals(engine: any): CadenceSignal[] {
+  const signals: CadenceSignal[] = [];
   // Structural: recorded mirrors that no longer match a fresh generation.
   try {
     for (const rec of engine.listStoreEntities('Mirror')) {
@@ -4491,8 +4451,18 @@ function computeCadence(
   } catch {
     // fs unavailable — skip the mirror signal
   }
+  return signals;
+}
 
-  return { due: signals.length > 0, signals };
+/** Due-check (ADR 0050): cycles + notes via the shared operator read; mirrors here. */
+function computeCadence(
+  engine: any,
+  opts: { noteDays?: number } = {},
+): { due: boolean; signals: Array<{ kind: string; message: string }> } {
+  return buildCadence(engine, {
+    noteDays: opts.noteDays,
+    mirrorCheck: mirrorCadenceSignals,
+  });
 }
 
 program

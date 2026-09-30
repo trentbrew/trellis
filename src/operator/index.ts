@@ -15,3 +15,10 @@ export {
   type WipOptions,
   type OperatorEngine,
 } from './wip.js';
+
+export {
+  buildCadence,
+  type CadenceResult,
+  type CadenceSignal,
+  type CadenceOptions,
+} from './cadence.js';
