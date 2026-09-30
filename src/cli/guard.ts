@@ -39,7 +39,15 @@ export function registerGuardCommand(program: Command): void {
       const owner = fileOwnerFor(trellisDir, rel, {
         excludeLaneId: opts.excludeLane,
       });
-      const allowed = !owner || owner.agentId === writerAgent;
+      // Host sessions share one per-machine agentId (`agent:trentbrew`), so the
+      // agentId comparison cannot distinguish concurrent agents. When the writer
+      // names its own lane (`--exclude-lane`, default `TRELLIS_LANE_ID`), any
+      // remaining owner is a *foreign lane* — enforce on lane, per ADR 0015
+      // ("owned by that lane"). Fall back to agentId otherwise.
+      const laneScoped = Boolean(opts.excludeLane);
+      const allowed = laneScoped
+        ? !owner
+        : !owner || owner.agentId === writerAgent;
       const reason =
         owner && !allowed
           ? formatCrossAgentOwnershipMessage(rel, owner, writerAgent)
