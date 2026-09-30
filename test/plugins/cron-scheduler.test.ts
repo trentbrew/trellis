@@ -48,6 +48,9 @@ function createMemoryStore(seed: CronJobRecord[] = []): CronStore & {
       const cur = entities.get(id) ?? { id };
       entities.set(id, { ...cur, ...attrs });
     },
+    async createEntity(id, type, attrs) {
+      entities.set(id, { id, type, ...attrs });
+    },
   };
 }
 
