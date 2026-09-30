@@ -81,6 +81,19 @@ export function buildActiveLaneFileOwners(
   return owners;
 }
 
+/**
+ * Resolve the owning live lane for a repo-relative path, or null if unowned.
+ * A thin read over {@link buildActiveLaneFileOwners} for path-level callers
+ * (e.g. the `trellis guard` command and host hooks).
+ */
+export function fileOwnerFor(
+  trellisDir: string,
+  relPath: string,
+  opts?: { excludeLaneId?: string; now?: number },
+): FileOwner | null {
+  return buildActiveLaneFileOwners(trellisDir, opts).get(relPath) ?? null;
+}
+
 export function formatCrossAgentOwnershipMessage(
   path: string,
   owner: FileOwner,
