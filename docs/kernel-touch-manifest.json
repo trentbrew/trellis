@@ -43,7 +43,8 @@
     },
     {
       "id": "turtlecode-ide",
-      "path": "../studio",
+      "path": "../priorart/studio",
+      "note": "Archived Studio prior art (2026-09-29); skill sync only — not npm-shipped",
       "sync": [
         {
           "from": "skills/trellis-vcs/SKILL.md",
