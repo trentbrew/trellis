@@ -6,14 +6,26 @@ import { TrellisVcsEngine } from '../engine.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-/** Published package version (from package.json at repo root). */
+/**
+ * Published package version: the nearest package.json named `trellis` above this
+ * module. A fixed `../../package.json` is right from src/cli/ but not from a bundled
+ * dist/ chunk, where it lands above the package (and printed 0.0.0).
+ */
 export function cliVersion(): string {
-  const path = resolve(here, '../../package.json');
-  try {
-    const pkg = JSON.parse(readFileSync(path, 'utf8')) as { version?: string };
-    if (typeof pkg.version === 'string') return pkg.version;
-  } catch {
-    /* fall through */
+  let dir = here;
+  for (let i = 0; i < 6; i++) {
+    try {
+      const pkg = JSON.parse(readFileSync(resolve(dir, 'package.json'), 'utf8')) as {
+        name?: string;
+        version?: string;
+      };
+      if (pkg.name === 'trellis' && typeof pkg.version === 'string') return pkg.version;
+    } catch {
+      /* no package.json here */
+    }
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
   }
   return '0.0.0';
 }

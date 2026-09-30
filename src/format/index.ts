@@ -140,6 +140,196 @@ export function formatEntity(
 }
 
 const ROW_CAP = 100;
+const TERMINAL_TABLE_COL_CAP = 6;
+const TERMINAL_COL_GAP = 2;
+const TERMINAL_CELL_MAX = 48;
+const ANSI_STRIP_RE = /\u001b\[[0-9;?]*[A-Za-z]/g;
+
+function visibleTerminalWidth(text: string): number {
+  return text.replace(ANSI_STRIP_RE, '').length;
+}
+
+function padTerminalCell(text: string, width: number): string {
+  const pad = width - visibleTerminalWidth(text);
+  return pad > 0 ? text + ' '.repeat(pad) : text;
+}
+
+export interface FormatTerminalHints {
+  layout?: 'auto' | 'table' | 'kv';
+  title?: string;
+  emptyMessage?: string;
+  columns?: string[];
+  maxRows?: number;
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === 'object' && !Array.isArray(v);
+}
+
+function inferTableColumns(
+  rows: Record<string, unknown>[],
+  prefer?: string[],
+): string[] {
+  if (prefer?.length) return prefer.slice(0, TERMINAL_TABLE_COL_CAP);
+  const keys = new Set<string>();
+  for (const row of rows.slice(0, 8)) {
+    for (const k of Object.keys(row)) keys.add(k);
+  }
+  const all = [...keys];
+  const priority = ['id', 'name', 'title', 'type', 'status', 'mutates', 'version'];
+  return all
+    .sort((a, b) => {
+      const ai = priority.indexOf(a);
+      const bi = priority.indexOf(b);
+      if (ai !== -1 || bi !== -1) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+      return a.localeCompare(b);
+    })
+    .slice(0, TERMINAL_TABLE_COL_CAP);
+}
+
+function formatTerminalCell(v: unknown, s: Style): string {
+  if (v === null || v === undefined) return s.dim('—');
+  if (typeof v === 'boolean') return v ? s.green('true') : s.red('false');
+  if (typeof v === 'number') return String(v);
+  if (typeof v === 'string') {
+    return v.length > 56 ? `${v.slice(0, 53)}…` : v;
+  }
+  if (Array.isArray(v)) {
+    if (v.length === 0) return s.dim('[]');
+    if (v.every((x) => typeof x === 'string' || typeof x === 'number')) {
+      const joined = v.map(String).join(', ');
+      return joined.length > 52 ? s.dim(`${v.length} items`) : joined;
+    }
+    return s.dim(`[${v.length}]`);
+  }
+  if (isRecord(v)) {
+    const compact = JSON.stringify(v);
+    return compact.length > 52 ? s.dim('{…}') : s.dim(compact);
+  }
+  return String(v);
+}
+
+function terminalTableLines(
+  rows: Record<string, unknown>[],
+  s: Style,
+  hints: FormatTerminalHints,
+): string[] {
+  const maxRows = hints.maxRows ?? ROW_CAP;
+  const cols = inferTableColumns(rows, hints.columns);
+  if (cols.length === 0) return terminalKvLines(rows[0] ?? {}, s, hints);
+
+  const slice = rows.slice(0, maxRows);
+  const widths = cols.map((col) => {
+    let w = col.length;
+    for (const row of slice) {
+      w = Math.max(w, formatTerminalCell(row[col], plain).length);
+    }
+    return Math.min(w, TERMINAL_CELL_MAX);
+  });
+
+  const gap = ' '.repeat(TERMINAL_COL_GAP);
+  const lines: string[] = [];
+  const title = hints.title ?? `Rows (${rows.length})`;
+  lines.push(s.bold(title), '');
+  lines.push(
+    `  ${cols.map((c, i) => padTerminalCell(s.dim(c), widths[i])).join(gap)}`,
+  );
+  lines.push(
+    `  ${cols.map((_, i) => s.dim('─'.repeat(widths[i]))).join(gap)}`,
+  );
+  for (const row of slice) {
+    const cells = cols.map((col, i) => {
+      const plainText = formatTerminalCell(row[col], plain);
+      const clipped =
+        plainText.length > TERMINAL_CELL_MAX
+          ? `${plainText.slice(0, TERMINAL_CELL_MAX - 1)}…`
+          : plainText;
+      let display: string;
+      if (i === 0) display = s.cyan(clipped);
+      else if (typeof row[col] === 'boolean') display = formatTerminalCell(row[col], s);
+      else display = clipped;
+      return padTerminalCell(display, widths[i]);
+    });
+    lines.push(`  ${cells.join(gap)}`);
+  }
+  if (rows.length > maxRows) {
+    lines.push(s.dim(`  … +${rows.length - maxRows} more`));
+  }
+  return lines;
+}
+
+function terminalKvLines(
+  obj: Record<string, unknown>,
+  s: Style,
+  hints: FormatTerminalHints,
+): string[] {
+  const lines: string[] = [];
+  if (hints.title) lines.push(s.bold(hints.title), '');
+  const entries = Object.entries(obj);
+  if (entries.length === 0) return [s.dim(hints.emptyMessage ?? 'Empty.')];
+  for (const [k, v] of entries) {
+    if (Array.isArray(v) && v.every((x) => typeof x === 'string' || typeof x === 'number')) {
+      lines.push(`  ${s.dim(`${k}:`)}`);
+      for (const item of v.slice(0, maxKvList(hints))) {
+        lines.push(`    ${formatTerminalCell(item, s)}`);
+      }
+      if (v.length > maxKvList(hints)) {
+        lines.push(s.dim(`    … +${v.length - maxKvList(hints)} more`));
+      }
+      continue;
+    }
+    lines.push(`  ${s.dim(`${k.padEnd(16)}`)} ${formatTerminalCell(v, s)}`);
+  }
+  return lines;
+}
+
+function maxKvList(hints: FormatTerminalHints): number {
+  return hints.maxRows ?? 24;
+}
+
+/**
+ * Generic JSON → terminal lines (spike: table / kv heuristics + optional hints).
+ * Stable `--json` payloads stay separate; this is human-facing only.
+ */
+export function formatTerminal(
+  value: unknown,
+  opts: { hints?: FormatTerminalHints; style?: Style } = {},
+): string[] {
+  const s = opts.style ?? plain;
+  const hints = opts.hints ?? {};
+  const empty = hints.emptyMessage ?? 'No results.';
+
+  if (value === null || value === undefined) return [s.dim(empty)];
+
+  const layout = hints.layout ?? 'auto';
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      if (hints.title) return [s.bold(hints.title), '', s.dim(empty)];
+      return [s.dim(empty)];
+    }
+    const records = value.filter(isRecord) as Record<string, unknown>[];
+    const tableOk =
+      layout === 'table' ||
+      (layout === 'auto' && records.length === value.length && records.length > 0);
+    if (tableOk) return terminalTableLines(records, s, hints);
+    const lines = [s.bold(hints.title ?? `List (${value.length})`), ''];
+    for (const item of value.slice(0, hints.maxRows ?? ROW_CAP)) {
+      lines.push(`  • ${formatTerminalCell(item, s)}`);
+    }
+    if (value.length > (hints.maxRows ?? ROW_CAP)) {
+      lines.push(s.dim(`  … +${value.length - (hints.maxRows ?? ROW_CAP)} more`));
+    }
+    return lines;
+  }
+
+  if (isRecord(value)) {
+    if (layout === 'table') return terminalTableLines([value], s, hints);
+    return terminalKvLines(value, s, hints);
+  }
+
+  return [String(value)];
+}
 
 export function formatFactList(
   facts: Fact[],

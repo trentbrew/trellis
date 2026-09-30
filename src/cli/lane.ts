@@ -617,6 +617,13 @@ export function registerLaneCommands(program: Command): void {
     .option('--poll <ms>', 'Snapshot poll interval (ms)', '1000')
     .option('--no-open', 'Do not auto-open browser')
     .option('--dev', 'UI dev mode: esbuild watch + SSE live reload (or TRELLIS_UI_DEV=1)')
+    .option('--host <addr>', 'Bind address (default 127.0.0.1; ADR 0053)')
+    .option(
+      '--allow-origin <origin>',
+      'Extra browser origin allowed CORS + writes (repeatable)',
+      (value: string, previous: string[]) => [...previous, value],
+      [] as string[],
+    )
     .action(async (opts, command) => {
       const rootPath = resolveLaneRepoPath(opts, command);
       const port = parseInt(opts.port, 10) || 3939;
@@ -625,8 +632,17 @@ export function registerLaneCommands(program: Command): void {
       const { startLanesDashboard } = await import('../ui/lanes-dashboard.js');
 
       try {
-        const handle = await startLanesDashboard({ rootPath, port, pollMs, dev: !!opts.dev });
-        const url = `http://localhost:${handle.port}/`;
+        const handle = await startLanesDashboard({
+          rootPath,
+          port,
+          pollMs,
+          dev: !!opts.dev,
+          host: opts.host,
+          allowOrigins: opts.allowOrigin,
+        });
+        const { warnIfExposed, urlHost } = await import('./admin.js');
+        const url = `http://${urlHost(handle.host)}:${handle.port}/`;
+        warnIfExposed(handle.host);
 
         console.log(chalk.green(`✓ Lane dashboard → ${chalk.bold(url)}`));
         if (opts.dev) {

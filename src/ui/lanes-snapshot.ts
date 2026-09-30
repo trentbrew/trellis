@@ -83,6 +83,25 @@ export interface LanesSnapshot {
   }>;
 }
 
+/**
+ * Run `fn` against the global integration store, not the active lane's view,
+ * then restore the lane context — issues and milestones are repo-wide.
+ */
+export function withGlobalIssueScope<T>(engine: TrellisVcsEngine, fn: () => T): T {
+  const savedLaneId = engine.getActiveLaneId();
+  const savedLaneLog = (engine as any).activeLaneLog;
+  (engine as any).activeLaneId = undefined;
+  (engine as any).activeLaneLog = null;
+  engine.open();
+  try {
+    return fn();
+  } finally {
+    (engine as any).activeLaneId = savedLaneId;
+    (engine as any).activeLaneLog = savedLaneLog;
+    if (savedLaneId) engine.open();
+  }
+}
+
 export function buildLanesSnapshot(
   engine: TrellisVcsEngine,
   rootPath: string,
@@ -123,57 +142,49 @@ export function buildLanesSnapshot(
     claimedSessionId: issue.claimedSessionId,
   }));
 
-  // Query issues from the global integration store, not lane-scoped
-  const savedLaneId = engine.getActiveLaneId();
-  const savedLaneLog = (engine as any).activeLaneLog;
-  (engine as any).activeLaneId = undefined;
-  (engine as any).activeLaneLog = null;
-  engine.open();
+  const { allIssues, milestones } = withGlobalIssueScope(engine, () => {
+    const allIssues = engine.listIssues().map((issue) => {
+      const issueLanes = lanes.filter(l => l.issueId === issue.id || l.issueId === `issue:${issue.id}`);
+      return {
+        id: issue.id,
+        title: issue.title,
+        status: issue.status,
+        priority: issue.priority,
+        labels: issue.labels || [],
+        createdAt: issue.createdAt,
+        claimedLaneId: issue.claimedLaneId,
+        claimedSessionId: issue.claimedSessionId,
+        laneCount: issueLanes.length,
+        laneIds: issueLanes.map(l => l.id),
+      } satisfies IssueRow;
+    });
 
-  const allIssues = engine.listIssues().map((issue) => {
-    const issueLanes = lanes.filter(l => l.issueId === issue.id || l.issueId === `issue:${issue.id}`);
-    return {
-      id: issue.id,
-      title: issue.title,
-      status: issue.status,
-      priority: issue.priority,
-      labels: issue.labels || [],
-      createdAt: issue.createdAt,
-      claimedLaneId: issue.claimedLaneId,
-      claimedSessionId: issue.claimedSessionId,
-      laneCount: issueLanes.length,
-      laneIds: issueLanes.map(l => l.id),
-    } satisfies IssueRow;
+    // Newest first — kanban columns, and any issue lists, show creates at the top.
+    allIssues.sort((a, b) => {
+      const ac = a.createdAt || '';
+      const bc = b.createdAt || '';
+      if (ac && bc && ac !== bc) return bc.localeCompare(ac);
+      return b.id.localeCompare(a.id, undefined, { numeric: true });
+    });
+
+    const milestones = engine.listMilestones().map((m) => ({
+      id: m.id.replace(/^milestone:/, ''),
+      message: m.message,
+      createdAt: m.createdAt,
+      createdBy: m.createdBy,
+      fileCount: m.affectedFiles?.length ?? 0,
+      affectedFiles: m.affectedFiles ?? [],
+    } satisfies MilestoneRow));
+
+    milestones.sort((a, b) => {
+      const ac = a.createdAt || '';
+      const bc = b.createdAt || '';
+      if (ac && bc && ac !== bc) return bc.localeCompare(ac);
+      return b.id.localeCompare(a.id, undefined, { numeric: true });
+    });
+
+    return { allIssues, milestones };
   });
-
-  // Newest first — kanban columns, and any issue lists, show creates at the top.
-  allIssues.sort((a, b) => {
-    const ac = a.createdAt || '';
-    const bc = b.createdAt || '';
-    if (ac && bc && ac !== bc) return bc.localeCompare(ac);
-    return b.id.localeCompare(a.id, undefined, { numeric: true });
-  });
-
-  const milestones = engine.listMilestones().map((m) => ({
-    id: m.id.replace(/^milestone:/, ''),
-    message: m.message,
-    createdAt: m.createdAt,
-    createdBy: m.createdBy,
-    fileCount: m.affectedFiles?.length ?? 0,
-    affectedFiles: m.affectedFiles ?? [],
-  } satisfies MilestoneRow));
-
-  milestones.sort((a, b) => {
-    const ac = a.createdAt || '';
-    const bc = b.createdAt || '';
-    if (ac && bc && ac !== bc) return bc.localeCompare(ac);
-    return b.id.localeCompare(a.id, undefined, { numeric: true });
-  });
-
-  // Restore lane context
-  (engine as any).activeLaneId = savedLaneId;
-  (engine as any).activeLaneLog = savedLaneLog;
-  if (savedLaneId) engine.open();
 
   // Newest / most recently updated lanes first within status (grid + table).
   lanes.sort((a, b) => {
