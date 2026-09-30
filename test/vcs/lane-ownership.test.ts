@@ -10,6 +10,7 @@ import { createVcsOp } from '../../src/vcs/ops.js';
 import {
   assertCrossAgentFileWriteAllowed,
   buildActiveLaneFileOwners,
+  fileOwnerFor,
   CrossAgentFileOwnershipError,
   formatCrossAgentOwnershipMessage,
 } from '../../src/vcs/lane-ownership.js';
@@ -72,6 +73,19 @@ describe('TRL-117 AC4 cross-agent file ownership', () => {
     const owners = buildActiveLaneFileOwners(join(TEST_ROOT, '.trellis'));
     expect(owners.get('docs/AGENTS.md')?.agentId).toBe('agent:alice');
     expect(owners.get('docs/AGENTS.md')?.laneId).toBe(lane.id);
+  });
+
+  test('fileOwnerFor resolves the owning lane for a path', async () => {
+    const lane = await engineA.createLane({ name: 'docs' });
+    await appendOwnedFile(TEST_ROOT, lane.id, 'agent:alice', 'docs/AGENTS.md', 'alice');
+
+    const trellisDir = join(TEST_ROOT, '.trellis');
+    expect(fileOwnerFor(trellisDir, 'docs/AGENTS.md')?.agentId).toBe('agent:alice');
+    expect(fileOwnerFor(trellisDir, 'docs/other.md')).toBeNull();
+    // excluding the owning lane (the writer's own) drops ownership
+    expect(
+      fileOwnerFor(trellisDir, 'docs/AGENTS.md', { excludeLaneId: lane.id }),
+    ).toBeNull();
   });
 
   test('assert allows same agent; rejects other agent with handoff prompt', async () => {

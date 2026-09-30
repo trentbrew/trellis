@@ -102,6 +102,7 @@ import { buildWip, noteEntityAttrs, cycleAttrs } from '../operator/wip.js';
 import { buildCadence, type CadenceSignal } from '../operator/cadence.js';
 import { requireDestructiveConfirm } from '../vcs/destructive-guard.js';
 import { registerLaneCommands } from './lane.js';
+import { registerGuardCommand } from './guard.js';
 import { registerAdminCommands } from './admin.js';
 import { registerTestCommands } from './test-cli.js';
 import { registerBrowserCommands } from './browser-cli.js';
@@ -7723,6 +7724,7 @@ gatewayProgram
 // ---------------------------------------------------------------------------
 
 registerLaneCommands(program);
+registerGuardCommand(program);
 registerAdminCommands(program);
 registerTestCommands(program);
 registerBrowserCommands(program);
