@@ -24,6 +24,7 @@ export * from './issue.js';
 export * from './op-log.js';
 export * from './idb-op-log.js';
 export * from './lane.js';
+export * from './lane-ownership.js';
 export * from './test-manifest.js';
 export * from './test-runner.js';
 export * from './authority.js';
