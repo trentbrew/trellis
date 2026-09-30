@@ -73,6 +73,9 @@ export function createKernelCronStore(kernel: TrellisKernel): CronStore {
     async updateEntity(id, attrs) {
       await kernel.updateEntity(id, attrs as any, CRON_CTX);
     },
+    async createEntity(id, type, attrs) {
+      await kernel.createEntity(id, type, attrs as any, undefined, CRON_CTX);
+    },
   };
 }
 

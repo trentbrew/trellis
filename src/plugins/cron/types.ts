@@ -32,6 +32,11 @@ export interface CronRunRecord {
 export interface CronHandlerContext {
   getEntity(id: string): Promise<Record<string, unknown> | null>;
   updateEntity(id: string, attrs: Record<string, unknown>): Promise<void>;
+  createEntity(
+    id: string,
+    type: string,
+    attrs: Record<string, unknown>,
+  ): Promise<void>;
 }
 
 export interface CronStore extends CronHandlerContext {

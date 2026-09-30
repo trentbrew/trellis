@@ -38,8 +38,19 @@ export const CronRunType = defineType(
   { title: 'jobId', label: 'Cron Run' },
 );
 
+export const ClockType = defineType(
+  'Clock',
+  {
+    currentTime: z.string(),
+    epochMs: z.number(),
+    tickCount: z.number().default(0),
+  },
+  { title: 'currentTime', label: 'Clock' },
+);
+
 export type CronJob = InferType<typeof CronJobType>;
 export type CronRun = InferType<typeof CronRunType>;
+export type Clock = InferType<typeof ClockType>;
 
 export const cronOntology: OntologySchema = {
   id: 'trellis:cron',
@@ -74,6 +85,16 @@ export const cronOntology: OntologySchema = {
         { name: 'status', type: 'string', required: true },
         { name: 'error', type: 'string' },
         { name: 'result', type: 'any' },
+      ],
+    },
+    {
+      name: 'Clock',
+      description:
+        'Singleton wall-clock fact fed by the scheduler (ADR 0019/0047) — the Now that cadence rules join against',
+      attributes: [
+        { name: 'currentTime', type: 'string', required: true },
+        { name: 'epochMs', type: 'number', required: true },
+        { name: 'tickCount', type: 'number' },
       ],
     },
   ],

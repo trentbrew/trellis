@@ -18,6 +18,24 @@ export function createBuiltinHandlers(): Record<string, CronHandler> {
       at: new Date().toISOString(),
     }),
 
+    /**
+     * Feed the singleton `clock:now` fact — the Now that cadence rules join
+     * against (ADR 0047). Step 1 of the scheduler→rule→dispatch pattern: the
+     * scheduler asserts wall-clock into the graph; rules read it.
+     */
+    'builtin:clock': async (_job, ctx) => {
+      const now = new Date();
+      const existing = await ctx.getEntity('clock:now');
+      const attrs = {
+        currentTime: now.toISOString(),
+        epochMs: now.getTime(),
+        tickCount: Number(existing?.tickCount ?? 0) + 1,
+      };
+      if (existing) await ctx.updateEntity('clock:now', attrs);
+      else await ctx.createEntity('clock:now', 'Clock', attrs);
+      return attrs;
+    },
+
     'builtin:counter': async (job, ctx) => {
       const payload = (job.payload ?? {}) as { targetId?: string };
       const targetId = payload.targetId;
