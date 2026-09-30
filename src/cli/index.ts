@@ -4497,8 +4497,13 @@ function computeCadence(
 
 program
   .command('cadence')
-  .description('Derived due-check — overdue cycles, note triage debt (ADR 0050)')
+  .description('Derived due-check — overdue cycles, note debt, stale lanes (ADR 0050)')
   .option('-d, --note-days <n>', 'Note triage age threshold in days', '14')
+  .option('--lanes', 'Include lane hygiene (stale/abandoned lanes) in the due-check')
+  .option(
+    '--dispatch',
+    'Execute lane dispositions (implies --lanes; runs the lane gc sweep)',
+  )
   .option('--json', 'Emit machine-readable JSON')
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (opts: any) => {
@@ -4510,6 +4515,23 @@ program
         process.exit(1);
       }
       const c = computeCadence(engine, { noteDays });
+
+      // Lane hygiene (TRL-407/TRL-88): classify lanes and, with --dispatch,
+      // execute dispositions. This is the scheduler's repo-aware sweep — the
+      // tenant cron cannot run it (lanes are VCS-engine-scoped).
+      if (opts.lanes || opts.dispatch) {
+        const { gcLanes } = await import('../vcs/lane-gc.js');
+        const rows = await gcLanes(engine, { apply: !!opts.dispatch });
+        for (const row of rows) {
+          if (row.disposition === 'leave') continue;
+          c.signals.push({
+            kind: `lane-${row.disposition}`,
+            message: `lane ${row.laneId.slice(0, 13)} → ${row.disposition} (${row.boundIssue ?? 'no issue'}, ${row.opCount} ops)${opts.dispatch ? ' [dispatched]' : ''}`,
+          });
+        }
+        c.due = c.signals.length > 0;
+      }
+
       if (opts.json) {
         console.log(JSON.stringify(c, null, 2));
       } else if (!c.due) {
