@@ -7,9 +7,10 @@ import { dirname, join } from 'node:path';
 import { spawn, type ChildProcess } from 'node:child_process';
 import chalk from 'chalk';
 import { DEFAULT_TURTLE_ADMIN_URL, probeUrl } from './admin.js';
+import { bundledTurtleAdminAvailable } from '../ui/turtle-admin-static.js';
 
 const DB_HEALTH_URL = 'http://127.0.0.1:4320/health';
-const AUTOSTART_WAIT_MS = 45_000;
+const AUTOSTART_WAIT_MS = 120_000;
 const POLL_MS = 400;
 
 function isTurtleAdminDir(dir: string): boolean {
@@ -74,10 +75,10 @@ export async function ensureTurtleAdminReachable(
   const children: ChildProcess[] = [];
   const uiUrl = process.env.TURTLE_ADMIN_URL?.trim() || DEFAULT_TURTLE_ADMIN_URL;
 
-  if (await probe(uiUrl)) {
+  if (bundledTurtleAdminAvailable() || process.env.TRELLIS_ADMIN_NO_AUTOSTART === '1') {
     return { children };
   }
-  if (process.env.TRELLIS_ADMIN_NO_AUTOSTART === '1') {
+  if (await probe(uiUrl)) {
     return { children };
   }
 
