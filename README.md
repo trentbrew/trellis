@@ -38,6 +38,7 @@ npm install -g trellis
 mkdir my-project && cd my-project
 trellis init      # guided or one-shot setup
 trellis ui        # live graph explorer
+trellis studio    # full Studio UI in the browser, bridged to this repo
 trellis code      # start an agent coding session
 ```
 
@@ -54,6 +55,17 @@ trellis garden                          # discover & revive abandoned work
 trellis query 'find ?e where type = "Task"'
 ```
 
+Run the operator surface when you need the derived picture rather than raw ops:
+
+```bash
+trellis note add "try lazy eviction for the chunk cache"   # commitment-free capture
+trellis wip                 # active / queue / shipped / next / cycles / notes
+trellis cycle create sept-sprint --target 2026-09-30
+trellis cadence             # due-check: overdue cycles, note debt, stale mirrors
+trellis mirror --write      # deterministic graph index; --check fails on drift
+trellis report              # derived worklog + epic→telos rollup
+```
+
 ## Build a realtime app
 
 Scaffold a typed, live-graph app — React, Vue, or Svelte — backed by Trellis:
@@ -63,10 +75,10 @@ npm create trellis@latest
 ```
 
 ```ts
-import { defineType } from "trellis/schema";
-import { z } from "zod";
+import { defineType } from 'trellis/schema';
+import { z } from 'zod';
 
-export const Task = defineType("Task", {
+export const Task = defineType('Task', {
   title: z.string(),
   done: z.boolean(),
 });
@@ -85,18 +97,55 @@ to every subscriber — the same write path.
 
 ## API surface
 
-The `trellis` package exposes focused subpaths:
+The `trellis` package exposes focused subpaths.
 
-| Import                             | Purpose                                     |
-| ---------------------------------- | ------------------------------------------- |
-| `trellis/client`                   | Local + remote client SDK                   |
-| `trellis/schema`                   | `defineType`, typed entities, EQL-S queries |
-| `trellis/{react,vue,svelte}/typed` | Live, schema-typed reads + mutations        |
-| `trellis/realtime`                 | Presence, chat, CRDT text                   |
-| `trellis/presence`                 | Agent presence ledger + live liveness census |
-| `trellis/operator`                 | Derived operator reads (`wip`)               |
-| `trellis/cms`                      | Read content collections over HTTP          |
-| `trellis/server`                   | HTTP + WebSocket DB server                  |
+**Runtime & data**
+
+| Import                             | Purpose                                            |
+| ---------------------------------- | -------------------------------------------------- |
+| `trellis`                          | Top-level engine, kernel, scaffold helpers         |
+| `trellis/core`                     | `TrellisKernel` — graph CRUD, no VCS dependency    |
+| `trellis/vcs`                      | Ops, branches, milestones, semantic diff           |
+| `trellis/sync`                     | Peer sync + bounded op-log readers                 |
+| `trellis/client`                   | Local + remote client SDK                          |
+| `trellis/schema`                   | `defineType`, typed entities, EQL-S queries        |
+| `trellis/{react,vue,svelte}/typed` | Live, schema-typed reads + mutations               |
+| `trellis/realtime`                 | Presence, chat, CRDT text                          |
+| `trellis/presence`                 | Agent presence ledger + live liveness census       |
+| `trellis/operator`                 | Derived operator reads (`wip`)                     |
+| `trellis/decisions`                | Decision traces, query, hook registry              |
+| `trellis/reasoning`                | Argumentation: attack graphs + grounded extensions |
+| `trellis/links`                    | Wiki-link parsing + graph link resolution          |
+| `trellis/ai`                       | Embeddings, chunker, vector store                  |
+| `trellis/cms`                      | Read content collections over HTTP                 |
+| `trellis/server`                   | HTTP + WebSocket DB server                         |
+| `trellis/db`                       | Low-level EAV store APIs                           |
+| `trellis/format`                   | Shared terminal formatters for CLI + shells        |
+
+**UI primitives** — each ships `/core`, `/react`, `/vue`, `/svelte`, and `/vanilla` entries:
+
+| Import             | Purpose                         |
+| ------------------ | ------------------------------- |
+| `trellis/forms`    | Schema-typed, validated forms   |
+| `trellis/palette`  | Command palette                 |
+| `trellis/dialog`   | Modal dialogs                   |
+| `trellis/timeline` | Timeline views                  |
+| `trellis/combobox` | Searchable select               |
+| `trellis/view`     | View state: columns, sort, mode |
+| `trellis/headless` | Unstyled behavior + registry    |
+
+**Persistence & plugins**
+
+| Import                              | Purpose                               |
+| ----------------------------------- | ------------------------------------- |
+| `trellis/persist/better-sqlite`     | better-sqlite3 backend                |
+| `trellis/persist/sqljs`             | sql.js (browser) backend              |
+| `trellis/persist/factory`           | Runtime backend selection             |
+| `trellis/plugins/cron`              | Scheduler-fed facts (`builtin:clock`) |
+| `trellis/plugins/idea-garden`       | Abandoned-work detection              |
+| `trellis/plugins/plan-approval`     | Plan gate for agent harnesses         |
+| `trellis/plugins/agent-memory`      | Durable agent memory                  |
+| `trellis/plugins/proactive-watcher` | Graph-change reactions                |
 
 ## Status
 
