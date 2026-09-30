@@ -26,7 +26,7 @@ describe('resolveAdminOpenTarget', () => {
     delete process.env.TURTLE_ADMIN_URL;
     const probe = vi.fn(async (url: string) => url === DEFAULT_TURTLE_ADMIN_URL);
     const result = await resolveAdminOpenTarget(kernelUrl, probe);
-    expect(result).toEqual({ url: DEFAULT_TURTLE_ADMIN_URL, label: 'turtle-admin' });
+    expect(result).toEqual({ url: DEFAULT_TURTLE_ADMIN_URL, label: 'turtle-admin (dev)' });
     expect(probe).toHaveBeenCalledWith(DEFAULT_TURTLE_ADMIN_URL);
   });
 
@@ -35,7 +35,7 @@ describe('resolveAdminOpenTarget', () => {
     process.env.TURTLE_ADMIN_URL = 'http://127.0.0.1:4950';
     const probe = vi.fn(async (url: string) => url === 'http://127.0.0.1:4950');
     const result = await resolveAdminOpenTarget(kernelUrl, probe);
-    expect(result.label).toBe('turtle-admin');
+    expect(result.label).toBe('turtle-admin (dev)');
     expect(probe).toHaveBeenNthCalledWith(1, 'http://127.0.0.1:4950');
   });
 
@@ -48,10 +48,18 @@ describe('resolveAdminOpenTarget', () => {
     expect(result).toEqual({ url: playground, label: 'playground /vcs' });
   });
 
-  it('falls back to kernel when no external UI responds', async () => {
+  it('prefers bundled SPA on kernel origin over dev server probe', async () => {
+    delete process.env.TRELLIS_ADMIN_URL;
+    const probe = vi.fn(async () => true);
+    const result = await resolveAdminOpenTarget(kernelUrl, probe, { bundledTurtleAdmin: true });
+    expect(result).toEqual({ url: kernelUrl, label: 'turtle-admin (bundled)' });
+    expect(probe).not.toHaveBeenCalled();
+  });
+
+  it('falls back to legacy when no external UI responds', async () => {
     delete process.env.TRELLIS_ADMIN_URL;
     const probe = vi.fn(async () => false);
     const result = await resolveAdminOpenTarget(kernelUrl, probe);
-    expect(result).toEqual({ url: kernelUrl, label: 'kernel / (bundled UI)' });
+    expect(result).toEqual({ url: kernelUrl, label: 'legacy admin (/classic)' });
   });
 });

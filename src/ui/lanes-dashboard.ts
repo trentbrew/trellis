@@ -38,6 +38,11 @@ import {
   uiDevOutDir,
   type UiDevReloadReason,
 } from './ui-dev.js';
+import {
+  bundledTurtleAdminAvailable,
+  serveTurtleAdminStatic,
+} from './turtle-admin-static.js';
+import { isUiDbProxyPath, proxyUiDbRequest } from './turtle-admin-ui-db.js';
 
 export interface LanesDashboardOptions {
   rootPath: string;
@@ -539,18 +544,45 @@ export async function startLanesDashboard(
       });
     }
 
-    // Operator console (TRL-191) — AffordanceShell + Operate sidebar; index + /admin alias
+    // Operator console — bundled turtle-admin SPA at `/` when shipped; legacy AffordanceShell at `/classic`
     if (path === '/admin' || path === '/admin.html') {
+      const loc = bundledTurtleAdminAvailable() ? `/${url.search}` : `/classic${url.search}`;
       return new Response(null, {
         status: 302,
-        headers: {
-          ...headers,
-          Location: `/${url.search}`,
-        },
+        headers: { ...headers, Location: loc },
+      });
+    }
+
+    if (bundledTurtleAdminAvailable() && isUiDbProxyPath(path)) {
+      const proxied = await proxyUiDbRequest(req);
+      const merged = new Headers(proxied.headers);
+      for (const [k, v] of Object.entries(headers)) merged.set(k, v);
+      return new Response(proxied.body, {
+        status: proxied.status,
+        statusText: proxied.statusText,
+        headers: merged,
+      });
+    }
+
+    if (path === '/classic' || path === '/classic.html') {
+      const htmlPath = findUiAsset('admin.html');
+      if (!htmlPath) {
+        return new Response('admin.html not found — run from trellis-node.', {
+          status: 404,
+          headers,
+        });
+      }
+      let html = readFileSync(htmlPath, 'utf-8');
+      html = injectIssuePrefixMeta(html, opts.rootPath);
+      if (uiDev) html = injectDevLiveReload(html);
+      return new Response(html, {
+        headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' },
       });
     }
 
     if (path === '/') {
+      const bundled = serveTurtleAdminStatic(req, '/', headers);
+      if (bundled) return bundled;
       const htmlPath = findUiAsset('admin.html');
       if (!htmlPath) {
         return new Response('admin.html not found — run from trellis-node.', {
@@ -770,6 +802,11 @@ export async function startLanesDashboard(
           headers,
         });
       }
+    }
+
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      const spa = serveTurtleAdminStatic(req, path, headers);
+      if (spa) return spa;
     }
 
     return new Response('Not Found', { status: 404, headers });
