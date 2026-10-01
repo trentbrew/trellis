@@ -113,6 +113,12 @@ export const ISSUE_COORDINATION_ATTRS = new Set([
   'assignee',
 ]);
 
+/**
+ * Integration-owned attrs that may diverge while a lane only links/touches an
+ * issue entity — suppress soft conflicts only (lane title writes still hard-conflict).
+ */
+export const ISSUE_SOFT_COORDINATION_ATTRS = new Set(['title']);
+
 // ---------------------------------------------------------------------------
 // Store helpers
 // ---------------------------------------------------------------------------
@@ -329,7 +335,8 @@ function detectEntityConflicts(
       if (laneAttrs.has(attribute)) continue;
       if (
         isIssueEntity(entityId) &&
-        ISSUE_COORDINATION_ATTRS.has(attribute)
+        (ISSUE_COORDINATION_ATTRS.has(attribute) ||
+          ISSUE_SOFT_COORDINATION_ATTRS.has(attribute))
       ) {
         continue;
       }

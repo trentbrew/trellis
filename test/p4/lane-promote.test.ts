@@ -299,6 +299,27 @@ describe('Lane promote', () => {
     expect(plan.canPromote).toBe(false);
   });
 
+  test('integration title rename does not soft-block when lane only links issue', async () => {
+    const parent = await engine.createIssue('Parent impl');
+    const parentId = parent.vcs!.issueId!;
+    const lane = await engine.createLane();
+    await engine.enterLane(lane.id);
+    const review = await engine.createIssue('Review pass: impl', {
+      parentIssueId: parentId,
+      labels: ['review'],
+    });
+    const reviewId = review.vcs!.issueId!;
+    await engine.leaveLane();
+
+    await engine.updateIssue(reviewId, {
+      title: 'Review pass: TRL-88 undo + conflict',
+    });
+
+    const plan = await engine.promoteLane(lane.id, { dryRun: true });
+    expect(plan.blockingConflicts).toHaveLength(0);
+    expect(plan.opsToReplay.length).toBeGreaterThanOrEqual(0);
+  });
+
   test('parallel title edit promotes when integration owns description', async () => {
     const created = await engine.createIssue('Soft conflict issue', {
       description: 'base description',
