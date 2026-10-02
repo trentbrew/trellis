@@ -247,6 +247,7 @@ function terminalTableLines(
       let display: string;
       if (i === 0) display = s.cyan(clipped);
       else if (typeof row[col] === 'boolean') display = formatTerminalCell(row[col], s);
+      else if (row[col] === null || row[col] === undefined) display = formatTerminalCell(row[col], s);
       else display = clipped;
       return padTerminalCell(display, widths[i]);
     });

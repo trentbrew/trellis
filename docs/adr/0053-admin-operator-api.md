@@ -63,6 +63,7 @@ Enforced in `src/ui/local-access.ts`, shared by `trellis admin` and `trellis lan
 ### 2. Reads are projections, never a store
 
 Clients read derived projections: the snapshot, `/api/issues`, `/api/issues/:id`,
+`GET /api/issues/:id/docs` (issue long-form markdown on disk — [0057](./0057-issue-dialog-docs-read-projection.md)),
 `/api/causal-graph`, and paged ops (d5). The SSE stream emits `snapshot` only when
 new ops land (idle means silence), and clients refetch on it. No client mirrors
 issues into its own store (d6).
@@ -97,6 +98,10 @@ virtualized feed; they never load the whole log.
 Issue truth stays in the op-log, behind this API. UI state (views, pages, tags)
 belongs to the client (`os/admin` uses its own `trellis db serve`). The client
 registers no issue schema, so issue data cannot land in the UI db.
+
+Long-form issue markdown (`docs/issues/<id>/journal.md`, `summary.md`) is a
+**read-only repo projection** via `/api/issues/:id/docs`, not UI-state `RecordBody`
+pages ([0057](./0057-issue-dialog-docs-read-projection.md)).
 
 ### 7. The snapshot carries `stats`, including the serving build
 
@@ -177,3 +182,13 @@ from inside a trellis-node checkout:
   reach `decompose` build.
 - `cliVersion()` finds the package's own `package.json` from a bundled chunk (it
   printed `0.0.0`), which d7's `stats.version` relies on.
+
+## Addenda
+
+### 2026-10-02 — Issue dialog docs read projection
+
+[ADR 0057](./0057-issue-dialog-docs-read-projection.md) extends §2 reads with
+`GET /api/issues/:id/docs` and clarifies §6: repo markdown for issues is served as
+an operator projection; turtle-admin must not persist issue bodies to the UI db.
+Issue ids are validated before path join (`assertIssueDocId`); reads are confined
+under `docs/issues/` with `realpath` (see 0057 §7 — not `issueDocRelDir`-alone checks).

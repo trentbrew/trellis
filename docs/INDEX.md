@@ -135,6 +135,7 @@
 | Spec: trellis admin — causal history graph (Logs · Branches) | draft | [specs/trellis-admin-causal-graph.md](./specs/trellis-admin-causal-graph.md) |
 | Spec: trellis admin — chrome polish (post TRL-229) | draft | [specs/trellis-admin-chrome-polish.md](./specs/trellis-admin-chrome-polish.md) |
 | Spec: trellis admin — Operate inline cell edit | draft | [specs/trellis-admin-datatable-cell-edit.md](./specs/trellis-admin-datatable-cell-edit.md) |
+| Spec: turtle-admin — issue dialog long-form docs (ADR 0057) | draft | [specs/trellis-admin-issue-docs.md](./specs/trellis-admin-issue-docs.md) |
 | Spec: trellis admin — extract Operate datatable module | draft | [specs/trellis-admin-datatable-extract.md](./specs/trellis-admin-datatable-extract.md) |
 | Spec: trellis admin — Operate datatable (SpreadsheetTable TML) | draft | [specs/trellis-admin-datatable.md](./specs/trellis-admin-datatable.md) |
 | Spec: trellis admin shell — Operate sidebar + index / | draft | [specs/trellis-admin-shell.md](./specs/trellis-admin-shell.md) |

@@ -1,0 +1,10 @@
+sequenceDiagram
+  participant Admin as turtle_admin
+  participant API as lanes_dashboard
+  participant Disk as docs_issues
+  participant VCS as op_log
+  Admin->>API: GET /api/issues/:id/docs
+  API->>VCS: getIssue(id)
+  API->>Disk: readIssueDocFiles confined
+  API-->>Admin: JSON with rendered ladder
+  Admin->>Admin: BlockEditor readonly markdown
