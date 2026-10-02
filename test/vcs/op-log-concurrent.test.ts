@@ -10,7 +10,7 @@
  * writes only its own line via `appendFileSync` (atomic for small payloads).
  */
 import { describe, test, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, readFileSync } from 'fs';
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { JsonOpLog } from '../../src/vcs/op-log.js';
@@ -104,6 +104,42 @@ describe('JsonOpLog durability under concurrent writers', () => {
     for (const o of reloaded) {
       expect(await verifyVcsOpHash(o as any)).toBe(true);
     }
+  });
+
+  test('reclaims an orphaned lock from a dead pid instead of timing out', async () => {
+    // A killed holder (e.g. a detached catch-up reaped at its timeout) never
+    // runs the finally-block unlink, leaving a lock with a dead owner pid.
+    const lockPath = `${logPath}.lock`;
+    // pid 2^31-1 is not a live process on any supported platform.
+    writeFileSync(
+      lockPath,
+      JSON.stringify({ pid: 2147483647, hostname: process.env.HOSTNAME ?? process.env.USER, acquiredAt: new Date().toISOString() }),
+    );
+
+    const log = new JsonOpLog(logPath);
+    log.load();
+    const op = await stubOp(1);
+    log.append(op);
+
+    expect(log.count()).toBe(1);
+    expect(existsSync(lockPath)).toBe(false);
+  });
+
+  test('reclaims an orphaned empty (0-byte) lock older than the stale window', async () => {
+    const lockPath = `${logPath}.lock`;
+    // Simulate a crash between open('wx') and writing owner metadata.
+    writeFileSync(lockPath, '');
+    const old = new Date(Date.now() - 5 * 60_000);
+    const { utimesSync } = await import('fs');
+    utimesSync(lockPath, old, old);
+
+    const log = new JsonOpLog(logPath);
+    log.load();
+    const op = await stubOp(1);
+    log.append(op);
+
+    expect(log.count()).toBe(1);
+    expect(existsSync(lockPath)).toBe(false);
   });
 
   test('legacy JSON-array file loads and migrates to JSONL on first append', async () => {

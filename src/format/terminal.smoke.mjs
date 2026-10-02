@@ -52,4 +52,14 @@ if (portCol < 0 || portVal !== portCol) {
   throw new Error(`table columns misaligned: header@${portCol} row@${portVal}\n${header}\n${row}`)
 }
 
+const sparse = [{ id: 'a:1', name: null, type: 'Thing' }]
+const sparseLines = formatTerminal(sparse, {
+  hints: { title: 'Sparse', columns: ['id', 'type', 'name'] },
+  style: ansi,
+})
+const sparseRow = sparseLines.find((l) => l.includes('a:1')) ?? ''
+if (!sparseRow.includes('\u001b[2m—')) {
+  throw new Error(`null table cells should be dim em dash: ${sparseRow}`)
+}
+
 console.log('format terminal smoke: ok')

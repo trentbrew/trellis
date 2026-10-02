@@ -26,6 +26,7 @@ import {
   unlinkSync,
   renameSync,
   appendFileSync,
+  statSync,
 } from 'fs';
 import { dirname, resolve } from 'path';
 import type { VcsOp } from './types.js';
@@ -82,6 +83,72 @@ function lockTimeoutMs(): number {
   if (!raw) return 5000;
   const parsed = Number(raw);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 5000;
+}
+
+/**
+ * A lock is stale when its owner is provably gone (same host, dead pid) or
+ * when it is older than the max age. Max age guards cross-host locks (where
+ * pid liveness is meaningless) and abandoned locks whose owner pid was
+ * recycled. Override with TRELLIS_OPLOG_LOCK_STALE_MS.
+ */
+function lockStaleMs(): number {
+  const raw = process.env.TRELLIS_OPLOG_LOCK_STALE_MS;
+  if (!raw) return 60_000;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 60_000;
+}
+
+interface OpLogLockRecord {
+  pid: number;
+  hostname?: string;
+  acquiredAt?: string;
+}
+
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err: unknown) {
+    return (err as NodeJS.ErrnoException)?.code === 'EPERM';
+  }
+}
+
+function readLockRecord(lockPath: string): OpLogLockRecord | null {
+  try {
+    const parsed = JSON.parse(readFileSync(lockPath, 'utf-8')) as OpLogLockRecord;
+    return typeof parsed === 'object' && parsed !== null ? parsed : null;
+  } catch {
+    // Empty or malformed (e.g. a crash between open and write) — no owner
+    // metadata, so treat as null and let the age check decide.
+    return null;
+  }
+}
+
+function isLockStale(lockPath: string): boolean {
+  const record = readLockRecord(lockPath);
+  const hostname = process.env.HOSTNAME ?? process.env.USER;
+  if (record) {
+    if (record.hostname && hostname && record.hostname !== hostname) {
+      // Different host — fall back to age only.
+      const age = record.acquiredAt ? Date.now() - new Date(record.acquiredAt).getTime() : 0;
+      return age > lockStaleMs();
+    }
+    if (typeof record.pid === 'number' && !isProcessAlive(record.pid)) {
+      return true;
+    }
+    if (record.acquiredAt) {
+      return Date.now() - new Date(record.acquiredAt).getTime() > lockStaleMs();
+    }
+    return false;
+  }
+  // No readable owner metadata: reclaim by file age so an orphaned 0-byte
+  // lock (process killed before writing its record) cannot deadlock the repo.
+  try {
+    const stat = statSync(lockPath);
+    return Date.now() - stat.mtimeMs > lockStaleMs();
+  } catch {
+    return false;
+  }
 }
 
 export class JsonOpLog implements OpLog {
@@ -258,11 +325,37 @@ export class JsonOpLog implements OpLog {
     while (Date.now() < deadline) {
       try {
         lockFd = openSync(this.lockPath, 'wx');
+        // Stamp owner metadata so a crashed/killed holder can be reclaimed
+        // instead of deadlocking every later run (a detached process killed at
+        // its timeout never runs the finally-block unlink).
+        try {
+          writeFileSync(
+            lockFd,
+            JSON.stringify({
+              pid: process.pid,
+              hostname: process.env.HOSTNAME ?? process.env.USER,
+              acquiredAt: new Date().toISOString(),
+            }),
+          );
+        } catch {
+          // Metadata is best-effort; age-based reclaim still covers it.
+        }
         break;
       } catch (err: any) {
         if (err?.code !== 'EEXIST') {
           throw err;
         }
+        // Reclaim an orphaned lock (dead owner / too old) rather than spinning
+        // until the timeout and failing hard.
+        if (isLockStale(this.lockPath)) {
+          try {
+            unlinkSync(this.lockPath);
+          } catch {
+            // another waiter may have reclaimed it first
+          }
+        }
+        // Brief sleep so we do not hot-spin on EEXIST while another live holder runs.
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 15);
       }
     }
 
