@@ -51,6 +51,7 @@ import { embed } from '../embeddings/model.js';
 import { EmbeddingManager } from '../embeddings/search.js';
 import { importFromGit } from '../git/git-importer.js';
 import { importGitBug } from '../git/git-bug-importer.js';
+import { importGitHub } from '../git/github-importer.js';
 import { exportToGit } from '../git/git-exporter.js';
 import { buildRepoExamples } from './examples.js';
 import { validateIssueCreateTitle } from './issue-create-guard.js';
@@ -1108,6 +1109,45 @@ program
       console.log();
     } catch (err: any) {
       console.error(chalk.red(`\ngit-bug import failed: ${err.message}`));
+      process.exit(1);
+    }
+  });
+
+// ---------------------------------------------------------------------------
+// trellis import-github (ADR-0036 §3)
+// ---------------------------------------------------------------------------
+
+program
+  .command('import-github')
+  .description('Import GitHub issues into this Trellis repo (ADR-0036 §3, read-only)')
+  .requiredOption('--repo <owner/name>', 'GitHub repository')
+  .option('-p, --path <path>', 'Target TrellisVCS repository path', '.')
+  .action(async (opts) => {
+    const rootPath = resolveRepoRoot(opts.path);
+
+    if (!TrellisVcsEngine.isRepo(rootPath)) {
+      console.error(chalk.red(`\nNot a TrellisVCS repository: ${rootPath}`));
+      process.exit(1);
+    }
+
+    console.log(chalk.dim(`Importing GitHub issues from: ${opts.repo}`));
+    console.log(chalk.dim(`Target: ${rootPath}`));
+    console.log();
+
+    try {
+      const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
+      engine.open();
+      const result = await importGitHub(engine.capabilityContext(), { repo: opts.repo });
+
+      console.log(chalk.green('✓ GitHub import complete'));
+      console.log(`  ${chalk.dim('Integration:')}    ${result.integrationId}`);
+      console.log(`  ${chalk.dim('Issues:')}         ${result.issuesImported}`);
+      console.log(`  ${chalk.dim('Ops:')}            ${result.opsCreated}`);
+      console.log(`  ${chalk.dim('Comments:')}       ${result.commentsCreated}`);
+      console.log(`  ${chalk.dim('Skipped:')}        ${result.skipped}`);
+      console.log();
+    } catch (err: any) {
+      console.error(chalk.red(`\nGitHub import failed: ${err.message}`));
       process.exit(1);
     }
   });
