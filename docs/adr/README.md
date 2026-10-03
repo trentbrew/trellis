@@ -32,6 +32,7 @@ Decisions for the **Agent Lane** program (`trellis lane`). Status: **accepted**
 | [0054](./0054-lane-scoped-file-ownership.md) | Lane-scoped cross-agent file ownership | Ownership keyed on lane, not agentId (host sessions share one identity); `trellis guard --exclude-lane`; one policy on `trellis/vcs`, thin hooks (accepted) |
 | [0055](./0055-lane-hygiene-scheduler-placement.md) | Lane hygiene scheduled at the host | Tenant cron is kernel/tenant-scoped; lanes are VCS-engine-scoped → host launchd sweep (`cadence --lanes --dispatch`); `builtin:clock` seeds the rule future (accepted) |
 | [0056](./0056-trellis-shift-close-of-day-ceremony.md) | `trellis shift` — derived, gated close-of-day | Close = mirror of the morning: derived read + `whereami` checkpoints + hygiene gate; `buildShift` on `trellis/operator`; one command to leave, one to re-enter (proposed) |
+| [0058](./0058-command-id-in-provenance.md) | `commandId` in op provenance — durable per-command undo targeting | Add `commandId` to `OpProvenance`, null-normalized (ADR-0021 slot pattern); not a separate column; enables ADR-0016 §7 `undo <commandId>` (accepted) |
 
 Desk issue: **TRL-35** (W0), **TRL-36** (W1). Plan:
 `TRELLIS/tooling/planning/agent-lanes.md`.
