@@ -186,4 +186,12 @@ export class GitReader {
       maxBuffer: 100 * 1024 * 1024,
     });
   }
+
+  /**
+   * Run a raw git command (read-only) and return stdout as a UTF-8 string.
+   * Used by the git-bug adapter (ADR 0049) to read `refs/bugs/*` and blobs.
+   */
+  readRaw(args: string): string {
+    return this.git(args);
+  }
 }
