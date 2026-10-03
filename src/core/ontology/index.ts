@@ -39,7 +39,7 @@ export {
 export type { Atom } from '../store/eav-store.js';
 
 // Core ontology (immutable built-in schemas)
-export { CORE_ONTOLOGY, CORE_VERSION } from './core-ontology.js';
+export { CORE_ONTOLOGY, CORE_VERSION, integrationEntityId, KNOWN_INTEGRATION_PROVIDERS } from './core-ontology.js';
 
 // Registry
 export { OntologyRegistry } from './registry.js';
