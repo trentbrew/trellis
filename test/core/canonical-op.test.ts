@@ -302,6 +302,38 @@ describe('canonical op hashing (ADR 0021)', () => {
       });
     });
 
+    it('round-trips a commandId in provenance (ADR 0058) and verifies', async () => {
+      const { op } = await kernel.addFact('e:5', 'name', 'y', {
+        provenance: { ...PROVENANCE.mcp, commandId: 'cmd:3' },
+      });
+      const readBack = backend.getByHash(op.hash)!;
+      expect(readBack.provenance).toEqual({ actorType: 'ai', origin: 'mcp', commandId: 'cmd:3' });
+      expect(await verifyOpHash(readBack)).toEqual({ valid: true, legacy: false });
+    });
+
+    it('an op without commandId keeps the pre-0058 hash (old ops still verify)', async () => {
+      const header = { kind: 'addFacts', timestamp: '2026-01-01T00:00:00.000Z', agentId: 'a' };
+      const payload = { facts: [{ e: 'e:1', a: 'n', v: 1 }], provenance: PROVENANCE.mcp };
+      // A commandId-less op must NOT gain a null key in the canonical body —
+      // otherwise every pre-existing v2 op would stop verifying.
+      const body = canonicalOpBody(payload);
+      expect(body).not.toContain('commandId');
+      const withNull = await hashKernelOp(header, { ...payload, provenance: { ...PROVENANCE.mcp, commandId: null } });
+      const without = await hashKernelOp(header, payload);
+      expect(withNull).toBe(without);
+    });
+
+    it('commandId is covered by the hash — swapping it invalidates', async () => {
+      const { op } = await kernel.addFact('e:7', 'name', 'z', {
+        provenance: { ...PROVENANCE.mcp, commandId: 'cmd:1' },
+      });
+      const forged: KernelOp = {
+        ...backend.getByHash(op.hash)!,
+        provenance: { ...PROVENANCE.mcp, commandId: 'cmd:2' },
+      };
+      expect(await verifyOpHash(forged)).toEqual({ valid: false, legacy: false });
+    });
+
     it('is covered by the hash — swapping origin invalidates it', async () => {
       const { op } = await kernel.addFact('e:6', 'name', 'x', {
         provenance: PROVENANCE.mcp,

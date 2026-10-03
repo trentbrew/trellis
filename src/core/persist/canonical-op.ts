@@ -35,6 +35,13 @@ export const OP_PREIMAGE_VERSION = 2;
 export interface OpProvenance {
   actorType: 'user' | 'machine' | 'ai';
   origin: 'cli' | 'sdk' | 'http' | 'mcp' | 'sync' | 'migration' | 'cron';
+  /**
+   * Per-command id (ADR-0016 §7 / ADR 0058). Optional: emitted into the
+   * canonical body only when present, so existing v2 ops (minted before this
+   * field existed) keep verifying — verifyOpHash re-canonicalizes the parsed op,
+   * so an always-present `commandId:null` key would change every old op's hash.
+   */
+  commandId?: string | null;
 }
 
 /**
@@ -128,7 +135,13 @@ function canonicalLink(l: Link): Link {
 
 function canonicalProvenance(p: OpProvenance | undefined): OpProvenance | null {
   if (!p) return null;
-  return { actorType: p.actorType, origin: p.origin };
+  // `commandId` is emitted only when present: verifyOpHash re-canonicalizes the
+  // parsed op, so adding an always-present null key would invalidate every
+  // pre-existing v2 op's hash. Conditional emission keeps old ops verifying and
+  // adds the field forward (ADR 0058).
+  return p.commandId != null
+    ? { actorType: p.actorType, origin: p.origin, commandId: p.commandId }
+    : { actorType: p.actorType, origin: p.origin };
 }
 
 /**
