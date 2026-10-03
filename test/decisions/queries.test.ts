@@ -131,4 +131,22 @@ describe('Decision Queries', () => {
     const chain = engine.getDecisionChain('issue:TRL-99');
     expect(chain.length).toBe(0);
   });
+
+  // TRL-219: the links must survive a reload. The tests above pass even with a
+  // bare store.addLinks (same process); this one fails unless the links are
+  // emitted as vcs:storeLink ops and replayed from the op log.
+  test('getDecisionChain survives a reload (links are op-backed)', async () => {
+    const engine = await initEngine();
+    await engine.recordDecision({
+      toolName: 'trellis_issue_create',
+      relatedEntities: ['issue:TRL-reload'],
+    });
+
+    // Fresh engine on the same on-disk repo — replays the op log.
+    const reopened = new TrellisVcsEngine({ rootPath: TEST_DIR });
+    reopened.open();
+    const chain = reopened.getDecisionChain('issue:TRL-reload');
+    expect(chain.length).toBe(1);
+    expect(chain[0].toolName).toBe('trellis_issue_create');
+  });
 });

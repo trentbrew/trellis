@@ -91,17 +91,21 @@ export async function recordDecision(
   });
   await ctx.applyOp(op);
 
-  // Store related entity links
-  if (input.relatedEntities) {
-    const eid = decisionEntityId(id);
+  // Store related entity links as durable ops (vcs:storeLink) — a bare
+  // ctx.store.addLinks would bypass the op log and vanish on reload, so
+  // getDecisionChain would return nothing in a fresh process (TRL-219).
+  if (input.relatedEntities?.length) {
     const links = input.relatedEntities.map((target) => ({
-      e1: eid,
+      e1: decisionEntityId(id),
       a: 'relatedTo',
       e2: target,
     }));
-    if (links.length > 0) {
-      ctx.store.addLinks(links);
-    }
+    const linkOp = await createVcsOp('vcs:storeLink', {
+      agentId: ctx.agentId,
+      previousHash: ctx.getLastOp()?.hash,
+      vcs: { links, provenance: ctx.provenance },
+    });
+    await ctx.applyOp(linkOp);
   }
 
   return op;
