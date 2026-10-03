@@ -11,12 +11,50 @@ import {
   createValidationMiddleware,
 } from '../../src/core/ontology/validator.js';
 import {
-  projectOntology,
   teamOntology,
   agentOntology,
   builtinOntologies,
 } from '../../src/core/ontology/builtins.js';
 import type { OntologySchema } from '../../src/core/ontology/types.js';
+
+// Test fixture — a small domain ontology standing in for the retired
+// project ontology (ADR-0036 §4). Mirrors the shape the registry/validation
+// tests exercise (a typed entity with an enum, a second type, a relation).
+const testOntology: OntologySchema = {
+  id: 'test:project',
+  name: 'Test Project Ontology',
+  version: '1.0.0',
+  description: 'Fixture for ontology registry + validation tests.',
+  entities: [
+    {
+      name: 'Project',
+      attributes: [
+        { name: 'name', type: 'string', required: true },
+        { name: 'status', type: 'string', enum: ['active', 'archived', 'draft'] },
+      ],
+    },
+    { name: 'Module', attributes: [{ name: 'name', type: 'string', required: true }] },
+    { name: 'Feature', attributes: [{ name: 'name', type: 'string', required: true }] },
+    { name: 'Dependency', attributes: [{ name: 'name', type: 'string', required: true }] },
+    { name: 'Release', attributes: [{ name: 'name', type: 'string', required: true }] },
+  ],
+  relations: [
+    {
+      name: 'contains',
+      sourceTypes: ['Project'],
+      targetTypes: ['Module', 'Feature'],
+      cardinality: 'many',
+      description: 'Project contains modules/features',
+    },
+    {
+      name: 'dependsOn',
+      sourceTypes: ['Project', 'Module'],
+      targetTypes: ['Dependency', 'Module', 'Project'],
+      cardinality: 'many',
+      description: 'Depends on another entity',
+    },
+  ],
+};
 import { TrellisKernel } from '../../src/core/kernel/trellis-kernel.js';
 import { BetterSqliteKernelBackend } from '../../src/core/persist/better-sqlite-backend.js';
 import { join } from 'path';
@@ -35,39 +73,39 @@ describe('OntologyRegistry', () => {
   });
 
   it('should register an ontology', () => {
-    registry.register(projectOntology);
+    registry.register(testOntology);
     expect(registry.list()).toHaveLength(1);
-    expect(registry.get('trellis:project')).toBeDefined();
+    expect(registry.get('test:project')).toBeDefined();
   });
 
   it('should register all builtins', () => {
     for (const o of builtinOntologies) registry.register(o);
-    expect(registry.list()).toHaveLength(3);
+    expect(registry.list()).toHaveLength(2);
   });
 
   it('should reject duplicate registration at same version', () => {
-    registry.register(projectOntology);
-    expect(() => registry.register(projectOntology)).toThrow(
+    registry.register(testOntology);
+    expect(() => registry.register(testOntology)).toThrow(
       'already registered',
     );
   });
 
   it('should unregister an ontology', () => {
-    registry.register(projectOntology);
-    registry.unregister('trellis:project');
+    registry.register(testOntology);
+    registry.unregister('test:project');
     expect(registry.list()).toHaveLength(0);
     expect(registry.hasEntityType('Project')).toBe(false);
   });
 
   it('should resolve entity types', () => {
-    registry.register(projectOntology);
+    registry.register(testOntology);
     expect(registry.hasEntityType('Project')).toBe(true);
     expect(registry.hasEntityType('Module')).toBe(true);
     expect(registry.hasEntityType('NonExistent')).toBe(false);
   });
 
   it('should return entity def with attributes', () => {
-    registry.register(projectOntology);
+    registry.register(testOntology);
     const def = registry.getEntityDef('Project');
     expect(def).toBeDefined();
     expect(def!.name).toBe('Project');
@@ -76,7 +114,7 @@ describe('OntologyRegistry', () => {
   });
 
   it('should list all entity types', () => {
-    registry.register(projectOntology);
+    registry.register(testOntology);
     const types = registry.listEntityTypes();
     expect(types).toContain('Project');
     expect(types).toContain('Module');
@@ -84,36 +122,36 @@ describe('OntologyRegistry', () => {
   });
 
   it('should return required attributes', () => {
-    registry.register(projectOntology);
+    registry.register(testOntology);
     const required = registry.getRequiredAttributes('Project');
     expect(required.find((a) => a.name === 'name')).toBeDefined();
   });
 
   it('should resolve relations', () => {
-    registry.register(projectOntology);
+    registry.register(testOntology);
     const rel = registry.getRelationDef('contains');
     expect(rel).toBeDefined();
     expect(rel!.sourceTypes).toContain('Project');
   });
 
   it('should get relations for a type', () => {
-    registry.register(projectOntology);
+    registry.register(testOntology);
     const rels = registry.getRelationsForType('Project');
     expect(rels.length).toBeGreaterThan(0);
     expect(rels.some((r) => r.name === 'contains')).toBe(true);
   });
 
   it('should list relation names', () => {
-    registry.register(projectOntology);
+    registry.register(testOntology);
     const names = registry.listRelationNames();
     expect(names).toContain('dependsOn');
     expect(names).toContain('contains');
   });
 
   it('should track which ontology defines each type', () => {
-    registry.register(projectOntology);
+    registry.register(testOntology);
     registry.register(teamOntology);
-    expect(registry.getEntityOntology('Project')).toBe('trellis:project');
+    expect(registry.getEntityOntology('Project')).toBe('test:project');
     expect(registry.getEntityOntology('Developer')).toBe('trellis:team');
   });
 
@@ -187,7 +225,7 @@ describe('Validation', () => {
   beforeEach(() => {
     store = new EAVStore();
     registry = new OntologyRegistry();
-    registry.register(projectOntology);
+    registry.register(testOntology);
     registry.register(teamOntology);
   });
 
@@ -309,7 +347,7 @@ describe('Validation Middleware', () => {
     kernel.boot();
 
     const registry = new OntologyRegistry();
-    registry.register(projectOntology);
+    registry.register(testOntology);
     kernel.addMiddleware(createValidationMiddleware(registry));
 
     // Valid entity — should not throw
@@ -330,7 +368,7 @@ describe('Validation Middleware', () => {
     kernel.boot();
 
     const registry = new OntologyRegistry();
-    registry.register(projectOntology);
+    registry.register(testOntology);
     kernel.addMiddleware(createValidationMiddleware(registry));
 
     await expect(
@@ -351,7 +389,7 @@ describe('Validation Middleware', () => {
     kernel.boot();
 
     const registry = new OntologyRegistry();
-    registry.register(projectOntology);
+    registry.register(testOntology);
     kernel.addMiddleware(createValidationMiddleware(registry));
 
     await expect(
@@ -371,7 +409,7 @@ describe('Validation Middleware', () => {
     kernel.boot();
 
     const registry = new OntologyRegistry();
-    registry.register(projectOntology);
+    registry.register(testOntology);
     kernel.addMiddleware(createValidationMiddleware(registry));
 
     // Unknown type — should pass in non-strict mode
@@ -391,7 +429,7 @@ describe('Validation Middleware', () => {
     kernel.boot();
 
     const registry = new OntologyRegistry();
-    registry.register(projectOntology);
+    registry.register(testOntology);
     kernel.addMiddleware(
       createValidationMiddleware(registry, { strict: true }),
     );
@@ -411,12 +449,12 @@ describe('Validation Middleware', () => {
 // ---------------------------------------------------------------------------
 
 describe('Built-in Ontologies', () => {
-  it('should have 3 built-in ontologies', () => {
-    expect(builtinOntologies).toHaveLength(3);
+  it('should have 2 built-in ontologies (project retired, ADR-0036 §4)', () => {
+    expect(builtinOntologies).toHaveLength(2);
   });
 
-  it('project ontology should have expected entity types', () => {
-    const types = projectOntology.entities.map((e) => e.name);
+  it('test fixture ontology should have expected entity types', () => {
+    const types = testOntology.entities.map((e) => e.name);
     expect(types).toContain('Project');
     expect(types).toContain('Module');
     expect(types).toContain('Feature');
@@ -445,7 +483,7 @@ describe('Built-in Ontologies', () => {
     for (const o of builtinOntologies) {
       registry.register(o);
     }
-    expect(registry.list()).toHaveLength(3);
-    expect(registry.listEntityTypes().length).toBeGreaterThan(10);
+    expect(registry.list()).toHaveLength(2);
+    expect(registry.listEntityTypes().length).toBeGreaterThan(5);
   });
 });

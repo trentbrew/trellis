@@ -768,6 +768,97 @@ export function integrationEntityId(provider: string, externalId: string): strin
 }
 
 /**
+ * core:Project — a thin work container (ADR-0036 §2).
+ *
+ * Deliberately minimal: name, description, status — no owned subtypes, no
+ * god-link fields. Content is reached through *links*: `Issue belongsTo`,
+ * `Collection related`, `Repo represents`. A wedding and a monorepo are the
+ * same type with different linked collections.
+ */
+const project: SchemaDefinition = {
+  '@id': 'core:Project',
+  '@type': 'trellis:Schema',
+  version: VERSION,
+  tier: 'core',
+  subClassOf: 'core:Thing',
+  label: 'Project',
+  icon: 'lucide:folder-kanban',
+  fields: [
+    f('name', 'title', { required: true }),
+    f('description', 'rich_text'),
+    f('status', 'select', {
+      selectOptions: ['active', 'archived', 'draft', 'done'],
+    }),
+  ],
+};
+
+/**
+ * core:Repo — a thin identity over a real repository (ADR-0036 §1).
+ *
+ * Not a storage model: git owns file bytes (trellis ADR 0038), `.trellis/`
+ * owns ops. A Repo only names *where* a repository is and how to reach it.
+ * Forge coordinates live on the linked `Integration` row, not here.
+ */
+const repo: SchemaDefinition = {
+  '@id': 'core:Repo',
+  '@type': 'trellis:Schema',
+  version: VERSION,
+  tier: 'core',
+  subClassOf: 'core:Thing',
+  label: 'Repo',
+  icon: 'lucide:git-branch',
+  fields: [
+    f('name', 'title', { required: true }),
+    f('path', 'rich_text'),
+    f('remote', 'url'),
+    f('defaultBranch', 'rich_text'),
+    f('trellisRoot', 'rich_text'),
+    f('vcs', 'select', { selectOptions: ['git', 'trellis', 'none'] }),
+    f('integration', 'relation', {
+      relation: { targetSchema: 'core:Integration', cardinality: 'one' },
+    }),
+    f('represents', 'relation', {
+      relation: { targetSchema: 'core:Project', cardinality: 'one' },
+    }),
+    f('serves', 'relation', {
+      relation: { targetSchema: 'core:Service', cardinality: 'many' },
+    }),
+  ],
+};
+
+/**
+ * core:Service — a runnable thing a repo provides (ADR-0036 addendum 2026-10-02).
+ *
+ * A repo serves *n* services at once (dev server, docs server, publish
+ * pipeline). Grounded in the sidecar shape (`os-sandbox/lib/sidecars.mjs`:
+ * `{ id, port, status, description }`). Declared metadata only — turtleOS does
+ * not bind ports or run commands from this entity; process management is
+ * supervisor/class-X territory (ADR-0016 §8).
+ */
+const service: SchemaDefinition = {
+  '@id': 'core:Service',
+  '@type': 'trellis:Schema',
+  version: VERSION,
+  tier: 'core',
+  subClassOf: 'core:Thing',
+  label: 'Service',
+  icon: 'lucide:server',
+  fields: [
+    f('name', 'title', { required: true }),
+    f('kind', 'select', {
+      selectOptions: ['dev-server', 'publish', 'docs', 'worker', 'other'],
+    }),
+    f('port', 'number'),
+    f('ports', 'json'),
+    f('command', 'rich_text'),
+    f('status', 'select', {
+      selectOptions: ['running', 'stopped', 'error', 'unknown'],
+    }),
+    f('url', 'url'),
+  ],
+};
+
+/**
  * All core structural type schemas.
  * Auto-loaded into the kernel at construction time.
  */
@@ -799,6 +890,9 @@ export const CORE_ONTOLOGY: SchemaDefinition[] = [
   pipeline,
   pipelinePhase,
   integration,
+  project,
+  repo,
+  service,
   ...COLLECTION_SCHEMAS,
 ];
 

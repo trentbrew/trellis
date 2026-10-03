@@ -104,7 +104,6 @@ export {
   KNOWN_INTEGRATION_PROVIDERS,
 } from './ontology/index.js';
 export {
-  projectOntology,
   teamOntology,
   agentOntology,
   builtinOntologies,
