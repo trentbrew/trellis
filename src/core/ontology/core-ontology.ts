@@ -727,6 +727,47 @@ const pipelinePhase: SchemaDefinition = {
 };
 
 /**
+ * core:Integration — Connector metadata (ADR-0036 §3 P0, FIN-0051 shape).
+ *
+ * A connector (Plaid, Cal.com, GitHub, …) is represented as metadata only:
+ * `credentialRef` points at the host secret store and is NEVER a secret value.
+ * `provider` is `rich_text` (not a closed `select`) so new connectors land
+ * without a kernel release — see `KNOWN_INTEGRATION_PROVIDERS` for the known
+ * set and `integrationEntityId` for stable ids.
+ */
+const integration: SchemaDefinition = {
+  '@id': 'core:Integration',
+  '@type': 'trellis:Schema',
+  version: VERSION,
+  tier: 'core',
+  subClassOf: 'core:Thing',
+  label: 'Integration',
+  icon: 'lucide:plug',
+  fields: [
+    f('provider', 'rich_text', { required: true }),
+    f('status', 'select', {
+      required: true,
+      selectOptions: ['connected', 'error', 'disconnected'],
+    }),
+    f('label', 'title', { required: true }),
+    f('externalId', 'rich_text'),
+    f('linkedAt', 'date'),
+    f('lastSyncedAt', 'date'),
+    f('credentialRef', 'rich_text'),
+    f('environment', 'rich_text'),
+    f('errorMessage', 'rich_text'),
+  ],
+};
+
+/** Known integration providers — a convention, not a validation gate. */
+export const KNOWN_INTEGRATION_PROVIDERS = ['plaid', 'calcom', 'github'] as const;
+
+/** Stable id for a connector instance: `integration:{provider}:{externalId}`. */
+export function integrationEntityId(provider: string, externalId: string): string {
+  return `integration:${provider}:${externalId}`;
+}
+
+/**
  * All core structural type schemas.
  * Auto-loaded into the kernel at construction time.
  */
@@ -757,6 +798,7 @@ export const CORE_ONTOLOGY: SchemaDefinition[] = [
   handoff,
   pipeline,
   pipelinePhase,
+  integration,
   ...COLLECTION_SCHEMAS,
 ];
 

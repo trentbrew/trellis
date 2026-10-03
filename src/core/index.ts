@@ -98,6 +98,10 @@ export {
   findSchemaForType,
   RealtimeFieldError,
   EntityConflictError,
+  CORE_ONTOLOGY,
+  CORE_VERSION,
+  integrationEntityId,
+  KNOWN_INTEGRATION_PROVIDERS,
 } from './ontology/index.js';
 export {
   projectOntology,
