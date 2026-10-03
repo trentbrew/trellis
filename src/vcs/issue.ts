@@ -11,12 +11,10 @@ import {
   readFileSync,
   writeFileSync,
   mkdirSync,
-  openSync,
-  closeSync,
-  unlinkSync,
 } from 'fs';
 import { join, dirname } from 'path';
 import { createVcsOp } from './ops.js';
+import { withFileLock } from './file-lock.js';
 import type { VcsOp, IssueType } from './types.js';
 import { issueEntityId, criterionEntityId } from './types.js';
 import type { EngineContext } from './engine-context.js';
@@ -177,44 +175,24 @@ function nextIssueId(rootPath: string, laneId?: string): string {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 
   const lockPath = `${scopedCounterPath}.lock`;
-  const deadline = Date.now() + 5000;
-  let lockFd: number | undefined;
-
-  while (Date.now() < deadline) {
-    try {
-      lockFd = openSync(lockPath, 'wx');
-      break;
-    } catch (err: any) {
-      if (err?.code !== 'EEXIST') {
-        throw err;
+  return withFileLock(
+    lockPath,
+    'issue counter lock',
+    () => {
+      let counter = 0;
+      if (existsSync(scopedCounterPath)) {
+        try {
+          counter =
+            JSON.parse(readFileSync(scopedCounterPath, 'utf-8')).counter ?? 0;
+        } catch { }
       }
-    }
-  }
-
-  if (lockFd === undefined) {
-    throw new Error(
-      `Timed out waiting for issue counter lock: ${lockPath}. Another Trellis process may be stalled.`,
-    );
-  }
-
-  try {
-    let counter = 0;
-    if (existsSync(scopedCounterPath)) {
-      try {
-        counter =
-          JSON.parse(readFileSync(scopedCounterPath, 'utf-8')).counter ?? 0;
-      } catch { }
-    }
-    counter++;
-    writeFileSync(scopedCounterPath, JSON.stringify({ counter }, null, 2));
-    if (laneScope) return `issue:${laneScope}:${counter}`;
-    return `${readIssuePrefix(rootPath)}-${counter}`;
-  } finally {
-    closeSync(lockFd);
-    try {
-      unlinkSync(lockPath);
-    } catch { }
-  }
+      counter++;
+      writeFileSync(scopedCounterPath, JSON.stringify({ counter }, null, 2));
+      if (laneScope) return `issue:${laneScope}:${counter}`;
+      return `${readIssuePrefix(rootPath)}-${counter}`;
+    },
+    { timeoutMs: 5000 },
+  );
 }
 
 function slugify(text: string): string {
