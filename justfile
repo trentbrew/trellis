@@ -404,20 +404,31 @@ ext-validate: ext-build
 # Deploy / Publish
 # ---------------------------------------------------------------------------
 
+# Draft the CHANGELOG entry for the current package.json version.
+#   just changelog                    # print a draft generated from commits since the last release
+#   just changelog --write            # write it into CHANGELOG.md (marked as draft)
+#   just changelog --write --accept   # write it without the draft marker
+changelog *FLAGS='':
+  #!/usr/bin/env bash
+  set -euo pipefail
+  node scripts/changelog-entry.mjs {{FLAGS}}
+
 # One-shot kernel release. Folds gates + build + validate, then publishes.
-#   just publish              # gates → tag & push → CI (publish-npm.yml) publishes with provenance
-#   just publish --local      # publish from this machine (npm; needs auth/OTP), then push the tag
-#   just publish --dry-run    # gates only; no tag, no publish
+#   just publish                   # gates → tag & push → CI (publish-npm.yml) publishes with provenance
+#   just publish --local           # publish from this machine (npm; needs auth/OTP), then push the tag
+#   just publish --dry-run         # gates only; no tag, no publish
+#   just publish --write-changelog # accept the generated CHANGELOG draft and continue
 # Prefer CI (provenance, no 2FA). See tooling/RELEASING.md and docs/release-checklist.md.
 publish *FLAGS='':
   #!/usr/bin/env bash
   set -euo pipefail
-  local_pub=0; dry=0
+  local_pub=0; dry=0; write_changelog=0
   for f in {{FLAGS}}; do
     case "$f" in
       --local) local_pub=1 ;;
       --dry-run) dry=1 ;;
-      *) echo "✗ unknown flag: $f (use --local or --dry-run)"; exit 1 ;;
+      --write-changelog) write_changelog=1 ;;
+      *) echo "✗ unknown flag: $f (use --local, --dry-run, or --write-changelog)"; exit 1 ;;
     esac
   done
   if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -425,6 +436,29 @@ publish *FLAGS='':
   version=$(node -p "require('./package.json').version")
   tag="v${version}"
   echo "▸ trellis ${tag}"
+
+  # CHANGELOG must describe this version. Check before the heavy gates so a
+  # stale changelog fails in seconds, not after ship-check/test/build.
+  if ! node scripts/changelog-entry.mjs --check; then
+    echo ""
+    node scripts/changelog-entry.mjs
+    echo ""
+    if [ "$dry" = 1 ]; then
+      echo "✗ dry-run: CHANGELOG draft for ${version} shown above (not written)"
+      exit 1
+    fi
+    if [ "$write_changelog" = 1 ]; then
+      node scripts/changelog-entry.mjs --write --accept
+      git add CHANGELOG.md
+      git commit -m "release: trellis ${version} (changelog)"
+      echo "✓ changelog for ${version} written + committed — continuing"
+    else
+      node scripts/changelog-entry.mjs --write
+      echo "✓ draft written to CHANGELOG.md — review/edit it, commit, then re-run: just publish"
+      echo "  (or re-run with --write-changelog to accept the draft as-is)"
+      exit 1
+    fi
+  fi
 
   just ship-check
   bun run test:ship

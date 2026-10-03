@@ -74,12 +74,20 @@ if (regressed.length > 0) {
 // --- CHANGELOG matches the version being published ---------------------------------
 const changelogHeading = readFileSync(join(root, 'CHANGELOG.md'), 'utf8').match(/^## trellis \[([^\]]+)\]/m);
 if (!changelogHeading) {
-  fail('CHANGELOG.md has no `## trellis [version]` heading', ['Add the release entry before publishing.']);
+  fail('CHANGELOG.md has no `## trellis [version]` heading', [
+    'Draft one from the commits since the last release:',
+    '',
+    `  just changelog --write   # or: node scripts/changelog-entry.mjs --write`,
+  ]);
 }
 if (changelogHeading[1] !== pkg.version) {
   fail('CHANGELOG.md does not describe this version', [
     `package.json: ${pkg.version}`,
     `CHANGELOG top entry: ${changelogHeading[1]}`,
+    '',
+    'Draft one from the commits since the last release:',
+    '',
+    `  just changelog --write   # or: node scripts/changelog-entry.mjs --write`,
   ]);
 }
 
