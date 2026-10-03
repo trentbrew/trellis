@@ -825,6 +825,32 @@ for (const event of scanEvents) {
   }
 
   /**
+   * Provision (or repair) the git worktree for an existing lane.
+   *
+   * Idempotent: re-running on a lane that already has a registered worktree is
+   * a no-op. Used to upgrade lanes created before `lanes.worktreeBind` was
+   * enabled, and to recover a lane whose worktree path went missing.
+   */
+  async ensureLaneWorktree(
+    laneId: string,
+    worktreePathOverride?: string,
+  ): Promise<LaneMeta> {
+    const meta = laneMod.loadLaneMeta(this.trellisDir(), laneId);
+    if (!meta) {
+      throw new Error(`Lane not found: ${laneId}`);
+    }
+    if (!this.isWorktreeBindEnabled()) {
+      throw new Error(
+        'lanes.worktreeBind is not enabled for this workspace (.trellis/config.json)',
+      );
+    }
+    if (!laneWorktreeMod.isGitRepo(this.config.rootPath)) {
+      throw new Error(`Not a git repo: ${this.config.rootPath}`);
+    }
+    return this.provisionLaneWorktree(meta, worktreePathOverride);
+  }
+
+  /**
    * Auto-save a lane worktree before use (ADR 0038).
    *
    * Git is the sole authority over file bytes. Committing whatever the agent

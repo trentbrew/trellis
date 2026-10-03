@@ -14,7 +14,10 @@ import {
   canonicalIssueRef,
 } from '../vcs/issue-prefix.js';
 import { injectIssuePrefixMeta } from './issue-prefix-meta.js';
-import { startNodeServer } from '../server/node-adapter.js';
+import {
+  DEFAULT_PORT_FALLBACK_ATTEMPTS,
+  startNodeServer,
+} from '../server/node-adapter.js';
 import {
   buildLanesSnapshot,
   withGlobalIssueScope,
@@ -43,6 +46,12 @@ import {
   serveTurtleAdminStatic,
 } from './turtle-admin-static.js';
 import { isUiDbProxyPath, proxyUiDbRequest } from './turtle-admin-ui-db.js';
+import {
+  assertIssueDocId,
+  listRepoDocs,
+  readIssueDocFiles,
+  readRepoDocFile,
+} from '../vcs/repo-docs.js';
 
 export interface LanesDashboardOptions {
   rootPath: string;
@@ -54,6 +63,10 @@ export interface LanesDashboardOptions {
   host?: string;
   /** Origins granted CORS and writes beyond loopback ones (ADR 0053 d1). */
   allowOrigins?: string[];
+  /** When true (default), bump to the next free port if `port` is in use. */
+  rotatePort?: boolean;
+  /** Max ports to try when `rotatePort` (default {@link DEFAULT_PORT_FALLBACK_ATTEMPTS}). */
+  portFallbackAttempts?: number;
 }
 
 export interface LanesDashboardHandle {
@@ -410,6 +423,54 @@ export async function startLanesDashboard(
         });
       }
       return Response.json(issue, { headers });
+    }
+
+    const issueDocsMatch = path.match(/^\/api\/issues\/([^/]+)\/docs$/);
+    if (issueDocsMatch && req.method === 'GET') {
+      engine.open();
+      let bareId: string;
+      try {
+        bareId = assertIssueDocId(decodeURIComponent(issueDocsMatch[1]));
+      } catch {
+        return new Response(JSON.stringify({ error: 'invalid issue id' }), {
+          status: 400,
+          headers,
+        });
+      }
+      const issue = withGlobalIssueScope(engine, () => engine.getIssue(bareId));
+      if (!issue) {
+        return new Response(JSON.stringify({ error: `unknown issue: ${bareId}` }), {
+          status: 404,
+          headers,
+        });
+      }
+      const body = readIssueDocFiles(opts.rootPath, bareId, {
+        description: issue.description ?? null,
+      });
+      return Response.json(body, { headers });
+    }
+
+    if (path === '/api/repo/docs' && req.method === 'GET') {
+      const entries = listRepoDocs(opts.rootPath);
+      return Response.json({ entries }, { headers });
+    }
+
+    if (path === '/api/repo/docs/file' && req.method === 'GET') {
+      const rel = url.searchParams.get('path')?.trim();
+      if (!rel) {
+        return new Response(JSON.stringify({ error: 'path query required' }), {
+          status: 400,
+          headers,
+        });
+      }
+      const file = readRepoDocFile(opts.rootPath, rel);
+      if (!file) {
+        return new Response(JSON.stringify({ error: 'not found' }), {
+          status: 404,
+          headers,
+        });
+      }
+      return Response.json(file, { headers });
     }
 
     const laneOpsMatch = path.match(/^\/api\/lanes\/([^/]+)\/ops$/);
@@ -812,11 +873,19 @@ export async function startLanesDashboard(
     return new Response('Not Found', { status: 404, headers });
   };
 
+  const strictPort =
+    opts.rotatePort === false || process.env.TRELLIS_ADMIN_STRICT_PORT === '1';
+  const portFallbackAttempts =
+    requestedPort === 0 || strictPort
+      ? 1
+      : opts.portFallbackAttempts ?? DEFAULT_PORT_FALLBACK_ATTEMPTS;
+
   const server = await startNodeServer({
     port: requestedPort,
     hostname: host,
     fetch: fetchHandler,
     websocket: { open: () => { }, message: () => { }, close: () => { } },
+    portFallbackAttempts,
   });
   boundPort = server.port;
 
