@@ -46,7 +46,6 @@ export { OntologyRegistry } from './registry.js';
 
 // Built-in ontologies
 export {
-  projectOntology,
   teamOntology,
   agentOntology,
   builtinOntologies,
