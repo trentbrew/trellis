@@ -1,12 +1,8 @@
-# TRL-464: Spec — turtle-admin issue dialog long-form docs (read projection)
-
-> **Graph:** Issue id **TRL-464** is reserved in this scaffold. If `trellis issue create`
-> assigns a different id (ops lock blocked create on 2026-10-02), rename this folder and
-> update links.
+# TRL-467: Spec — turtle-admin issue dialog long-form docs (read projection)
 
 **ADR:** [0057-issue-dialog-docs-read-projection](../../adr/0057-issue-dialog-docs-read-projection.md)  
 **Spec:** [trellis-admin-issue-docs.md](../../specs/trellis-admin-issue-docs.md)  
-**Parent proposal:** TRL-463 (pending create)  
+**Parent proposal:** TRL-466  
 **Labels:** `spec`, `admin`, `needs-e2e`, `cohesion`
 
 ## Contract summary

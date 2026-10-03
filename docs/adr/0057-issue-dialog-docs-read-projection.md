@@ -2,7 +2,7 @@
 
 **Status:** Proposed
 **Date:** 2026-10-02
-**Issues:** TRL-463 (proposal, graph create pending) · TRL-464 (spec scaffold) · spec [`trellis-admin-issue-docs.md`](../specs/trellis-admin-issue-docs.md)
+**Issues:** TRL-466 (proposal) · TRL-467 (spec) · [`trellis-admin-issue-docs.md`](../specs/trellis-admin-issue-docs.md)
 **Depends on:** [0053](./0053-admin-operator-api.md) (operator API reads and two data planes)
 **Related:** [0040](./0040-lane-boundary-oss-and-hosted-platform.md) (engine upstream of turtleOS),
 [0044](./0044-plan-artifact-capture.md) (repo `docs/` conventions)

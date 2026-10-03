@@ -14,6 +14,9 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import type { Server as NodeHttpServer } from 'http';
 
+/** Default consecutive ports to try when `port` is busy (`trellis admin`, lane watch). */
+export const DEFAULT_PORT_FALLBACK_ATTEMPTS = 32;
+
 import type { RealtimeRelayOptions } from '../realtime/relay-server.js';
 import type { TrellisHttpServer } from './server-shared.js';
 
@@ -37,6 +40,10 @@ export interface NodeAdapterOptions {
    * Pass full {@link RealtimeRelayOptions} to enable `/blob` via `blobStore`.
    */
   attachPresenceRelay?: boolean | RealtimeRelayOptions;
+  /**
+   * When > 1, try `port`, then `port + 1`, … on `EADDRINUSE` (ignored when `port` is 0).
+   */
+  portFallbackAttempts?: number;
 }
 
 /**
@@ -46,6 +53,30 @@ export interface NodeAdapterOptions {
 export interface WsLike {
   readyState: number;
   send(data: string): void;
+}
+
+function listenOnce(
+  httpServer: NodeHttpServer,
+  port: number,
+  hostname?: string,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const onError = (err: NodeJS.ErrnoException) => {
+      cleanup();
+      reject(err);
+    };
+    const onListening = () => {
+      cleanup();
+      resolve();
+    };
+    const cleanup = () => {
+      httpServer.removeListener('error', onError);
+      httpServer.removeListener('listening', onListening);
+    };
+    httpServer.once('error', onError);
+    httpServer.once('listening', onListening);
+    httpServer.listen(port, hostname);
+  });
 }
 
 export async function startNodeServer(
@@ -110,9 +141,20 @@ export async function startNodeServer(
     });
   }
 
-  await new Promise<void>((resolve) =>
-    httpServer.listen(opts.port, opts.hostname, resolve),
-  );
+  const maxAttempts =
+    opts.port === 0 ? 1 : Math.max(1, opts.portFallbackAttempts ?? 1);
+  let boundPort = opts.port;
+  for (let i = 0; i < maxAttempts; i++) {
+    const candidate = opts.port + i;
+    try {
+      await listenOnce(httpServer, candidate, opts.hostname);
+      boundPort = candidate;
+      break;
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== 'EADDRINUSE' || i >= maxAttempts - 1) throw err;
+    }
+  }
 
   if (opts.attachPresenceRelay) {
     const { attachRealtimeRelay } = await import('../realtime/relay-server.js');
@@ -126,8 +168,7 @@ export async function startNodeServer(
   // After listen() resolves, read the actually-bound address — handles the
   // common "port 0" case where the OS picks an ephemeral port.
   const addr = httpServer.address();
-  const boundPort =
-    typeof addr === 'object' && addr ? addr.port : opts.port;
+  if (typeof addr === 'object' && addr) boundPort = addr.port;
   const boundHost =
     typeof addr === 'object' && addr ? addr.address : opts.hostname;
 

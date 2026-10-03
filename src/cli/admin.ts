@@ -98,6 +98,10 @@ export function registerAdminCommands(program: Command): void {
       .option('-p, --path <path>', 'Repository path', '.')
       .option('--port <port>', 'HTTP port', '3939')
       .option('--poll <ms>', 'Snapshot poll interval (ms)', '1000')
+      .option(
+        '--strict-port',
+        'Exit if --port is in use (default: try the next free port)',
+      )
       .option('--no-open', 'Do not auto-open browser')
       .option(
         '--host <addr>',
@@ -118,6 +122,7 @@ export function registerAdminCommands(program: Command): void {
     dev?: boolean;
     host?: string;
     allowOrigin?: string[];
+    strictPort?: boolean;
   }) => {
     const rootPath = resolveRepoRoot(process.env.TRELLIS_TARGET?.trim() || opts.path);
     const port = parseInt(opts.port, 10) || 3939;
@@ -139,9 +144,15 @@ export function registerAdminCommands(program: Command): void {
         dev,
         host: opts.host,
         allowOrigins: opts.allowOrigin,
+        rotatePort: !opts.strictPort,
       });
       const kernelUrl = `http://${urlHost(handle.host)}:${handle.port}/`;
 
+      if (handle.port !== port) {
+        console.log(
+          chalk.yellow(`  Port ${port} in use → listening on ${handle.port}`),
+        );
+      }
       console.log(chalk.dim(`  Kernel dashboard on ${handle.host}:${handle.port}`));
       console.log(chalk.dim(`  repo: ${rootPath}`));
       warnIfExposed(handle.host);

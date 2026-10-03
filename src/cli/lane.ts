@@ -300,6 +300,25 @@ export function registerLaneCommands(program: Command): void {
     });
 
   laneCmd
+    .command('worktree <id>')
+    .description('Provision or repair the git worktree for a lane (idempotent)')
+    .option('--worktree <path>', 'Explicit worktree path (W5)')
+    .option('-p, --path <path>', 'Repository path', '.')
+    .action(async (id, opts, command) => {
+      const rootPath = resolveLaneRepoPath(opts, command);
+      const engine = await openEngine(rootPath);
+
+      try {
+        const meta = await engine.ensureLaneWorktree(id, opts.worktree);
+        console.log(chalk.green(`✓ Lane worktree ready: ${chalk.bold(meta.id)}`));
+        console.log(`  ${chalk.dim('Worktree:')} ${meta.worktreePath}`);
+      } catch (err: unknown) {
+        console.error(chalk.red((err as Error).message));
+        process.exit(1);
+      }
+    });
+
+  laneCmd
     .description('List agent lanes')
     .option('--active', 'Show only active lanes')
     .option('--stale', 'Show only stale active lanes (lease expired or >24h)')
@@ -615,6 +634,10 @@ export function registerLaneCommands(program: Command): void {
     .option('-p, --path <path>', 'Repository path', '.')
     .option('--port <port>', 'HTTP port', '3939')
     .option('--poll <ms>', 'Snapshot poll interval (ms)', '1000')
+    .option(
+      '--strict-port',
+      'Exit if --port is in use (default: try the next free port)',
+    )
     .option('--no-open', 'Do not auto-open browser')
     .option('--dev', 'UI dev mode: esbuild watch + SSE live reload (or TRELLIS_UI_DEV=1)')
     .option('--host <addr>', 'Bind address (default 127.0.0.1; ADR 0053)')
@@ -639,11 +662,17 @@ export function registerLaneCommands(program: Command): void {
           dev: !!opts.dev,
           host: opts.host,
           allowOrigins: opts.allowOrigin,
+          rotatePort: !opts.strictPort,
         });
         const { warnIfExposed, urlHost } = await import('./admin.js');
         const url = `http://${urlHost(handle.host)}:${handle.port}/`;
         warnIfExposed(handle.host);
 
+        if (handle.port !== port) {
+          console.log(
+            chalk.yellow(`  Port ${port} in use → listening on ${handle.port}`),
+          );
+        }
         console.log(chalk.green(`✓ Lane dashboard → ${chalk.bold(url)}`));
         if (opts.dev) {
           console.log(chalk.dim('  UI dev: esbuild watch → .trellis/ui-dev/ · SSE /__dev/reload'));

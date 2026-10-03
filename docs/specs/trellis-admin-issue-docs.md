@@ -2,8 +2,8 @@
 
 **Status:** Ready for impl (pending graph issues TRL-463/464)  
 **Date:** 2026-10-02  
-**Proposal:** TRL-463 (pending)  
-**Spec issue:** TRL-464 (scaffold)  
+**Proposal:** TRL-466  
+**Spec issue:** TRL-467  
 **ADR:** [0057-issue-dialog-docs-read-projection](../adr/0057-issue-dialog-docs-read-projection.md) (Proposed — implement after Accepted)  
 **Amends contract:** [0053-admin-operator-api](../adr/0053-admin-operator-api.md) §2, §6  
 **Labels:** `spec`, `admin`, `needs-e2e`, `cohesion`  
