@@ -179,3 +179,10 @@
 | Icon Registry & Ontology — @trellis.computer/icons | draft | [trellis-ui/icon-ontology.md](./trellis-ui/icon-ontology.md) |
 | Provider & Context — @trellis.computer/ui Phase 2 | draft | [trellis-ui/provider-spec.md](./trellis-ui/provider-spec.md) |
 | Theme Contract — CSS Custom Properties for @trellis.computer/ui | draft | [trellis-ui/theme-contract.md](./trellis-ui/theme-contract.md) |
+
+## Specs
+
+| Title | Status | Path |
+| ----- | ------ | ---- |
+| The .trellis journal format — op envelope & hashing spec | draft | [spec/JOURNAL-FORMAT.md](./spec/JOURNAL-FORMAT.md) |
+| Journal conformance corpus | draft | [spec/conformance/README.md](./spec/conformance/README.md) |
