@@ -12,7 +12,7 @@
 
 import type { VcsOp } from '../vcs/types.js';
 import { signMessage, verifySignature } from './identity.js';
-import { hashVcsOp } from '../vcs/ops.js';
+import { hashVcsOpByVersion } from '../vcs/ops.js';
 
 // ---------------------------------------------------------------------------
 // Op signing
@@ -26,9 +26,9 @@ import { hashVcsOp } from '../vcs/ops.js';
  * body with the signature fields stripped.
  */
 function hashVcsOpBody(op: VcsOp): Promise<string> {
-  if (!op.vcs) return hashVcsOp(op);
+  if (!op.vcs) return hashVcsOpByVersion(op);
   const { signature: _s, signedBy: _b, signedWith: _w, ...rest } = op.vcs;
-  return hashVcsOp({ ...op, vcs: rest as VcsOp['vcs'] });
+  return hashVcsOpByVersion({ ...op, vcs: rest as VcsOp['vcs'] });
 }
 
 /**
@@ -54,7 +54,7 @@ export async function signOp(
   op.vcs.signedBy = identityEntityId;
   op.vcs.signedWith = signedWith;
   op.vcs.signature = signMessage(bodyHash, privateKeyBase64);
-  op.hash = await hashVcsOp(op);
+  op.hash = await hashVcsOpByVersion(op);
   return op;
 }
 

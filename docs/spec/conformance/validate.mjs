@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * Independent conformance validator for `.trellis` journal ops (v1).
+ * Independent conformance validator for `.trellis` journal ops.
  *
- * Reimplements docs/spec/JOURNAL-FORMAT.md §3 from the spec text alone — it
- * must not import kernel code. Zero dependencies; runs on Node >= 20 or Bun.
+ * Implements docs/spec/JOURNAL-FORMAT.md §3 (v1) and §6 (v2 `parents[]`).
+ * Reimplemented from the spec text alone — it must not import kernel code.
+ * Zero dependencies; runs on Node >= 20 or Bun.
  *
  *   node validate.mjs <journal.jsonl> [--keyring keys.json]
  *   bun  validate.mjs <journal.jsonl> [--keyring keys.json]
@@ -18,8 +19,8 @@ const OP_HASH_RE = /^trellis:op:[0-9a-f]{64}$/;
 const sha256Hex = (s) =>
   createHash('sha256').update(Buffer.from(s, 'utf8')).digest('hex');
 
-/** §3.1 — built as an object literal in this exact key order. */
-const preimage = (op, vcs) =>
+/** §3.1 — v1 preimage (built as an object literal in this exact key order). */
+const preimageV1 = (op, vcs) =>
   JSON.stringify({
     kind: op.kind,
     timestamp: op.timestamp,
@@ -28,7 +29,21 @@ const preimage = (op, vcs) =>
     vcs,
   });
 
-/** §3.2 — content hash over the full op payload, signature fields included. */
+/** §6 — v2 preimage: `parents` is always present (`[]` for a root). */
+const preimageV2 = (op, vcs) =>
+  JSON.stringify({
+    v: 2,
+    kind: op.kind,
+    timestamp: op.timestamp,
+    agentId: op.agentId,
+    parents: op.parents ?? [],
+    vcs,
+  });
+
+const preimage = (op, vcs) =>
+  op.v === 2 ? preimageV2(op, vcs) : preimageV1(op, vcs);
+
+/** §3.2/§6 — content hash over the full op payload, signature fields included. */
 export function opHash(op) {
   return `trellis:op:${sha256Hex(preimage(op, op.vcs))}`;
 }
@@ -54,9 +69,16 @@ export function parseJournal(text) {
     });
 }
 
-/** §3.4 — the normative verification order. Returns { valid, ops, violations }. */
+/**
+ * §3.4 / §6 — the normative verification order, per op version.
+ *
+ * v1 ops chain linearly (`previousHash`; omitted on genesis).
+ * v2 ops carry `parents[]`; every parent must appear earlier in the journal.
+ * A v2 root (`parents: []`) may start a new history line anywhere.
+ */
 export function validateJournal(ops, keyring = {}) {
   const violations = [];
+  const seen = new Set();
   let prev = null;
   let signedSeen = false;
 
@@ -85,7 +107,20 @@ export function validateJournal(ops, keyring = {}) {
       }
     }
 
-    if (i === 0) {
+    if (op.v === 2) {
+      if (!Array.isArray(op.parents)) {
+        violations.push(`${at}: v2 op must carry parents[]`);
+      } else {
+        for (const p of op.parents) {
+          if (!seen.has(p)) {
+            violations.push(`${at}: unknown parent ${String(p).slice(0, 24)}…`);
+          }
+        }
+      }
+      if ('previousHash' in op) {
+        violations.push(`${at}: v2 op must not carry previousHash`);
+      }
+    } else if (i === 0) {
       if ('previousHash' in op) violations.push(`${at}: genesis must omit previousHash`);
     } else if (op.previousHash !== prev?.hash) {
       violations.push(`${at}: previousHash does not chain to the previous op`);
@@ -121,6 +156,7 @@ export function validateJournal(ops, keyring = {}) {
       violations.push(`${at}: unsigned op after first signed op`);
     }
 
+    seen.add(op.hash);
     prev = op;
   });
 

@@ -21,6 +21,8 @@ const cases = [
   ['signed-then-unsigned.jsonl', false],
   ['tampered-hash.jsonl', false],
   ['broken-chain.jsonl', false],
+  ['diverged-dag.jsonl', true],
+  ['unknown-parent.jsonl', false],
 ];
 
 let failed = 0;

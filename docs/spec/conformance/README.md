@@ -37,10 +37,20 @@ bun docs/spec/conformance/make-fixtures.mjs
 | `signed-then-unsigned.jsonl` | **invalid** | unsigned op after the first signed op (§3.4.5) |
 | `tampered-hash.jsonl` | **invalid** | payload mutated after minting — hash recompute fails (§3.4.2) |
 | `broken-chain.jsonl` | **invalid** | `previousHash` does not chain (§3.4.3) |
+| `diverged-dag.jsonl` | **valid** | v2 `parents[]`: two roots + a merge op |
+| `unknown-parent.jsonl` | **invalid** | v2 op references a parent not in the journal |
 
-## Rules the fixtures do not yet cover (v2 work)
+## v2 envelope (parents[])
 
-- Diverged DAG (multi-parent) journals — arrives with the `parents[]` envelope.
+`feat/envelope-v2` implements the journal v2 envelope
+(`docs/spec/JOURNAL-FORMAT.md` §6): `v: 2` + `parents[]` (DAG) instead of
+`previousHash`, signed and hashed by the same scheme (the body hash excludes
+the signature fields; `hash` covers them). The validator dispatches on
+`op.v`, so v1 fixtures keep verifying byte-for-byte. v2 roots
+(`parents: []`) may start a new history line anywhere in a journal.
+
+## Rules the fixtures do not yet cover
+
 - Device-key resolution (`signedWith`) — covered by identity tests, not here.
 - Legacy v1 kernel ops (`{valid: true, legacy: true}` grandfathering) — see
   `src/core/persist/canonical-op.ts`; belongs in its own kernel-op corpus.

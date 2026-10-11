@@ -304,6 +304,23 @@ export interface VcsOp {
   timestamp: string;
   agentId: string;
   previousHash?: string;
+
+  /**
+   * Journal envelope version (v2 freeze — docs/spec/JOURNAL-FORMAT.md §6).
+   *
+   * Absent ⇒ v1: linear `previousHash` chain, no `v` key in the preimage.
+   * Present (`2`) ⇒ v2: `parents[]` DAG preimage. Only journal (VCS) ops use
+   * this slot; kernel graph ops carry their own `v` in the canonical body
+   * (ADR 0021).
+   */
+  v?: number;
+
+  /**
+   * v2 causal parents (DAG). Replaces `previousHash`; `[]` marks a v2 root.
+   * Hashed — part of the v2 preimage (docs/spec/JOURNAL-FORMAT.md §6).
+   */
+  parents?: string[];
+
   vcs?: VcsPayload;
 
   /**
