@@ -32,6 +32,7 @@ import { signOp } from './identity/signing-middleware.js';
 import type { IdentityResolver } from './identity/signing-middleware.js';
 import { PROVENANCE } from './core/persist/canonical-op.js';
 import type { OpProvenance } from './core/persist/canonical-op.js';
+import { DERIVED_ROOT_PATH, isDerivedRef } from './core/persist/derived-refs.js';
 import type { VcsOp, TrellisVcsConfig } from './vcs/types.js';
 import { DEFAULT_CONFIG } from './vcs/types.js';
 import { readIssuePrefix } from './vcs/issue-prefix.js';
@@ -168,6 +169,11 @@ function ensureTrellisGitignoreEntry(rootPath: string): void {
 // ---------------------------------------------------------------------------
 
 interface PersistedConfig {
+  /**
+   * Derived workspace root marker (`@self`): the real path is computed from
+   * this file's location, never stored. Legacy configs may carry a literal
+   * absolute path; `open()` migrates them (ADR-0013 phase 3 / TRL-40).
+   */
   rootPath: string;
   ignorePatterns: string[];
   debounceMs: number;
@@ -402,7 +408,7 @@ export class TrellisVcsEngine {
       // Preserve unknown/harness keys (e.g. `transcripts`) across re-inits —
       // re-initializing a repo must never clobber opt-in config.
       ...(existing ?? {}),
-      rootPath: this.config.rootPath,
+      rootPath: DERIVED_ROOT_PATH,
       ignorePatterns: this.config.ignorePatterns,
       debounceMs: this.config.debounceMs,
       defaultBranch: this.config.defaultBranch,
@@ -420,17 +426,19 @@ export class TrellisVcsEngine {
   }
 
   /**
-   * Patch only the persisted `rootPath` key, leaving every other key (and
-   * unknown/harness keys) untouched. Used to heal a stale path after the
-   * repo directory was renamed or moved.
+   * Migrate a legacy literal `rootPath` (pre-ADR-0013 configs) to the derived
+   * `@self` form, leaving every other key (and unknown/harness keys)
+   * untouched. The root is computed from the config file's location, so a
+   * renamed or moved repo can no longer leave a stale literal behind.
+   * Best-effort — `open()` guards the call and continues on the live root.
    */
-  private rebindPersistedRootPath(): void {
+  private migratePersistedRootPath(): void {
     const configPath = join(this.config.rootPath, '.trellis', 'config.json');
     const existing = this.readPersistedConfig();
     if (!existing) return;
     writeFileSync(
       configPath,
-      JSON.stringify({ ...existing, rootPath: this.config.rootPath }, null, 2),
+      JSON.stringify({ ...existing, rootPath: DERIVED_ROOT_PATH }, null, 2),
     );
   }
 
@@ -633,19 +641,16 @@ let opsCreated = 0;
         this.config.project = persisted.project;
       }
 
-      // Self-heal: if the repo directory was renamed or moved since init, the
-      // persisted `rootPath` is stale. The engine always resolves its own root
-      // from the real filesystem, so rebind the stored path to match and keep
-      // `.trellis/config.json` truthful for humans and tools that read it.
-      // Best-effort — never fail `open()` because the rebind write failed.
-      if (
-        persisted.rootPath &&
-        resolve(persisted.rootPath) !== resolve(this.config.rootPath)
-      ) {
+      // ADR-0013 phase 3: configs must carry the derived `rootPath` marker
+      // (`@self`), never a literal path that can rot across renames or moves.
+      // Migrate legacy literals on open so `.trellis/config.json` stays
+      // truthful for humans and tools that read it. Best-effort — never fail
+      // `open()` because the migration write failed.
+      if (persisted.rootPath && !isDerivedRef(persisted.rootPath)) {
         try {
-          this.rebindPersistedRootPath();
+          this.migratePersistedRootPath();
         } catch {
-          /* config stays stale; engine continues on the live path */
+          /* config stays legacy; engine continues on the live root */
         }
       }
     }

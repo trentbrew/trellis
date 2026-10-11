@@ -21,6 +21,7 @@ import type { VcsOp, VcsOpKind } from '../vcs/types.js';
 import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { PROVENANCE } from '../core/persist/canonical-op.js';
+import { DERIVED_ROOT_PATH } from '../core/persist/derived-refs.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -279,7 +280,9 @@ class ImportEngine {
     // Write config if it doesn't exist
     if (!existsSync(configPath)) {
       const config = {
-        rootPath: this.opts.to,
+        // Derived (ADR-0013 phase 3): the workspace root is the config file's
+        // location, never a literal path.
+        rootPath: DERIVED_ROOT_PATH,
         ignorePatterns: [
           'node_modules',
           '.git',
