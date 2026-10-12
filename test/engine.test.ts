@@ -70,6 +70,16 @@ describe('TrellisVcsEngine', () => {
     );
   });
 
+  test('initRepo recognizes the **/.trellis/ pattern variant', async () => {
+    writeFileSync(join(TEST_DIR, '.gitignore'), 'dist\n**/.trellis/\n');
+    const engine = new TrellisVcsEngine({ rootPath: TEST_DIR });
+    await engine.initRepo();
+
+    expect(readFileSync(join(TEST_DIR, '.gitignore'), 'utf-8')).toBe(
+      'dist\n**/.trellis/\n',
+    );
+  });
+
   test('initRepo scans existing files when indexWorkspace is enabled', async () => {
     const engine = new TrellisVcsEngine({ rootPath: TEST_DIR });
     const result = await engine.initRepo({ indexWorkspace: true });

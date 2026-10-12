@@ -141,7 +141,11 @@ function hasTrellisGitignoreEntry(content: string): boolean {
     .filter((line) => line.length > 0 && !line.startsWith('#'))
     .some((line) => {
       const normalized = line.replace(/\/$/, '');
-      return normalized === '.trellis' || normalized === '/.trellis';
+      return (
+        normalized === '.trellis' ||
+        normalized === '/.trellis' ||
+        normalized === '**/.trellis'
+      );
     });
 }
 
