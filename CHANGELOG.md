@@ -4,6 +4,36 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [4.0.12] — 2026-10-12
+
+**Journal format frozen + agent-lane hardening: a spec'd op envelope, DAG-ready
+journals, and derived config refs.**
+
+- **Journal format v0.1 spec + conformance corpus** — `docs/spec/JOURNAL-FORMAT.md`
+  pins the op envelope (preimage, hashing, signing, chain + signing policy), with
+  an independent zero-dependency validator and reference-minted fixtures. The
+  corpus is the compatibility gate for every envelope change.
+- **Envelope v2 (`parents[]` DAG)** — `VcsOp` gains `v`/`parents`; hashing,
+  signing, and verification dispatch on the op version, so v1 ops stay
+  byte-compatible while roots and merges become first-class in journals. Op
+  provenance gains `commandId` (ADR-0058).
+- **Derived `rootPath` (`@self`)** — `.trellis/config.json` no longer stores a
+  literal path (ADR-0013 phase 3): init and import persist `@self`, and `open()`
+  migrates legacy literals, so renames and moves can't go stale. `trellis init`
+  also recognizes `**/.trellis` gitignore spellings.
+- **Platform ontology** — `Repo` + thin `Project` + `Service`; `Integration`
+  promoted to a core platform type; `trellis:project` retired (TRL-197, TRL-203).
+- **Git bridges** — forge-direct GitHub import, read-only to start (TRL-224);
+  git-bug adapter imports `refs/bugs/*` (TRL-200).
+- **Agent lanes & guard** — lane-scoped ownership policy exported on
+  `trellis/vcs`; `trellis guard` cross-agent file-ownership checks; lane-scoped
+  enforcement for host sessions (workstream D); softer lane-promote conflicts.
+- **Operator surface** — `trellis cadence --lanes/--dispatch` (TRL-88),
+  `builtin:clock` scheduler fact (ADR-0019/0047), agent liveness census
+  (ADR-0052), and `trellis/presence` + `trellis/operator` export lifts.
+- **Reliability** — crash-safe op-log/issue locks, orphaned-lockfile cleanup,
+  worktree bind at the facility root, and a changelog gate in `just publish`.
+
 ## trellis [4.0.10] — 2026-09-29
 
 **Operator surface: notes, cycles, cadence, mirrors, and report (ADR 0050).**
