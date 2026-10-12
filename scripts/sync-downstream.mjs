@@ -25,6 +25,7 @@ const manifest = JSON.parse(
 const checkOnly = process.argv.includes('--check');
 
 let failed = 0;
+let skipped = 0;
 
 function ok(msg) {
   console.log(`  ✓ ${msg}`);
@@ -63,7 +64,11 @@ for (const consumer of manifest.consumers) {
   console.log(`${consumer.id} (${base})`);
 
   if (!existsSync(base) && consumer.id !== 'cursor-global') {
-    fail(`path missing: ${base}`);
+    // Desk machines materialize different downstream sets (the clean-room desk
+    // omits priorart/studio by design). Verify what exists here; note the rest.
+    console.log('  · skipped (not materialized here)');
+    skipped += 1;
+    console.log('');
     continue;
   }
 
@@ -138,4 +143,8 @@ if (failed) {
   console.error(`\n${failed} issue(s)`);
   process.exit(1);
 }
-console.log('Downstream sync OK');
+console.log(
+  skipped
+    ? `Downstream sync OK (${skipped} consumer(s) skipped — not materialized here)`
+    : 'Downstream sync OK',
+);
