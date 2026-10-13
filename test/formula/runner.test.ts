@@ -9,14 +9,14 @@ import {
   serialize,
   evaluate,
   ParseError,
-} from '../index.js';
-import type { DialectTag, EvalContextV1 } from '../index.js';
+} from '../../src/formula/index.js';
+import type { DialectTag, EvalContextV1 } from '../../src/formula/index.js';
 import {
   classifyPbCompat,
   evaluateCms,
   evaluateKernel,
   evaluatePb,
-} from '../adapters/index.js';
+} from '../../src/formula/adapters/index.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const matrixPath = join(here, 'matrix.jsonl');
