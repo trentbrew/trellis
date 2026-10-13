@@ -1,0 +1,10 @@
+flowchart TB
+  subgraph inputs [Corpus rows]
+    E[expr + dialect + context]
+  end
+  E --> A{Adapter stub or direct parse}
+  A --> IR[Canonical IR]
+  IR --> EV[evaluate]
+  EV --> OUT[expected match]
+  IR --> SER[serialize]
+  SER --> RT[round-trip check]

@@ -1,0 +1,25 @@
+{"id":"k-mul","dialect":"kernel-fn","expr":"$mul($price, $quantity)","context":{"record":{"price":10,"quantity":3}},"expected":30,"roundtrip":true}
+{"id":"k-add","dialect":"kernel-fn","expr":"$add($price, $quantity)","context":{"record":{"price":10,"quantity":3}},"expected":13,"roundtrip":true}
+{"id":"k-sub","dialect":"kernel-fn","expr":"$sub($total, $discount)","context":{"record":{"total":100,"discount":15}},"expected":85,"roundtrip":true}
+{"id":"k-div","dialect":"kernel-fn","expr":"$div($total, $count)","context":{"record":{"total":20,"count":4}},"expected":5,"roundtrip":true}
+{"id":"k-if","dialect":"kernel-fn","expr":"$if($gt($score, 10), \"high\", \"low\")","context":{"record":{"score":12}},"expected":"high","roundtrip":true}
+{"id":"k-if-null","dialect":"kernel-fn","expr":"$if(false, 1, null)","context":{"record":{}},"expected":null,"roundtrip":true}
+{"id":"c-mul","dialect":"cms-brace","expr":"{price} * {quantity}","context":{"record":{"price":4,"quantity":5}},"expected":20,"roundtrip":true}
+{"id":"c-add","dialect":"cms-brace","expr":"{a} + {b}","context":{"record":{"a":2,"b":3}},"expected":5,"roundtrip":true}
+{"id":"c-paren","dialect":"cms-brace","expr":"({price} + 1) * 2","context":{"record":{"price":3}},"expected":8,"roundtrip":true}
+{"id":"c-array-unwrap","dialect":"cms-brace","expr":"{qty} * 2","context":{"record":{"qty":[7]}},"expected":14,"roundtrip":true}
+{"id":"p-mul","dialect":"pb-compat","expr":"@price * @quantity","context":{"record":{"price":2,"quantity":4}},"expected":8,"roundtrip":true}
+{"id":"p-request","dialect":"pb-compat","expr":"@request.auth.id != '' && @price * 2","context":{"record":{"price":5},"request":{"auth":{"id":"user1"}}},"expected":10,"roundtrip":false,"skip":true,"notes":"boolean && not in v1 infix; eval numeric part only in p-mul-simple"}
+{"id":"p-mul-simple","dialect":"pb-compat","expr":"@total / @count","context":{"record":{"total":9,"count":3}},"expected":3,"roundtrip":true}
+{"id":"p-rich-concat","dialect":"pb-compat","expr":"concat(@a, @b)","expectError":true}
+{"id":"p-rich-string","dialect":"pb-compat","expr":"@a + \"x\"","expectError":true}
+{"id":"k-missing-field","dialect":"kernel-fn","expr":"$mul($price, $quantity)","context":{"record":{"price":10}},"expected":0,"roundtrip":false,"notes":"null coerces to 0 in numeric mul"}
+{"id":"sh-cms-mul","kind":"classify","expr":"@price * @qty","expectedClass":"cms-numeric"}
+{"id":"sh-cms-paren","kind":"classify","expr":"(@a + @b) / 2","expectedClass":"cms-numeric"}
+{"id":"sh-rich-concat","kind":"classify","expr":"concat(@a, \"hi\")","expectedClass":"shablon-rich"}
+{"id":"sh-rich-round","kind":"classify","expr":"round(@total, 2)","expectedClass":"shablon-rich"}
+{"id":"sh-rich-string","kind":"classify","expr":"@name + \"!\"","expectedClass":"shablon-rich"}
+{"id":"sh-invalid","kind":"classify","expr":"   ","expectedClass":"invalid"}
+{"id":"sh-adapter-kernel","kind":"adapter","adapter":"kernel","expr":"$mul($price, $quantity)","context":{"record":{"price":3,"quantity":4}},"expected":12}
+{"id":"sh-adapter-cms","kind":"adapter","adapter":"cms","expr":"{a} + {b}","context":{"record":{"a":10,"b":1}},"expected":11}
+{"id":"sh-adapter-pb","kind":"adapter","adapter":"pb","expr":"@x * 3","context":{"record":{"x":5}},"expected":15}

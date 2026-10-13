@@ -8,7 +8,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['test/**/*.test.ts'],
+    include: ['test/**/*.test.ts', 'experiments/**/corpus/*.test.ts'],
     setupFiles: ['./test/setup/mirror-isolation.ts'],
     globals: false,
     testTimeout: 30_000,

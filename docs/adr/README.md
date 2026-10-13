@@ -50,6 +50,7 @@ Desk issue: **TRL-35** (W0), **TRL-36** (W1). Plan:
 | [0022](./0022-zone-capability-model.md)            | Zone-scoped capability model           | `CapabilityLevel{None,Reader,Member,Owner}`; zones = immutable `zoneId` + mutable `alias`; per-writer refs; single-owner `integration` (accepted, TRL-102) |
 | [0023](./0023-zone-encryption-at-rest.md)         | Encryption-at-rest for zone keys       | Per-zone AES-256-GCM; key wrapped under argon2id KEK (Ed25519 root); revoke = rotate; relay stores ciphertext only (proposed, TRL-97/102) |
 | [0049](./0049-git-bug-compatibility-adapter.md) | git-bug compatibility adapter        | Read `refs/bugs/*` in clean-room TS; map git-bug ops → `vcs:issue*`; Trellis canonical (proposed) |
+| [0059](./0059-frozen-formula-core-dialect-adapters.md) | Frozen formula core + dialect adapters | Zero-dep parse/eval core in `trellis` package; CMS/kernel/PB/client as adapters; amends 0009 (accepted, TRL-470) |
 
 ### Product / explorer shell
 
