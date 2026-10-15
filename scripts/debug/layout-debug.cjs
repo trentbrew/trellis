@@ -1,5 +1,7 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
+const path = require('path');
+const OUT = path.join(__dirname, 'layout-debug.json');
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
@@ -28,9 +30,9 @@ const fs = require('fs');
     }
     return { cols: shell.gridTemplateColumns, rows: shell.gridTemplateRows, rects };
   });
-  fs.writeFileSync('layout-debug.json', JSON.stringify(m, null, 2));
+  fs.writeFileSync(OUT, JSON.stringify(m, null, 2));
   await browser.close();
 })().catch((e) => {
-  fs.writeFileSync('layout-debug.json', String(e));
+  fs.writeFileSync(OUT, String(e));
   process.exit(1);
 });

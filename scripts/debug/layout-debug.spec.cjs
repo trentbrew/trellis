@@ -1,5 +1,7 @@
 const { test } = require('@playwright/test');
 const fs = require('fs');
+const path = require('path');
+const OUT = path.join(__dirname, 'layout-debug.json');
 
 test('debug layout', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -28,5 +30,5 @@ test('debug layout', async ({ page }) => {
     }
     return { cols: shell.gridTemplateColumns, rows: shell.gridTemplateRows, rects };
   });
-  fs.writeFileSync('layout-debug.json', JSON.stringify(m, null, 2));
+  fs.writeFileSync(OUT, JSON.stringify(m, null, 2));
 });
