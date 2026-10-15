@@ -88,6 +88,10 @@ export type EntrySubscriber<
   T extends Record<string, unknown> = Record<string, unknown>,
 > = (entry: Entry<T> | null) => void;
 
+export type CollectionPbType = 'base' | 'view' | 'auth';
+export type CollectionKind = 'user' | 'system' | 'auth';
+export type CollectionTierOntology = 'user' | 'system' | 'core';
+
 export type Collection = {
   /** Normalized lowercase key (e.g. "blog_post"). */
   key: string;
@@ -97,6 +101,18 @@ export type Collection = {
   inferred: boolean;
   /** Total entry count (all statuses). */
   count: number;
+  /** Sidebar section id (TypeSchema fact `navOntology`). Not a PB JSON field on this type. */
+  navOntology?: string;
+  /** Sidebar section title (TypeSchema fact `navOntologyLabel`). */
+  navOntologyLabel?: string;
+  /** Explicit system collection (TypeSchema fact `system: true`). */
+  system?: boolean;
+  /** CMS kind for PB adapter (TypeSchema fact `kind`). */
+  kind?: CollectionKind;
+  /** PocketBase collection type mirror (TypeSchema fact `pbType`). */
+  pbType?: CollectionPbType;
+  /** Tier mirror for flags — not sidebar nav (TypeSchema fact `ontology`). */
+  ontology?: string;
 };
 
 export type CmsClientOptions = {

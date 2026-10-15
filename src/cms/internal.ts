@@ -2,7 +2,12 @@
  * Trellis CMS — internal helpers (fact join, status detection, reference expansion).
  */
 
-import type { Entry, EntryStatus } from './types.js';
+import type {
+  CollectionKind,
+  CollectionPbType,
+  Entry,
+  EntryStatus,
+} from './types.js';
 
 export type RawFact = { e: string; a: string; v: string | number | boolean };
 export type RawEntity = { id: string; type: string };
@@ -36,6 +41,55 @@ export function isSystemType(type: string): boolean {
 
 export function typeKey(type: string): string {
   return type.trim().toLowerCase();
+}
+
+/** TypeSchema facts → optional CMS list meta (ADR 0006 phase 6d / ADR 0004 4b). */
+const COLLECTION_KINDS = new Set<string>(['user', 'system', 'auth']);
+const COLLECTION_PB_TYPES = new Set<string>(['base', 'view', 'auth']);
+
+export function collectionMetaFromSchemaFacts(
+  efacts: RawFact[],
+): {
+  navOntology?: string;
+  navOntologyLabel?: string;
+  system?: boolean;
+  kind?: CollectionKind;
+  pbType?: CollectionPbType;
+  ontology?: string;
+} {
+  const meta: ReturnType<typeof collectionMetaFromSchemaFacts> = {};
+
+  const stringFact = (attr: string) => {
+    const fact = efacts.find((f) => f.a === attr);
+    if (typeof fact?.v !== 'string') return undefined;
+    const trimmed = fact.v.trim();
+    return trimmed === '' ? undefined : trimmed;
+  };
+
+  const navOntology = stringFact('navOntology');
+  if (navOntology !== undefined) meta.navOntology = navOntology;
+
+  const navOntologyLabel = stringFact('navOntologyLabel');
+  if (navOntologyLabel !== undefined) meta.navOntologyLabel = navOntologyLabel;
+
+  if (efacts.some((f) => f.a === 'system' && f.v === true)) {
+    meta.system = true;
+  }
+
+  const kind = stringFact('kind');
+  if (kind !== undefined && COLLECTION_KINDS.has(kind)) {
+    meta.kind = kind as CollectionKind;
+  }
+
+  const pbType = stringFact('pbType');
+  if (pbType !== undefined && COLLECTION_PB_TYPES.has(pbType)) {
+    meta.pbType = pbType as CollectionPbType;
+  }
+
+  const ontology = stringFact('ontology');
+  if (ontology !== undefined) meta.ontology = ontology;
+
+  return meta;
 }
 
 export function entryFromFacts(entity: RawEntity, facts: RawFact[], links?: RawLink[]): Entry {

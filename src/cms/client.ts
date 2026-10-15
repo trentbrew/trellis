@@ -43,6 +43,7 @@ import {
   fingerprint,
   groupFactsByEntity,
   groupLinksBySource,
+  collectionMetaFromSchemaFacts,
   typeKey,
   type RawEntity,
   type RawFact,
@@ -137,11 +138,13 @@ export class CmsClient {
       const k = typeKey(name);
       const labelFact = efacts.find((f) => f.a === 'label');
       const label = typeof labelFact?.v === 'string' ? labelFact.v : name;
+      const schemaMeta = collectionMetaFromSchemaFacts(efacts);
       out.set(k, {
         key: k,
         label,
         inferred: false,
         count: counts.get(k) ?? 0,
+        ...schemaMeta,
       });
     }
 

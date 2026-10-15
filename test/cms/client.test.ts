@@ -246,6 +246,97 @@ describe('CmsClient.collections — explicit CMS schemas', () => {
       true,
     );
   });
+
+  test('surfaces navOntology, navOntologyLabel, and tier ontology facts', async () => {
+    const entities = [
+      { id: 'schema:people', type: 'TypeSchema' },
+      { id: 'schema:posts', type: 'TypeSchema' },
+    ];
+    const facts = [
+      { e: 'schema:people', a: 'type', v: 'TypeSchema' },
+      { e: 'schema:people', a: 'cms', v: true },
+      { e: 'schema:people', a: 'label', v: 'People' },
+      { e: 'schema:people', a: 'navOntology', v: 'content' },
+      { e: 'schema:people', a: 'navOntologyLabel', v: 'Content' },
+      { e: 'schema:people', a: 'ontology', v: 'user' },
+      { e: 'schema:posts', a: 'type', v: 'TypeSchema' },
+      { e: 'schema:posts', a: 'cms', v: true },
+      { e: 'schema:posts', a: 'navOntology', v: 'civic-media' },
+      { e: 'schema:posts', a: 'navOntologyLabel', v: 'Civic media' },
+    ];
+    const { fn } = mockFetch((path) => {
+      if (path.endsWith('/entities')) return entities;
+      if (path.endsWith('/facts')) return facts;
+      if (path.endsWith('/links')) return [];
+      return [];
+    });
+    const client = createCmsClient({
+      url: 'http://localhost:9999',
+      fetch: fn,
+      pollIntervalMs: 500,
+    });
+    const collections = await client.collections();
+    const people = collections.find((c) => c.key === 'people');
+    const posts = collections.find((c) => c.key === 'posts');
+    expect(people?.navOntology).toBe('content');
+    expect(people?.navOntologyLabel).toBe('Content');
+    expect(people?.ontology).toBe('user');
+    expect(posts?.navOntology).toBe('civic-media');
+    expect(posts?.navOntologyLabel).toBe('Civic media');
+    client.close();
+  });
+
+  test('surfaces system, kind, and pbType facts', async () => {
+    const entities = [{ id: 'schema:_superusers', type: 'TypeSchema' }];
+    const facts = [
+      { e: 'schema:_superusers', a: 'type', v: 'TypeSchema' },
+      { e: 'schema:_superusers', a: 'cms', v: true },
+      { e: 'schema:_superusers', a: 'system', v: true },
+      { e: 'schema:_superusers', a: 'kind', v: 'auth' },
+      { e: 'schema:_superusers', a: 'pbType', v: 'auth' },
+      { e: 'schema:_superusers', a: 'ontology', v: 'core' },
+    ];
+    const { fn } = mockFetch((path) => {
+      if (path.endsWith('/entities')) return entities;
+      if (path.endsWith('/facts')) return facts;
+      if (path.endsWith('/links')) return [];
+      return [];
+    });
+    const client = createCmsClient({
+      url: 'http://localhost:9999',
+      fetch: fn,
+      pollIntervalMs: 500,
+    });
+    const [row] = await client.collections();
+    expect(row?.system).toBe(true);
+    expect(row?.kind).toBe('auth');
+    expect(row?.pbType).toBe('auth');
+    expect(row?.ontology).toBe('core');
+    client.close();
+  });
+
+  test('ignores empty string nav facts', async () => {
+    const entities = [{ id: 'schema:items', type: 'TypeSchema' }];
+    const facts = [
+      { e: 'schema:items', a: 'type', v: 'TypeSchema' },
+      { e: 'schema:items', a: 'cms', v: true },
+      { e: 'schema:items', a: 'navOntology', v: '   ' },
+    ];
+    const { fn } = mockFetch((path) => {
+      if (path.endsWith('/entities')) return entities;
+      if (path.endsWith('/facts')) return facts;
+      if (path.endsWith('/links')) return [];
+      return [];
+    });
+    const client = createCmsClient({
+      url: 'http://localhost:9999',
+      fetch: fn,
+      pollIntervalMs: 500,
+    });
+    const [row] = await client.collections();
+    expect(row?.navOntology).toBeUndefined();
+    client.close();
+  });
 });
 
 describe('subscribe — shared poll dedup', () => {
