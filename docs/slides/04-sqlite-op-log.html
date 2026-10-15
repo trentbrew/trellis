@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slide Deck — SQLite Op-Log (Causal Stream)</title>
+  <link rel="stylesheet" href="trellis.css">
+</head>
+<body>
+  <div class="slides">
+
+    <!-- Title -->
+    <div class="slide title-slide">
+      <div class="slide-content">
+        <h1>The SQLite <span class="accent">Op-Log</span></h1>
+        <p class="subtitle">The immutable, content-addressed causal stream — Trellis's flight recorder</p>
+        <div class="deck-meta">
+          <p>Source: <code>src/vcs/op-log.ts</code> · <code>src/vcs/ops.ts</code> · <code>src/vcs/types.ts</code> · <code>src/core/persist/backend.ts</code></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agenda -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Today's Deck</h2>
+        <ol>
+          <li>Why an op-log?</li>
+          <li>VcsOp structure</li>
+          <li>Content-addressed hashing</li>
+          <li>JSONL on-disk format</li>
+          <li>Persistence backends (SQLite / WAL)</li>
+          <li>Boot & snapshots</li>
+          <li>Lane journals</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Why Op-Log -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>What Is the Causal Stream?</h2>
+        <p class="lead">A Git commit is a snapshot of the entire repo at a moment in time. A Trellis op is a single semantic change — a fact asserted, a file modified, a branch created.</p>
+        <div class="columns">
+          <div>
+            <h3>Git model</h3>
+            <pre><code>commits: [snapshot1] ← [snapshot2] ← [snapshot3]
+                   ↑           full repo copy
+                   every commit stores everything
+                    (diff is derived, not stored)
+</code></pre>
+          </div>
+          <div>
+            <h3>Trellis model</h3>
+            <pre><code>ops: op1 → op2 → op3 → op4 → op5
+        ↑
+      each op is ONE change
+      (add a fact, modify a file,
+       create a branch, etc.)
+
+  store = fold(allOps) → current state
+</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VcsOp Structure -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Op Structure</h2>
+        <p>Every operation is a self-contained envelope with a hashed payload:</p>
+<pre><code>export interface VcsOp {
+  hash: string;          // trellis:op:{sha256}
+  kind: VcsOpKind;       // e.g. 'vcs:fileAdd'
+  timestamp: string;     // ISO 8601
+  agentId: string;       // who asserted it
+  previousHash?: string; // causal link → predecessor
+  vcs?: VcsPayload;      // payload (HASHED)
+  laneId?: string;       // envelope (NOT hashed)
+  facts?: Fact[];        // envelope annotations (NOT hashed)
+  links?: Link[];        // envelope annotations (NOT hashed)
+}
+
+// The hash covers:
+// { kind, timestamp, agentId, previousHash, vcs }
+// — NOT the envelope fields.
+</code></pre>
+        <p style="color: var(--text-dim); font-size: 0.85rem; margin-top: 1rem;">Envelope vs payload (TRL-102): envelope fields annotate an op <em>without</em> invalidating its hash. This lets peers annotate foreign ops (e.g. tagging them as "remote") while keeping provenance intact.</p>
+      </div>
+    </div>
+
+    <!-- Op Kinds -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Op Kinds — Tiered Granularity</h2>
+        <p>Ops are organized in three additive tiers of granularity:</p>
+        <table>
+          <thead><tr><th>Tier</th><th>Granularity</th><th>Op Kinds</th></tr></thead>
+          <tbody>
+            <tr><td><strong>0</strong></td><td>File-as-blob</td><td><code>fileAdd</code>, <code>fileModify</code>, <code>fileDelete</code>, <code>fileRename</code></td></tr>
+            <tr><td><strong>1</strong></td><td>File-as-entity</td><td>Same as Tier 0 + line-level metadata, language detection</td></tr>
+            <tr><td><strong>2</strong></td><td>AST-as-graph</td><td><code>symbolRename</code>, <code>symbolMove</code>, <code>symbolExtract</code>, <code>signatureChange</code></td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem;">Tiers are additive — a file change may produce <em>both</em> a <code>vcs:fileModify</code> (Tier 0) and a <code>vcs:symbolRename</code> (Tier 2), making the same change queryable at both levels.</p>
+      </div>
+    </div>
+
+    <!-- Op Kinds (VCS control) -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>VCS Control &amp; Workflow Ops</h2>
+        <p>Beyond file-level changes, the op log records structural and workflow operations:</p>
+<pre style="font-size: 0.85em;"><code>// Branch management
+vcs:branchCreate    // new branch pointer
+vcs:branchDelete    // remove branch
+vcs:branchAdvance   // move head pointer
+
+// History curation
+vcs:milestoneCreate  // human-curated checkpoint
+vcs:checkpointCreate // auto-generated stable state
+
+// Issue lifecycle
+vcs:issueCreate / issueUpdate / issueStart /
+vcs:issuePause / issueResume / issueClose / issueReopen
+
+// Agent lanes (multi-agent isolation)
+vcs:laneCreate / laneDrop /
+vcs:lanePromoteStart / lanePromoteComplete / lanePromoteAbort
+
+// Decision traces
+vcs:decisionRecord
+
+// EAV graph writes
+vcs:storeAssert / storeRetract /
+vcs:storeLink / storeUnlink</code></pre>
+      </div>
+    </div>
+
+    <!-- Hashing -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Content-Addressed Hashing</h2>
+        <p><span class="teal">Every op's hash is a SHA-256 digest</span> of its content + causal predecessor. This makes the op log <strong>tamper-evident</strong> — rewriting any op invalidates every successor.</p>
+<pre><code>// hashVcsOp({ kind, timestamp, agentId,
+//           previousHash, vcs })
+const content = JSON.stringify({
+  kind: 'vcs:fileAdd',
+  timestamp: '2026-06-15T12:00:00Z',
+  agentId: 'identity:alice',
+  previousHash: 'trellis:op:abc123…',
+  vcs: {
+    filePath: 'src/auth.ts',
+    contentHash: 'sha256:def456…',
+  }
+})
+
+const hashBuffer = await crypto.subtle.digest('sha256', content)
+// → hashHex: "trellis:op:9f3a7e…"
+</code></pre>
+        <p style="margin-top: 1rem; color: var(--text-dim);">The hash is reproducible — given the same inputs, two peers minting the same semantic change produce identical hashes. This enables deduplication during sync.</p>
+      </div>
+    </div>
+
+    <!-- JSONL Format -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>On-Disk Format: JSONL</h2>
+        <p><span class="yellow">One op per line</span> — newline-delimited JSON. Appends are atomic, preventing the "lost append" bug that plagued the old array format.</p>
+<pre><code>ops.json (JSONL)
+{"hash":"trellis:op:001…","kind":"vcs:fileAdd","timestamp":"2026-06-15T12:00:00Z","agentId":"identity:alice","previousHash":null,"vcs":{"filePath":"src/index.ts","contentHash":"sha256:abc"}}
+{"hash":"trellis:op:002…","kind":"vcs:fileAdd","timestamp":"2026-06-15T12:00:30Z","agentId":"identity:alice","previousHash":"trellis:op:001…","vcs":{"filePath":"src/utils.ts","contentHash":"sha256:def"}}
+{"hash":"trellis:op:003…","kind":"vcs:branchCreate","timestamp":"2026-06-15T12:01:00Z","agentId":"identity:alice","previousHash":"trellis:op:002…","vcs":{"branchName":"feature-x"}}
+</code></pre>
+        <p style="margin-top: 1.5rem; color: var(--text-dim);">Two processes can never clobber each other's writes — each simply adds its own line. Legacy JSON-array files are auto-migrated on first append.</p>
+      </div>
+    </div>
+
+    <!-- Persistence Backends -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Backend Abstraction</h2>
+        <p>The <code>OpLog</code> interface is backend-agnostic. Implementations persist to filesystem (<code>JsonOpLog</code>), browser IndexedDB (<code>IdbOpLog</code>), or any store:</p>
+<pre><code>export interface OpLog {
+  load(): void | Promise<void>
+  append(op: VcsOp): void
+  readAll():       VcsOp[]
+  getLastOp():    VcsOp | undefined
+  count():        number
+  flush?():       Promise<void>
+}
+
+// Concrete implementations:
+JsonOpLog     // JSONL on filesystem
+IdbOpLog      // IndexedDB (browser)
+LaneOpLog     // per-lane journal journal
+</code></pre>
+        <p style="margin-top: 1rem; color: var(--text-dim);">The <code>KernelBackend</code> interface (SQLite) provides the same operations for the kernel: <code>append</code>, <code>readAll</code>, <code>readUntil</code>, <code>readAfter</code>, <code>readUntilTimestamp</code>, snapshot support.</p>
+      </div>
+    </div>
+
+    <!-- Boot & Snapshots -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Boot &amp; Snapshots</h2>
+        <p>The kernel boots by loading the latest snapshot, then replaying only ops <em>after</em> that snapshot — making startup fast even for large histories.</p>
+<pre><code>class TrellisKernel {
+  boot(): { opsReplayed, fromSnapshot } {
+    backend.init()
+
+    const snapshot = backend.loadLatestSnapshot()
+    if (snapshot) {
+      store.restore(snapshot.data)      // hydrate from snapshot
+      backend.readAfter(snapshot.lastOpHash)  // replay tail only
+    } else {
+      backend.readAll()                 // full replay
+    }
+  }
+
+  checkpoint() {
+    backend.saveSnapshot(lastOpHash, store.snapshot())
+  }
+}
+
+// Snapshot = { facts, links, catalog }
+// Triggered every N ops or on signal (green build, interval)</code></pre>
+      </div>
+    </div>
+
+    <!-- Lane Journals -->
+    <div class="slide">
+      <div class="slide-content">
+        <h2>Per-Lane Op Journals</h2>
+        <p><span class="accent">Agent lanes</span> each have their own isolated op journal — a separate JSONL file. This enables multi-agent isolation without cross-contamination.</p>
+<pre><code>.trellis/
+  ops.json        // integration journal (main branch)
+  lanes/
+    lane-a1b2…/
+      ops.json    // lane journal
+    lane-c3d4…/
+      ops.json    // lane journal
+  snapshots/
+    snap-a1b2…/   // lane snapshots
+</code></pre>
+        <p style="margin-top: 1rem;">When a lane is <strong>promoted</strong> (via <code>trellis issue close --confirm</code>), its ops are replayed onto the integration journal, and a milestone is auto-created.</p>
+        <p style="color: var(--text-dim); font-size: 0.9rem;">File: <code>src/vcs/lane.ts</code> — <code>src/vcs/lane-promote.ts</code></p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="slide">
+      <div class="slide-content" style="text-align: center;">
+        <h1>Questions?</h1>
+        <p style="margin-top: 2rem;">Source: <code>src/vcs/op-log.ts</code> · <code>src/vcs/ops.ts</code></p>
+        <p style="margin-top: 3rem; font-size: 0.9rem; color: var(--text-dim);">
+          <span class="badge badge-vcs">VCS</span> ·
+          <a href="01-five-pillars.html" style="color: var(--accent-2);">Pillars</a> ·
+          <a href="02-eav-kernel.html" style="color: var(--accent-2);">EAV Kernel</a> ·
+          <a href="03-iroh-sync.html" style="color: var(--accent-2);">Iroh Sync</a> ·
+          <a href="06-vcs-decompose.html" style="color: var(--accent-2);">VCS Ops</a> ·
+          <a href="index.html" style="color: var(--text-dim);">← All decks</a>
+        </p>
+      </div>
+    </div>
+
+  </div>
+  <script src="trellis-slides.js"></script>
+  <div class="nav-overlay"></div>
+  <div class="slide-footer"><span class="deck-title">SQLite Op-Log</span><span class="page" id="page-indicator"></span></div>
+</body>
+</html>

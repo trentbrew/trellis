@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trellis Slides — Five Pillars</title>
+  <link rel="stylesheet" href="trellis.css">
+  <script src="trellis-slides.js" defer></script>
+</head>
+<body>
+  <div class="slides">
+
+    <!-- Title -->
+    <section class="slide title-slide">
+      <div class="slide-content">
+        <h1>The Five Pillars of <span class="accent">Trellis</span></h1>
+        <p class="subtitle">Local-first semantic graph OS — built on an inspectable causal substrate</p>
+        <div class="deck-meta">
+          <p>Source: <code>docs/PILLARS.md</code> · <code>docs/DESIGN.md</code> · <code>docs/ARCHITECTURE.md</code></p>
+        </div>
+      </div>
+      <div class="nav-overlay"></div>
+    </section>
+
+    <!-- Pillar Overview -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>What Is Trellis?</h2>
+        <p class="lead">A local-first agentic OS runtime: a personal and collaborative semantic graph where files, entities, facts, links, decisions, agents, branches, and milestones live in one inspectable causal substrate.</p>
+
+        <div class="columns">
+          <div>
+            <h3>Local ownership is primary</h3>
+            <p>Trellis is fully useful without a cloud server. Local state, local identity, local persistence, and local query execution are the default. Cloud services, relays, and gateways are additive.</p>
+          </div>
+          <div>
+            <h3>Sync is replication, not ownership transfer</h3>
+            <p>Peer sync replicates signed, causally ordered operations between Trellis nodes. A relay may help peers connect but does not own state.</p>
+          </div>
+        </div>
+
+        <p style="margin-top: 2rem;"><span class="badge badge-vcs">5 Pillars</span> <span class="badge badge-kernel">Agentic OS</span></p>
+      </div>
+    </section>
+
+    <!-- Pillar 1 -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>Pillar 1: The Causal Stream</h2>
+        <h3>A fine-grained, immutable ledger of every semantic change</h3>
+
+        <p>Every change — from a file save to a branch creation — is recorded as a <code>VcsOp</code> in the append-only stream. The stream is:</p>
+
+        <ul>
+          <li><strong>Immutable</strong> — ops are never modified or deleted</li>
+          <li><strong>Causally ordered</strong> — each op references its predecessor via <code>previousHash</code></li>
+          <li><strong>Content-addressed</strong> — each op's hash covers its content + causal link (SHA-256)</li>
+          <li><strong>Agent-attributed</strong> — every op carries an <code>agentId</code> (human or CI)</li>
+        </ul>
+
+        <pre><code>// Each op is a node in the causal DAG
+{ kind: 'vcs:fileAdd',
+  timestamp: '2026-06-15T12:00:00Z',
+  agentId: 'identity:alice',
+  previousHash: 'trellis:op:abc123…',
+  hash: 'trellis:op:def456…',
+  vcs: { filePath: 'src/auth.ts', contentHash: 'sha256:…' }
+}
+</code></pre>
+      </div>
+    </section>
+
+    <!-- Pillar 2 -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>Pillar 2: Semantic Patching</h2>
+        <h3>Understanding code as a tree (AST), not lines of text</h3>
+
+        <p>Instead of treating changes as line diffs, Trellis records changes as <strong>structured semantic patches</strong> that describe <em>what happened</em> in terms of code structure.</p>
+
+        <ul>
+          <li>A variable rename across 47 lines is one <code>symbolRename</code> op, not 47 line-level edits</li>
+          <li>Two patches <strong>commute</strong> when they operate on disjoint entities</li>
+          <li>When they conflict, the result is a <strong>structured conflict</strong> naming the entities involved — not <code>&lt;&lt;&lt;&lt;&lt;</code> text markers</li>
+        </ul>
+
+        <pre><code>type SemanticPatch =
+  | { kind: 'symbolAdd'      entity: ASTEntity }
+  | { kind: 'symbolRemove'   entityId: string }
+  | { kind: 'symbolModify'   entityId, oldSig, newSig }
+  | { kind: 'symbolRename'   entityId, oldName, newName }
+  | { kind: 'symbolMove'     entityId, oldFile, newFile }</code></pre>
+      </div>
+    </section>
+
+    <!-- Pillar 3 -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>Pillar 3: Narrative Milestones</h2>
+        <h3>Human-curated "stories" that sit on top of the stream</h3>
+
+        <p>Trellis separates history into three tiers of significance:</p>
+
+        <pre><code>┌──────────────────────────────────────────────────┐
+│  NARRATIVE LAYER (human-curated)                    │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐              │
+│  │Milestone│──│Milestone│──│Milestone│              │
+│  │ "init"  │  │"feature"│  │"bugfix" │              │
+│  └────┬────┘  └────┬────┘  └────┬────┘              │
+│  ─────┼─────────────┼────────────┼────────           │
+│  STABILITY LAYER (auto-generated)                   │
+│   [ckpt]  [ckpt]  [ckpt]  [ckpt]                    │
+│  ─────┼─────────────┼────────────┼────────           │
+│  CAUSAL LAYER (continuous)                            │
+│  [op][op][op][op][op][op][op][op][op][op][op][op]   │
+└──────────────────────────────────────────────────┘</code></pre>
+
+        <table style="margin-top: 1rem;">
+          <thead><tr><th>Layer</th><th>Unit</th><th>Created By</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Causal</strong></td><td><code>VcsOp</code></td><td>System (watcher)</td></tr>
+            <tr><td><strong>Stability</strong></td><td><code>Checkpoint</code></td><td>System (green build)</td></tr>
+            <tr><td><strong>Narrative</strong></td><td><code>Milestone</code></td><td>Human (guided)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Pillar 4 -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>Pillar 4: The Governance Subgraph</h2>
+        <h3>Identity and permissions built into the data structure</h3>
+
+        <div class="columns">
+          <div>
+            <h3>Identity Model</h3>
+            <p>Every actor (human, CI runner, bot) is an <code>Identity</code> entity with an Ed25519 key pair. The private key stays local; the public key + DID are graph entities replicated to peers.</p>
+
+            <pre><code>{ e: 'identity:alice',
+  a: 'type',        v: 'Identity'
+  a: 'publicKey',   v: 'ed25519:…'
+  a: 'did',         v: 'did:key:z6Mk…'
+}</code></pre>
+          </div>
+          <div>
+            <h3>Op Signing</h3>
+            <p>Every op carries an Ed25519 signature over its hash. A signing middleware verifies incoming remote ops. Policy rules live as graph entities too — branch protection, merge gates, attestation requirements.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pillar 5 -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>Pillar 5: The Idea Garden</h2>
+        <h3>A permanent, searchable archive of all exploration</h3>
+
+        <p>In Git, abandoned work (stale branches, lost commits) is invisible. In Trellis, the causal stream is immutable, so abandoned work remains in the stream. The Idea Garden is a <strong>query layer</strong> that surfaces, clusters, and makes abandoned exploration searchable.</p>
+
+        <ul>
+          <li><strong>Context-switch detection:</strong> When files being modified shifts abruptly, preceding un-milestoned ops form a candidate cluster</li>
+          <li><strong>Branch abandonment:</strong> Stale branches' un-milestoned ops are flagged</li>
+          <li><strong>Revert detection:</strong> Ops followed by undo-ops form a cluster</li>
+        </ul>
+
+        <pre><code># Discover abandoned work
+trellis garden list
+trellis garden search -k "auth caching"
+trellis garden revive &lt;cluster-id&gt; --branch "retry-caching"</code></pre>
+      </div>
+    </section>
+
+    <!-- Architecture -->
+    <section class="slide">
+      <div class="slide-content">
+        <h2>Runtime Architecture</h2>
+        <p>The target shape: NixOS host → Turtle runtime service/sidecar → Trellis kernel → sync transports → client surfaces.</p>
+
+        <pre><code>NixOS / host system
+  → Turtle runtime service or sidecar
+    → Trellis kernel
+      → EAV graph store
+      → causal op log
+      → query engine
+      → blob store
+      → identity and governance
+      → local live subscriptions
+    → sync transports
+      → Iroh peer-to-peer
+      → local memory transport
+      → optional WebSocket / PartyKit relay
+    → client surfaces
+      → Tauri desktop shell
+      → CLI
+      → MCP
+      → TypeScript SDK
+      → browser gateway</code></pre>
+
+        <p style="margin-top: 2rem; font-size: 0.9rem; color: var(--text-dim);">Invariants: works without cloud server · local state is primary · every mutation is a durable op · peers validate through identity & causal history · relays are optional adapters.</p>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <section class="slide">
+      <div class="slide-content" style="text-align: center;">
+        <h1>Questions?</h1>
+        <p class="lead" style="margin-top: 2rem;">Trellis — a local-first semantic graph OS</p>
+
+        <p style="margin-top: 3rem; font-size: 0.9rem; color: var(--text-dim);">
+          <span class="badge badge-vcs">5 Pillars</span>
+          &nbsp; <a href="eav-kernel.html" style="color: var(--accent-2);">EAV Kernel</a> ·
+          <a href="eql-s.html" style="color: var(--accent-2);">EQL-S Query</a> ·
+          <a href="op-log.html" style="color: var(--accent-2);">SQLite Op-Log</a> ·
+          <a href="iroh-sync.html" style="color: var(--accent-2);">Iroh Peer Sync</a> ·
+          <a href="semantic-patching.html" style="color: var(--accent-2);">Semantic Patching</a> ·
+          <a href="index.html" style="color: var(--text-dim);">← All decks</a>
+        </p>
+      </div>
+    </section>
+
+  </div>
+  <div class="nav-overlay"></div>
+</body>
+</html>
