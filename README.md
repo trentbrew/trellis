@@ -40,6 +40,7 @@ trellis init      # guided or one-shot setup
 trellis ui        # live graph explorer
 trellis studio    # full Studio UI in the browser, bridged to this repo
 trellis code      # start an agent coding session
+trellis wire      # pairwise Iroh peer sync (ADR 0060)
 ```
 
 Track work as graph-native entities instead of text commits:
@@ -121,6 +122,7 @@ The `trellis` package exposes focused subpaths.
 | `trellis/server`                   | HTTP + WebSocket DB server                         |
 | `trellis/db`                       | Low-level EAV store APIs                           |
 | `trellis/format`                   | Shared terminal formatters for CLI + shells        |
+| `trellis/formula`                  | Frozen formula core + dialect adapters             |
 
 **UI primitives** — each ships `/core`, `/react`, `/vue`, `/svelte`, and `/vanilla` entries:
 

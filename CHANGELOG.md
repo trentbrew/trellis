@@ -4,6 +4,28 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [4.1.0] — 2026-10-15
+
+**Peer wire, forms, and formula core: Iroh-backed pair sync, a form ontology,
+and a hardened release pipeline.**
+
+- **Iroh peer wire (ADR 0060)** — `trellis wire` brings pairwise peer sync over
+  Iroh, the on-ramp to local-first graph replication that does not depend on the
+  relay.
+- **Formula core** — the frozen kernel formula core + dialect adapters (ADR 0059,
+  TRL-470) graduate to `src/formula` and a `trellis/formula` export (TRL-479).
+- **Forms** — the form ontology lands as `trellis/forms` (core + React, Vue,
+  Svelte, vanilla).
+- **Device provisioning (TRL-455)** — devices mint their own keys, sprite
+  authorizations are signed, and private keys are written owner-only.
+- **MCP decision capture** — decision traces auto-capture again and honor
+  `--path`.
+- **Release pipeline** — publish runs from CI only, validates the tarball before
+  it ships, and the gate runs on Node 22.
+- **Repo hygiene + guard** — scratch artifacts and stale media removed; an
+  enforceable sensitive-content scan (PII, secrets, denied paths) now runs on
+  pre-commit, pre-push, and CI (TRL-493).
+
 ## trellis [4.0.12] — 2026-10-12
 
 **Journal format frozen + agent-lane hardening: a spec'd op envelope, DAG-ready
