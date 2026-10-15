@@ -1,0 +1,18 @@
+# Local enforcement for the sensitive-content guard (TRL-493).
+#
+# The guard runs on every commit (staged content) and every push (full tracked
+# tree). Rules: scripts/sensitive-patterns.json. Same scanner runs in CI via
+# .github/workflows/sensitive-scan.yml, so local bypasses still fail the build.
+#
+# Install (once per clone): `lefthook install`
+#   - On machines that already point core.hooksPath at a lefthook-aware dir,
+#     the existing hook dispatches into this file automatically — nothing to do.
+# Bypass (discouraged, audit-logged by git): `git commit --no-verify`
+pre-commit:
+  commands:
+    sensitive-scan:
+      run: node scripts/scan-sensitive.mjs
+pre-push:
+  commands:
+    sensitive-scan:
+      run: node scripts/scan-sensitive.mjs --all

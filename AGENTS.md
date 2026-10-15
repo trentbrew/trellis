@@ -35,6 +35,10 @@ pnpm test:e2e      # playwright e2e
 - Markdown docs (not docx)
 - Graph writes use the Trellis CLI or MCP tools — never modify `.trellis/` by hand
 - Native-ESM tooling: APIs mean signatures are authoritative, plus **includes** the records
+- **Never commit personal data or secrets** — this repo is public and a guard blocks it.
+  Rules in `scripts/sensitive-patterns.json`; scanner `scripts/scan-sensitive.mjs`
+  (`pnpm sensitive-scan`). Enforced on pre-commit, pre-push (lefthook) and CI. Fix a
+  false positive via `allowPaths`, never `--no-verify`.
 - **Performance spikes are workshop lanes** — same lane carries the spike + impl, promote once
   measured & parity-proven (see TRL-20 spike, `lane-8daf05b`)
 

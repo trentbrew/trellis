@@ -44,6 +44,31 @@ bun run build
 
 See [AGENTS.md](./AGENTS.md) for the conceptual framework and [DESIGN.md](./DESIGN.md) for the architecture specification.
 
+## Sensitive Content & Secrets
+
+This repository is public. A guard blocks personal material, PII, and
+credentials from ever landing here.
+
+- **Rules:** [`scripts/sensitive-patterns.json`](./scripts/sensitive-patterns.json) — denied paths, strings, and regexes (PII, keys, tokens).
+- **Scanner:** `scripts/scan-sensitive.mjs` (`pnpm sensitive-scan` for the full tree).
+- **Enforced on:**
+  - `pre-commit` — staged content (via [`lefthook.yml`](./lefthook.yml)).
+  - `pre-push` — the full tracked tree.
+  - CI — [`.github/workflows/sensitive-scan.yml`](./.github/workflows/sensitive-scan.yml) on every push and PR (required check).
+
+Run it yourself any time:
+
+```bash
+pnpm sensitive-scan          # whole tracked tree
+node scripts/scan-sensitive.mjs   # staged content only
+```
+
+A **false positive** is fixed by adding the file to `allowPaths` in
+`sensitive-patterns.json` — not by `--no-verify`. If the scanner blocks a
+commit, remove the flagged content or allowlist it deliberately; CI will reject
+it otherwise.
+
+
 ## Licensing
 
 Trellis is AGPL-3.0-or-later. By submitting issues, code samples, or any other contribution, you agree that your contribution can be incorporated under the same license. A formal Contributor License Agreement will be introduced before pull requests reopen.

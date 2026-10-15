@@ -1,0 +1,39 @@
+{
+  "$comment": "Deny-list for scripts/scan-sensitive.mjs. Edit + commit to evolve the guard. allowPaths wins over everything.",
+  "denyPaths": [
+    "docs/applications",
+    "residency-dump",
+    "the-residency",
+    "/residency-",
+    ".env",
+    ".env.local",
+    ".env.production",
+    "id_rsa",
+    "id_ed25519",
+    ".pem"
+  ],
+  "denyStrings": [
+    "Rancho Cucamonga",
+    "livetheresidency",
+    "Astera Institute",
+    "hello@trentbrew.com"
+  ],
+  "denyRegexes": [
+    { "name": "ssn", "pattern": "\\b\\d{3}-\\d{2}-\\d{4}\\b", "flags": "" },
+    { "name": "aws-access-key", "pattern": "\\b(?:AKIA|ASIA)[0-9A-Z]{16}\\b", "flags": "" },
+    { "name": "github-pat", "pattern": "\\bgh(?:p|o|u|s|r)_[A-Za-z0-9]{36,}\\b", "flags": "" },
+    { "name": "github-fine-grained-pat", "pattern": "\\bgithub_pat_[A-Za-z0-9_]{22,}\\b", "flags": "" },
+    { "name": "slack-token", "pattern": "\\bxox[baprs]-[A-Za-z0-9-]{10,}\\b", "flags": "" },
+    { "name": "private-key", "pattern": "-----BEGIN (?:RSA |EC |OPENSSH |PGP |DSA )?PRIVATE KEY-----", "flags": "" },
+    { "name": "personal-email", "pattern": "[A-Za-z0-9._%+-]+@(?:gmail|icloud|proton|protonmail|hey|yahoo|outlook|hotmail)\\.com\\b", "flags": "i" }
+  ],
+  "allowPaths": [
+    "scripts/sensitive-patterns.json",
+    "scripts/scan-sensitive.mjs",
+    "apps/docs/.github/ISSUE_TEMPLATE/config.yml",
+    "node_modules/",
+    "rug/",
+    "dist/",
+    ".playwright-mcp/"
+  ]
+}
