@@ -24,9 +24,9 @@ The Node.js implementation of Trellis. Contains the graph runtime, VCS engine, M
 ## Testing
 
 ```bash
-pnpm test          # unit tests
-pnpm check         # typecheck + lint
-pnpm test:e2e      # playwright e2e
+bun test           # unit tests
+bun run check      # typecheck + lint
+bun run test:e2e   # playwright e2e
 ```
 
 ## conventions

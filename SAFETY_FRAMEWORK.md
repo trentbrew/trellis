@@ -323,8 +323,8 @@ else
 fi
 
 # 4. Run tests if available
-if command -v pnpm >/dev/null 2>&1; then
-    echo "✓ pnpm available - run 'pnpm test' to verify functionality"
+if command -v bun >/dev/null 2>&1; then
+    echo "✓ bun available - run 'bun test' to verify functionality"
 elif command -v npm >/dev/null 2>&1; then
     echo "✓ npm available - run 'npm test' to verify functionality"
 fi
