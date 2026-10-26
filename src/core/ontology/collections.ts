@@ -14,10 +14,12 @@
  * SDK users live in `trellis/schema` (`src/schema/collections.ts`).
  */
 
-import type {
-  PropertyType,
-  PropertyValueSpecification,
-  SchemaDefinition,
+import {
+  PropertyTypeSchema,
+  type PropertyType,
+  type PropertyValueSpecification,
+  type RelationConfig,
+  type SchemaDefinition,
 } from './types.js';
 
 const VERSION = '1.0.0';
@@ -95,6 +97,161 @@ export interface CollectionFieldRow {
    */
   vocabulary?: string;
   order: number;
+}
+
+/**
+ * Cardinality vocabulary from `graph-ontology/core.json` (`RelationConfig`).
+ */
+export type RelationCardinality =
+  | 'one_to_one'
+  | 'one_to_many'
+  | 'many_to_one'
+  | 'many_to_many';
+
+/**
+ * Link configuration for relation-valued properties, aligned with
+ * `graph-ontology/core.json` `$defs/RelationConfig`.
+ */
+export interface RelationLinkConfig {
+  targetEntityTypes?: string[];
+  relationType?: string;
+  cardinality?: RelationCardinality;
+  inverseProperty?: string;
+  symmetric?: boolean;
+}
+
+/**
+ * Attributes of a `trellis:Relation` entity (persisted or derived).
+ */
+export interface RelationRow {
+  id: string;
+  key: string;
+  label: string;
+  valueType: string;
+  /** JSON `CollectionOption[]` (option ids) for select / multi_select. */
+  options?: string;
+  /** Root `core:Tag` entity id for `tags` relations. */
+  vocabulary?: string;
+  description?: string;
+  /** `'user'` for user-defined relations, or `'app:<name>'` for code-derived relations. */
+  owner?: string;
+  /** True for code-derived relations; never persisted to the op log. */
+  readOnly?: boolean;
+  /** JSON `RelationLinkConfig` for link-valued relations (`relation` or `tags`). */
+  relation?: string;
+}
+
+/**
+ * Parse a `CollectionMeta.relations` value (JSON string or string array) into
+ * an ordered, deduplicated list of relation ids.
+ */
+export function parseRelationIds(
+  raw: string | readonly string[] | undefined,
+): string[] {
+  if (!raw) return [];
+  let list: unknown;
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) return [];
+    try {
+      list = JSON.parse(trimmed);
+    } catch {
+      return [];
+    }
+  } else {
+    list = raw;
+  }
+  if (!Array.isArray(list)) return [];
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const item of list) {
+    if (typeof item !== 'string') continue;
+    const id = item.trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    result.push(id);
+  }
+  return result;
+}
+
+/**
+ * Parse a `RelationRow.relation` JSON string into a `RelationLinkConfig`.
+ */
+export function parseRelationLinkConfig(
+  raw: string | undefined,
+): RelationLinkConfig | undefined {
+  if (!raw) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return undefined;
+    }
+    const obj = parsed as Record<string, unknown>;
+    const config: RelationLinkConfig = {};
+    if (Array.isArray(obj.targetEntityTypes)) {
+      config.targetEntityTypes = obj.targetEntityTypes.filter(
+        (t): t is string => typeof t === 'string' && t.trim().length > 0,
+      );
+    }
+    if (typeof obj.relationType === 'string' && obj.relationType.trim()) {
+      config.relationType = obj.relationType.trim();
+    }
+    if (
+      obj.cardinality === 'one_to_one' ||
+      obj.cardinality === 'one_to_many' ||
+      obj.cardinality === 'many_to_one' ||
+      obj.cardinality === 'many_to_many'
+    ) {
+      config.cardinality = obj.cardinality;
+    }
+    if (typeof obj.inverseProperty === 'string' && obj.inverseProperty.trim()) {
+      config.inverseProperty = obj.inverseProperty.trim();
+    }
+    if (typeof obj.symmetric === 'boolean') {
+      config.symmetric = obj.symmetric;
+    }
+    return config;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Convert a kernel `RelationConfig` (`targetSchema`, `cardinality: 'one' | 'many'`)
+ * into `core.json`'s `RelationLinkConfig`.
+ */
+export function toRelationLinkConfig(config: RelationConfig): RelationLinkConfig {
+  const link: RelationLinkConfig = {
+    cardinality: config.cardinality === 'one' ? 'many_to_one' : 'many_to_many',
+  };
+  if (config.targetSchema) {
+    link.targetEntityTypes = [config.targetSchema];
+  }
+  if (config.syncedProperty) {
+    link.inverseProperty = config.syncedProperty;
+  }
+  return link;
+}
+
+/**
+ * Convert `core.json`'s `RelationLinkConfig` back to the kernel's `RelationConfig`.
+ */
+export function fromRelationLinkConfig(
+  link: RelationLinkConfig | undefined,
+): RelationConfig | undefined {
+  if (!link) return undefined;
+  const cardinality: 'one' | 'many' =
+    link.cardinality === 'one_to_one' || link.cardinality === 'many_to_one'
+      ? 'one'
+      : 'many';
+  const result: RelationConfig = { cardinality };
+  if (link.targetEntityTypes && link.targetEntityTypes.length > 0) {
+    result.targetSchema = link.targetEntityTypes[0];
+  }
+  if (link.inverseProperty) {
+    result.syncedProperty = link.inverseProperty;
+  }
+  return result;
 }
 
 /** Attributes every row has; never user field keys. */
@@ -227,40 +384,114 @@ const KERNEL_TYPE: Record<Exclude<CollectionFieldType, 'tags'>, PropertyType> = 
   checkbox: 'checkbox',
 };
 
+function compileRelationToField(rel: RelationRow): PropertyValueSpecification | null {
+  if (RESERVED_RECORD_KEYS.has(rel.key)) return null;
+  if (rel.valueType === 'tags') {
+    return {
+      name: rel.key,
+      valueType: 'relation',
+      description: rel.label,
+      relation: { targetSchema: 'core:Tag', cardinality: 'many' },
+    };
+  }
+  if (isCollectionFieldType(rel.valueType)) {
+    return {
+      name: rel.key,
+      valueType: KERNEL_TYPE[rel.valueType as Exclude<CollectionFieldType, 'tags'>],
+      description: rel.label,
+    };
+  }
+  if (rel.valueType === 'relation') {
+    const link = fromRelationLinkConfig(parseRelationLinkConfig(rel.relation));
+    return {
+      name: rel.key,
+      valueType: 'relation',
+      description: rel.label,
+      ...(link ? { relation: link } : {}),
+    };
+  }
+  if ((PropertyTypeSchema as readonly string[]).includes(rel.valueType)) {
+    return {
+      name: rel.key,
+      valueType: rel.valueType as PropertyType,
+      description: rel.label,
+    };
+  }
+  return null;
+}
+
+function isRelationRowCandidate(
+  row: CollectionFieldRow | RelationRow,
+): row is RelationRow {
+  return 'id' in row && typeof row.id === 'string' && !('collection' in row);
+}
+
 /**
  * Compile a collection's fields into the per-collection row schema the middleware
  * validates `CollectionRecord`s against. Option membership is deliberately not
  * enforced: a picker adds an option and selects it in one gesture, so the row
  * write can land before the re-compiled schema does.
+ *
+ * ADR 0048 phase 3: when `collection.relations` lists ordered `trellis:Relation`
+ * ids and matching relation rows are supplied (via `relationRows` or in `fieldRows`),
+ * the schema compiles from those Relations in order; otherwise it falls back to
+ * `CollectionField` rows.
  */
 export function compileCollectionSchema(
-  collection: { id: string; title?: string },
-  fieldRows: readonly CollectionFieldRow[],
+  collection: { id: string; title?: string; relations?: string | readonly string[] },
+  fieldRows: readonly (CollectionFieldRow | RelationRow)[] = [],
+  relationRows?: readonly RelationRow[],
 ): SchemaDefinition {
-  const userFields = fieldRows
-    .filter(
-      (row) =>
-        row.collection === collection.id &&
-        isCollectionFieldType(row.valueType) &&
-        !RESERVED_RECORD_KEYS.has(row.key),
-    )
-    .sort((a, b) => a.order - b.order || a.key.localeCompare(b.key))
-    .map((row): PropertyValueSpecification => {
-      // Field specs have no label; the display label rides in `description`.
-      if (row.valueType === 'tags') {
+  const relationIds = parseRelationIds(collection.relations);
+  const candidateRelations: readonly RelationRow[] =
+    relationRows ?? fieldRows.filter(isRelationRowCandidate);
+
+  let userFields: PropertyValueSpecification[];
+  if (relationIds.length > 0 && (relationRows !== undefined || candidateRelations.length > 0)) {
+    const byId = new Map<string, RelationRow>();
+    for (const rel of candidateRelations) {
+      byId.set(rel.id, rel);
+    }
+    userFields = [];
+    const seenKeys = new Set<string>();
+    for (const relId of relationIds) {
+      const rel = byId.get(relId);
+      if (!rel || seenKeys.has(rel.key)) continue;
+      const spec = compileRelationToField(rel);
+      if (spec) {
+        seenKeys.add(rel.key);
+        userFields.push(spec);
+      }
+    }
+  } else {
+    const legacyRows = fieldRows.filter(
+      (row): row is CollectionFieldRow => 'collection' in row,
+    );
+    userFields = legacyRows
+      .filter(
+        (row) =>
+          row.collection === collection.id &&
+          isCollectionFieldType(row.valueType) &&
+          !RESERVED_RECORD_KEYS.has(row.key),
+      )
+      .sort((a, b) => a.order - b.order || a.key.localeCompare(b.key))
+      .map((row): PropertyValueSpecification => {
+        // Field specs have no label; the display label rides in `description`.
+        if (row.valueType === 'tags') {
+          return {
+            name: row.key,
+            valueType: 'relation',
+            description: row.label,
+            relation: { targetSchema: 'core:Tag', cardinality: 'many' },
+          };
+        }
         return {
           name: row.key,
-          valueType: 'relation',
+          valueType: KERNEL_TYPE[row.valueType as Exclude<CollectionFieldType, 'tags'>],
           description: row.label,
-          relation: { targetSchema: 'core:Tag', cardinality: 'many' },
         };
-      }
-      return {
-        name: row.key,
-        valueType: KERNEL_TYPE[row.valueType as Exclude<CollectionFieldType, 'tags'>],
-        description: row.label,
-      };
-    });
+      });
+  }
 
   const title = collection.title?.trim();
   return {
@@ -301,6 +532,7 @@ export const COLLECTION_META_SCHEMA: SchemaDefinition = {
     f('color', 'rich_text'),
     f('description', 'rich_text'),
     f('sortOrder', 'number'),
+    f('relations', 'rich_text'),
   ],
 };
 

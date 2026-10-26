@@ -17,7 +17,17 @@ import type {
 } from '../ontology/types.js';
 import type { Atom, Fact } from '../store/eav-store.js';
 import { buildOntologyIndex } from './boot-middleware.js';
-import { collectionSlug, isCollectionSchemaId } from '../ontology/collections.js';
+import {
+  collectionMetaId,
+  collectionSlug,
+  compileCollectionSchema,
+  isCollectionSchemaId,
+} from '../ontology/collections.js';
+import {
+  parseRelationIds,
+  relationRowFromFacts,
+  type RelationRow,
+} from '../ontology/relations.js';
 
 export interface SchemaMiddlewareConfig {
   /** Live ontology index — refreshed per op so schema edits apply immediately. */
@@ -61,7 +71,13 @@ export function createSchemaMiddleware(
         if (!typeFact) continue;
 
         const entityType = String(typeFact.v);
-        const schema = resolveSchemaForEntity(entityType, entityId, op.facts, ontologies);
+        const schema = resolveSchemaForEntity(
+          entityType,
+          entityId,
+          op.facts,
+          ontologies,
+          config.getEntityFacts,
+        );
         if (!schema) continue;
 
         for (const fact of op.facts) {
@@ -108,7 +124,13 @@ export function createSchemaMiddleware(
             ...stored.filter((fact) => !changed.has(fact.a)),
             ...op.facts.filter((fact) => fact.e === entityId),
           ];
-          const schema = resolveSchemaForEntity(String(typeFact.v), entityId, merged, ontologies);
+          const schema = resolveSchemaForEntity(
+            String(typeFact.v),
+            entityId,
+            merged,
+            ontologies,
+            config.getEntityFacts,
+          );
           if (!schema) continue;
           for (const fact of op.facts) {
             if (fact.e !== entityId || fact.v === '') continue;
@@ -140,11 +162,57 @@ function findPerCollectionRecordSchema(
   return undefined;
 }
 
+function resolveRelationBackedCollectionSchema(
+  slug: string,
+  opFacts: Fact[],
+  getEntityFacts?: (entityId: string) => Fact[],
+): SchemaDefinition | undefined {
+  if (!getEntityFacts) return undefined;
+  const collectionId = collectionMetaId(slug);
+  const storedMeta = getEntityFacts(collectionId);
+  const opMeta = opFacts.filter((f) => f.e === collectionId);
+  if (storedMeta.length === 0 && opMeta.length === 0) return undefined;
+
+  const metaAttrs = new Map<string, Atom>();
+  for (const fact of storedMeta) metaAttrs.set(fact.a, fact.v);
+  for (const fact of opMeta) metaAttrs.set(fact.a, fact.v);
+
+  const rawRelations = metaAttrs.get('relations');
+  const relationIds = parseRelationIds(
+    typeof rawRelations === 'string' ? rawRelations : undefined,
+  );
+  if (relationIds.length === 0) return undefined;
+
+  const relationRows: RelationRow[] = [];
+  for (const relId of relationIds) {
+    const storedRel = getEntityFacts(relId);
+    const opRel = opFacts.filter((f) => f.e === relId);
+    const changedAttrs = new Set(opRel.map((f) => f.a));
+    const mergedRel = [
+      ...storedRel.filter((f) => !changedAttrs.has(f.a)),
+      ...opRel,
+    ];
+    const row = relationRowFromFacts(relId, mergedRel);
+    if (row) relationRows.push(row);
+  }
+  if (relationRows.length === 0) return undefined;
+
+  const title = typeof metaAttrs.get('title') === 'string'
+    ? (metaAttrs.get('title') as string)
+    : undefined;
+  return compileCollectionSchema(
+    { id: collectionId, title, relations: relationIds },
+    [],
+    relationRows,
+  );
+}
+
 function resolveSchemaForEntity(
   entityType: string,
   entityId: string,
   facts: Fact[],
   ontologies: Map<string, SchemaDefinition>,
+  getEntityFacts?: (entityId: string) => Fact[],
 ): SchemaDefinition | undefined {
   const shortType = entityType.includes(':')
     ? entityType.split(':').pop()!
@@ -158,6 +226,12 @@ function resolveSchemaForEntity(
       ? collectionSlug(String(collectionIdFact.v))
       : null;
     if (slug) {
+      const relationBacked = resolveRelationBackedCollectionSchema(
+        slug,
+        facts,
+        getEntityFacts,
+      );
+      if (relationBacked?.fields?.length) return relationBacked;
       const perCollection = findPerCollectionRecordSchema(slug, ontologies);
       if (perCollection?.fields?.length) return perCollection;
     }

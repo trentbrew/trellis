@@ -10,6 +10,7 @@
 
 import type { SchemaDefinition, PropertyValueSpecification } from './types.js';
 import { COLLECTION_SCHEMAS } from './collections.js';
+import { RELATION_SCHEMA } from './relations.js';
 
 const VERSION = '1.0.0';
 type PVS = PropertyValueSpecification;
@@ -894,6 +895,7 @@ export const CORE_ONTOLOGY: SchemaDefinition[] = [
   repo,
   service,
   ...COLLECTION_SCHEMAS,
+  RELATION_SCHEMA,
 ];
 
 /**
