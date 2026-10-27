@@ -1,10 +1,22 @@
+---
+title: Proposal: Graph-Native Geodata System for Trellis
+description: Prior art for graph-native geodata; superseded by ADR 0063 for the location model.
+created: 2026-07-31
+updated: 2026-10-27
+status: superseded
+---
+
 # Proposal: Graph-Native Geodata System for Trellis
 
-**Status:** Proposal  
+> **Superseded (2026-10-27):** this proposal is prior art. The decision of record
+> for location is [ADR 0063](../adr/0063-location-graph-native.md). Spatial
+> predicates, federated geometry, and attestation remain future work.
+
+**Status:** Superseded by ADR 0063  
 **Date:** 2026-07-31  
 **Context:** Identity-addressed Trellis projects (ADR 0032) + EAV kernel  
-**Follow-on:** [`graph-native-geodata.md`](./graph-native-geodata.md)  
-**Related:** ADR 0032, TRL-156+, TRL-333  
+**Superseded by:** [ADR 0063 — Location is graph-native](../adr/0063-location-graph-native.md)  
+**Related:** ADR 0032  
 
 ## Summary
 

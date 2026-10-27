@@ -4,6 +4,15 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [4.1.1] — 2026-10-27
+
+**Location is graph-native — an ADR, not a new property type.**
+
+- **ADR 0063** — location is modeled as a `Place` entity plus role relations and
+  numeric `latitude`/`longitude`, never as a `PropertyType`; `core:Event.location`
+  stays display text, and geocoding remains an adapter/cache.
+- **Supersedes** the unshipped 2026-07-31 graph-native geodata proposal.
+
 ## trellis [4.1.0] — 2026-10-15
 
 **Peer wire, forms, and formula core: Iroh-backed pair sync, a form ontology,
