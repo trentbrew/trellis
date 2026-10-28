@@ -232,6 +232,11 @@ export interface DefineTypeOptions<
   /** Parent type name (`subClassOf`). */
   extends?: string;
   label?: string;
+  /**
+   * Bind fields to shared global relation ids (e.g. `{ dueDate: 'rel:due' }`).
+   * ADR 0048 §2.4 / TRL-502.
+   */
+  sharedRelations?: Partial<Record<string, string>>;
 }
 
 export function defineType<
@@ -246,14 +251,33 @@ export function defineType<
 ): TrellisType<Name, Z, R, C> {
   const relations = (opts.relations ?? {}) as R;
   const computed = (opts.computed ?? {}) as C;
+  const sharedRelations = opts.sharedRelations ?? {};
+
+  const stampSharedRelation = (
+    name: string,
+    spec: PropertyValueSpecification,
+  ): PropertyValueSpecification => {
+    const sharedId = sharedRelations[name];
+    if (sharedId === undefined) return spec;
+    const trimmed = sharedId.trim();
+    if (!trimmed.startsWith('rel:')) {
+      throw new Error(
+        `sharedRelations.${name} must start with "rel:" (got ${JSON.stringify(sharedId)})`,
+      );
+    }
+    return { ...spec, sharedRelationId: trimmed };
+  };
 
   const fields: PropertyValueSpecification[] = [
     ...Object.entries(shape).map(([name, zt]) => {
       const spec = zodToSpec(name, zt as z.ZodTypeAny, name === opts.title);
       const sync = opts.fieldSync?.[name as Extract<keyof Z, string>];
-      return sync ? { ...spec, sync } : spec;
+      const withSync = sync ? { ...spec, sync } : spec;
+      return stampSharedRelation(name, withSync);
     }),
-    ...Object.entries(relations).map(([name, r]) => relationToSpec(name, r)),
+    ...Object.entries(relations).map(([name, r]) =>
+      stampSharedRelation(name, relationToSpec(name, r)),
+    ),
     ...Object.entries(computed).map(
       ([name, c]) => ({ name, required: false, ...c.spec }) as PropertyValueSpecification,
     ),
