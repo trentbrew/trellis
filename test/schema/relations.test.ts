@@ -393,4 +393,59 @@ describe('deriveCodeRelations and listRelations', () => {
     expect(kernel.readAllOps().length).toBe(opsBefore);
     expect(readRelationsFromStore(kernel.getStore())).toEqual([]);
   });
+
+  it('honors sharedRelations overlay ids across types while keeping distinct keys', () => {
+    const Task = defineType(
+      'Task',
+      {
+        title: z.string(),
+        dueDate: z.string().optional(),
+      },
+      {
+        title: 'title',
+        sharedRelations: { dueDate: 'rel:due' },
+      },
+    );
+    const Project = defineType(
+      'Project',
+      {
+        name: z.string(),
+        due: z.string().optional(),
+      },
+      {
+        title: 'name',
+        sharedRelations: { due: 'rel:due' },
+      },
+    );
+
+    const taskDue = deriveCodeRelations(Task, 'projects').find((r) => r.key === 'dueDate')!;
+    const projectDue = deriveCodeRelations(Project, 'projects').find((r) => r.key === 'due')!;
+    expect(taskDue.id).toBe('rel:due');
+    expect(projectDue.id).toBe('rel:due');
+    expect(taskDue.key).toBe('dueDate');
+    expect(projectDue.key).toBe('due');
+
+    const unshared = defineType('Note', { body: z.string() }, { title: 'body' });
+    expect(deriveCodeRelations(unshared, 'projects')[0].id).toBe('rel:projects.Note.body');
+
+    const merged = listRelations({
+      schemas: [
+        { schema: Task, app: 'projects' },
+        { schema: Project, app: 'projects' },
+      ],
+    });
+    const dueRows = merged.filter((r) => r.id === 'rel:due');
+    expect(dueRows).toHaveLength(1);
+    expect(dueRows[0]!.key).toBe('dueDate');
+  });
+
+  it('rejects sharedRelations ids that do not start with rel:', () => {
+    expect(() =>
+      defineType(
+        'Bad',
+        { x: z.string() },
+        { sharedRelations: { x: 'due' } },
+      ),
+    ).toThrow(/rel:/);
+  });
 });
