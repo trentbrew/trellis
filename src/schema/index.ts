@@ -24,7 +24,6 @@ export type {
   InferType,
   InferResolvedType,
   Ref,
-  Relation,
   RelationMap,
   RelTarget,
   ResolveSpecFor,
@@ -32,6 +31,7 @@ export type {
 } from './define.js';
 
 export * from './collections.js';
+export * from './relations.js';
 
 export type { FieldSyncTier } from '../core/ontology/types.js';
 export {

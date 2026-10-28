@@ -20,6 +20,7 @@ export const CollectionMeta = defineType(
     color: z.string().optional(),
     description: z.string().optional(),
     sortOrder: z.number().optional(),
+    relations: z.string().optional(),
   },
   { title: 'title', extends: 'core:Record', tier: 'system', label: 'User Collection' },
 );

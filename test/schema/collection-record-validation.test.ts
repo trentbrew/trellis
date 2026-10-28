@@ -114,4 +114,66 @@ describe('CollectionRecord per-collection validation', () => {
     const id = await client.create('CollectionRecord', { collectionId: COLLECTION_ID, title: 'Solaris' });
     await expect(client.update(id, { f_unknown: 'anything' })).resolves.toBeUndefined();
   });
+
+  it('validates records in a relation-backed collection via CollectionMeta.relations (ADR 0048 phase 3)', async () => {
+    const relSlug = 'movies';
+    const relCollectionId = `collectionMeta:${relSlug}`;
+    const ratingRelId = `rel:user.${relSlug}.rating`;
+    const genreRelId = `rel:user.${relSlug}.genres`;
+
+    await client.create(
+      'Relation',
+      {
+        key: 'rating',
+        label: 'Rating',
+        valueType: 'number',
+        owner: 'user',
+        readOnly: false,
+      },
+      undefined,
+      { id: ratingRelId },
+    );
+    await client.create(
+      'Relation',
+      {
+        key: 'genres',
+        label: 'Genres',
+        valueType: 'tags',
+        vocabulary: 'tag:vocab',
+        owner: 'user',
+        readOnly: false,
+      },
+      undefined,
+      { id: genreRelId },
+    );
+    await client.create(
+      'CollectionMeta',
+      {
+        title: 'Movies',
+        slug: relSlug,
+        relations: JSON.stringify([ratingRelId, genreRelId]),
+      },
+      undefined,
+      { id: relCollectionId },
+    );
+
+    const validId = await client.create('CollectionRecord', {
+      collectionId: relCollectionId,
+      title: 'Arrival',
+      rating: 9,
+      genres: ['tag:scifi'],
+    });
+    expect(validId).toMatch(/^collectionrecord:/);
+
+    await expect(
+      client.create('CollectionRecord', {
+        collectionId: relCollectionId,
+        title: 'Bad rating',
+        rating: 'nine',
+      }),
+    ).rejects.toThrow(/rating/);
+
+    await expect(client.update(validId, { rating: 'ten' })).rejects.toThrow(/rating/);
+    await expect(client.update(validId, { rating: 10 })).resolves.toBeUndefined();
+  });
 });

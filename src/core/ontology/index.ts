@@ -57,3 +57,34 @@ export {
   validateStore,
   createValidationMiddleware,
 } from './validator.js';
+
+// Global relations (ADR 0048 phase 3)
+export {
+  RELATION_PREFIX,
+  RELATION_SCHEMA,
+  RELATION_VALUE_TYPES,
+  applyCollectionRelationMigration,
+  deriveCodeRelations,
+  fromRelationLinkConfig,
+  isRelationValueType,
+  listRelations,
+  migrateCollectionFieldsToRelations,
+  parseRelationIds,
+  parseRelationLinkConfig,
+  readRelationsFromStore,
+  relationId,
+  relationRowFromFacts,
+  toRelationLinkConfig,
+  userRelationId,
+} from './relations.js';
+export type {
+  AppliedCollectionRelationMigration,
+  ApplyCollectionRelationMigrationTarget,
+  CollectionFieldMigrationResult,
+  ListRelationsOptions,
+  RelationCardinality,
+  RelationLinkConfig,
+  RelationRow,
+  RelationValueType,
+  SchemaWithOptionalApp,
+} from './relations.js';

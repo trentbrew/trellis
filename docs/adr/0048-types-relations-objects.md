@@ -185,3 +185,23 @@ keeps them aligned:
 
 **Rule of thumb:** ADR "phase 3" = kernel Relations. Client "phase 3" = types-as-records UI (manifest
 first). Client "3b" = graph `Type` entities behind the same UI, still before Relations land.
+
+---
+
+## Addendum: Kernel Phase 3 (`trellis:Relation`, 2026-10-25, TRL-494)
+
+Phase 3 lands in `trellis-node` as an additive kernel slice (`TRL-494`). Four decisions refine §2.3, §2.4, §3, and §5:
+
+1. **Mapping to the `graph-ontology` document surface.** A kernel `trellis:Relation` is Anytype's word for a property definition of any value type. In `graph-ontology/core.json` it corresponds to `PropertyDef`, not `RelationType`. Only link-valued relations (`valueType === 'relation'` or `'tags'`) carry `core.json`'s `RelationConfig` shape (`targetEntityTypes`, `cardinality` across `one_to_one`, `one_to_many`, `many_to_one`, `many_to_many`, `inverseProperty`, and `symmetric`).
+2. **`CollectionField` coexists and migrates through ops.** `trellis:CollectionField` shipped in v4.0.10 through v4.1.0 (`c0b40f4`), so §3's "replace before 4.0.8 publishes" no longer applies. `CollectionField` remains registered and readable for op-log replay. `CollectionMeta` gains an optional `relations` field (ordered JSON list of Relation ids). `compileCollectionSchema` compiles from `Relation` rows when `CollectionMeta.relations` is present, and falls back to `CollectionField` rows otherwise. `migrateCollectionFieldsToRelations(meta, fieldRows)` deterministically mints `rel:user.<slug>.<key>` records and the ordered `relations` list so re-running is a no-op.
+3. **Code relations are derived on read, never persisted (answers §5 open question 1).** Neither the kernel nor the app runtime writes code types' fields into the op log. Instead, `deriveCodeRelations(schema, app)` projects a `SchemaDefinition`'s fields into read-only `Relation` records (`owner: 'app:<app>'`, `readOnly: true`, id `rel:<app>.<type>.<key>`), and `listRelations()` merges persisted user Relations with derived code Relations. Because code is the single authority for code-declared fields, a rename or removal in code cannot leave orphaned `Relation` rows in storage.
+4. **Open-world storage vs declare-and-refuse export is deferred to the exporter (`TRL-498`).** The kernel remains open-world for undeclared attributes on an entity; how undeclared relations are projected or filtered when exporting a `graph-ontology` document is decided at the exporter boundary (`TRL-498`).
+
+**Follow-up issues filed under `TRL-494`:**
+- `TRL-495`: shared-relation overlays across types (for example binding `due` to `rel:due`).
+- `TRL-496`: migrate `TypeExtension`, `RecordExtra`, and CMS `props` to `trellis:Relation`.
+- `TRL-497`: deprecate `CollectionField` and field-owned relation config after downstream cutover.
+- `TRL-498`: `graph-ontology` promotion gate (exporter, offline validation, and re-ingest round-trip).
+- `TRL-499`: ADR 0048 phase 4 (cross-type sets and change-type).
+- `TRL-500`: client phase 3b in FINANCE and turtlenote (swap `ManifestTypeSource` for graph-backed Type and Relation rows).
+
