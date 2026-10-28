@@ -4,6 +4,14 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [4.1.3] — 2026-10-28
+
+**ADR 0048 kernel: global Relations and shared overlay binding.**
+
+- **`trellis:Relation`** — system-tier property definitions; `CollectionMeta.relations` with CollectionField fallback and idempotent migration.
+- **Derived code relations** — `deriveCodeRelations` / `listRelations` for schema-backed types without persisting mirrors.
+- **Shared overlays** — `DefineTypeOptions.sharedRelations` and `PropertyValueSpecification.sharedRelationId` so fields like Task.due and Project.due share one `rel:` id.
+
 ## trellis [4.1.2] — 2026-10-27
 
 **Formula parity: `$round` and `$concat` join the frozen core.**
