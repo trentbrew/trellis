@@ -111,6 +111,11 @@ export interface PropertyValueSpecification {
   pattern?: string;
   minLength?: number;
   maxLength?: number;
+  /**
+   * Global relation id for this field when shared across types (ADR 0048 §2.4, TRL-502).
+   * Set via `defineType` `sharedRelations` map; must start with `rel:`.
+   */
+  sharedRelationId?: string;
 }
 
 // ---------------------------------------------------------------------------

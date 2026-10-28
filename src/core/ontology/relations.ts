@@ -465,7 +465,13 @@ export function deriveCodeRelations(
   const owner = `app:${resolvedApp}`;
 
   return schema.fields.map((field): RelationRow => {
-    const id = relationId(resolvedApp, typeName, field.name);
+    const sharedId = field.sharedRelationId?.trim();
+    if (sharedId && !sharedId.startsWith(RELATION_PREFIX)) {
+      throw new Error(
+        `Field ${field.name}: sharedRelationId must start with "${RELATION_PREFIX}"`,
+      );
+    }
+    const id = sharedId || relationId(resolvedApp, typeName, field.name);
     const row: RelationRow = {
       id,
       key: field.name,
