@@ -4,6 +4,18 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [4.1.2] — 2026-10-27
+
+**Formula parity: `$round` and `$concat` join the frozen core.**
+
+- **`$round(value, decimals = 0)`** — coerces with `Number()` and rounds half up
+  at `10^decimals`, matching the kernel `ExprEvaluator`.
+- **`$concat(...values)`** — stringifies each value, with `null` and missing
+  fields as `''`, matching the kernel.
+- **Conformance** — the formula matrix now covers rounding (including the
+  default precision) and concatenation (including a missing field), both with
+  canonical round-trip.
+
 ## trellis [4.1.1] — 2026-10-27
 
 **Location is graph-native — an ADR, not a new property type.**

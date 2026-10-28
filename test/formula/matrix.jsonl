@@ -23,3 +23,7 @@
 {"id":"sh-adapter-kernel","kind":"adapter","adapter":"kernel","expr":"$mul($price, $quantity)","context":{"record":{"price":3,"quantity":4}},"expected":12}
 {"id":"sh-adapter-cms","kind":"adapter","adapter":"cms","expr":"{a} + {b}","context":{"record":{"a":10,"b":1}},"expected":11}
 {"id":"sh-adapter-pb","kind":"adapter","adapter":"pb","expr":"@x * 3","context":{"record":{"x":5}},"expected":15}
+{"id":"k-round","dialect":"kernel-fn","expr":"$round($price, 2)","context":{"record":{"price":3.14159}},"expected":3.14,"roundtrip":true}
+{"id":"k-round-default","dialect":"kernel-fn","expr":"$round($score)","context":{"record":{"score":4.5}},"expected":5,"roundtrip":true}
+{"id":"k-concat","dialect":"kernel-fn","expr":"$concat($first, \" \", $last)","context":{"record":{"first":"Ada","last":"Lovelace"}},"expected":"Ada Lovelace","roundtrip":true}
+{"id":"k-concat-missing","dialect":"kernel-fn","expr":"$concat($first, $middle)","context":{"record":{"first":"Ada"}},"expected":"Ada","roundtrip":true,"notes":"missing field stringifies to '' (ExprEvaluator parity)"}

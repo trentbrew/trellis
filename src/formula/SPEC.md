@@ -35,6 +35,11 @@ Binary `+ - * /` coerce operands with `Number()`. Operand `null` → `0`.
 
 `$add`, `$sub`, `$mul`, `$div`, `$if`, `$gt`, `$eq` — arity per kernel `ExprEvaluator` v1 subset.
 
+`$round(value, decimals = 0)` and `$concat(...values)` match `ExprEvaluator` exactly: `$round`
+coerces with `Number()` and rounds half up at `10^decimals`; `$concat` stringifies each value, `null`
+and missing as `''`. Added for turtlenote's editable formula fields (its ADR 0005) and shablon's
+rich dialect (`round()`, `concat()`), which reach the core through `kernel-fn`, not `pb-compat`.
+
 ## Security
 
 No `eval` or `new Function` in this module. Parse-only evaluation.

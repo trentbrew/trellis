@@ -12,6 +12,11 @@ const builtins: Record<string, BuiltinFn> = {
   $if: (args) => (args[0] ? args[1] : args[2]),
   $gt: (args) => Number(args[0]) > Number(args[1]),
   $eq: (args) => args[0] === args[1],
+  $round: (args) => {
+    const factor = 10 ** Number(args[1] ?? 0);
+    return Math.round(Number(args[0]) * factor) / factor;
+  },
+  $concat: (args) => args.map((a) => String(a ?? '')).join(''),
 };
 
 export function callBuiltin(
