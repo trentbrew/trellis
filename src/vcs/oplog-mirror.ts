@@ -151,6 +151,34 @@ export function mirrorOpLines(
   }
 }
 
+/**
+ * Replace the mirror with the current journal after a sanctioned rewrite
+ * (KRN-508). The snapshot ring is cleared because every snapshot in it holds
+ * the superseded ops — restoring one would bring them back. The pre-rewrite
+ * journal survives as the repo-local `ops.json.pre-rewrite.<ts>` copy.
+ */
+export function resetMirror(opsPath: string, lastHash?: string): void {
+  if (process.env.TRELLIS_SKIP_OPLOG_MIRROR === '1') return;
+  const repoKey = repoKeyForOpsPath(opsPath);
+  if (!repoKey || !existsSync(opsPath)) return;
+
+  const dir = mirrorDir(repoKey);
+  mkdirSync(dir, { recursive: true });
+  const journalPath = join(dir, 'journal.jsonl');
+  copyFileSync(opsPath, journalPath);
+  rmSync(join(dir, 'snapshots'), { recursive: true, force: true });
+  rotateSnapshots(repoKey, journalPath);
+  writeMeta({
+    repoKey,
+    rootPath: dirname(dirname(resolve(opsPath))),
+    journalPath,
+    sourceOpsPath: resolve(opsPath),
+    lineCount: countLines(journalPath),
+    lastHash,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
 /** Best snapshot or journal for recovery. */
 export function findMirrorForOpsPath(
   opsPath: string,

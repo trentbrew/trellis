@@ -19,6 +19,7 @@ import { TrellisVcsEngine } from '../engine.js';
 import { IrohSyncTransport } from '../sync/iroh-transport.js';
 import { TrellisVcsSyncPeer } from '../sync/vcs-sync-peer.js';
 import { resolveRepoRoot } from './repo-path.js';
+import type { VcsOp } from '../vcs/types.js';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -110,7 +111,18 @@ export function registerPeerSyncCommands(program: Command): void {
     .requiredOption('--ticket <ticket>', 'Peer ticket (from `trellis sync ticket` / `serve`)')
     .option('--peer-id <id>', 'Peer endpoint id (peer naming; defaults to "remote")')
     .option('--timeout <seconds>', 'Max seconds to wait for integration', '15')
-    .action(async (opts: { ticket: string; peerId?: string; timeout: string }) => {
+    .option(
+      '--resolve-conflicts',
+      'Renumber local issues that lost an id conflict, then integrate (KRN-508)',
+    )
+    .option('--confirm-destructive', 'Approve the journal rewrite a renumber needs')
+    .action(async (opts: {
+      ticket: string;
+      peerId?: string;
+      timeout: string;
+      resolveConflicts?: boolean;
+      confirmDestructive?: boolean;
+    }) => {
       const rootPath = resolveRepoRoot();
       const engine = openEngine(rootPath);
       const before = engine.getOpCount();
@@ -120,6 +132,8 @@ export function registerPeerSyncCommands(program: Command): void {
       });
       let applied = 0;
       let rejected = 0;
+      const rejectedOps: VcsOp[] = [];
+      const reasons = new Map<string, number>();
       const peer = new TrellisVcsSyncPeer({
         peerId: transport.localId(),
         engine,
@@ -127,6 +141,10 @@ export function registerPeerSyncCommands(program: Command): void {
         onIntegrate: (r) => {
           applied += r.applied;
           rejected += countRejected(r);
+          for (const x of r.rejected) {
+            rejectedOps.push(x.op);
+            reasons.set(x.reason, (reasons.get(x.reason) ?? 0) + 1);
+          }
         },
       });
 
@@ -146,10 +164,30 @@ export function registerPeerSyncCommands(program: Command): void {
         }
       }
 
-      const after = engine.getOpCount();
-      console.log(`applied ${applied} rejected ${rejected}`);
-      console.log(`ops ${before} -> ${after}`);
       await transport.close();
+      console.log(`applied ${applied} rejected ${rejected}`);
+      for (const [reason, n] of reasons) console.log(`  ${reason}: ${n}`);
+
+      if (reasons.has('issue-id-conflict') || reasons.has('missing-dependency')) {
+        if (!opts.resolveConflicts) {
+          console.log('  issue ids may collide with the peer; re-run with --resolve-conflicts');
+        } else {
+          const r = await engine.resolveIssueIdConflicts(rejectedOps, {
+            confirmDestructive: opts.confirmDestructive,
+          });
+          for (const { from, to } of r.renumbered) console.log(`renumbered ${from} -> ${to}`);
+          if (r.peerMustRenumber.length > 0) {
+            console.log(
+              `kept ${r.peerMustRenumber.join(', ')}; the peer resolves by pulling from here with --resolve-conflicts`,
+            );
+          }
+          console.log(
+            `integrated applied ${r.integrated.applied} rejected ${r.integrated.rejected.length}`,
+          );
+        }
+      }
+
+      console.log(`ops ${before} -> ${engine.getOpCount()}`);
       process.exit(0);
     });
 }

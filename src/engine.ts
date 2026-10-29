@@ -15,6 +15,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  rmSync,
   writeFileSync,
 } from 'fs';
 import { readFile } from 'fs/promises';
@@ -35,7 +36,18 @@ import type { OpProvenance } from './core/persist/canonical-op.js';
 import { DERIVED_ROOT_PATH, isDerivedRef } from './core/persist/derived-refs.js';
 import type { VcsOp, TrellisVcsConfig } from './vcs/types.js';
 import { DEFAULT_CONFIG } from './vcs/types.js';
-import { readIssuePrefix } from './vcs/issue-prefix.js';
+import {
+  issuePrefixSet,
+  parseIssueRefId,
+  readIssuePrefix,
+} from './vcs/issue-prefix.js';
+import {
+  descendantHashes,
+  findIssueIdConflicts,
+  rewriteOps,
+} from './vcs/issue-renumber.js';
+import { readRemoteConfig } from './vcs/oplog-remote.js';
+import { requireDestructiveConfirm } from './vcs/destructive-guard.js';
 import { BlobStore } from './vcs/blob-store.js';
 import { BlobResolver } from './vcs/blob-resolver.js';
 import type { EngineContext, ApplyOpOptions } from './vcs/engine-context.js';
@@ -251,7 +263,8 @@ export type IntegrateOpRejectReason =
   | 'unauthorized'
   | 'missing-dependency'
   | 'apply-failed'
-  | 'issue-id-conflict';
+  | 'issue-id-conflict'
+  | 'superseded';
 
 export interface IntegrateOpRejection {
   op: VcsOp;
@@ -263,6 +276,15 @@ export interface IntegrateOpsResult {
   applied: number;
   skipped: number;
   rejected: IntegrateOpRejection[];
+}
+
+export interface ResolveIssueIdConflictsResult {
+  /** Local issues re-minted under a new id (this machine lost the number). */
+  renumbered: Array<{ from: string; to: string }>;
+  /** Ids this machine kept; the peer must run the resolution on its side. */
+  peerMustRenumber: string[];
+  /** The foreign ops integrated after any renumber. */
+  integrated: IntegrateOpsResult;
 }
 
 /** A VCS payload without its signature envelope (`signature`, `signedBy`, `signedWith`). */
@@ -961,7 +983,15 @@ for (const event of scanEvents) {
   private async integrateOpsUnbatched(
     ops: VcsOp[],
   ): Promise<IntegrateOpsResult> {
-    const known = new Set(this.opLog.readAll().map((op) => op.hash));
+    const known = new Set<string>();
+    // Ops a KRN-508 renumber replaced; a stale copy must not resurrect them.
+    const superseded = new Set<string>();
+    for (const op of this.opLog.readAll()) {
+      known.add(op.hash);
+      if (op.kind === 'vcs:issueRenumber') {
+        for (const h of op.vcs?.supersededOpHashes ?? []) superseded.add(h);
+      }
+    }
     const pendingByHash = new Map<string, VcsOp>();
     const rejected: IntegrateOpRejection[] = [];
     let applied = 0;
@@ -970,6 +1000,15 @@ for (const event of scanEvents) {
     for (const op of ops) {
       if (known.has(op.hash)) {
         skipped++;
+        continue;
+      }
+
+      if (superseded.has(op.hash)) {
+        rejected.push({
+          op,
+          reason: 'superseded',
+          message: `Rejected op '${op.hash}': replaced by an issue renumber.`,
+        });
         continue;
       }
 
@@ -1088,6 +1127,106 @@ for (const event of scanEvents) {
     }
 
     return { applied, skipped, rejected };
+  }
+
+  /**
+   * Recover from issue-id conflicts with one peer (KRN-508, ADR 0064 interim).
+   *
+   * `foreignOps` are the peer's ops this engine rejected. For each id both
+   * sides minted, the create that is later by `(timestamp, hash)` loses. When
+   * the local create loses, this machine rewrites its own ops that descend
+   * from it — the ones the peer rejected — under the next free id, records the
+   * replaced hashes in a `vcs:issueRenumber` op, then integrates `foreignOps`.
+   * When the peer's create loses, nothing is rewritten here: the peer runs
+   * this on its side.
+   *
+   * Refuses without `confirmDestructive`, inside a lane, and when a configured
+   * remote has acked an op in the rewrite range (a third copy holds it).
+   */
+  async resolveIssueIdConflicts(
+    foreignOps: VcsOp[],
+    opts: { confirmDestructive?: boolean } = {},
+  ): Promise<ResolveIssueIdConflictsResult> {
+    if (this.activeLaneId) {
+      throw new Error('Issue renumber requires integration mode; leave the active lane first.');
+    }
+
+    const localOps = this.opLog.readAll();
+    const conflicts = findIssueIdConflicts(localOps, foreignOps);
+    const losers = conflicts
+      .filter((c) => c.localLoses)
+      .sort((a, b) => localOps.indexOf(a.local) - localOps.indexOf(b.local));
+    const peerMustRenumber = conflicts.filter((c) => !c.localLoses).map((c) => c.issueId);
+
+    if (losers.length === 0) {
+      return { renumbered: [], peerMustRenumber, integrated: await this.integrateOps(foreignOps) };
+    }
+
+    const action = `renumber ${losers.map((c) => c.issueId).join(', ')} (rewrite local op journal)`;
+    requireDestructiveConfirm({ action, confirmDestructive: opts.confirmDestructive });
+    if (!this.opLog.replaceAll) {
+      throw new Error('Issue renumber needs an op log that supports replaceAll().');
+    }
+
+    const rewrite = descendantHashes(localOps, losers.map((c) => c.local.hash));
+    const firstRewritten = localOps.findIndex((op) => rewrite.has(op.hash));
+    for (const [name, remote] of Object.entries(readRemoteConfig(this.config.rootPath))) {
+      const ack = remote?.lastAckHash;
+      if (!ack) continue;
+      const ackIndex = localOps.findIndex((op) => op.hash === ack);
+      if (ackIndex === -1 || ackIndex >= firstRewritten) {
+        throw new Error(
+          `Refusing to renumber: remote "${name}" has acked ops in the rewrite range ` +
+            `(${ack}); a third copy holds them (ADR 0064).`,
+        );
+      }
+    }
+
+    // Next free numbers above everything either side has minted.
+    const prefixes = issuePrefixSet(this.config.rootPath);
+    let floor = 0;
+    for (const op of [...localOps, ...foreignOps]) {
+      const id = op.kind === 'vcs:issueCreate' ? op.vcs?.issueId : undefined;
+      const n = id ? parseIssueRefId(id, prefixes)?.n : undefined;
+      if (n !== undefined && n > floor) floor = n;
+    }
+    const renames = new Map<string, string>();
+    for (const c of losers) {
+      const prefix = parseIssueRefId(c.issueId, prefixes)?.prefix ?? readIssuePrefix(this.config.rootPath);
+      renames.set(c.issueId, `${prefix}-${++floor}`);
+    }
+
+    const { ops: rewritten } = await rewriteOps(localOps, rewrite, renames, async (unsigned, original) => {
+      const material = this.signingMaterial;
+      if (!material || original.vcs?.signedBy !== material.identityEntityId) {
+        throw new Error(`Cannot renumber: op ${original.hash} was signed by another identity.`);
+      }
+      return signOp(unsigned, material.privateKey, material.identityEntityId, material.signedWith);
+    });
+
+    const supersededOpHashes = localOps.filter((op) => rewrite.has(op.hash)).map((op) => op.hash);
+    for (const [from, to] of renames) {
+      const record = await this.signLocalOp(
+        await createVcsOp('vcs:issueRenumber', {
+          agentId: this.agentId,
+          previousHash: rewritten[rewritten.length - 1]?.hash,
+          vcs: { issueId: to, fromIssueId: from, supersededOpHashes },
+        }),
+      );
+      rewritten.push(record);
+    }
+
+    this.opLog.replaceAll(rewritten, { action, confirmDestructive: opts.confirmDestructive });
+    // The snapshot materialized the replaced ops; rebuild from the journal.
+    rmSync(integrationSnapshotPath(this.trellisDir()), { force: true });
+    this.integrationCache = null;
+    this.syncIntegrationFromDisk();
+
+    return {
+      renumbered: [...renames].map(([from, to]) => ({ from, to })),
+      peerMustRenumber,
+      integrated: await this.integrateOps(foreignOps),
+    };
   }
 
   /**
