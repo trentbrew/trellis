@@ -35,6 +35,7 @@ import { requireDestructiveConfirm } from './destructive-guard.js';
 import {
   mirrorOpLine,
   mirrorOpLines,
+  resetMirror,
   restoreOpsFromMirror,
   backfillMirrorIfBehind,
 } from './oplog-mirror.js';
@@ -87,6 +88,8 @@ export interface OpLog {
   flush?(): Promise<void>;
   beginBulk?(): void;
   endBulk?(): void;
+  /** Replace the whole journal. Destructive; only the KRN-508 renumber uses it. */
+  replaceAll?(ops: VcsOp[], gate: { action: string; confirmDestructive?: boolean }): void;
 }
 
 // File-lock primitives (acquire + stale-owner reclaim) live in file-lock.ts so
@@ -193,6 +196,34 @@ export class JsonOpLog implements OpLog {
       this.ops.push(op);
       this.hashes.add(op.hash);
     });
+  }
+
+  /**
+   * Replace the whole journal — the one sanctioned exception to append-only
+   * (KRN-508, ADR 0064 interim). Gated by the destructive-op guard; keeps an
+   * `ops.json.pre-rewrite.<ts>` copy and resets the mirror so its snapshots
+   * cannot restore the replaced ops.
+   */
+  replaceAll(
+    ops: VcsOp[],
+    gate: { action: string; confirmDestructive?: boolean },
+  ): void {
+    requireDestructiveConfirm(gate);
+    this.withLock(() => {
+      if (existsSync(this.filePath)) {
+        copyFileSync(this.filePath, `${this.filePath}.pre-rewrite.${Date.now()}`);
+      }
+      const payload =
+        ops.map((o) => JSON.stringify(o)).join('\n') + (ops.length ? '\n' : '');
+      const tmp = `${this.filePath}.tmp`;
+      writeFileSync(tmp, payload);
+      renameSync(tmp, this.filePath);
+      this.ops = [...ops];
+      this.hashes = new Set(ops.map((o) => o.hash));
+      this.legacy = false;
+      this.knownDiskSize = Buffer.byteLength(payload);
+    });
+    resetMirror(this.filePath, ops.at(-1)?.hash);
   }
 
   readAll(): VcsOp[] {

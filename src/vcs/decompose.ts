@@ -631,6 +631,16 @@ export function decompose(op: VcsOp): DecomposedOp {
       break;
     }
 
+    case 'vcs:issueRenumber': {
+      if (!vcs.issueId || !vcs.fromIssueId) break;
+      result.addFacts.push({
+        e: issueEntityId(vcs.issueId),
+        a: 'renumberedFrom',
+        v: vcs.fromIssueId,
+      });
+      break;
+    }
+
     // ----- Decision traces -----
 
     case 'vcs:decisionRecord': {

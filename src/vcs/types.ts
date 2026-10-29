@@ -57,6 +57,9 @@ export type VcsOpKind =
   // Issue blocking
   | 'vcs:issueBlock'
   | 'vcs:issueUnblock'
+  // Two-peer id-conflict recovery (KRN-508, ADR 0064 interim): records that a
+  // losing create was re-minted under a new id and which op hashes it replaced.
+  | 'vcs:issueRenumber'
   // Decision traces
   | 'vcs:decisionRecord'
   // Harness chat transcripts (gated by `transcripts.enabled`, local-only by
@@ -181,6 +184,10 @@ export interface VcsPayload {
   issueAssignee?: string;
   pauseNote?: string;
   blockedByIssueId?: string;
+  /** issueRenumber: the id the issue was minted under before the conflict. */
+  fromIssueId?: string;
+  /** issueRenumber: hashes of the rewritten ops; ingest rejects them if they resurface. */
+  supersededOpHashes?: string[];
 
   // Decision traces
   decisionId?: string;
