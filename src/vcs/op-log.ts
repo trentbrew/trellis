@@ -26,12 +26,18 @@ import {
   unlinkSync,
   renameSync,
   appendFileSync,
+  statSync,
 } from 'fs';
 import { dirname, resolve } from 'path';
 import type { VcsOp } from './types.js';
 import { withFileLock } from './file-lock.js';
 import { requireDestructiveConfirm } from './destructive-guard.js';
-import { mirrorOpLine, restoreOpsFromMirror, backfillMirrorIfBehind } from './oplog-mirror.js';
+import {
+  mirrorOpLine,
+  mirrorOpLines,
+  restoreOpsFromMirror,
+  backfillMirrorIfBehind,
+} from './oplog-mirror.js';
 import { assertRecentRemoteAckForRepair } from './oplog-remote.js';
 
 export interface RepairOptions {
@@ -66,6 +72,9 @@ export interface RepairResult {
  * - `flush()` is optional — when present, awaiting it guarantees durability
  *   for backends with deferred writes (e.g. IndexedDB). Filesystem backends
  *   that write synchronously may omit it.
+ * - `beginBulk()` / `endBulk()` are optional and nest. Between them a backend
+ *   may amortize per-append bookkeeping (backups, mirrors) across the batch;
+ *   every op is still durable in the journal when `append` returns.
  *
  * Implementations are responsible for hash-deduplication on `append`.
  */
@@ -76,6 +85,8 @@ export interface OpLog {
   getLastOp(): VcsOp | undefined;
   count(): number;
   flush?(): Promise<void>;
+  beginBulk?(): void;
+  endBulk?(): void;
 }
 
 // File-lock primitives (acquire + stale-owner reclaim) live in file-lock.ts so
@@ -89,6 +100,16 @@ export class JsonOpLog implements OpLog {
   private lockPath: string;
   /** True when the on-disk file is still the legacy single JSON array. */
   private legacy = false;
+  /**
+   * Journal size as of our last read or write. Appends only grow the file, so
+   * an unchanged size means no peer appended and the re-read can be skipped.
+   */
+  private knownDiskSize = -1;
+  /** `beginBulk` nesting depth; > 0 amortizes backups and mirror writes. */
+  private bulkDepth = 0;
+  private bulkBackedUp = false;
+  private bulkMirrorLines: string[] = [];
+  private bulkMirrorLastHash: string | undefined;
 
   constructor(filePath: string) {
     this.filePath = filePath;
@@ -110,7 +131,24 @@ export class JsonOpLog implements OpLog {
     this.legacy = raw.trim().startsWith('[');
     this.ops = this.parseFile(raw);
     this.hashes = new Set(this.ops.map((o) => o.hash));
+    this.knownDiskSize = Buffer.byteLength(raw);
     backfillMirrorIfBehind(this.filePath);
+  }
+
+  beginBulk(): void {
+    this.bulkDepth++;
+  }
+
+  endBulk(): void {
+    if (this.bulkDepth === 0) return;
+    this.bulkDepth--;
+    if (this.bulkDepth > 0) return;
+    this.bulkBackedUp = false;
+    if (this.bulkMirrorLines.length > 0) {
+      mirrorOpLines(this.filePath, this.bulkMirrorLines, this.bulkMirrorLastHash);
+      this.bulkMirrorLines = [];
+      this.bulkMirrorLastHash = undefined;
+    }
   }
 
   append(op: VcsOp): void {
@@ -122,7 +160,10 @@ export class JsonOpLog implements OpLog {
         this.hashes = new Set(this.ops.map((o) => o.hash));
         this.migrateToJsonl();
         this.legacy = false;
-      } else if (existsSync(this.filePath)) {
+      } else if (
+        existsSync(this.filePath) &&
+        statSync(this.filePath).size !== this.knownDiskSize
+      ) {
         // A peer process may have appended since we loaded. Adopt the longer
         // disk journal so our in-memory tail reflects reality.
         const diskOps = this.readDiskOps();
@@ -219,10 +260,20 @@ export class JsonOpLog implements OpLog {
   private appendLineToDisk(op: VcsOp): void {
     const dir = dirname(this.filePath);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    this.backupCurrentFile();
+    // In a bulk window the backup ring rotates once, holding the pre-batch file.
+    if (this.bulkDepth === 0 || !this.bulkBackedUp) {
+      this.backupCurrentFile();
+      if (this.bulkDepth > 0) this.bulkBackedUp = true;
+    }
     const line = JSON.stringify(op) + '\n';
     appendFileSync(this.filePath, line);
-    mirrorOpLine(this.filePath, line, op.hash);
+    this.knownDiskSize = statSync(this.filePath).size;
+    if (this.bulkDepth > 0) {
+      this.bulkMirrorLines.push(line);
+      this.bulkMirrorLastHash = op.hash;
+    } else {
+      mirrorOpLine(this.filePath, line, op.hash);
+    }
   }
 
   private backupCurrentFile(): void {
