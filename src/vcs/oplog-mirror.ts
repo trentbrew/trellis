@@ -99,7 +99,20 @@ function rotateSnapshots(repoKey: string, journalPath: string): void {
 
 /** Mirror one appended JSONL line (integration journal only). */
 export function mirrorOpLine(opsPath: string, line: string, opHash?: string): void {
+  mirrorOpLines(opsPath, [line], opHash);
+}
+
+/**
+ * Mirror several journal lines in one write — same end state as calling
+ * `mirrorOpLine` per line, without re-counting the journal per line.
+ */
+export function mirrorOpLines(
+  opsPath: string,
+  lines: string[],
+  lastHash?: string,
+): void {
   if (process.env.TRELLIS_SKIP_OPLOG_MIRROR === '1') return;
+  if (lines.length === 0) return;
   const repoKey = repoKeyForOpsPath(opsPath);
   if (!repoKey) return;
 
@@ -107,24 +120,31 @@ export function mirrorOpLine(opsPath: string, line: string, opHash?: string): vo
   const dir = mirrorDir(repoKey);
   mkdirSync(dir, { recursive: true });
   const journalPath = join(dir, 'journal.jsonl');
-  appendFileSync(journalPath, line.endsWith('\n') ? line : `${line}\n`);
+  appendFileSync(
+    journalPath,
+    lines.map((l) => (l.endsWith('\n') ? l : `${l}\n`)).join(''),
+  );
 
   const prev = readMeta(repoKey);
   const lineCount = countLines(journalPath);
+  const before = lineCount - lines.length;
   const meta: MirrorMeta = {
     repoKey,
     rootPath,
     journalPath,
     sourceOpsPath: resolve(opsPath),
     lineCount,
-    lastHash: opHash ?? prev?.lastHash,
+    lastHash: lastHash ?? prev?.lastHash,
     updatedAt: new Date().toISOString(),
   };
   writeMeta(meta);
 
+  // Per line this is `lineCount === 1 || lineCount % SNAPSHOT_EVERY_OPS === 0`;
+  // a batch rotates when it starts the journal or crosses a multiple.
   if (
-    lineCount === 1 ||
-    lineCount % SNAPSHOT_EVERY_OPS === 0 ||
+    before === 0 ||
+    Math.floor(lineCount / SNAPSHOT_EVERY_OPS) >
+      Math.floor(before / SNAPSHOT_EVERY_OPS) ||
     (prev && lineCount > prev.lineCount + SNAPSHOT_EVERY_OPS)
   ) {
     rotateSnapshots(repoKey, journalPath);

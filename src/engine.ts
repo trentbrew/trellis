@@ -298,6 +298,13 @@ export class TrellisVcsEngine {
   private activeLaneId?: string;
   private activeLaneLog: LaneOpLog | null = null;
   private integrationCache: IntegrationCache | null = null;
+  /**
+   * > 0 while `integrateOps` applies a batch: the integration snapshot is
+   * written once at the end instead of after every op. A crash mid-batch
+   * leaves an older `tailHash`, and open() replays the journal past it.
+   */
+  private deferSnapshotDepth = 0;
+  private snapshotDeferred = false;
   private materializationStats: MaterializationStats =
     materializeMod.emptyMaterializationStats();
   private watchReconcileOnRestart = false;
@@ -931,6 +938,29 @@ for (const event of scanEvents) {
       );
     }
 
+    // KRN-509: per-op snapshot, backup and mirror writes each cost O(log
+    // size), so a peer's full history integrated op by op was O(N²).
+    this.deferSnapshotDepth++;
+    this.opLog.beginBulk?.();
+    try {
+      return await this.integrateOpsUnbatched(ops);
+    } finally {
+      this.opLog.endBulk?.();
+      this.deferSnapshotDepth--;
+      if (this.deferSnapshotDepth === 0 && this.snapshotDeferred) {
+        this.snapshotDeferred = false;
+        savePersistedSnapshot(
+          integrationSnapshotPath(this.trellisDir()),
+          this.integrationCache?.tailHash,
+          this.store,
+        );
+      }
+    }
+  }
+
+  private async integrateOpsUnbatched(
+    ops: VcsOp[],
+  ): Promise<IntegrateOpsResult> {
     const known = new Set(this.opLog.readAll().map((op) => op.hash));
     const pendingByHash = new Map<string, VcsOp>();
     const rejected: IntegrateOpRejection[] = [];
@@ -3537,11 +3567,15 @@ for (const event of scanEvents) {
       } else {
         this.integrationCache.tailHash = opToApply.hash;
       }
-      savePersistedSnapshot(
-        integrationSnapshotPath(this.trellisDir()),
-        opToApply.hash,
-        this.store,
-      );
+      if (this.deferSnapshotDepth > 0) {
+        this.snapshotDeferred = true;
+      } else {
+        savePersistedSnapshot(
+          integrationSnapshotPath(this.trellisDir()),
+          opToApply.hash,
+          this.store,
+        );
+      }
     }
 
     if (
