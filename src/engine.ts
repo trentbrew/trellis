@@ -250,7 +250,8 @@ export type IntegrateOpRejectReason =
   | 'hash-mismatch'
   | 'unauthorized'
   | 'missing-dependency'
-  | 'apply-failed';
+  | 'apply-failed'
+  | 'issue-id-conflict';
 
 export interface IntegrateOpRejection {
   op: VcsOp;
@@ -1001,6 +1002,23 @@ for (const event of scanEvents) {
             message: auth.message ?? `Unauthorized ingest of '${op.kind}'.`,
           });
           progressed = true; // resolved (as a rejection); don't re-defer
+          continue;
+        }
+
+        // Two writers allocating offline can mint the same `PREFIX-N` for
+        // different issues. The same create (same hash) was skipped above, so
+        // an existing id here is a different issue — applying would overwrite
+        // it. The peer's later ops chain off this one and reject as
+        // missing-dependency, halting that tail rather than merging into it.
+        const createdIssueId =
+          op.kind === 'vcs:issueCreate' ? op.vcs?.issueId : undefined;
+        if (createdIssueId && issueMod.getIssue(this._ctx(), createdIssueId)) {
+          rejected.push({
+            op,
+            reason: 'issue-id-conflict',
+            message: `Rejected issueCreate for '${createdIssueId}': a different issue already has that id.`,
+          });
+          progressed = true;
           continue;
         }
 

@@ -165,7 +165,27 @@ function bumpIssueCounterAtLeast(rootPath: string, n: number): void {
   }
 }
 
-function nextIssueId(rootPath: string, laneId?: string): string {
+/**
+ * Highest legacy `PREFIX-N` already materialized in the store. Ops pulled from
+ * a peer (`integrateOps`) never touch the local counter file, so the counter
+ * alone would re-mint ids the store already holds.
+ */
+function maxIssueNumberInStore(ctx: EngineContext, rootPath: string): number {
+  const prefixes = issuePrefixSet(rootPath);
+  let max = 0;
+  for (const f of ctx.store.getFactsByAttribute('type')) {
+    if (f.v !== 'Issue') continue;
+    const parts = parseIssueRefId(f.e.replace(/^issue:/, ''), prefixes);
+    if (parts && parts.n > max) max = parts.n;
+  }
+  return max;
+}
+
+/**
+ * @param floor Legacy allocator only: the counter continues above this value
+ *   (the store's highest `PREFIX-N`). Ignored for lane-scoped ids.
+ */
+function nextIssueId(rootPath: string, laneId?: string, floor = 0): string {
   const laneScope = laneId?.trim();
   const counterPath = getIssueCounterPath(rootPath);
   const scopedCounterPath = laneScope
@@ -186,6 +206,7 @@ function nextIssueId(rootPath: string, laneId?: string): string {
             JSON.parse(readFileSync(scopedCounterPath, 'utf-8')).counter ?? 0;
         } catch { }
       }
+      if (!laneScope && floor > counter) counter = floor;
       counter++;
       writeFileSync(scopedCounterPath, JSON.stringify({ counter }, null, 2));
       if (laneScope) return `issue:${laneScope}:${counter}`;
@@ -433,7 +454,11 @@ export async function createIssue(
     const parts = parseIssueRefId(id, issuePrefixSet(rootPath))!;
     bumpIssueCounterAtLeast(rootPath, parts.n);
   } else {
-    id = nextIssueId(rootPath, opts?.laneId);
+    id = nextIssueId(
+      rootPath,
+      opts?.laneId,
+      opts?.laneId ? 0 : maxIssueNumberInStore(ctx, rootPath),
+    );
   }
 
   const op = await createVcsOp('vcs:issueCreate', {
