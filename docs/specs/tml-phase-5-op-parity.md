@@ -1,4 +1,4 @@
-# TML Phase 5 — Renderer-agnostic write path (proposal)
+# TML Phase 5; Renderer-agnostic write path (proposal)
 
 **Issue:** TRL-273 · **Proposal:** TRL-274  
 **Parent cycle:** TRL-247  
@@ -12,8 +12,8 @@ other renderers (kanban drag, table inline edit, future shells) may still use be
 
 ## Goal
 
-Every interactive write in admin surfaces through `TmlDriver.op` — declarative
-`tml-op` attributes or a single shell helper — with zero raw mutation fetch in
+Every interactive write in admin surfaces through `TmlDriver.op`; declarative
+`tml-op` attributes or a single shell helper; with zero raw mutation fetch in
 `admin.html` inline script.
 
 ## Scope

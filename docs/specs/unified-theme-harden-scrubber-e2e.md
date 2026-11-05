@@ -1,10 +1,10 @@
-# Spec: Harden unified theme — scrubber e2e + badge rgba
+# Spec: Harden unified theme; scrubber e2e + badge rgba
 
 **Status:** Ready for impl  
 **Date:** 2026-07-21  
 **Proposal:** TRL-169  
 **Parent chain:** TRL-167 (Phase C shipped)  
-**No design gate** — test + helper harden only
+**No design gate**; test + helper harden only
 
 ---
 
@@ -12,9 +12,9 @@
 
 Close two gaps left after Phase B/C review:
 
-1. **Scrubber e2e** — client vantage detents (2 / 5 / 8) must be exercised in
+1. **Scrubber e2e**; client vantage detents (2 / 5 / 8) must be exercised in
    Playwright, not only unit/source review.
-2. **Badge tint** — `client.html` appends `22` to CSS colors for drawer badges
+2. **Badge tint**; `client.html` appends `22` to CSS colors for drawer badges
    (`${ENTITY_COLORS[…]}22`). That breaks when `--entity-default` / text tokens
    resolve to `rgba(...)`.
 
@@ -26,11 +26,11 @@ Out of scope: fractal engine, dual-shell, new product surfaces, SvelteKit DX.
 
 | Artifact | Path / note |
 | -------- | ----------- |
-| Color helper | `src/ui/theme/color-tint.ts` — `withAlpha(color, alpha01)` |
+| Color helper | `src/ui/theme/color-tint.ts`; `withAlpha(color, alpha01)` |
 | Unit tests | `test/ui/color-tint.test.ts` (+ optional client grep for helper use) |
 | `client.html` | Use withAlpha-equivalent for drawer type badges; stop raw `}22` append |
 | Lanes route | `GET /client` in `lanes-dashboard.ts` serves `client.html` (e2e host) |
-| E2E | `e2e/client-vantage.spec.cjs` — detent → `data-ui-vantage` + shell |
+| E2E | `e2e/client-vantage.spec.cjs`; detent → `data-ui-vantage` + shell |
 | Regression | Keep `e2e/tml-lanes.spec.cjs` green |
 
 ---
@@ -48,9 +48,9 @@ Normative cases (unit-test these):
 | ----- | ----- | ------------ |
 | `#edb2f1` | `0.13` | `rgba(237, 178, 241, 0.13)` (or equivalent) |
 | `#00ceb9` | `0.13` | rgba form |
-| `rgba(255, 255, 255, 0.618)` | `0.13` | `rgba(255, 255, 255, 0.13)` — **replace** alpha, do not concatenate |
+| `rgba(255, 255, 255, 0.618)` | `0.13` | `rgba(255, 255, 255, 0.13)`; **replace** alpha, do not concatenate |
 | `rgb(1, 2, 3)` | `0.5` | `rgba(1, 2, 3, 0.5)` |
-| empty / garbage | any | fallback transparent or input unchanged — pick one and test |
+| empty / garbage | any | fallback transparent or input unchanged; pick one and test |
 
 **client.html:** replace drawer badge style that uses `` `${color}22` `` with a
 local `withAlpha(color, 0.13)` (or `Math.round(0x22/255)` ≈ 0.133) matching the
@@ -73,14 +73,14 @@ if (path === '/client' || path === '/client.html') {
 }
 ```
 
-Theme route `/theme/runtime-theme.css` already exists. Graph API may 404 —
+Theme route `/theme/runtime-theme.css` already exists. Graph API may 404 : 
 `client.html` boot already catches graph failure and still hides `#loading`;
 vantage dock remains interactive. No need to stub `/api/graph` unless e2e
 flakes (Executor may add empty JSON stub only if required).
 
 ---
 
-## 5. E2E — `e2e/client-vantage.spec.cjs`
+## 5. E2E; `e2e/client-vantage.spec.cjs`
 
 ```text
 PW_REUSE=1 pnpm test:e2e e2e/client-vantage.spec.cjs
@@ -88,7 +88,7 @@ PW_REUSE=1 pnpm test:e2e e2e/client-vantage.spec.cjs
 
 Minimum cases:
 
-1. `goto('/client')` — `#vantage-scrubber` visible; `#main` has
+1. `goto('/client')`; `#vantage-scrubber` visible; `#main` has
    `data-ui-vantage="8"`; `#ui-thing` has `data-trellis-shell="card"`.
 2. Click **Node** detent → `#main[data-ui-vantage="2"]` and
    `#ui-thing[data-trellis-shell="node"]`.

@@ -1,6 +1,6 @@
-# TRL-334 — Spec: Realtime full-state sync with safety layers
+# TRL-334; Spec: Realtime full-state sync with safety layers
 
-Parent: **TRL-333** (proposal). Backend path — no `needs-design`.
+Parent: **TRL-333** (proposal). Backend path; no `needs-design`.
 
 ## Problem
 
@@ -36,9 +36,9 @@ sequenceDiagram
   end
 ```
 
-## Agent read surface (H2 — landed 2026-09-22)
+## Agent read surface (H2; landed 2026-09-22)
 
-Harness agents read graph state via **typed tools** only — no freeform EQL-S in the
+Harness agents read graph state via **typed tools** only; no freeform EQL-S in the
 agent tool surface:
 
 | Tool | Path |
@@ -63,24 +63,24 @@ frozen EQL-S baseline = `--arm=graph-strict`.
 
 ## Delivery slices (executor order)
 
-### Slice 1 — Protocol + policy + audit (in tree; harden)
+### Slice 1; Protocol + policy + audit (in tree; harden)
 
 - Types compile and protocol extension tests pass.
 - `SyncAuditTrail` appends JSONL lines for sync events.
 - `sync-policy` blocks/quarantines per risk class; unit tests green.
 
-### Slice 2 — Daemon + WebSocket wire-up
+### Slice 2; Daemon + WebSocket wire-up
 
 - `SyncDaemon` persistent loop: connect, tail local ops, push/pull full-state messages.
 - Integrate `websocket-transport` with existing `SyncEngine` handshake.
 - Rate limit + quarantine counters exposed on `getState()`.
 
-### Slice 3 — CLI + checkpoint / rollback
+### Slice 3; CLI + checkpoint / rollback
 
 - `trellis realtime-sync start|status|pause|rollback` (VCS `trellis sync` remains push/pull).
-- `trellis realtime-sync integrate <file> --mode dry-run|validate|apply` — checkpoint under `.trellis/sync-checkpoint.json` before apply; `rollback` restores last checkpoint.
+- `trellis realtime-sync integrate <file> --mode dry-run|validate|apply`; checkpoint under `.trellis/sync-checkpoint.json` before apply; `rollback` restores last checkpoint.
 
-### Slice 4 — Integration
+### Slice 4; Integration
 
 - Round-trip test: two temp repos, WS room, snapshot + lane journal exchange, policy blocks destructive remote op by default.
 
@@ -94,7 +94,7 @@ test:npx vitest run test/vcs/sync-policy.test.ts
 test:npx vitest run test/p7/sync-engine.test.ts
 ```
 
-Behavioral (prose — verified in review):
+Behavioral (prose; verified in review):
 
 1. Remote destructive VCS ops are **denied by default** unless policy explicitly allows environment.
 2. Every apply/validate/quarantine path writes an **audit** line when audit enabled.
@@ -102,7 +102,7 @@ Behavioral (prose — verified in review):
 
 ## Graph hygiene
 
-TRL-334 currently has **duplicate** audit AC rows on the issue — retract duplicates and replace with the five machine AC above before impl close.
+TRL-334 currently has **duplicate** audit AC rows on the issue; retract duplicates and replace with the five machine AC above before impl close.
 
 ## Teach
 

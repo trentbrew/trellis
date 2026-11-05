@@ -1,4 +1,4 @@
-# Spec: trellis admin — chrome polish (post TRL-229)
+# Spec: trellis admin; chrome polish (post TRL-229)
 
 **Status:** Ready for impl  
 **Date:** 2026-07-21  
@@ -14,7 +14,7 @@
 
 Founder UX polish on TRL-229 VCS layout: **stack collapsible WORK/LOGS zones** (no 50/50 split), **header band above secondary+main** (not beside secondary), **icon breadcrumbs with active tab segment**, **slim view header** (no duplicate route title), **full-width board search**, **oplog day groups in pinned inspector only**.
 
-Static HTML/CSS/JS in `admin.html` only — no React port.
+Static HTML/CSS/JS in `admin.html` only; no React port.
 
 ---
 
@@ -26,7 +26,7 @@ Static HTML/CSS/JS in `admin.html` only — no React port.
 | Secondary zones | **`.secondary-zone`** sections with toggle + nav; intrinsic stack height (remove `flex: 1` equal split on `.secondary-nav`) |
 | Zone collapse | Per-zone only; keys **`trellis-admin-zone-work-collapsed`**, **`trellis-admin-zone-logs-collapsed`** (`0`/`1`) |
 | Global secondary collapse | **Remove** `#secondary-toggle` and **`html.secondary-collapsed`** rail mode (this wedge) |
-| View title | **Remove** `#view-title` / `Work · …` updates from `setVcsRoute` — wayfinding via breadcrumbs |
+| View title | **Remove** `#view-title` / `Work · …` updates from `setVcsRoute`; wayfinding via breadcrumbs |
 | View meta | **Hidden** on `work/board`; contextual only on other routes (see §6.1) |
 | Breadcrumbs | Fourth segment **`#crumb-tab`** with route icon; `aria-current="page"` on active tab |
 | Crumb update | **`updateCrumbTab(zone, tab)`** called from `setVcsRoute` (replaces view title logic) |
@@ -92,7 +92,7 @@ Hide primary `.sidebar`. Header spans cols 1 / -1 row 1; secondary + main (+ opt
 
 ## 5. Markup contracts
 
-### 5.1 Secondary — stacked collapsible zones
+### 5.1 Secondary; stacked collapsible zones
 
 Replace flat zone labels + equal-height navs:
 
@@ -119,7 +119,7 @@ Replace flat zone labels + equal-height navs:
 - **Remove** `#zone-work-label` / `#zone-logs-label` div eyebrows (toggle label replaces)
 - **Forbidden:** `flex: 1` on `.secondary-nav` for equal split; `#secondary-toggle`
 
-### 5.2 Breadcrumbs — icon segments + active tab
+### 5.2 Breadcrumbs; icon segments + active tab
 
 Wrap crumb in `nav[aria-label="Location"]`:
 
@@ -206,11 +206,11 @@ function updateCrumbTab(zone, tab) {
 
 Called at end of `setVcsRoute`. **Remove** `viewTitle.textContent = titles[route]` block.
 
-### 6.2 `setVcsRoute` — view meta matrix
+### 6.2 `setVcsRoute`; view meta matrix
 
 | Route | `#view-meta` | Content |
 | ----- | ------------ | ------- |
-| `work/board` | **hidden** | — (counts in header stats only) |
+| `work/board` | **hidden** |; (counts in header stats only) |
 | `work/milestones` | visible | milestone count |
 | `work/workflows` | visible | Coming soon |
 | `logs/ops` | visible | op count + live state |

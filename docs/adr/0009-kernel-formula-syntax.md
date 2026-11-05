@@ -16,7 +16,7 @@ Trellis has two formula surfaces today:
 
 - **Kernel path** uses `ExprEvaluator` (`$if`, `$concat`, `$mul`, `$field`, …) per `TRELLIS_SPEC`.
 - **CMS path** keeps `{field}` arithmetic for backward-compatible collection schemas.
-- No automatic aliasing in v1 — document both; unify later if CMS schemas migrate to kernel ontologies.
+- No automatic aliasing in v1; document both; unify later if CMS schemas migrate to kernel ontologies.
 
 ## Consequences
 

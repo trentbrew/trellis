@@ -1,4 +1,4 @@
-# TRL-475 — Spec: Formula core slice 2 (adapters + shablon wire)
+# TRL-475; Spec: Formula core slice 2 (adapters + shablon wire)
 
 **Parent:** TRL-470 · **Impl:** TRL-476 · **Depends on:** TRL-473 (slice 1, closed) · **ADR:** [0059](../../adr/0059-frozen-formula-core-dialect-adapters.md)
 
@@ -8,10 +8,10 @@ Slice 1 (`experiments/formula-core-v1`) proves parse/eval/serialize + corpus for
 
 ## Goal
 
-1. **Adapters** — thin `surface → IR → evaluate` entrypoints per dialect tag.
-2. **Shablon bridge** — `src/formula/dialect.js` delegates CMS-compat classification to shared rules (Node-importable path from trellis-node experiment or duplicated minimal classifier kept in sync — prefer **file import** from `trellis` workspace path documented in impl).
-3. **Corpus growth** — lift shablon 4a matrix rows into `matrix.jsonl` (classification + eval rows).
-4. **Regression** — shablon `pb-formula-compat-unit` + `pb-schema-unit` unchanged green.
+1. **Adapters**; thin `surface → IR → evaluate` entrypoints per dialect tag.
+2. **Shablon bridge**; `src/formula/dialect.js` delegates CMS-compat classification to shared rules (Node-importable path from trellis-node experiment or duplicated minimal classifier kept in sync; prefer **file import** from `trellis` workspace path documented in impl).
+3. **Corpus growth**; lift shablon 4a matrix rows into `matrix.jsonl` (classification + eval rows).
+4. **Regression**; shablon `pb-formula-compat-unit` + `pb-schema-unit` unchanged green.
 
 **Non-goals (slice 2):** kernel `ExprEvaluator` replacement, `trellis/cms` client migration, npm publish pin, TRL-471 pb-node.
 
@@ -37,13 +37,13 @@ Add ≥6 rows ported from shablon `dialect.test.js` expectations (ids prefixed `
 
 ### 4. Shablon wire (`lab/oss/shablon`)
 
-- Add dev dependency path or relative import documented in `src/formula/README.md` (slice 2): **optional** — if cross-repo import is impractical in CI, duplicate classifier logic in shablon with **shared corpus JSON** copied to both repos and a comment linking TRL-475.
+- Add dev dependency path or relative import documented in `src/formula/README.md` (slice 2): **optional**; if cross-repo import is impractical in CI, duplicate classifier logic in shablon with **shared corpus JSON** copied to both repos and a comment linking TRL-475.
 
 Minimum AC: shablon tests pass; dialect behavior unchanged for Trellis schema guard paths.
 
 ### 5. Docs
 
-- Update `experiments/formula-core-v1/SPEC.md` — adapter section.
+- Update `experiments/formula-core-v1/SPEC.md`; adapter section.
 - `docs/issues/TRL-475/journal.md` on impl hops.
 
 ## Acceptance criteria
@@ -69,5 +69,5 @@ test:cd ../../lab/oss/shablon && bun run pb-schema-unit
 ## Impl hints
 
 - Keep zero runtime deps in formula-core experiment.
-- AC runner cwd is the repo root (`manifestRoot = trellis-node`); shablon paths are repo-relative: `cd ../../lab/oss/shablon` (pre-verified green — formula 4 pass, schema 6 pass).
-- Do not change proxy HTTP shapes in shablon — only formula/dialect layer.
+- AC runner cwd is the repo root (`manifestRoot = trellis-node`); shablon paths are repo-relative: `cd ../../lab/oss/shablon` (pre-verified green; formula 4 pass, schema 6 pass).
+- Do not change proxy HTTP shapes in shablon; only formula/dialect layer.

@@ -1,4 +1,4 @@
-# ADR 0017 — Blob GC and thermal decay policy
+# ADR 0017; Blob GC and thermal decay policy
 
 **Status:** proposed (2026-07-10) **Related:**
 [0016](./0016-relay-blob-serving.md) (relay blob serving),
@@ -11,13 +11,13 @@ TRL-46/TRL-47 (which deferred GC)
 [0016](./0016-relay-blob-serving.md) shipped the byte tier but explicitly
 deferred a garbage-collection policy: `BlobStore` never evicts, so the relay's
 `{trellisDir}/blobs/` grows without bound. On a Sprites.dev host the storage
-tiers are priced ~25× apart — **hot NVMe ≈ $0.50/GB‑month vs cold object
-≈ $0.02/GB‑month** — and, more importantly, keeping a Sprite awake purely to
+tiers are priced ~25× apart; **hot NVMe ≈ $0.50/GB‑month vs cold object
+≈ $0.02/GB‑month**; and, more importantly, keeping a Sprite awake purely to
 seed bytes is a _compute_ bill (a 24/7 1 vCPU + 2 GB relay ≈ $115/month),
 dwarfing storage. So an unbounded hot store is the expensive failure mode, and
 "just keep everything hot forever" is the wrong default.
 
-We need an eviction policy — but eviction of a content-addressed store is only
+We need an eviction policy; but eviction of a content-addressed store is only
 safe if it is never destructive. The design has to make that guarantee
 structural, not a hope.
 
@@ -27,7 +27,7 @@ A blob's hash _is_ its identity. Evicting the relay's copy of `X` loses nothing
 **as long as some other holder can still re-produce bytes that hash to `X`**.
 That reframes GC from "deletion" to "cache demotion": a miss is a re-fetch, not
 data loss. The relay is a _cache_ of a byte that lives authoritatively
-elsewhere — never the sole holder.
+elsewhere; never the sole holder.
 
 ## Decision
 
@@ -43,22 +43,22 @@ Concretely, a blob becomes eligible for hot eviction only once it has been
 durably written to the cold tier (object storage) **or** is known-held by at
 least one reachable peer. A freshly `PUT` blob that has not yet been backed up
 is **pinned** (ineligible) until backup completes. This makes decay a
-latency/cost decision, never a correctness one — a design consequence of
+latency/cost decision, never a correctness one; a design consequence of
 "servers never own state" ([0016](./0016-relay-blob-serving.md)).
 
 ### Heat signal
 
-Heat is **access frequency with recency decay** — the popularity signal the user
+Heat is **access frequency with recency decay**; the popularity signal the user
 proposed ("hot/cold by how often a file is fetched, including peer copies"),
 which is exactly a **W‑TinyLFU** admission/eviction policy (Caffeine's algorithm):
 a frequency sketch plus a small recency window. Per-blob heat inputs:
 
-- `getCount` — `GET`/Range hits on `/blob/:hash` (a Range hit counts once).
-- `peerFetchCount` — copies handed to peers (future iroh-blobs replication).
-- `lastAccess` — recency, for the decay term.
+- `getCount`; `GET`/Range hits on `/blob/:hash` (a Range hit counts once).
+- `peerFetchCount`; copies handed to peers (future iroh-blobs replication).
+- `lastAccess`; recency, for the decay term.
 
 Heat is metadata kept beside the store (sidecar index / SQLite), **not** in the
-content-addressed bytes — the bytes stay immutable and their hash unchanged.
+content-addressed bytes; the bytes stay immutable and their hash unchanged.
 
 ### Eviction algorithm
 
@@ -86,7 +86,7 @@ first demoted. But demotion is deletion _of the hot copy only_.
 A `GET` miss walks _up_ the ladder (peer/cold → hot); decay pushes _down_. R2 is
 preferred for the cold tier specifically because a blob server is egress-shaped
 and R2 charges no egress. The client OPFS copy needs `persist()` or the browser
-may evict it under storage pressure — without it the "local authoritative copy"
+may evict it under storage pressure; without it the "local authoritative copy"
 is itself only a cache, which would violate the invariant when it is the last
 holder.
 
@@ -96,7 +96,7 @@ The peer tier is [iroh-blobs](https://www.iroh.computer/sendme) (the library
 under `sendme`), which is content-addressed over **BLAKE3**, whereas `BlobStore`
 is **SHA‑256**. Adopting the peer tier implies either a hash migration to BLAKE3
 or a dual-hash index. BLAKE3's Bao verified-streaming tree also enables
-incremental range verification — a natural fit for the TRL-48 range/streaming
+incremental range verification; a natural fit for the TRL-48 range/streaming
 path and future P2P video. This ADR records the direction; the hash decision is
 its own follow-up.
 

@@ -556,10 +556,14 @@ export async function rechainOpForIntegration(
   if (!isVcsOpKindSafe(op.kind)) {
     throw new Error(`Cannot rechain op kind '${op.kind}' for integration replay`);
   }
+  // The source signature covers its lane `previousHash`, so it cannot survive
+  // the rechain: drop the envelope and let `applyOp` re-sign with the local
+  // key. The signed original stays in the lane journal.
+  const { signature: _s, signedBy: _b, signedWith: _w, ...vcs } = op.vcs ?? {};
   const rechained = await createVcsOp(op.kind as VcsOpKind, {
     agentId: op.agentId,
     previousHash,
-    vcs: { ...op.vcs },
+    vcs,
   });
   // Carry the source lane as envelope provenance (TRL-102). It records where
   // the op came from without entering the preimage — the promoted op must hash

@@ -15,15 +15,15 @@ Trellis is a local-first agentic OS runtime. The local graph kernel, causal op l
 
 > **Issue ids below are stale except where noted.** `TRL-7` … `TRL-14` were
 > written before those numbers were reused by the presence wedge, so every one
-> of them now resolves to an unrelated (mostly closed) issue — e.g. this
+> of them now resolves to an unrelated (mostly closed) issue; e.g. this
 > document's `TRL-12` "Spike Iroh transport" is really "Track universal-presence
 > example in git", closed. Milestones 4 and 5 have been re-pointed at real
 > issues (`TRL-110`, `TRL-111`). The rest are prose, not tracked work: cut an
 > issue before starting one, and update the reference here.
 
-### Milestone 0 — Local-First OS Architecture
+### Milestone 0; Local-First OS Architecture
 
-Issue: `TRL-7` — Codify local-first Trellis OS architecture
+Issue: `TRL-7`; Codify local-first Trellis OS architecture
 
 Checkpoint message:
 
@@ -37,9 +37,9 @@ Outcome:
 - Core layers are named: kernel, runtime, sync, UI, and compatibility adapters.
 - Centralized web paths are explicitly treated as adapters.
 
-### Milestone 1 — Local Runtime Loop
+### Milestone 1; Local Runtime Loop
 
-Issue: `TRL-8` — Prototype local Trellis runtime loop
+Issue: `TRL-8`; Prototype local Trellis runtime loop
 
 Checkpoint message:
 
@@ -53,9 +53,9 @@ Outcome:
 - Local live queries update after mutations.
 - Runtime remains useful offline.
 
-### Milestone 2 — Turtle Desktop Shell
+### Milestone 2; Turtle Desktop Shell
 
-Issue: `TRL-9` — Create Turtle Tauri desktop shell prototype
+Issue: `TRL-9`; Create Turtle Tauri desktop shell prototype
 
 Checkpoint message:
 
@@ -69,9 +69,9 @@ Outcome:
 - UI can create, update, and list graph entities.
 - Live graph state is visible in the desktop shell.
 
-### Milestone 3 — Runtime and NixOS Boundary
+### Milestone 3; Runtime and NixOS Boundary
 
-Issue: `TRL-10` — Define NixOS and local runtime service boundary
+Issue: `TRL-10`; Define NixOS and local runtime service boundary
 
 Checkpoint message:
 
@@ -85,9 +85,9 @@ Outcome:
 - Storage, identity, config, and lifecycle boundaries are defined.
 - NixOS service/module direction is documented.
 
-### Milestone 4 — Graph Op Sync Protocol
+### Milestone 4; Graph Op Sync Protocol
 
-Issue: `TRL-110` — SPEC-v1.1: generalize the graph op sync protocol
+Issue: `TRL-110`; SPEC-v1.1: generalize the graph op sync protocol
 
 Checkpoint message:
 
@@ -101,9 +101,9 @@ Outcome:
 - In-memory peers can exchange graph ops and converge.
 - Incoming ops are idempotent and causally validated.
 
-### Milestone 5 — Iroh P2P Transport
+### Milestone 5; Iroh P2P Transport
 
-Issue: `TRL-111` — Spike Iroh transport for Trellis sync (blocked by `TRL-110`)
+Issue: `TRL-111`; Spike Iroh transport for Trellis sync (blocked by `TRL-110`)
 
 Checkpoint message:
 
@@ -117,9 +117,9 @@ Outcome:
 - Graph ops replicate without an app relay server.
 - Remote ops apply locally and trigger live query updates.
 
-### Milestone 6 — Signed Ops and Governance
+### Milestone 6; Signed Ops and Governance
 
-Issue: `TRL-13` — Design signed ops and capability governance
+Issue: `TRL-13`; Design signed ops and capability governance
 
 Checkpoint message:
 
@@ -133,9 +133,9 @@ Outcome:
 - Capability checks reject unauthorized writes.
 - Invite and revocation semantics are defined.
 
-### Milestone 7 — Optional Relay and Browser Gateway
+### Milestone 7; Optional Relay and Browser Gateway
 
-Issue: `TRL-14` — Add optional relay and browser gateway adapter
+Issue: `TRL-14`; Add optional relay and browser gateway adapter
 
 Checkpoint message:
 

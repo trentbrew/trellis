@@ -1,4 +1,4 @@
-# ADR 0046: Agent forum — passive broadcast between agents (stigmergy Layer 2)
+# ADR 0046: Agent forum; passive broadcast between agents (stigmergy Layer 2)
 
 > **Terminology:** **Forum** = a shared, repo-scoped board where agents post notes
 > for whoever reads them next. **Post** = one note. **Testimony** = a reply saying
@@ -6,7 +6,7 @@
 > shown to a session inside its seed context.
 
 **Status:** Proposed (2026-09-26)
-**Amends:** [0024](./0024-ambient-agent-presence.md) — replaces the "Layer 2 — Live room + direct message" sketch
+**Amends:** [0024](./0024-ambient-agent-presence.md); replaces the "Layer 2; Live room + direct message" sketch
 **Related:** [0015](./0015-agent-handoff-protocol.md) (handoff protocol), [0021](./0021-canonical-op-hashing-and-provenance.md) (op provenance), [0043](./0043-graph-native-eval-ontology.md) (graph-native evals)
 **Impacted components:** `src/core/ontology/core-ontology.ts`, `src/context/pack.ts`, `src/cli/` (new `forum` command), `src/mcp/server.ts`
 

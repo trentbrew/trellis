@@ -1,8 +1,8 @@
-# Spec: Unified theme contract — runtime surfaces (Phase A)
+# Spec: Unified theme contract; runtime surfaces (Phase A)
 
 **Status:** Ready for impl\
 **Date:** 2026-07-17\
-**Proposal:** TRL-156 —
+**Proposal:** TRL-156 : 
 [`unified-theme-contract-proposal.md`](./unified-theme-contract-proposal.md)\
 **Informed by:** `BRAND.md`, ADR 0011, `tml-v0.1-kanban.md`, trellis-client
 `INSET_SURFACES.md`\
@@ -46,11 +46,11 @@ substrate with fractal vantage.
 
 Single file under `src/ui/theme/runtime-theme.css`. Structure:
 
-1. **Semantic tokens** — Studio-aligned names (`--background-base`,
+1. **Semantic tokens**; Studio-aligned names (`--background-base`,
    `--surface-raised-base`, `--text-interactive-base`, status colors, radii,
    spacing, font families). Phase A values match current `tml-lanes.html` inline
    `:root` (purple accent `#6d5bfa`).
-2. **Legacy aliases** — backward-compat shorthands used by existing page CSS:
+2. **Legacy aliases**; backward-compat shorthands used by existing page CSS:
 
 ```css
 --bg: var(--background-base);
@@ -69,7 +69,7 @@ Single file under `src/ui/theme/runtime-theme.css`. Structure:
 --mono: var(--font-family-mono);
 ```
 
-3. **Component tokens** — `--tml-badge-*`, `--tml-accent-glow`,
+3. **Component tokens**; `--tml-badge-*`, `--tml-accent-glow`,
    `--tml-kanban-body-inset` (extract from current `tml-lanes.html` badge
    `rgba()` tints).
 
@@ -131,24 +131,24 @@ landed `tml-lanes.html` and e2e selectors.
 Add row under **Surfaces today**:
 
 | **Kernel runtime** (`trellis-node/src/ui/`) | `src/ui/theme/runtime-theme.css`
-(semantic + legacy aliases) | Inter + JetBrains (Phase A) | **Converging** —
+(semantic + legacy aliases) | Inter + JetBrains (Phase A) | **Converging** : 
 Phase B aligns values to Studio |
 
 Link to this spec in **References**.
 
 ---
 
-## 6. Fractal extension points (Phase C — document only)
+## 6. Fractal extension points (Phase C; document only)
 
 Add comment block at bottom of `runtime-theme.css`:
 
 ```css
-/* Phase B (inset substrate — trellis-client pattern):
+/* Phase B (inset substrate; trellis-client pattern):
    --surface-1: color-mix(in oklch, var(--card) 25%, var(--background));
    --surface-2: color-mix(in oklch, var(--card) 50%, var(--background));
    --surface-3: var(--card);
 
-   Phase C hooks (fractal — TRL-25, not consumed in Phase A):
+   Phase C hooks (fractal; TRL-25, not consumed in Phase A):
    --ui-vantage: 0;                  // 0–21 scalar; NOT deck present/edit mode
    html[data-trellis-band="L1|L2|L3"]
    [data-ui-vantage] [data-trellis-shell="node|row|card"]
@@ -161,7 +161,7 @@ No runtime behavior change in Phase A.
 
 ## 7. Tests
 
-### 7.1 Unit — `test/ui/runtime-theme.test.ts`
+### 7.1 Unit; `test/ui/runtime-theme.test.ts`
 
 - File exists at `src/ui/theme/runtime-theme.css`.
 - Contains all legacy alias declarations (`--bg`, `--font`, `--mono`, etc.).
@@ -170,7 +170,7 @@ No runtime behavior change in Phase A.
 
 Run: `pnpm test test/ui/runtime-theme.test.ts`
 
-### 7.2 E2E — extend `e2e/tml-lanes.spec.cjs`
+### 7.2 E2E; extend `e2e/tml-lanes.spec.cjs`
 
 Add test:
 

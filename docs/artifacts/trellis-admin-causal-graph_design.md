@@ -1,8 +1,8 @@
 ---
 version: alpha
-name: trellis admin — causal history graph (Logs · Branches)
+name: trellis admin; causal history graph (Logs · Branches)
 description: >-
-  Design for TRL-262 — Git-graph-style causal topology for integration branch:
+  Design for TRL-262; Git-graph-style causal topology for integration branch:
   milestones on trunk, agent lane forks as side lanes, promote as merge nodes.
   Replaces logs/branches stub; complements logs/ops linear stream.
 source:
@@ -75,9 +75,9 @@ components:
     padding: 4px 10px
 ---
 
-# Design: trellis admin — causal history graph
+# Design: trellis admin; causal history graph
 
-**Status:** Design verified — ready for Architect  
+**Status:** Design verified; ready for Architect  
 **Parent:** TRL-261 · **Design issue:** TRL-262  
 **Mock:** [trellis-admin-causal-graph_mockup.html](./trellis-admin-causal-graph_mockup.html)  
 **Amends:** [trellis-admin-vcs-layout-ide_design.md](./trellis-admin-vcs-layout-ide_design.md) (replaces `logs/branches` stub)  
@@ -87,23 +87,23 @@ components:
 
 ## Overview
 
-Replace the **Logs → Branches** stub with a **Causal History Graph** — vertical git-client topology showing how agent lane forks diverge from integration and merge back on promote. Milestones appear as tag flags on trunk nodes; active lane heads show branch pills.
+Replace the **Logs → Branches** stub with a **Causal History Graph**; vertical git-client topology showing how agent lane forks diverge from integration and merge back on promote. Milestones appear as tag flags on trunk nodes; active lane heads show branch pills.
 
 **Not** a replacement for Logs → Ops (linear live tail). **Not** the home for Work → Milestones (narrative cards stay; graph links to them).
 
 Copy uses **fork** in user-facing text where possible; reserve **lane** for `lane-uuid` in metadata rows.
 
-Emotional tone: same dense L3 operator shell — dark inset card, mono selection metadata, honest empty state when no fork history exists.
+Emotional tone: same dense L3 operator shell; dark inset card, mono selection metadata, honest empty state when no fork history exists.
 
 ## IA placement (decision)
 
 | Route | Verdict |
 | ----- | ------- |
-| **Logs → Branches** | **Ship here** — matches TRL-225/226 stub slot and IDE Logs mental model |
-| Work → Milestones | Reject as graph host — keep cards; optional “View in graph” link later |
-| Logs → Ops sub-panel | Reject — conflates linear tail with topology |
+| **Logs → Branches** | **Ship here**; matches TRL-225/226 stub slot and IDE Logs mental model |
+| Work → Milestones | Reject as graph host; keep cards; optional “View in graph” link later |
+| Logs → Ops sub-panel | Reject; conflates linear tail with topology |
 
-**View header:** breadcrumb ends `{repo} / operate / vcs / branches` (icon crumbs per TRL-236); `#view-meta` in `.view-header-start` shows `{N events · M active forks · integration: main}`. Global `.header-stats` stays board-global — graph counts do not duplicate there.
+**View header:** breadcrumb ends `{repo} / operate / vcs / branches` (icon crumbs per TRL-236); `#view-meta` in `.view-header-start` shows `{N events · M active forks · integration: main}`. Global `.header-stats` stays board-global; graph counts do not duplicate there.
 
 ## Colors
 
@@ -122,19 +122,19 @@ Inherit `runtime-theme.css`. Map graph lanes to tokens:
 ## Typography
 
 - Panel title **Causal history** + subtitle (one line, `{colors.text-base}`): explains click-to-expand hash.
-- Row message: `{typography.row-message}` — trunk rows `{colors.text-base}`; fork rows `{colors.lane-fork}` medium weight.
-- Selection meta: `{typography.row-meta}` — `{hash} · {agentId} · {relative date}`.
+- Row message: `{typography.row-message}`; trunk rows `{colors.text-base}`; fork rows `{colors.lane-fork}` medium weight.
+- Selection meta: `{typography.row-meta}`; `{hash} · {agentId} · {relative date}`.
 - Legend below card: `{typography.legend}` with 12px dots.
 
 ## Layout
 
 ### Shell context
 
-Graph lives in `#panel-branches` main `view-body` — full width, scrollable vertically. Optional oplog inspector (280px) remains independent; graph does not require pin open.
+Graph lives in `#panel-branches` main `view-body`; full width, scrollable vertically. Optional oplog inspector (280px) remains independent; graph does not require pin open.
 
 ```
 [ view header: crumbs + meta ]
-[ graph card — flex row: SVG | commit list ]
+[ graph card; flex row: SVG | commit list ]
 [ legend row ]
 [ empty state when commits.length === 0 ]
 ```
@@ -184,17 +184,17 @@ Each row is a full-width button:
 | Leave `logs/branches` | route active → inactive | `destroy()` on primitive; selection cleared |
 | Snapshot SSE | connected / disconnected | `refresh()` graph data; `#view-meta` counts update |
 | Click row button | unselected / selected | Toggle selection; SVG dot +2px r; row `aria-selected`; meta row visible |
-| Click SVG dot | unselected / selected | Same as row (decorative mirror — keyboard path is row only) |
+| Click SVG dot | unselected / selected | Same as row (decorative mirror; keyboard path is row only) |
 | Enter / Space on row | focused | Toggle selection |
 | Arrow Up/Down on row | focus on row | Move focus prev/next row; selection unchanged unless Enter |
-| Pin live tail (`#pin-toggle`) | collapsed / open | Oplog inspector opens (280px); graph main column shrinks — graph scrolls independently |
+| Pin live tail (`#pin-toggle`) | collapsed / open | Oplog inspector opens (280px); graph main column shrinks; graph scrolls independently |
 | Secondary LOGS zone collapse | expanded / collapsed | Route tabs hidden; graph panel unchanged when route already active |
 | Loading | no data yet | Skeleton card (3 pulse rows) in `#causal-graph-host` |
 | Empty graph | `commits.length === 0` | Empty copy + hint “Start an issue to fork a lane” |
 | Sparse trunk-only | milestones, no forks | Trunk timeline still renders; legend unchanged |
 | Reduced motion | `prefers-reduced-motion: reduce` | No SSE pulse animation; selection bg instant (no transition) |
 
-Selection does **not** open `#dlg` in v1 — inline meta sufficient. Architect may wire `onSelect → shell detail` as follow-up.
+Selection does **not** open `#dlg` in v1; inline meta sufficient. Architect may wire `onSelect → shell detail` as follow-up.
 
 ### Branch pill rules
 
@@ -234,7 +234,7 @@ type CausalNode = {
 }
 ```
 
-Build from: `listMilestones()`, `listLanes()` (+ `parentLaneId`, `forkKind`), promote ops — **not** raw full op journal.
+Build from: `listMilestones()`, `listLanes()` (+ `parentLaneId`, `forkKind`), promote ops; **not** raw full op journal.
 
 ## Accessibility
 
@@ -252,7 +252,7 @@ Build from: `listMilestones()`, `listLanes()` (+ `parentLaneId`, `forkKind`), pr
 
 - Loading: skeleton card (3 gray rows) until first snapshot.
 - Empty: centered message + link hint “Board → Promote when done”.
-- Sparse (trunk only, no forks): show milestones on trunk — still valuable.
+- Sparse (trunk only, no forks): show milestones on trunk; still valuable.
 
 ## Design research
 
@@ -269,6 +269,6 @@ See design-research subagent TRL-262: confirms Logs/Branches slot, `buildTimelin
 
 ## Open questions for Architect
 
-1. Extend `buildLanesSnapshot` vs new `buildCausalGraphSnapshot` — prefer dedicated builder.
+1. Extend `buildLanesSnapshot` vs new `buildCausalGraphSnapshot`; prefer dedicated builder.
 2. Whether promote replay creates explicit graph node from op kind or inferred from lane status `promoted`.
 3. Light theme: use same token mapping via `runtime-theme.css` (mock is dark-only; light variant follows `--color-primary` pattern from user reference screenshots).

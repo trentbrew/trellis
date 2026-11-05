@@ -1,4 +1,4 @@
-# Spec: `<trellis-entity>` — Universal Entity Renderer
+# Spec: `<trellis-entity>`; Universal Entity Renderer
 
 **Status:** spec
 **Date:** 2026-07-24
@@ -8,7 +8,7 @@
 - docs/planning/trellis-ui-webcomponents.md (Component API)
 - docs/trellis-ui/provider-spec.md (provider context)
 - demo/realtime-app/src/lib/fractal/Thing.svelte (vantage/shell reference)
-- `trellis/browser` — `liveEntity()`, `liveEntities()`
+- `trellis/browser`; `liveEntity()`, `liveEntities()`
 
 **Target:** `packages/core/src/` in trellis-ui monorepo
 
@@ -35,21 +35,21 @@ from `trellis/browser` for reactive data fetching.
 
 | Attribute | Type | Required | Default | Description |
 | --------- | ---- | -------- | ------- | ----------- |
-| `id` | string | Yes | — | Entity ID |
-| `type` | string | Yes | — | Entity type name |
+| `id` | string | Yes |; | Entity ID |
+| `type` | string | Yes |; | Entity type name |
 | `vantage` | number | No | `8` | Continuous focal depth (0–13) |
 | `lane` | string | No | `"main"` | Lane identifier |
 | `editable` | boolean | No | `false` | Show edit affordance in card shell |
 
 **Properties:**
-- `id: string` — Mirror of `id` attribute
-- `type: string` — Mirror of `type` attribute
-- `vantage: number` — Mirror of `vantage` attribute
-- `lane: string` — Mirror of `lane` attribute
-- `editable: boolean` — Mirror of `editable` attribute
-- `data: EntityData | null` — Fetched entity data (reactive)
-- `loading: boolean` — Loading state
-- `error: Error | null` — Error state
+- `id: string`; Mirror of `id` attribute
+- `type: string`; Mirror of `type` attribute
+- `vantage: number`; Mirror of `vantage` attribute
+- `lane: string`; Mirror of `lane` attribute
+- `editable: boolean`; Mirror of `editable` attribute
+- `data: EntityData | null`; Fetched entity data (reactive)
+- `loading: boolean`; Loading state
+- `error: Error | null`; Error state
 
 ### Shell Mapping
 
@@ -60,15 +60,15 @@ from `trellis/browser` for reactive data fetching.
 | 8–13 | `card` | Expanded card with optional edit form |
 
 **CSS custom properties set on host:**
-- `--vantage` — The current vantage value (0–13), drives `clamp()` transitions
+- `--vantage`; The current vantage value (0–13), drives `clamp()` transitions
 
 **Host attribute:**
-- `data-shell` — Set to `node`, `row`, or `card` based on vantage
+- `data-shell`; Set to `node`, `row`, or `card` based on vantage
 
 ### Events
 
-- `trellis-entity-update` — Fired when entity data changes (bubbles, composed)
-- `trellis-error` — Fired when fetching fails (bubbles, composed)
+- `trellis-entity-update`; Fired when entity data changes (bubbles, composed)
+- `trellis-error`; Fired when fetching fails (bubbles, composed)
 
 ### Context
 
@@ -119,9 +119,9 @@ No changes to existing files (provider.ts, context.ts, signal-utils.ts).
 
 ## 4. Dependencies
 
-- `lit` — already in packages/core devDependencies
-- `trellis/browser` — peer dependency (`liveEntity()`, `TrellisDb`)
-- `@trellis.computer/ui` — internal (provider context, getTrellisClient)
+- `lit`; already in packages/core devDependencies
+- `trellis/browser`; peer dependency (`liveEntity()`, `TrellisDb`)
+- `@trellis.computer/ui`; internal (provider context, getTrellisClient)
 - No new npm packages
 
 ---
@@ -136,4 +136,4 @@ No changes to existing files (provider.ts, context.ts, signal-utils.ts).
 6. `trellis-entity` uses `getTrellisClient()` to obtain TrellisDb from provider context
 7. `pnpm build` succeeds in packages/core
 8. `pnpm check` passes with 0 errors
-9. `trellis issue check TRL-329` — all AC pass
+9. `trellis issue check TRL-329`; all AC pass

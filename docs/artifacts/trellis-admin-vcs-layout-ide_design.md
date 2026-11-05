@@ -1,8 +1,8 @@
 ---
 version: alpha
-name: trellis admin — VCS layout IDE-aligned Work/Logs
+name: trellis admin; VCS layout IDE-aligned Work/Logs
 description: >-
-  Design for TRL-225 — regroup VCS secondary nav to Work (Board · Milestones · Workflows)
+  Design for TRL-225; regroup VCS secondary nav to Work (Board · Milestones · Workflows)
   and Logs (Ops · Decisions · Branches); per-view AffordanceShell header; fold always-on
   op-log into Logs/Ops main with optional pin inspector.
 source:
@@ -78,9 +78,9 @@ components:
     backgroundColor: "{colors.surface-inset-base}"
 ---
 
-# Design: trellis admin — VCS layout IDE-aligned Work/Logs
+# Design: trellis admin; VCS layout IDE-aligned Work/Logs
 
-**Status:** Design verified — ready for Architect  
+**Status:** Design verified; ready for Architect  
 **Parent:** TRL-225 · **Design issue:** TRL-226  
 **Mock:** [trellis-admin-vcs-layout-ide_mockup.html](./trellis-admin-vcs-layout-ide_mockup.html)  
 **Amends:** [trellis-admin-shell_design.md](./trellis-admin-shell_design.md), [trellis-admin-toolbar_design.md](./trellis-admin-toolbar_design.md) (IA + chrome placement)  
@@ -92,9 +92,9 @@ components:
 
 Align kernel admin **VCS chrome** with turtlecode IDE **Plan / Logs** mental model: shallow siblings as **route tabs inside a resizable secondary sidebar**, tools in a **per-view header** (AffordanceShell analogue), not a global operate row.
 
-**Work** is where issues live (board projections). **Logs** is where causal history lives (ops timeline). Flat Milestones · Issues · Lanes · Workflows peers are retired — lanes remain board metadata; issues are the board.
+**Work** is where issues live (board projections). **Logs** is where causal history lives (ops timeline). Flat Milestones · Issues · Lanes · Workflows peers are retired; lanes remain board metadata; issues are the board.
 
-Emotional tone: same dense L3 operator shell as prior admin wedges — dark sidebars, mono zone eyebrows, 34px controls, honest stubs.
+Emotional tone: same dense L3 operator shell as prior admin wedges; dark sidebars, mono zone eyebrows, 34px controls, honest stubs.
 
 ## Colors
 
@@ -102,9 +102,9 @@ Inherit `runtime-theme.css`. Secondary sidebar uses `{colors.sidebar-bg}` (`#0c0
 
 ## Typography
 
-- Zone labels **WORK** / **LOGS**: `{typography.label}` — 10px mono uppercase, 0.08em tracking (matches Operate eyebrow).
-- View header title: `{typography.view-title}` — e.g. `Work · Board`, `Logs · Ops`.
-- View meta: `{typography.view-meta}` — e.g. `131 issues · 4 lanes`, `346 ops · live`.
+- Zone labels **WORK** / **LOGS**: `{typography.label}`; 10px mono uppercase, 0.08em tracking (matches Operate eyebrow).
+- View header title: `{typography.view-title}`; e.g. `Work · Board`, `Logs · Ops`.
+- View meta: `{typography.view-meta}`; e.g. `131 issues · 4 lanes`, `346 ops · live`.
 - Route nav items: 13px sans medium (same as primary `.nav-item`).
 
 ## Layout
@@ -115,7 +115,7 @@ Inherit `runtime-theme.css`. Secondary sidebar uses `{colors.sidebar-bg}` (`#0c0
 [ primary sidebar ] [ secondary 224 ] [ main (view header + body) ]
 ```
 
-**No always-visible 280px op-log column** in default layout. Ops content fills **main** under Logs → Ops. Optional **Pin live tail** opens a collapsible right inspector (280px) — companion pattern, not fourth permanent column.
+**No always-visible 280px op-log column** in default layout. Ops content fills **main** under Logs → Ops. Optional **Pin live tail** opens a collapsible right inspector (280px); companion pattern, not fourth permanent column.
 
 Embed (`?embed=1`): hide **primary** sidebar only; secondary + main (+ optional pin) remain.
 
@@ -126,12 +126,12 @@ Embed (`?embed=1`): hide **primary** sidebar only; secondary + main (+ optional 
 | **WORK** | **Board** (default), Milestones, Workflows (stub) | Board → TML projections; Milestones → list panel; Workflows → empty state |
 | **LOGS** | **Ops** (default), Decisions (stub), Branches (stub) | Ops → op timeline (reuse `.op` row styling); stubs → coming soon |
 
-- Remove `data-secondary="issues"` and `data-secondary="lanes"` — both map to **Board**.
-- Secondary head title: **VCS** → split into zone labels only (no single “VCS” H1 in sidebar head — optional crumb stays `…/vcs`).
+- Remove `data-secondary="issues"` and `data-secondary="lanes"`; both map to **Board**.
+- Secondary head title: **VCS** → split into zone labels only (no single “VCS” H1 in sidebar head; optional crumb stays `…/vcs`).
 
 ### View header (AffordanceShell analogue)
 
-Lives **inside main**, top of active view — replaces global `.operate-toolbar` row.
+Lives **inside main**, top of active view; replaces global `.operate-toolbar` row.
 
 | Region | Contents |
 | ------ | -------- |
@@ -152,13 +152,13 @@ Lives **inside main**, top of active view — replaces global `.operate-toolbar`
 1. **Canonical ops surface:** Logs → Ops **main panel** (IDE `OpTimeline` parity).
 2. **Pin live tail:** toggles optional right inspector (`280px`, resizable, `oplog-collapsed` semantics). Default **off**.
 3. **Badge:** Ops nav shows live dot + count when stream active and user is on another tab.
-4. **Naming:** Nav tab **Ops**; pinned inspector title **Live ops** — avoid duplicate “Op log” in header and nav.
+4. **Naming:** Nav tab **Ops**; pinned inspector title **Live ops**; avoid duplicate “Op log” in header and nav.
 
 ### Collapse / resize
 
 | Control | Behavior |
 | ------- | -------- |
-| Primary sidebar | Unchanged — icon rail 56px, toggle in app header |
+| Primary sidebar | Unchanged; icon rail 56px, toggle in app header |
 | Secondary | Collapse → **48px icon rail** (keep admin v2 machinery); toggle in **view header** (move from global toolbar) |
 | Pin inspector | Collapse → `0px`; X in inspector head; notify bell may reopen (existing pattern) |
 | Secondary width | Default **224px** (IDE Plan/Logs); resize 160–360px; persist `trellis-admin-secondary-w` |
@@ -188,8 +188,8 @@ Route nav items 32px tall (slightly denser than primary 36px). View header contr
 | Input | States | Output |
 | ----- | ------ | ------ |
 | Click Work · Board | default | Main shows kanban/grid/table; view header shows projection picker + search |
-| Click Work · Milestones | — | Main shows milestone list; toolbar hidden |
-| Click Work · Workflows | stub | Main shows “Workflows — coming soon” |
+| Click Work · Milestones |; | Main shows milestone list; toolbar hidden |
+| Click Work · Workflows | stub | Main shows “Workflows; coming soon” |
 | Click Logs · Ops | default | Main shows op timeline; pin toggle available |
 | Click Logs · Decisions / Branches | stub | Main shows coming soon empty state |
 | View header secondary toggle | expanded ↔ collapsed | `html.secondary-collapsed`; persist localStorage |
@@ -197,14 +197,14 @@ Route nav items 32px tall (slightly denser than primary 36px). View header contr
 | Projection picker (Board) | grid / kanban / table | TML projection swap (unchanged) |
 | Search (Board) | empty / has value | Filter board rows; clear button visible when value |
 | Resize secondary | drag handle | `--secondary-w` within min/max |
-| Embed `?embed=1` | — | Primary sidebar hidden; Work/Logs secondary retained |
+| Embed `?embed=1` |; | Primary sidebar hidden; Work/Logs secondary retained |
 
 ## Accessibility
 
 - **Focus order:** primary nav → secondary route tabs (WORK then LOGS) → view header controls → main content → pin inspector (when open).
 - **Labels:** zone blocks `aria-labelledby`; active route `aria-current="page"`; view header `role="region"` + `aria-label` from title (e.g. `Work · Board`).
 - **Live region:** Ops meta line `aria-live="polite"` for stream status; pin inspector `aria-label="Live ops stream"`.
-- **Motion:** `prefers-reduced-motion: reduce` — no slide animations on pin inspector; instant show/hide.
+- **Motion:** `prefers-reduced-motion: reduce`; no slide animations on pin inspector; instant show/hide.
 
 ## Do's and Don'ts
 
@@ -217,14 +217,14 @@ Route nav items 32px tall (slightly denser than primary 36px). View header contr
 **Don't**
 
 - Don't keep Issues and Lanes as separate secondary peers.
-- Don't show global `.operate-toolbar` above all views — scope tools to Work · Board only.
+- Don't show global `.operate-toolbar` above all views; scope tools to Work · Board only.
 - Don't require always-on 280px op-log in default layout (breaks IDE Logs parity).
 
 ## Open for Architect
 
 1. **URL/state:** recommend `?vcs=work/board` | `?vcs=logs/ops` query params or hashless JS state with deep-link note in spec.
-2. **Crumb route segment:** keep `vcs` or add `work`/`logs` — default keep `vcs`, update `#crumb-route` from active zone optional.
+2. **Crumb route segment:** keep `vcs` or add `work`/`logs`; default keep `vcs`, update `#crumb-route` from active zone optional.
 3. **Migrate `setSecondary()`:** replace `data-secondary=milestones|issues|lanes|workflows` with zone+tab model; gate `#tml-root` on `work/board` only.
-4. **E2e:** update `admin.spec.cjs` — secondary zone tabs, view header toolbar visibility, Logs/Ops main timeline, pin inspector toggle.
+4. **E2e:** update `admin.spec.cjs`; secondary zone tabs, view header toolbar visibility, Logs/Ops main timeline, pin inspector toggle.
 5. **Backward compat:** one release with redirect from old localStorage `trellis-admin-secondary` values if needed.
-6. **Synthesist (cohesion):** parent TRL-225 has `cohesion` — pattern audit after spec draft optional.
+6. **Synthesist (cohesion):** parent TRL-225 has `cohesion`; pattern audit after spec draft optional.

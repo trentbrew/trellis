@@ -10,23 +10,23 @@ projections. No visual builder or operator overlay on this critical path.
 | Concern | Import | Notes |
 | ------- | ------ | ----- |
 | Schema | `trellis/schema` | `defineType`, `InferType`, `entityMutations` |
-| Client | `trellis/client/sdk` | `TrellisDb` — remote HTTP + `/realtime` WebSocket |
+| Client | `trellis/client/sdk` | `TrellisDb`; remote HTTP + `/realtime` WebSocket |
 | Typed reads/writes (React) | `trellis/react/typed` | `useEntities`, `useEntity`, `useMutation` |
 | Typed reads/writes (Vue) | `trellis/vue/typed` | Same surface as React |
 | Typed reads/writes (Svelte) | `trellis/svelte/typed` | `entitiesStore`, `mutations` |
-| Realtime room (React) | `trellis/react/realtime` | `useRoom`, `useSignal` — browser-safe |
+| Realtime room (React) | `trellis/react/realtime` | `useRoom`, `useSignal`; browser-safe |
 | Realtime room (Vue) | `trellis/vue` | `useRoom`, composables |
 | Realtime room (Svelte) | `trellis/svelte` | `createRoom`, `toStore` |
 | Primitives | `trellis/realtime` | `joinPresence`, `PersistentChannel`, `RealtimeText`, transports |
 
-**Do not import** `trellis/react` root in browser demos — it may pull Node-only
+**Do not import** `trellis/react` root in browser demos; it may pull Node-only
 paths. Use `trellis/react/realtime` + `trellis/react/typed`.
 
 ### Mutation semantics (today)
 
 Typed `create` / `update` / `remove` call `TrellisDb` HTTP APIs and **resolve
 when the server confirms** the write. There is **no optimistic local apply** and
-no automatic rollback UI on reject — that is **future work** (SPEC-v1.1+).
+no automatic rollback UI on reject; that is **future work** (SPEC-v1.1+).
 
 ```typescript
 // All frameworks delegate here:
@@ -71,7 +71,7 @@ npx vitest run test/schema test/realtime test/client
 
 | Test file | Covers |
 | --------- | ------ |
-| `test/schema/graph-nav-sync.test.ts` | Two `TrellisDb` clients — subscription + `liveEntities` cross-client create |
+| `test/schema/graph-nav-sync.test.ts` | Two `TrellisDb` clients; subscription + `liveEntities` cross-client create |
 | `test/schema/typed-adapters.test.ts` | Typed adapter wiring |
 | `test/realtime/adapters.contract.test.ts` | Vue + Svelte adapters on one `MemoryHub` |
 | `test/realtime/persistent-channel.test.ts` | Chat channel grow-only + replay |
@@ -85,10 +85,10 @@ npx vitest run test/schema test/realtime test/client
 | ----- | --------------- | ----- |
 | **Relay transport** (`joinPresence` + `VITE_PRESENCE_RELAY_URL`) | Yes | Backoff in `durable-object-relay-transport` / PartyKit adapter; room replays via `RelayPersistence` where configured |
 | **`TrellisDb` WebSocket** (`subscribe`, typed `entitiesStore`) | **No (v1)** | On `close`, socket is cleared; subscriptions are **not** auto-resubscribed. App must call `subscribe` again after reconnect or avoid `disconnect()` during transient blips |
-| **`TrellisClient` VCS sync** | Optional | `reconnect: true` on PartyKit transport — peer sync, not explorer typed reads |
+| **`TrellisClient` VCS sync** | Optional | `reconnect: true` on PartyKit transport; peer sync, not explorer typed reads |
 
 **Practical guidance:** presence/chat/text demos use the relay layer (reconnect
-friendly). graph-nav typed entities use `TrellisDb` — treat long-lived pages as
+friendly). graph-nav typed entities use `TrellisDb`; treat long-lived pages as
 needing a future reconnect+resubscribe helper (backlog, not TRL-35 scope).
 
 ## Manual QA
@@ -96,7 +96,7 @@ needing a future reconnect+resubscribe helper (backlog, not TRL-35 scope).
 ### graph-nav (typed entities)
 
 1. `just graph-nav` → open `/react/` and `/svelte/` (or Vue) in two tabs.
-2. Add a nav item in one tab — appears in the other without refresh.
+2. Add a nav item in one tab; appears in the other without refresh.
 
 ### universal-presence
 
@@ -122,8 +122,8 @@ await client.registerType(Todo);
 const todos = useEntities(client, Todo);
 const mut = useMutation(Todo);
 
-// Vue — useEntities / useMutation from trellis/vue/typed
-// Svelte — entitiesStore / mutations from trellis/svelte/typed
+// Vue; useEntities / useMutation from trellis/vue/typed
+// Svelte; entitiesStore / mutations from trellis/svelte/typed
 ```
 
 ## Deferred (not TRL-35)

@@ -100,6 +100,8 @@ export interface SignatureVerificationResult {
   valid: boolean;
   op: VcsOp;
   reason?: string;
+  /** Why an invalid result failed: no key resolves for the signer, or a key resolved and the signature did not verify. */
+  failure?: 'unknown-signer' | 'invalid-signature';
 }
 
 function resolveKeysForOp(
@@ -142,6 +144,7 @@ export async function verifyOpBatch(
       results.push({
         valid: false,
         op,
+        failure: 'unknown-signer',
         reason: `Unknown identity/device: ${op.vcs.signedBy}${
           op.vcs.signedWith ? ` / ${op.vcs.signedWith}` : ''
         }`,
@@ -153,11 +156,34 @@ export async function verifyOpBatch(
     const valid = keys.some((publicKey) =>
       verifySignature(bodyHash, op.vcs!.signature!, publicKey),
     );
-    results.push({
-      valid,
-      op,
-      reason: valid ? undefined : `Invalid signature on op ${op.hash}`,
-    });
+    if (valid) {
+      results.push({ valid, op });
+      continue;
+    }
+    // The try-all fallback found keys for the identity, but none for the named
+    // device: the device was never registered here, so the signature cannot be
+    // judged — report it as unknown rather than forged.
+    const deviceId = op.vcs.signedWith;
+    const unknownDevice =
+      !!deviceId &&
+      deviceId !== 'root' &&
+      !!resolver.resolveDevicePublicKey &&
+      !resolver.resolveDevicePublicKey(op.vcs.signedBy, deviceId);
+    results.push(
+      unknownDevice
+        ? {
+            valid,
+            op,
+            failure: 'unknown-signer',
+            reason: `Unknown device: ${op.vcs.signedBy} / ${deviceId}`,
+          }
+        : {
+            valid,
+            op,
+            failure: 'invalid-signature',
+            reason: `Invalid signature on op ${op.hash}`,
+          },
+    );
   }
 
   return results;

@@ -21,10 +21,10 @@ Plan mode artifacts are **not portable** across agent IDEs:
 
 There is **no vendor standard**. Trellis already has:
 
-- `docs/adr/` — accepted architectural decisions
-- `docs/issues/TRL-N/` — long-form issue docs (`trellis issue doc`)
-- `PendingPlan` graph entity — **graph mutation buffering**, not prose plans
-- `DecisionTrace` — tool-call micro-audit, not wedge planning
+- `docs/adr/`; accepted architectural decisions
+- `docs/issues/TRL-N/`; long-form issue docs (`trellis issue doc`)
+- `PendingPlan` graph entity; **graph mutation buffering**, not prose plans
+- `DecisionTrace`; tool-call micro-audit, not wedge planning
 
 Plans produced in IDE plan mode drift outside the repo and never link to `issue:TRL-N` unless copied manually.
 
@@ -56,7 +56,7 @@ Override any origin with `--path` or `--session`.
 
 ### Out of scope (v1)
 
-- Auto-capture hooks on IDE plan approval (Cursor / Antigravity stop hooks) — follow-on ops wedge
+- Auto-capture hooks on IDE plan approval (Cursor / Antigravity stop hooks); follow-on ops wedge
 - `PlanDocument` graph entity (v1.5)
 - Auto-promote to numbered ADR
 
@@ -71,7 +71,7 @@ Override any origin with `--path` or `--session`.
 **Negative**
 
 - Codex capture is heuristic (transcript parse), not file-native
-- Global IDE plans require explicit `capture` — not automatic on plan approval
+- Global IDE plans require explicit `capture`; not automatic on plan approval
 - Duplicate storage until user deletes ephemeral IDE copies
 
 ## Implementation

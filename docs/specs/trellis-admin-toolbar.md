@@ -1,4 +1,4 @@
-# Spec: trellis admin — Operate header/toolbar parity
+# Spec: trellis admin; Operate header/toolbar parity
 
 **Status:** Ready for impl  
 **Date:** 2026-07-21  
@@ -14,7 +14,7 @@
 
 Raise kernel VCS chrome to **CollectionBrowseToolbar** density: slim brand
 header + **full-bleed Operate toolbar** (view picker → search → Filters stub →
-Export disabled → New issue disabled). Static HTML/CSS in `admin.html` only —
+Export disabled → New issue disabled). Static HTML/CSS in `admin.html` only : 
 no React AppShell / shadcn.
 
 ---
@@ -24,16 +24,16 @@ no React AppShell / shadcn.
 | Decision | Choice |
 | -------- | ------ |
 | Chrome stack | Brand header **40px** + full-bleed `.operate-toolbar` (~48px min, `padding: 8px 16px`, `gap: 4px`) |
-| Control height | **34px** (`--toolbar-control-h`) — keep e2e lock |
+| Control height | **34px** (`--toolbar-control-h`); keep e2e lock |
 | View a11y | **`role="radiogroup"`** + `role="radio"` + `aria-checked` (not `aria-pressed`) |
 | View class | Keep `.view-toggle` class name for continuity; restyle to muted track / raised active |
-| Active segment | Track `#1e1e1e` / `--background-weak`; active `#1c1c1c` / `--surface` — **not** accent fill |
+| Active segment | Track `#1e1e1e` / `--background-weak`; active `#1c1c1c` / `--surface`; **not** accent fill |
 | Label-on-active | Icon always; text label **only** when `aria-checked="true"` |
 | Search | Composite flex-1; keep `#search` / `#search-input` / clear; existing client filter |
 | Filters | Stub note “Filters coming soon.” · `role="status"` · Escape/outside/reclick dismiss |
 | Export | Disabled icon; `aria-label="Export"` |
 | New issue | Disabled primary; `aria-label="New issue (coming soon)"` |
-| Statusbar | Telemetry SSOT — live/repo/stats stay in `.statusbar`; **not** in brand header |
+| Statusbar | Telemetry SSOT; live/repo/stats stay in `.statusbar`; **not** in brand header |
 | Theme | `/theme/runtime-theme.css` only |
 | Out of scope | Wire New/create; real filters; export; datatable; AppShell; responsive polish |
 
@@ -67,7 +67,7 @@ grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--oplog-w);
 | `.operate-toolbar` | row 2 · col 2 |
 | `.main` | row 3 · col 2 |
 | `.oplog` | rows 1–3 · col 3 |
-| `.statusbar` | row 4 · col 2 (or `1 / -1` if already full-bleed — **preserve existing span**) |
+| `.statusbar` | row 4 · col 2 (or `1 / -1` if already full-bleed; **preserve existing span**) |
 
 **Embed (`html.admin-embed`):** hide `.sidebar`; brand + toolbar + main + oplog +
 statusbar remain visible. Update any rules that still assume a single 48px header

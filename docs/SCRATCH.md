@@ -9,21 +9,21 @@ Trent: if you could re-invent git from scratch how would you approach it
 
 ===========================
 
-Great question, Trent — and right in your wheelhouse given how much you think about substrate-level infrastructure and semantic layers.
+Great question, Trent; and right in your wheelhouse given how much you think about substrate-level infrastructure and semantic layers.
 
 Here's how I'd approach reinventing git from scratch:
 
-**Start with the graph, not the filesystem.** Git's core insight — content-addressable storage forming a DAG — is brilliant and I'd keep it. But I'd make the graph a first-class, queryable thing rather than something you reconstruct by walking refs and parsing objects. Think of the commit graph more like a lightweight database you can ask questions of directly: "show me every commit that touched this function" shouldn't require plumbing through `git log -p` and grepping.
+**Start with the graph, not the filesystem.** Git's core insight; content-addressable storage forming a DAG; is brilliant and I'd keep it. But I'd make the graph a first-class, queryable thing rather than something you reconstruct by walking refs and parsing objects. Think of the commit graph more like a lightweight database you can ask questions of directly: "show me every commit that touched this function" shouldn't require plumbing through `git log -p` and grepping.
 
-**Semantic diffs, not line diffs.** This is the big one. Git fundamentally thinks in lines of text. A "change" is lines added/removed. But code isn't lines — it's a tree of structures. I'd want the diff layer to be pluggable and language-aware by default. A rename of a variable across a file isn't 47 line changes — it's one semantic operation. This connects directly to your trellis thinking: the diff should operate on the semantic layer, not the raw substrate.
+**Semantic diffs, not line diffs.** This is the big one. Git fundamentally thinks in lines of text. A "change" is lines added/removed. But code isn't lines; it's a tree of structures. I'd want the diff layer to be pluggable and language-aware by default. A rename of a variable across a file isn't 47 line changes; it's one semantic operation. This connects directly to your trellis thinking: the diff should operate on the semantic layer, not the raw substrate.
 
-**Make the staging area explicit and purposeful.** The index/staging area is one of git's most confusing concepts for newcomers, but the _idea_ — curating what goes into a commit — is valuable. I'd reframe it as a "narrative" layer: you're not staging files, you're composing a story about a change. Commits should be explanations, not snapshots. Something closer to a structured changeset with intent metadata baked in.
+**Make the staging area explicit and purposeful.** The index/staging area is one of git's most confusing concepts for newcomers, but the _idea_; curating what goes into a commit; is valuable. I'd reframe it as a "narrative" layer: you're not staging files, you're composing a story about a change. Commits should be explanations, not snapshots. Something closer to a structured changeset with intent metadata baked in.
 
 **History as a first-class data structure.** Git treats history as append-only but then gives you rebase to lie about it, which creates this weird tension. I'd separate the _causal_ history (what actually happened) from the _presentational_ history (the clean narrative for others). Keep both. Let people curate the story without destroying the record. Immutable audit log underneath, malleable narrative on top.
 
-**Identity and collaboration built in, not bolted on.** Git has no concept of "who you are" beyond a name/email string in config. Auth, permissions, code review, discussion — all of that lives in GitHub/GitLab, not in the tool. I'd build a lightweight identity and capabilities layer into the protocol itself. Not a full platform, but enough that a repo can express "this key can push to main" without needing a web service.
+**Identity and collaboration built in, not bolted on.** Git has no concept of "who you are" beyond a name/email string in config. Auth, permissions, code review, discussion; all of that lives in GitHub/GitLab, not in the tool. I'd build a lightweight identity and capabilities layer into the protocol itself. Not a full platform, but enough that a repo can express "this key can push to main" without needing a web service.
 
-**Branches as lightweight workspaces, not pointer gymnastics.** Branches in git are beautifully simple (just a pointer to a commit), but the _workflow_ around them — tracking, rebasing, merge conflicts, detached HEAD — is where the complexity explodes. I'd model branches more like workspaces or contexts: each one carries its own view of the project, with explicit policies for how they relate to each other. Merging becomes reconciliation between worldviews rather than textual three-way merge.
+**Branches as lightweight workspaces, not pointer gymnastics.** Branches in git are beautifully simple (just a pointer to a commit), but the _workflow_ around them; tracking, rebasing, merge conflicts, detached HEAD; is where the complexity explodes. I'd model branches more like workspaces or contexts: each one carries its own view of the project, with explicit policies for how they relate to each other. Merging becomes reconciliation between worldviews rather than textual three-way merge.
 
 **A few things I'd deliberately keep:**
 
@@ -31,11 +31,11 @@ The content-addressable store. Distributed-first architecture. Cheap local opera
 
 **What I'd resist:**
 
-The temptation to build a platform. The tool should be a protocol and a local engine. Let the collaboration layer be separate but well-integrated, not monolithic. This is the Unix philosophy applied to version control — do one thing (track and reconcile changes) extremely well, with clean interfaces for everything else.
+The temptation to build a platform. The tool should be a protocol and a local engine. Let the collaboration layer be separate but well-integrated, not monolithic. This is the Unix philosophy applied to version control; do one thing (track and reconcile changes) extremely well, with clean interfaces for everything else.
 
 The meta-observation is that git was designed for tracking the Linux kernel's source code, and that context leaked into every design decision. A from-scratch version should ask: what does _change tracking_ look like when it's not anchored to "lines in files managed by Linus"?
 
-Curious where your instincts diverge — especially around the semantic layer piece. I'd imagine you'd want TQL-like queryability over the commit graph, and maybe something where the trellis _is_ the version history rather than something versioned _by_ an external tool.
+Curious where your instincts diverge; especially around the semantic layer piece. I'd imagine you'd want TQL-like queryability over the commit graph, and maybe something where the trellis _is_ the version history rather than something versioned _by_ an external tool.
 
 ===========================
 
@@ -47,7 +47,7 @@ Here is how I would flesh out those instincts into a concrete architecture.
 
 ## 1. The "Substrate-First" Graph
 
-In this version, the repository isn't a collection of folders—it’s a **Datalog-backed Property Graph**.
+In this version, the repository isn't a collection of folders: it’s a **Datalog-backed Property Graph**.
 
 Every "save" doesn't just hash a file; it deconstructs the code into its constituent parts (functions, variables, imports).
 
@@ -70,7 +70,7 @@ I’d implement a **Bi-Layered History**:
 
 ## 3. Semantic Merging & Conflict Resolution
 
-Text-based merging is a relic of the typewriter era. If I rename a variable in one branch and you add a line using the _old_ name in another, Git thinks everything is fine—but the code won't compile.
+Text-based merging is a relic of the typewriter era. If I rename a variable in one branch and you add a line using the _old_ name in another, Git thinks everything is fine: but the code won't compile.
 
 In Git 2.0, **merging happens at the AST level**:
 
@@ -100,7 +100,7 @@ Instead of "switching branches" (which physically moves files on your disk and c
 
 ## The Verdict: Why It’s Hard
 
-The biggest hurdle isn't the tech—it's the **Substrate Gravity**. Git is the "Common Tongue" of software. Replacing it requires not just a better tool, but a shift in how we think about code. We have to stop seeing code as "lines of text in a box" and start seeing it as a **living, breathing topological map**.
+The biggest hurdle isn't the tech: it's the **Substrate Gravity**. Git is the "Common Tongue" of software. Replacing it requires not just a better tool, but a shift in how we think about code. We have to stop seeing code as "lines of text in a box" and start seeing it as a **living, breathing topological map**.
 
 You mentioned that Git was "anchored to lines in files managed by Linus." If we unanchor it, the version control system starts to look less like a tool and more like a **collaborative operating system.**
 
@@ -130,7 +130,7 @@ Three‑way merge is the source of most Git pain. It assumes you have a common a
 I’d adopt a **CRDT‑like (Conflict‑free Replicated Data Type)** or **operational transformation** approach for the _semantic_ graph:
 
 - When you make a change, you’re not recording a snapshot; you’re recording a **patch** (rename variable, move function to another file, add a class) against the current state.
-- Merging is just applying patches from two branches onto a common base. If patches commute (e.g., two people adding different functions), they merge automatically. If they conflict (e.g., one renames a function and the other edits it), the system knows precisely why and can surface a structured resolution—like a type‑aware conflict editor.
+- Merging is just applying patches from two branches onto a common base. If patches commute (e.g., two people adding different functions), they merge automatically. If they conflict (e.g., one renames a function and the other edits it), the system knows precisely why and can surface a structured resolution: like a type‑aware conflict editor.
 
 This turns the “merge conflict” from a wall of `<<<<<<<` into a manageable, often automated, process.
 
@@ -141,7 +141,7 @@ This turns the “merge conflict” from a wall of `<<<<<<<` into a manageable, 
 Git’s object store (blobs, trees, commits) is elegant but opaque. For a reinvention, I’d use an **embedded queryable database** (e.g., SQLite with a carefully designed schema, or LMDB with a layer on top).
 
 - The entire history is a **local database** you can run SQL‑like queries against. No need for external tools like `git log --grep` or `git grep`.
-- Remote sync becomes database replication—efficient, secure, and familiar to anyone who’s used SQLite or FoundationDB.
+- Remote sync becomes database replication: efficient, secure, and familiar to anyone who’s used SQLite or FoundationDB.
 - This also makes “forking” trivial: a fork is just a new replica with its own write permissions.
 
 The downside? Binary compatibility with existing Git would vanish. But if we’re reinventing, we can break things intentionally.
@@ -153,7 +153,7 @@ The downside? Binary compatibility with existing Git would vanish. But if we’r
 Both earlier responses mention DIDs and built‑in auth. I’d go further: **every change carries a capability**, not just a signature.
 
 - The graph itself defines who can create certain types of nodes (commits, branches, issues) based on keys that are themselves nodes in the graph.
-- You don’t need a central server to enforce branch protection—the local replica rejects any change that doesn’t satisfy the policy expressed in the repository’s “governance” subgraph.
+- You don’t need a central server to enforce branch protection: the local replica rejects any change that doesn’t satisfy the policy expressed in the repository’s “governance” subgraph.
 - This turns GitHub’s permission system into a local, verifiable property of the repo, not a feature of a web service.
 
 ---
@@ -162,7 +162,7 @@ Both earlier responses mention DIDs and built‑in auth. I’d go further: **eve
 
 Branches as pointers are simple but lead to the “stash / switch / merge” dance. I’d instead have **workspaces** that each contain a set of **pending changes** (the patches mentioned above).
 
-- Workspaces are independent; you can have many open at once. Each workspace is a branch in the sense of “a place to accumulate changes,” but there’s no “detached HEAD” state because there’s no HEAD—there’s just the current set of patches applied to a base snapshot.
+- Workspaces are independent; you can have many open at once. Each workspace is a branch in the sense of “a place to accumulate changes,” but there’s no “detached HEAD” state because there’s no HEAD: there’s just the current set of patches applied to a base snapshot.
 - Moving changes between workspaces is just moving patches; the system automatically checks for conflicts and offers resolution.
 - This eliminates `git stash` entirely. It also makes `git rebase` a transparent operation: you’re just reapplying a list of patches onto a new base.
 
@@ -181,7 +181,7 @@ A green‑field VCS can’t replace Git overnight. I’d design a **dual‑forma
 
 Git’s UI is famously confusing because it exposes internal plumbing as porcelain. I’d invert that:
 
-- **By default**, you work with concepts: “save a change,” “share with teammate,” “see who last touched this function.” No staging area, no index, no reflog—those are power‑user internals.
+- **By default**, you work with concepts: “save a change,” “share with teammate,” “see who last touched this function.” No staging area, no index, no reflog: those are power‑user internals.
 - When you need advanced history rewriting, you’re still manipulating the same patch graph, but the UI gives you safe, reversible operations (like “reorder these patches” with preview and automatic rebase).
 - This is analogous to how modern databases hide MVCC details but let experts peek under the hood when necessary.
 
@@ -189,9 +189,9 @@ Git’s UI is famously confusing because it exposes internal plumbing as porcela
 
 ### Final thought
 
-What unites all these ideas is moving version control from a **static archive of snapshots** to a **dynamic, queryable, and collaborative environment**. Git is a monument to 2005 constraints—fast, distributed, but fundamentally file‑centric. A reinvention should reflect what we’ve learned since then: that code is structured, teams are distributed, and developers spend as much time _understanding_ history as they do creating it.
+What unites all these ideas is moving version control from a **static archive of snapshots** to a **dynamic, queryable, and collaborative environment**. Git is a monument to 2005 constraints: fast, distributed, but fundamentally file‑centric. A reinvention should reflect what we’ve learned since then: that code is structured, teams are distributed, and developers spend as much time _understanding_ history as they do creating it.
 
-If I were building this, I’d start with the graph and the patch‑based semantics, then build just enough of a database and UI to make it usable. The hardest part wouldn’t be the technology—it would be convincing people that a VCS can be something more than “fast file sync with branches.”
+If I were building this, I’d start with the graph and the patch‑based semantics, then build just enough of a database and UI to make it usable. The hardest part wouldn’t be the technology: it would be convincing people that a VCS can be something more than “fast file sync with branches.”
 
 ===========================
 
@@ -262,7 +262,7 @@ Imagine an IDE where you don't "Save" files, but the IDE continuously streams ti
 
 ===========================
 
-You’ve captured the trajectory perfectly. **TrellisVCS** — I like the name. It suggests the idea of a lattice that supports growth while maintaining structure, which is exactly what we’re after.
+You’ve captured the trajectory perfectly. **TrellisVCS**; I like the name. It suggests the idea of a lattice that supports growth while maintaining structure, which is exactly what we’re after.
 
 To your question: _Does committing disappear?_
 
@@ -272,7 +272,7 @@ Not disappear, but **transmute**. The explicit `git commit` command becomes a sp
 
 ### The Causal Stream (Automatic, Granular)
 
-In a system where every IDE action (rename, extract function, add line, even cursor movements) can be recorded as a semantic patch, you have a continuous, fine‑grained ledger. This is your **“flight recorder.”** There’s no need for “save” — the stream is always there.
+In a system where every IDE action (rename, extract function, add line, even cursor movements) can be recorded as a semantic patch, you have a continuous, fine‑grained ledger. This is your **“flight recorder.”** There’s no need for “save”; the stream is always there.
 
 - Undo becomes just stepping back in the stream.
 - Every state is reconstructable by replaying patches.
@@ -284,14 +284,14 @@ Commits in today’s Git are the only way to create a persistent, shareable, and
 
 - A **milestone** is a reference to a specific point in the causal stream, plus a human‑written explanation, a set of associated reviewers, and maybe a test attestation.
 - You could create milestones automatically after a build passes, or manually when a feature feels “done.”
-- They become the unit of code review, deployment, and collaboration — but they don’t replace the underlying stream.
+- They become the unit of code review, deployment, and collaboration; but they don’t replace the underlying stream.
 
 ### Workflow Implications
 
 - **Working**: You never explicitly commit. You just work. The system records everything in the background.
 - **Sharing**: When you want to send a change to a colleague, you create a **milestone** (or a **patch set** derived from a range in the causal stream) and push that.
 - **Reviewing**: Reviewers see the semantic diff between milestones, not a messy collection of “wip” commits.
-- **Rebasing / Rewriting**: You’re still manipulating patches, but you’re doing it on the semantic layer. The causal stream remains immutable — the narrative layer is just a set of pointers.
+- **Rebasing / Rewriting**: You’re still manipulating patches, but you’re doing it on the semantic layer. The causal stream remains immutable; the narrative layer is just a set of pointers.
 
 ---
 
@@ -327,7 +327,7 @@ But more likely, your IDE would offer a button: **“Create milestone”** that,
 
 ### The Deeper Question
 
-Does this mean we stop thinking about “commits” entirely? I think yes — but only in the sense that we stop conflating “save” with “publish.” The new primitive is the **causal patch stream**, and the new social unit is the **milestone** (or **changeset**). The word “commit” might stick around as legacy terminology, but its meaning would shift to “I am making this point in the causal stream into a durable, shareable artifact.”
+Does this mean we stop thinking about “commits” entirely? I think yes; but only in the sense that we stop conflating “save” with “publish.” The new primitive is the **causal patch stream**, and the new social unit is the **milestone** (or **changeset**). The word “commit” might stick around as legacy terminology, but its meaning would shift to “I am making this point in the causal stream into a durable, shareable artifact.”
 
 What I’m curious about: in this model, do you see milestones being _automatically_ proposed by the system (e.g., “hey, you haven’t created a milestone in an hour, and these three logical changes seem ready”), or do you think humans should always explicitly trigger them? The balance between automation and intention is one of the interesting design knobs we’d have to tune.
 
@@ -377,15 +377,15 @@ By separating the **Flight Recorder** from the **History Book**, we solve the gr
 
 The "Trellis" doesn't just hold the plant up; it guides where it grows. If the system says, _"Hey, I noticed you've been refactoring the database layer for two hours without a milestone; want to bundle these 400 patches into a draft?"_ it's acting as a partner, not a micro-manager.
 
-**If the system is drafting these milestones, should it also be responsible for identifying "technical debt" patches that were never promoted to a milestone—essentially creating a 'graveyard' of abandoned ideas that we can search later?**
+**If the system is drafting these milestones, should it also be responsible for identifying "technical debt" patches that were never promoted to a milestone: essentially creating a 'graveyard' of abandoned ideas that we can search later?**
 
 ===========================
 
-You’ve framed the automation‑vs‑intention trade‑off perfectly. The **hybrid intelligence** model—where the system proposes and the human disposes—keeps the narrative layer meaningful without turning it into a firehose of algorithmic noise.
+You’ve framed the automation‑vs‑intention trade‑off perfectly. The **hybrid intelligence** model: where the system proposes and the human disposes: keeps the narrative layer meaningful without turning it into a firehose of algorithmic noise.
 
 To your final question: _Should the system identify patches that were never promoted to a milestone as a “graveyard” of abandoned ideas?_
 
-**Absolutely.** This is one of the most valuable—and underappreciated—features of a causal‑first VCS.
+**Absolutely.** This is one of the most valuable: and underappreciated: features of a causal‑first VCS.
 
 ---
 
@@ -404,7 +404,7 @@ In each case, the **ideas** are effectively lost unless someone remembers to res
 
 ### The “Graveyard” as a First‑Class Causal Archive
 
-With TrellisVCS, every semantic patch—every tentative rename, every experimental refactor, every half‑formed feature—is already in the causal stream. The question is how we surface and retain the ones that never became milestones.
+With TrellisVCS, every semantic patch: every tentative rename, every experimental refactor, every half‑formed feature: is already in the causal stream. The question is how we surface and retain the ones that never became milestones.
 
 - **Tag abandoned clusters:** The system can automatically detect a contiguous set of patches that were never incorporated into a milestone and were later “diverged” from (e.g., the user switched contexts). Those patches form a **draft branch** or an **idea cluster**.
 - **Searchable by semantics:** Because the patches are AST‑aware, you can later ask: “Did I ever try to implement a caching layer in the auth module?” and get a list of abandoned patch sets, along with their causal context and perhaps even the test results at the time.
@@ -414,7 +414,7 @@ With TrellisVCS, every semantic patch—every tentative rename, every experiment
 
 ### Beyond a Graveyard: A Living Idea Garden
 
-I’d resist calling it a graveyard—it sounds too final. Instead, think of it as an **idea garden** where every exploratory path remains, searchable and reusable.
+I’d resist calling it a graveyard: it sounds too final. Instead, think of it as an **idea garden** where every exploratory path remains, searchable and reusable.
 
 - **Private vs. shared:** By default, abandoned clusters are local to the user, but they can choose to publish them as “draft” or “RFC” nodes for discussion.
 - **Garbage collection policy:** Unlike Git’s aggressive GC, TrellisVCS would keep these patches indefinitely unless the user explicitly purges them (or sets retention policies). Storage is cheap; lost ideas are expensive.
@@ -431,15 +431,15 @@ It also changes collaboration: “Does anyone have an abandoned attempt at a Gra
 
 ### Closing the Loop
 
-Your hybrid model—with system‑proposed milestones and human editorial control—fits perfectly with this idea garden. The system’s role is to _surface_ meaningful clusters (including abandoned ones) and make them discoverable. The human decides whether to cultivate, ignore, or prune.
+Your hybrid model: with system‑proposed milestones and human editorial control: fits perfectly with this idea garden. The system’s role is to _surface_ meaningful clusters (including abandoned ones) and make them discoverable. The human decides whether to cultivate, ignore, or prune.
 
-The ultimate shift is from **version control as a safety net** to **version control as a creative partner**—one that remembers everything, understands structure, and helps you build on your own history, whether that history was polished or discarded.
+The ultimate shift is from **version control as a safety net** to **version control as a creative partner**: one that remembers everything, understands structure, and helps you build on your own history, whether that history was polished or discarded.
 
 If we pull all these threads together, TrellisVCS becomes less a “replacement for Git” and more a **new medium for collaborative thought**. And that, I think, is the direction worth building toward.
 
 ===========================
 
-The transition from a "Graveyard" to an **"Idea Garden"** is the final piece of the puzzle. It moves the VCS from a tool that records _successes_ to a system that captures the **entirety of the creative process.** In Git, we are trained to be "clean"—to prune, to squash, and to delete. We treat our messy exploratory paths like embarrassing drafts. But in **TrellisVCS**, those "embarrassing drafts" are high-value training data and architectural breadcrumbs.
+The transition from a "Graveyard" to an **"Idea Garden"** is the final piece of the puzzle. It moves the VCS from a tool that records _successes_ to a system that captures the **entirety of the creative process.** In Git, we are trained to be "clean": to prune, to squash, and to delete. We treat our messy exploratory paths like embarrassing drafts. But in **TrellisVCS**, those "embarrassing drafts" are high-value training data and architectural breadcrumbs.
 
 ---
 
@@ -494,19 +494,19 @@ This isn't just a better version of Git; it’s a **Collaborative Memory Engine.
 
 =====================
 
-If I were building the prototype tomorrow, I’d start with the **Causal Stream engine**—the local, fine‑grained, semantic‑patch ledger. Here’s why:
+If I were building the prototype tomorrow, I’d start with the **Causal Stream engine**: the local, fine‑grained, semantic‑patch ledger. Here’s why:
 
 ---
 
 ### 1. The Causal Stream is the substrate for everything else
 
-The semantic merge, the narrative milestones, the idea garden—all depend on having a rich, structured record of changes. Without a causal stream, you’re just building a better merge algorithm on top of snapshot‑based history, which leaves the deeper problems unsolved.
+The semantic merge, the narrative milestones, the idea garden: all depend on having a rich, structured record of changes. Without a causal stream, you’re just building a better merge algorithm on top of snapshot‑based history, which leaves the deeper problems unsolved.
 
 - **Semantic merge** works best when it has access to the original patches (rename, extract, etc.), not just two final states.
 - **Narrative milestones** are just curated views over the stream; you can’t curate what you don’t capture.
 - **Idea garden** is literally the archive of causal patches that never got promoted.
 
-So the causal stream is the _foundation_—build it first, and everything else becomes a layer on top.
+So the causal stream is the _foundation_: build it first, and everything else becomes a layer on top.
 
 ---
 
@@ -514,7 +514,7 @@ So the causal stream is the _foundation_—build it first, and everything else b
 
 Every developer suffers from the gap between “save” and “commit.” We lose work, we clutter history with “wip” commits, we fear experimentation. A causal stream that records every change automatically, semantically, and with zero cognitive overhead would deliver value the moment the prototype runs.
 
-You could ship this as a **local‑first IDE plugin** that replaces “save” with an invisible, continuous history—no collaboration features needed yet. Developers would immediately feel the benefit: undo that works across restarts, a timeline of every idea, and no more “I should have committed.”
+You could ship this as a **local‑first IDE plugin** that replaces “save” with an invisible, continuous history: no collaboration features needed yet. Developers would immediately feel the benefit: undo that works across restarts, a timeline of every idea, and no more “I should have committed.”
 
 ---
 
@@ -527,7 +527,7 @@ Once the causal stream is solid, the other pieces become _applications_ on top o
 - **Governance** becomes rules applied to milestones.
 - **Idea garden** becomes a set of views over un‑milestoned patches.
 
-If you start with semantic merge, you’re still forced to model patches anyway—but you’re also building a complex reconciliation system without having a clean source of truth to test it against. That’s backwards.
+If you start with semantic merge, you’re still forced to model patches anyway: but you’re also building a complex reconciliation system without having a clean source of truth to test it against. That’s backwards.
 
 ---
 
@@ -545,7 +545,7 @@ These are foundational. Getting them right early pays dividends. Semantic merge,
 
 ### Trade‑offs
 
-If I focused on semantic merge first, I’d get to “team collaboration” faster in the short term—people hate merge conflicts. But I’d be building on a shaky foundation (snapshots), and I’d miss the local productivity gains that make the new system compelling enough to adopt.
+If I focused on semantic merge first, I’d get to “team collaboration” faster in the short term: people hate merge conflicts. But I’d be building on a shaky foundation (snapshots), and I’d miss the local productivity gains that make the new system compelling enough to adopt.
 
 By starting with the causal stream, I accept that the first prototype won’t solve merge conflicts. But it will change how people _work_, which builds trust and adoption. Then, when I later deliver semantic merge that leverages the stream, it’s a natural extension, not a standalone feature that requires users to abandon Git anyway.
 

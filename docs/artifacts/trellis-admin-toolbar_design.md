@@ -1,8 +1,8 @@
 ---
 version: alpha
-name: trellis admin — Operate header/toolbar parity
+name: trellis admin; Operate header/toolbar parity
 description: >-
-  Design for TRL-194 — bring CollectionBrowseToolbar density into kernel admin VCS:
+  Design for TRL-194; bring CollectionBrowseToolbar density into kernel admin VCS:
   full-width toolbar row under brand header; view picker + search + stub actions.
 source:
   tool: greenfield
@@ -73,9 +73,9 @@ components:
     rounded: "{rounded.md}"
 ---
 
-# Design: trellis admin — Operate header/toolbar parity
+# Design: trellis admin; Operate header/toolbar parity
 
-**Status:** Design verified — ready for Architect  
+**Status:** Design verified; ready for Architect  
 **Parent:** TRL-194 · **Design issue:** TRL-195  
 **Mock:** [trellis-admin-toolbar_mockup.html](./trellis-admin-toolbar_mockup.html)  
 **Canon:** `fractal-playground/components/collections/collection-browse-toolbar.tsx` (`CollectionBrowseToolbar`) + `CollectionViewPicker` toolbar variant  
@@ -87,11 +87,11 @@ components:
 ## Overview
 
 Raise kernel VCS chrome to the same **Operate browse family** as playground
-Collections — not by porting React/shadcn, but by restaging the toolbar as a
+Collections; not by porting React/shadcn, but by restaging the toolbar as a
 **full-width sticky row** under a slim brand header, matching
 `CollectionBrowseToolbar` density and L→R order.
 
-Emotional tone: dense L3 operator strip — 34px controls, 4px gaps, muted active
+Emotional tone: dense L3 operator strip; 34px controls, 4px gaps, muted active
 view segment, composite search, honest stubs on the right.
 
 ## Colors
@@ -99,7 +99,7 @@ view segment, composite search, honest stubs on the right.
 Inherit `runtime-theme.css`. Toolbar sits on `--bg` / `{colors.toolbar-bg}` with
 a bottom hairline (brand header already supplies the top edge). View picker
 **track** = `{colors.toolbar-track}` (`#1e1e1e` / `--background-weak`). **Active
-segment** = `{colors.toolbar-active}` (`#1c1c1c` / `--surface-raised`) — raised
+segment** = `{colors.toolbar-active}` (`#1c1c1c` / `--surface-raised`); raised
 on muted track (not accent-filled). Primary **+ New issue** uses accent when
 enabled; this wedge ships it **disabled** (coming soon).
 
@@ -121,18 +121,18 @@ medium sans. Search placeholder sans (drop mono-only search field).
 
 | Region | Spec |
 | ------ | ---- |
-| Brand header | Slim glass bar: brand + optional crumb `Operate / VCS` — **no** view/search |
+| Brand header | Slim glass bar: brand + optional crumb `Operate / VCS`; **no** view/search |
 | Operate toolbar | Full main width; `border-y`; `padding: 8px 16px`; `gap: 4px`; sticky under brand |
 | Control height | **34px** (kernel + e2e lock; not playground 32px) |
 | Statusbar | Unchanged SSOT for live / repo / stats (do not move into header) |
 
 ### L→R toolbar order (normative)
 
-1. **View picker** — Grid · Kanban · Table (icon + **label only when active**)
-2. **Search composite** — `flex: 1`; search icon + input + clear
-3. **Filters** — ghost icon button; stub menu (table-oriented copy)
-4. **Export** — ghost icon; **disabled**; `aria-label="Export"`
-5. **+ New issue** — primary; **disabled** this wedge; name “New issue (coming soon)”
+1. **View picker**; Grid · Kanban · Table (icon + **label only when active**)
+2. **Search composite**; `flex: 1`; search icon + input + clear
+3. **Filters**; ghost icon button; stub menu (table-oriented copy)
+4. **Export**; ghost icon; **disabled**; `aria-label="Export"`
+5. **+ New issue**; primary; **disabled** this wedge; name “New issue (coming soon)”
 
 **Out of toolbar:** Upload, Physics, Hash/Query search modes, schema view
 eligibility, grid column-count control.
@@ -184,7 +184,7 @@ icon buttons square ~34×34.
 
 - View picker: `role="radiogroup"` `aria-label="Projection"` with
   `role="radio"` + `aria-checked`; Left/Right arrows move selection (document in
-  impl). Alternative `aria-pressed` only if Architect chooses minimal churn —
+  impl). Alternative `aria-pressed` only if Architect chooses minimal churn : 
   then update e2e in-wedge.
 - Search: `type="search"`; labeled; clear labeled.
 - Filters: `aria-label="Filters"`; stub note uses `role="status"` (not `menu`);
@@ -219,15 +219,15 @@ icon buttons square ~34×34.
 2. AC: view picker icon + label-on-active; muted track + raised active segment; 3 modes wired.
 3. AC: search composite flex-1; keep `#search` / `#search-input`; filter behavior preserved.
 4. AC: Filters stub note (“Filters coming soon”) + disabled Export + disabled New issue.
-5. AC: e2e — toolbar present; view + search; embed keeps toolbar; 34px heights;
+5. AC: e2e; toolbar present; view + search; embed keeps toolbar; 34px heights;
    no live/stats in brand header; migrate selectors with a11y choice.
-6. Radiogroup (preferred) vs aria-pressed — pick one; update e2e in-wedge.
+6. Radiogroup (preferred) vs aria-pressed; pick one; update e2e in-wedge.
 7. Out of scope: wire New → `issue create`; real filters; export; datatable; responsive polish.
 
 ### Cohesion (pre-architect · synthesist)
 
 1. **Supersede shell header contract:** brand 40 + full-bleed toolbar; amend embed grid so brand + toolbar + main + oplog + statusbar remain. Retire shell “header = brand · live · stats · view · search.”
-2. **View picker lock:** muted track / raised active — not accent pill; label-on-active only.
+2. **View picker lock:** muted track / raised active; not accent pill; label-on-active only.
 3. **Search continuity:** restyle composite; preserve `#search` / `#search-input` wiring.
 4. **Stub honesty:** Filters = “coming soon” only; Export/New disabled with clear names.
 5. **Preserve:** OPERATE_NAV sidebar; visual-parity projections; theme SSOT; no AppShell.
@@ -238,5 +238,5 @@ icon buttons square ~34×34.
 - interaction matrix: 8 rows, 0 empty cells
 - a11y: focus order + prefers-reduced-motion documented
 - token parity: YAML ↔ mock :root verified
-- design.md lint: N/A — token-only wedge
+- design.md lint: N/A; token-only wedge
 - design critique: 2 rounds, 0 blockers remaining

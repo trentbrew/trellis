@@ -1,4 +1,4 @@
-# ADR 0033: Headless forms ontology — schema-derived form descriptors
+# ADR 0033: Headless forms ontology; schema-derived form descriptors
 
 **Status:** Proposed
 **Date:** 2026-07-31
@@ -6,7 +6,7 @@
 **Builds on:** `src/schema/define.ts` (`defineType`), ADR 0018 (field sync
 tiers), ontology registry packages (`ontology/workflow`, `ontology/pipeline`,
 TRL-355/358)
-**Planning seed:** sprite `omen`/`orchestrator` lineage — a form layer
+**Planning seed:** sprite `omen`/`orchestrator` lineage; a form layer
 prototyped in a sprite that died; rebuilt in-tree as a framework-free
 contract.
 
@@ -18,7 +18,7 @@ entity schema. Today:
 
 1. **Forms are invented per client.** The Vue sprite, Studio, and any future
    client each hand-write forms for `Task`, `Note`, `Agent`, and every
-   `defineType` schema a user ships — duplicating field controls, options,
+   `defineType` schema a user ships; duplicating field controls, options,
    requiredness, and validation forever, drifting the moment a schema
    changes.
 2. **The schema already *is* a form spec, half-expressed.**
@@ -28,7 +28,7 @@ entity schema. Today:
    `minLength/maxLength`, `editable`, and `computed`. No client reads any of
    it.
 3. **UI work was driving ontology work backwards.** ADR 0001 (trellis-ui)
-   noted affordances should be deferred "until UI work drives the need" — but
+   noted affordances should be deferred "until UI work drives the need"; but
    the need is not per-component, it is a *derived contract*.
 4. **A lost sprite.** The first implementation lived in a sprite that crashed
    mid-push; the work vanished. Rebuilding it in `trellis-node` makes the
@@ -36,14 +36,14 @@ entity schema. Today:
 
 ## Decision
 
-### 1. `trellis/forms` — a headless form descriptor engine
+### 1. `trellis/forms`; a headless form descriptor engine
 
 A new `src/forms/` module derives a pure, JSON-serializable
-`FormDescriptor` from a `SchemaDefinition`. It binds to nothing — no
+`FormDescriptor` from a `SchemaDefinition`. It binds to nothing; no
 framework, no components, no store. Any client renders it; new clients stop
 hand-writing forms.
 
-- **`deriveFormDescriptor(schema, { mode })`** — pure function (no kernel, no
+- **`deriveFormDescriptor(schema, { mode })`**; pure function (no kernel, no
   graph): maps every field's `valueType` to a `FieldControl` (`text`,
   `textarea`, `number`, `checkbox`, `select`, `multi_select`, `date`,
   `relation`, `people`, `files`, `json`, `readonly`), lifts validation
@@ -61,18 +61,18 @@ hand-writing forms.
 - **Browser-safe.** The derive/resolve path has no Node imports; it ships via
   `trellis/forms` and is re-exported from `trellis/browser`.
 
-### 2. The graph is the override surface — `trellis:Form` / `trellis:FormField`
+### 2. The graph is the override surface; `trellis:Form` / `trellis:FormField`
 
 Derivation is the default; the exception is a first-class graph entity:
 
-- `trellis:Form` — `entityType`, optional `mode` (undefined = all modes),
+- `trellis:Form`; `entityType`, optional `mode` (undefined = all modes),
   optional `title`/`description`, relation `fields → trellis:FormField`.
-- `trellis:FormField` — keyed by `fieldName` (must match a schema attribute);
+- `trellis:FormField`; keyed by `fieldName` (must match a schema attribute);
   can set `label`, `control`, `required`, `readonly`, `hidden`, `order`,
   `section` (move across sections), `options`, `defaultValue`, `placeholder`,
   `description`.
 - **Precedence:** mode-scoped `Form` entities win over mode-less ones for
-  that mode. Nothing can add a field that the schema does not have — the
+  that mode. Nothing can add a field that the schema does not have; the
   schema is the field universe; the graph rearranges it.
 - **`resolveFormDescriptor(ontologies, type, { mode, forms | overrides })`**
   is the end-to-end entry point: find schema → derive → apply overrides.
@@ -81,7 +81,7 @@ Derivation is the default; the exception is a first-class graph entity:
 ### 3. Surface
 
 - **SDK:** `client.formDescriptor(type, { mode })` and `client.listForms()`
-  — in-process in local mode, `GET /forms/:type?mode=…` / `GET /forms` in
+ ; in-process in local mode, `GET /forms/:type?mode=…` / `GET /forms` in
   remote mode.
 - **HTTP:** `GET /forms` (derivable types) and `GET /forms/:type?mode=…`
   (descriptor, 404 when the type has no schema, 400 on bad mode).
@@ -93,12 +93,12 @@ Derivation is the default; the exception is a first-class graph entity:
   `client.registerType`-able schemas; `registerFormOverrides` needs no kernel
   special-casing.
 
-### 4. The engine and framework adapters — `trellis/forms/core` and friends
+### 4. The engine and framework adapters; `trellis/forms/core` and friends
 
 The descriptor answers *what a form is*; the engine answers *how a form
 behaves*. Both ship, so clients get a complete headless stack:
 
-- **`trellis/forms/core`** — `createFormCore(formSchema, initialValues?)`, a
+- **`trellis/forms/core`**; `createFormCore(formSchema, initialValues?)`, a
   framework-free state machine holding `values`, `errors`, `dirty`,
   `touched`, `isSubmitting`, computed `isValid`/`isDirty`. Actions:
   `setValue`/`setValues`, `setError`/`setErrors`, `setTouched`, `setDirty`,
@@ -114,21 +114,21 @@ behaves*. Both ship, so clients get a complete headless stack:
   the core to frameworks with idiomatic surfaces: React `useForm` +
   `<Form>/<Field>` (context-based, `useSyncExternalStore`), Vue
   `useFormVue` (reactive state), Svelte `createFormStore` (store contract
-  only — no svelte package dependency, works in 4 and 5), vanilla
+  only; no svelte package dependency, works in 4 and 5), vanilla
   `createVanillaForm` + `bindFormToDOM` (two-way DOM sync, submit handling,
   `data-error-for` error text).
-- **No renderer ships** in the sense of a component library — the adapters
+- **No renderer ships** in the sense of a component library; the adapters
   are *state bindings*, and the UI still belongs to each client.
 
 ### 5. What does NOT change
 
 - Schemas stay the single source of truth. No form-specific fields are added
-  to `SchemaDefinition` — the vocabulary it already carries is sufficient.
+  to `SchemaDefinition`; the vocabulary it already carries is sufficient.
 - The kernel does not learn about forms. Derivation is a pure read path over
   `listOntologies()` + the graph; no new middleware, no new op kinds.
 - No renderer ships in this ADR. Studio/cloud clients render the descriptor;
   a reference renderer is a follow-up (deliberately out of scope to keep the
-  contract honest — headless means nobody's components leak in).
+  contract honest; headless means nobody's components leak in).
 
 ## Consequences
 
@@ -143,22 +143,22 @@ behaves*. Both ship, so clients get a complete headless stack:
   agents) rename, hide, and regroup fields with `trellis issue`-style graph
   writes; no redeploy.
 - **Survives sprites.** The contract now lives in the published library
-  (`trellis/forms`) — the third incarnation of this work cannot vanish with
+  (`trellis/forms`); the third incarnation of this work cannot vanish with
   an app. (First incarnation: sprite `omen`/`orchestrator`, lost to five
   crashes. Second: sprite `form-v1` branch `origin/form-v1`, recovered and
-  ported — its engine became `src/forms/core`, its adapters were rewritten
+  ported; its engine became `src/forms/core`, its adapters were rewritten
   without the sprite's ESM `require()` hacks and svelte module shim.)
 
 ### Negative
 
 - **Another subpath to maintain** (`trellis/forms` + `/core` + four adapter
   subpaths + browser re-export + build entries + MCP/HTTP/SDK wiring).
-- **Adapters add framework deps** (`react`, `vue` as peer/optional deps —
+- **Adapters add framework deps** (`react`, `vue` as peer/optional deps : 
   importing the root `trellis/forms` never touches them; only the adapter
   subpaths do). The Svelte adapter stays dependency-free by consuming only
   the store contract.
 - **Humanized labels are a poor-man's i18n.** Real per-locale labels need the
-  graph override (or a schema field) — deferred.
+  graph override (or a schema field); deferred.
 - **Overrides add an indirection** clients must query; two sources of truth
   (schema + graph) require the precedence rule above to stay documented.
 
@@ -167,17 +167,17 @@ behaves*. Both ship, so clients get a complete headless stack:
 - Forms are read-only derivations: `GET /forms*` honors existing permission
   checks (entity-type read). Override entities are ordinary graph writes,
   subject to the same auth/permissions as any `createEntity`.
-- Descriptor JSON is derived from registered schemas only — no arbitrary
+- Descriptor JSON is derived from registered schemas only; no arbitrary
   code, no component names, no URLs from user input.
 
 ## Implementation sketch
 
-1. `src/forms/types.ts` — `FormDescriptor`, `FormFieldDescriptor`,
+1. `src/forms/types.ts`; `FormDescriptor`, `FormFieldDescriptor`,
    `FormSectionDescriptor`, `FormOverride`, `FieldControl` (12 kinds).
-2. `src/forms/derive.ts` — `deriveFormDescriptor`, `deriveFormFields`,
+2. `src/forms/derive.ts`; `deriveFormDescriptor`, `deriveFormFields`,
    `humanize`; valueType→control map; section/order logic.
-3. `src/forms/ontology.ts` — `defineType` `Form`/`FormField` + `FORMS_ONTOLOGY`.
-4. `src/forms/overrides.ts` / `resolve.ts` / `kernel.ts` — merge, end-to-end
+3. `src/forms/ontology.ts`; `defineType` `Form`/`FormField` + `FORMS_ONTOLOGY`.
+4. `src/forms/overrides.ts` / `resolve.ts` / `kernel.ts`; merge, end-to-end
    resolve, kernel adapter.
 5. Surface: `src/server/server.ts` (`/forms`), `src/client/sdk.ts`
    (`formDescriptor`/`listForms`), `src/mcp/forms.ts`
@@ -186,11 +186,11 @@ behaves*. Both ship, so clients get a complete headless stack:
    re-export.
 7. Tests: `test/core/forms.test.ts` (derive/override/resolve/kernel) +
    `test/server/forms-endpoint.test.ts` (HTTP surface).
-8. Engine: `src/forms/core/{types,schema,validate,index}.ts` — ported from
+8. Engine: `src/forms/core/{types,schema,validate,index}.ts`; ported from
    the `form-v1` sprite (`origin/form-v1`, commit `660d8b3`), rewritten:
    no `require()` in ESM, no svelte module shim, `submit` persists
    validation errors into state, dirty baseline = initialized state shape.
-9. Adapters: `src/forms/{react,vue,svelte,vanilla}/index.ts` — React
+9. Adapters: `src/forms/{react,vue,svelte,vanilla}/index.ts`; React
    `useSyncExternalStore` + context; Vue reactive; Svelte store contract
    (mirrors `src/svelte/stores.ts`); vanilla DOM glue.
 10. Engine tests: `test/core/forms-engine.test.ts` (state machine, dual-path

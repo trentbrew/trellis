@@ -1,8 +1,8 @@
 ---
 version: alpha
-name: trellis admin — Operate inline cell edit
+name: trellis admin; Operate inline cell edit
 description: >-
-  Design for TRL-212 — activate inline cell edit on Operate datatable for
+  Design for TRL-212; activate inline cell edit on Operate datatable for
   branch + issue columns. Extends admin-datatable module; zero density delta.
 source:
   tool: greenfield
@@ -63,9 +63,9 @@ components:
     background: "transparent"
 ---
 
-# Design: trellis admin — Operate inline cell edit
+# Design: trellis admin; Operate inline cell edit
 
-**Status:** Design verified — ready for Architect  
+**Status:** Design verified; ready for Architect  
 **Parent:** TRL-212 · **Design issue:** TRL-213  
 **Mock:** [trellis-admin-datatable-cell-edit_mockup.html](./trellis-admin-datatable-cell-edit_mockup.html)  
 **Inherits density:** [trellis-admin-datatable_design.md](./trellis-admin-datatable_design.md) / TRL-203  
@@ -79,10 +79,10 @@ components:
 Activate the edit-ready hooks reserved in TRL-206/207: **branch** and **issue**
 cells become editable in Operate table view. Edit UX lives in the
 `admin-datatable` module; shell keeps Seam C (row → `#dlg`). Density frozen at
-42/36 — edit chrome is an **inset accent ring** inside the cell, not a new
+42/36; edit chrome is an **inset accent ring** inside the cell, not a new
 surface.
 
-Emotional tone: quiet spreadsheet precision — one cell at a time, no floating
+Emotional tone: quiet spreadsheet precision; one cell at a time, no floating
 editors, no cards.
 
 ## Colors
@@ -93,22 +93,22 @@ on invalid issue id. **Never** `--surface2` for row hover.
 
 ## Typography
 
-Mono 12px for cell values and the edit `<input>` — match `.lanes-table td`.
+Mono 12px for cell values and the edit `<input>`; match `.lanes-table td`.
 
 ## Layout
 
 ```
 #view-table / .table-wrap
 └── table.lanes-table
-    ├── thead (sort — unchanged)
+    ├── thead (sort; unchanged)
     └── tbody
         └── tr
-            ├── td[data-col=lane]     RO — identity + spinner
-            ├── td[data-col=agent]    RO — ownership
-            ├── td[data-col=ops]      RO — derived
-            ├── td[data-col=files]    RO — derived
-            ├── td[data-col=branch]   EDITABLE — lane.targetBranch
-            └── td[data-col=issue]    EDITABLE — lane.issueId (empty → —)
+            ├── td[data-col=lane]     RO; identity + spinner
+            ├── td[data-col=agent]    RO; ownership
+            ├── td[data-col=ops]      RO; derived
+            ├── td[data-col=files]    RO; derived
+            ├── td[data-col=branch]   EDITABLE; lane.targetBranch
+            └── td[data-col=issue]    EDITABLE; lane.issueId (empty → : )
 ```
 
 Shell / toolbar / sidebar / statusbar / embed: **untouched**.
@@ -116,7 +116,7 @@ Shell / toolbar / sidebar / statusbar / embed: **untouched**.
 ## Elevation & Depth
 
 Inset hierarchy only: `outline: 2px solid accent; outline-offset: -2px` on
-`td.cell-editing` — same language as row `:focus-visible` and sort-btn focus.
+`td.cell-editing`; same language as row `:focus-visible` and sort-btn focus.
 No modal, no popover, no floating toolbar.
 
 ## Shapes
@@ -140,11 +140,11 @@ box (`padding: 0 14px` inherited rhythm).
 | `data-col` | Editable | Why |
 | ---------- | -------- | --- |
 | lane | **no** | Primary id; spinner chrome; dlg id prefers `data-entity-id` |
-| agent | **no** | Ownership / lane protocol — not casual metadata |
+| agent | **no** | Ownership / lane protocol; not casual metadata |
 | ops | **no** | Derived op count |
 | files | **no** | Derived file count |
 | branch | **yes** | Stored `targetBranch` |
-| issue | **yes** | Stored `issueId`; empty clears / shows `—` |
+| issue | **yes** | Stored `issueId`; empty clears / shows `: ` |
 
 ### Interaction matrix
 
@@ -153,7 +153,7 @@ box (`padding: 0 14px` inherited rhythm).
 | Single-click `td[data-editable=true]` | Begin edit: `stopPropagation`; add `cell-editing`; mount `<input>`; select value; dispatch `trellis:cell-activate` |
 | Single-click non-editable cell / row chrome (not editing) | Seam C: open `#dlg` |
 | Editing + click non-editable cell / row chrome | **Commit** current cell first; then open `#dlg` for that row (blur/commit completes before activate) |
-| Double-click any row | **Out of v1** — do not add; single-click Seam C + F2/edit click suffice |
+| Double-click any row | **Out of v1**; do not add; single-click Seam C + F2/edit click suffice |
 | Row focused + **F2** (or **e**) | Begin edit on **first editable** cell in that row (`branch`); do **not** open `#dlg` |
 | Enter (while editing) | Commit → `trellis:cell-commit` → same col, next visible row (stay if last) |
 | Tab / Shift+Tab (editing) | Commit → next / prev **editable** cell in row, then wrap to next/prev row’s editable |
@@ -163,8 +163,8 @@ box (`padding: 0 14px` inherited rhythm).
 | TML MutationObserver mid-edit | **Skip `refresh()`** while any `.cell-editing` exists |
 | Search would hide editing row | **Cancel** edit (restore), then apply `.hidden-by-search` |
 | Invalid issue id on commit | Keep editing; `aria-invalid` on input + `td`; show `#cell-edit-error`; **no** `trellis:cell-commit` |
-| Empty issue on commit | Store null; display `—` |
-| Empty branch on commit | **Reject** — keep editing; `aria-invalid` + error “Branch required” |
+| Empty issue on commit | Store null; display `: ` |
+| Empty branch on commit | **Reject**; keep editing; `aria-invalid` + error “Branch required” |
 | Mutation host rejects commit | Toast error via `#toast`; **restore** prior cell text; exit edit (do not leave dirty UI) |
 | Row Enter/Space (not editing) | Open `#dlg` (existing) |
 
@@ -181,7 +181,7 @@ not editing + Enter     → #dlg
 
 ### Issue id validation (normative)
 
-- Empty / whitespace → null, display `—` (valid commit)
+- Empty / whitespace → null, display `: ` (valid commit)
 - Non-empty must match `/^TRL-\d+$/i` (e.g. `TRL-212`)
 - Anything else → invalid, keep editing
 
@@ -196,7 +196,7 @@ not editing + Enter     → #dlg
 - Do not steal focus from `#dlg` when dialog open  
 - Preserve e2e selectors: `#view-table`, `.table-wrap`, `.sort-btn`, `#table-empty`, `.lanes-table`
 
-## Mutation seam (Open for Architect — behavior lock)
+## Mutation seam (Open for Architect; behavior lock)
 
 Design locks **UX**; Architect picks wire:
 

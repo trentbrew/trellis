@@ -1,4 +1,4 @@
-# Spec: trellis admin shell — Operate sidebar + index /
+# Spec: trellis admin shell; Operate sidebar + index /
 
 **Status:** Ready for impl  
 **Date:** 2026-07-21  
@@ -26,7 +26,7 @@ no `lane watch` kill-gate.
 | -------- | ------ |
 | Sidebar | **200px** labeled `.sidebar` (not 56px `.rail`); zone label `Operate` |
 | Nav contract | Mirror `fractal-playground/lib/shell/modes.ts` `OPERATE_NAV` **ids + order** |
-| Live surface | **VCS only** — `data-nav-id="vcs"` + `aria-current="page"` |
+| Live surface | **VCS only**; `data-nav-id="vcs"` + `aria-current="page"` |
 | Stubs | Collections → API: `aria-disabled="true"` **without** native `disabled`; accessible name `{Label} (coming soon)`; click no-ops |
 | Index route | **`GET /`** serves `admin.html` |
 | `/admin` | **302** (or 301) redirect to `/` **preserving query string** (`?embed=1`, `?view=`) |
@@ -40,14 +40,14 @@ no `lane watch` kill-gate.
 
 ### OPERATE_NAV (normative order + `data-nav-id`)
 
-1. `collections` — Collections — stub  
-2. `storage` — Storage — stub  
-3. `pages` — Pages — stub  
-4. `history` — History — stub  
-5. `cron` — Cron — stub  
-6. `auth` — Auth — stub  
-7. `apis` — API — stub (**id `apis`**, not `api`)  
-8. `vcs` — VCS — **live**
+1. `collections`; Collections; stub  
+2. `storage`; Storage; stub  
+3. `pages`; Pages; stub  
+4. `history`; History; stub  
+5. `cron`; Cron; stub  
+6. `auth`; Auth; stub  
+7. `apis`; API; stub (**id `apis`**, not `api`)  
+8. `vcs`; VCS; **live**
 
 ---
 
@@ -72,7 +72,7 @@ no `lane watch` kill-gate.
 | ---- | -------- |
 | `GET /` | Serve `admin.html` (200) |
 | `GET /admin`, `/admin.html` | Redirect to `/` + original search (e.g. `/admin?embed=1` → `/?embed=1`) |
-| `GET /lanes`, `/lanes.html` | Serve `lanes.html` (200) — legacy board |
+| `GET /lanes`, `/lanes.html` | Serve `lanes.html` (200); legacy board |
 | Existing | `/theme/runtime-theme.css`, `/tml-runtime.js`, `/api/lanes*`, `/tml-lanes`, `/client` unchanged |
 
 **CLI:** `trellis admin` kernel fallback opens `/`. Playground `TRELLIS_PLAYGROUND_URL` / probe path unchanged.
@@ -132,15 +132,15 @@ Prefer `page.goto('/')` for shell smoke; keep at least one case that hits
 
 **Required cases (extend file):**
 
-1. **Operate nav** — on `/`: `nav[aria-label="Operate"]` has 8 `.nav-item`;
+1. **Operate nav**; on `/`: `nav[aria-label="Operate"]` has 8 `.nav-item`;
    `[data-nav-id="vcs"][aria-current="page"]`; stubs have `aria-disabled="true"`
    and no `disabled` attribute; first stub accessible name matches /coming soon/i
-2. **Index** — `GET /` shows sidebar + `#view-kanban` (or active view) + `#oplog`
-3. **Alias redirect** — `goto('/admin?view=grid')` → URL matches `/?view=grid`
+2. **Index**; `GET /` shows sidebar + `#view-kanban` (or active view) + `#oplog`
+3. **Alias redirect**; `goto('/admin?view=grid')` → URL matches `/?view=grid`
    (or equivalent path `/` with search)
-4. **Embed** — `/?embed=1`: `html.admin-embed`; `.sidebar` hidden; toolbar +
+4. **Embed**; `/?embed=1`: `html.admin-embed`; `.sidebar` hidden; toolbar +
    `#oplog` visible
-5. **Regression** — existing visual-parity cases still pass (dialog / grid /
+5. **Regression**; existing visual-parity cases still pass (dialog / grid /
    kanban / table / scroll)
 
 Run (impl / reviewer): `CI=1 pnpm test:e2e e2e/admin.spec.cjs`

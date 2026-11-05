@@ -7,7 +7,7 @@
 
 > **Client shipped; server missing.** TRL-235 implemented `trellis remote` +
 > `oplog-remote.ts` against `MemoryRemoteSprite`. This spec adds the **production
-> HTTP handler** deployed to a Fly Sprite — bytes-only, no Trellis engine.
+> HTTP handler** deployed to a Fly Sprite; bytes-only, no Trellis engine.
 
 ---
 
@@ -23,18 +23,18 @@ routes the client already calls.
    - `GET /v0/ledger/tail?repoId=…`
    - `POST /v0/ledger/push`
    - `GET /v0/ledger/checkpoints/:tailHash`
-2. **Filesystem store** on sprite — immutable checkpoints + advancing tip.
-3. **Bearer auth** — reject unauthenticated writes/reads when `LEDGER_API_KEY` set.
-4. **Checkpoint retention** — ring of last **8** checkpoints per `repoId` (mirror parity).
-5. **`trellis ledger-sprite deploy`** — bundle handler to Sprites (reuse `deploy-gateway` pattern).
-6. **`trellis remote provision`** — deploy + `remote add` + print URL/key for desk.
-7. **Contract tests** — handler must pass same scenarios as `MemoryRemoteSprite`.
+2. **Filesystem store** on sprite; immutable checkpoints + advancing tip.
+3. **Bearer auth**; reject unauthenticated writes/reads when `LEDGER_API_KEY` set.
+4. **Checkpoint retention**; ring of last **8** checkpoints per `repoId` (mirror parity).
+5. **`trellis ledger-sprite deploy`**; bundle handler to Sprites (reuse `deploy-gateway` pattern).
+6. **`trellis remote provision`**; deploy + `remote add` + print URL/key for desk.
+7. **Contract tests**; handler must pass same scenarios as `MemoryRemoteSprite`.
 
 ## 3. Non-goals (v0)
 
 - Parsing ops into EAV / running `repair` on server
 - Multi-remote / org index (L1)
-- Cloud broker auto-provision (defer — manual `remote provision` OK)
+- Cloud broker auto-provision (defer; manual `remote provision` OK)
 - Replacing local mirror (`~/.trellis/oplog-mirror/`)
 
 ## 4. HTTP contract (must match client)
@@ -75,9 +75,9 @@ Rules:
 
 ### `GET /v0/ledger/checkpoints/:tailHash`
 
-**200** — raw JSONL body (same bytes pushed), or JSON wrapper `{ "checkpoint": "…" }` (client accepts both).
+**200**; raw JSONL body (same bytes pushed), or JSON wrapper `{ "checkpoint": "…" }` (client accepts both).
 
-**404** — unknown hash.
+**404**; unknown hash.
 
 ### Auth
 
@@ -96,7 +96,7 @@ Rules:
         <tailHash>.jsonl
 ```
 
-No SQLite, no engine — filesystem only.
+No SQLite, no engine; filesystem only.
 
 ## 6. Surfaces
 
@@ -104,7 +104,7 @@ No SQLite, no engine — filesystem only.
 | ------- | ---- |
 | Handler + store | `src/server/ledger-handler.ts`, `src/server/ledger-store.ts` |
 | Deploy | `src/server/deploy-ledger.ts` (mirrors `deploy-gateway.ts`) |
-| CLI | `src/cli/ledger-sprite-cli.ts` — `ledger-sprite deploy`; extend `remote-cli.ts` with `remote provision` |
+| CLI | `src/cli/ledger-sprite-cli.ts`; `ledger-sprite deploy`; extend `remote-cli.ts` with `remote provision` |
 | Tests | `test/server/ledger-handler.test.ts` (contract); `test/server/ledger-integration.test.ts` (client ↔ handler) |
 | Entrypoint | Generated Bun bundle → `/home/sprite/trellis-ledger/server.mjs` |
 
@@ -129,7 +129,7 @@ Service name: `trellis-ledger`. HTTP port: `8080` (Sprites public port).
 - Spec file exists at `docs/specs/sprite-ledger-handler-v0.md`
 - Client spec exists at `docs/specs/vcs-oplog-remote-sprite-v0.md`
 
-### Behavioral (impl issue — `test/server/ledger-*.test.ts`)
+### Behavioral (impl issue; `test/server/ledger-*.test.ts`)
 
 | # | Criterion | Test command |
 | - | --------- | ------------ |
@@ -152,7 +152,7 @@ Service name: `trellis-ledger`. HTTP port: `8080` (Sprites public port).
 | ---- | ------ |
 | `src/server/sprites.ts` | Reuse `ensureSprite`, `runSpriteCopy`, service lifecycle |
 | `src/server/deploy-meta.ts` | Reuse name validation + URL helpers |
-| `src/vcs/oplog-remote.ts` | No protocol change — handler must match `MemoryRemoteSprite` |
+| `src/vcs/oplog-remote.ts` | No protocol change; handler must match `MemoryRemoteSprite` |
 | `src/cli/remote-cli.ts` | Add `remote provision` |
 | `docs/specs/vcs-oplog-remote-sprite-v0.md` | Cross-link server spec §4 |
 
@@ -160,6 +160,6 @@ Service name: `trellis-ledger`. HTTP port: `8080` (Sprites public port).
 
 | Question | Decision |
 | -------- | -------- |
-| Separate sprite vs room server? | **Yes** — dedicated ledger handler service |
-| Live Fly in CI? | **No** — in-process handler tests; optional `TRELLIS_LEDGER_SMOKE=1` manual |
+| Separate sprite vs room server? | **Yes**; dedicated ledger handler service |
+| Live Fly in CI? | **No**; in-process handler tests; optional `TRELLIS_LEDGER_SMOKE=1` manual |
 | Checkpoint retention | **8** (ring parity with local `.bak`) |

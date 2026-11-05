@@ -1,4 +1,4 @@
-# Spec: TML v0.1 — Kanban test bed + v0 sync
+# Spec: TML v0.1; Kanban test bed + v0 sync
 
 **Status:** Ready for impl\
 **Date:** 2026-07-16\
@@ -13,17 +13,17 @@ untouched)
 
 v0 proved four primitives (`query` / `live` / `op` / `ref`) on a **lane grid**.
 v0.1 proves the same runtime on the **issue Kanban** that humans already use in
-`lanes.html` — without inventing new visual language and without migrating
+`lanes.html`; without inventing new visual language and without migrating
 production.
 
 Two deliverables:
 
-1. **Spec sync** — make `tml-v0.md` match the landed runtime.
-2. **Kanban in TML** — three columns, same status collapse as `ISSUE_COLUMNS`.
+1. **Spec sync**; make `tml-v0.md` match the landed runtime.
+2. **Kanban in TML**; three columns, same status collapse as `ISSUE_COLUMNS`.
 
 ---
 
-## 2. Spec sync (Phase A) — required edits to `tml-v0.md`
+## 2. Spec sync (Phase A); required edits to `tml-v0.md`
 
 Executor updates `docs/specs/tml-v0.md` so it no longer contradicts the code:
 
@@ -62,7 +62,7 @@ Unknown statuses fall into Backlog (same as `renderKanban`).
 ### 3.2 Markup shape
 
 Stay on **`/tml-lanes`** (one sterile page). Replace or extend the lane grid so
-the primary board is Kanban. Lane grid may remain below or be removed — prefer
+the primary board is Kanban. Lane grid may remain below or be removed; prefer
 **Kanban primary**, lane grid optional secondary; do not break `promote` if the
 lane grid stays.
 
@@ -113,7 +113,7 @@ etc.). Do not port search, op-log, stats, dialog, or view toggles.
 - **No new mutations required** for this wedge. `promote` may remain on a lane
   section if kept; issue start/close via `tml-op` is out of scope.
 
-### 3.4 Runtime change — OR groups + `not` groups
+### 3.4 Runtime change; OR groups + `not` groups
 
 Today `evaluateQuery` only parsed `and`-chained comparisons after `type = 'X'`.
 Column collapse needs **OR of same-field equalities**, and Backlog needs a
@@ -143,7 +143,7 @@ Add unit tests in `test/ui/tml-runtime.test.ts` for:
 3. Type filter still required / empty on unknown type.
 4. `not` group places unknown statuses in Backlog only.
 
-`PeerDriver` already speaks real TQL — no change required for PeerDriver in this
+`PeerDriver` already speaks real TQL; no change required for PeerDriver in this
 wedge. Do not switch the test page default to PeerDriver.
 
 ### 3.5 Live updates
@@ -220,9 +220,9 @@ membership updates on next SSE snapshot.
 
 - **Global CLI 3.2.6** cannot parse JSONL `ops.json`; use `./bin/trellis.mjs`
   (3.4.0) for verification.
-- Concurrent `lane watch` can clobber issue ops (known ADR 0026 finding) — not
+- Concurrent `lane watch` can clobber issue ops (known ADR 0026 finding); not
   this wedge's fix.
-- `tml-if="issue.laneIds"` uses `isTmlTruthy` — empty arrays are falsy (see
+- `tml-if="issue.laneIds"` uses `isTmlTruthy`; empty arrays are falsy (see
   `tml-v0.md` §3.2 / harden TRL-153).
 - Mount semantics: the element with `tml-query` is the list container; its child
   tree is the per-row template. Put `tml-query` on `.kanban-col-body`, not on

@@ -1,4 +1,4 @@
-# Spec: ADR 0018 Phase 1 — explicit create ids + field sync tiers
+# Spec: ADR 0018 Phase 1; explicit create ids + field sync tiers
 
 **Status:** ready for impl · **ADR:**
 [0018](../adr/0018-explicit-ids-and-field-sync-tiers.md) · **Issues:** TRL-57
@@ -15,7 +15,7 @@ Ship the two kernel/SDK contracts that unblock per-entity durable worlds:
 **Out of scope:** tick/ECS, WorldBundle→EAV engine migration, CRDT conflicts,
 browser-embedded kernel, hosted TurtleDB, `needs-e2e`.
 
-## API — explicit ids
+## API; explicit ids
 
 ### CreateEntityOptions
 
@@ -29,7 +29,7 @@ export interface CreateEntityOptions {
 ### SDK signature (backward compatible)
 
 Keep 3rd arg as links. Add optional **4th** options bag only (no 3rd-arg
-`{ id }` overload — avoids ambiguity):
+`{ id }` overload; avoids ambiguity):
 
 ```ts
 create(
@@ -64,10 +64,10 @@ Kernel `createEntity` unchanged (already accepts any id).
 - `src/client/sdk.ts`
 - `src/client/sdk.browser.ts`
 - `src/server/server.ts` (`handleCreate`)
-- `test/db/sdk.test.ts` — local explicit id + conflict
+- `test/db/sdk.test.ts`; local explicit id + conflict
 - Server/HTTP fixture test for 409 + round-trip (extend existing harness)
 
-## API — field sync tiers
+## API; field sync tiers
 
 ### Types (`src/core/ontology/types.ts`)
 
@@ -98,7 +98,7 @@ HTTP + CLI):
    - no field spec → allow (open-world)
    - `effectiveFieldSync` === `derived` → **strip** (silent peel)
    - `effectiveFieldSync` === `realtime` → **reject** (throw / 400) naming the
-     field — use `trellis/realtime`
+     field; use `trellis/realtime`
 3. Persist remaining attrs
 
 Prefer one helper/middleware so all entry points share behavior. No
@@ -125,7 +125,7 @@ Set `sync` on leaf `PropertyValueSpecification` from `fieldSync[name]`. Export
 ## ADR closeout
 
 When impl AC green: set ADR 0018 **Status: accepted** and cite impl issue id.
-Engine WorldBundle migration is a Strategist follow-up — not this wedge.
+Engine WorldBundle migration is a Strategist follow-up; not this wedge.
 
 ## Acceptance criteria
 

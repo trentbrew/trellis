@@ -15,7 +15,7 @@ status: superseded
 **Status:** Superseded by ADR 0063  
 **Date:** 2026-07-31  
 **Context:** Identity-addressed Trellis projects (ADR 0032) + EAV kernel  
-**Superseded by:** [ADR 0063 — Location is graph-native](../adr/0063-location-graph-native.md)  
+**Superseded by:** [ADR 0063; Location is graph-native](../adr/0063-location-graph-native.md)  
 **Related:** ADR 0032  
 
 ## Summary

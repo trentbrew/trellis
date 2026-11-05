@@ -1,22 +1,22 @@
-# Lane archive + recovery commit — 2026-08-04
+# Lane archive + recovery commit; 2026-08-04
 
 > Living log. One step per turn. Append after each step.
 > Goal: archive lane pollution, clear stale engine pointer, commit the b941575 recovery
 > cleanly, without re-triggering the 9801056-class silent revert.
 
-## Step 0 — Start state (2026-08-04T02:25:51Z)
+## Step 0; Start state (2026-08-04T02:25:51Z)
 
 ### Git
 | Item | Value |
 |------|--------|
 | Branch | `main` |
-| HEAD | `a291635` — docs(adr): ADR 0037… |
-| Parent | `5155578` — polluted journal/sync commit |
-| Good baseline | `b941575` — refuse-before-clobber floor |
+| HEAD | `a291635`; docs(adr): ADR 0037… |
+| Parent | `5155578`; polluted journal/sync commit |
+| Good baseline | `b941575`; refuse-before-clobber floor |
 | origin/main | `5155578` |
 | Ahead of origin | 1 commit (`a291635`) |
 | Unstaged paths | 76 |
-| Worktrees | 1 — repo root @ `a291635` [main] |
+| Worktrees | 1; repo root @ `a291635` [main] |
 
 ### Trellis engine
 | Item | Value |
@@ -70,7 +70,7 @@ until main-head vs disk is proven.
 
 ---
 
-## Step 1 — Archive all lane dirs (2026-08-04T02:26:xxZ)
+## Step 1; Archive all lane dirs (2026-08-04T02:26:xxZ)
 
 ### What ran
 ```
@@ -83,7 +83,7 @@ with node `fs.renameSync` (same approach as earlier orphan-worktree cleanup).
 | Item | Before | After |
 |------|--------|-------|
 | `.trellis/lanes/` (live) | 313 | 0 |
-| `.trellis/lanes-archive-20260804/` | — | 313 |
+| `.trellis/lanes-archive-20260804/` |; | 313 |
 | Space | 22M (combined) | preserved under archive |
 
 ### Verification
@@ -107,7 +107,7 @@ with node `fs.renameSync` (same approach as earlier orphan-worktree cleanup).
 
 ---
 
-## Step 2 — Clear engine active-lane / branch pointer (2026-08-04T02:28:52Z)
+## Step 2; Clear engine active-lane / branch pointer (2026-08-04T02:28:52Z)
 
 ### Before
 ```json
@@ -119,7 +119,7 @@ with node `fs.renameSync` (same approach as earlier orphan-worktree cleanup).
 {"currentBranch":"main"}
 ```
 
-`activeLaneId` removed entirely — no stale pointer into the archived lanes.
+`activeLaneId` removed entirely; no stale pointer into the archived lanes.
 
 ### What ran
 Node `fs.writeFileSync` to `.trellis/state.json` (lane guard blocks shell edits to `.trellis/`).
@@ -137,14 +137,14 @@ Node `fs.writeFileSync` to `.trellis/state.json` (lane guard blocks shell edits 
 
 ---
 
-## Step 3 — Commit path choice: Path A (2026-08-04T02:3xZ)
+## Step 3; Commit path choice: Path A (2026-08-04T02:3xZ)
 
-**Decision:** Path A — direct `git commit`. No `git sync`, no op-log journaling,
+**Decision:** Path A; direct `git commit`. No `git sync`, no op-log journaling,
 no materialize-from-op-log. Keeps the recovery commit out of the op-log entirely
 (safe from 9801056-class re-revert). Un-journaled commit is accepted as temporary
 debt (catch-up follows as separate step later).
 
-## Step 4 — Commit recovery (2026-08-04T02:3xZ)
+## Step 4; Commit recovery (2026-08-04T02:3xZ)
 
 **Commit hash:** `0dbfad4`
 **Message:** `recover: restore tree to b941575 after 5155578 pollution; re-apply ADR 0037 + journal catch-up CLI`
@@ -157,19 +157,19 @@ debt (catch-up follows as separate step later).
 
 **Lane guard:** Returned `ask` on `git commit`. User committed manually in terminal.
 
-## Step 5 — Push (2026-08-04T02:3xZ)
+## Step 5; Push (2026-08-04T02:3xZ)
 
-`git push origin main` — `0dbfad4` pushed. `origin/main` now at `0dbfad4`.
+`git push origin main`; `0dbfad4` pushed. `origin/main` now at `0dbfad4`.
 
 **History on main:**
 ```
 0dbfad4 recover: restore tree to b941575…
 a291635  docs(adr): ADR 0037…
-5155578  feat(journal): … (polluted — 77 files reverted)
+5155578  feat(journal): … (polluted; 77 files reverted)
 b941575  Phase A/B/C safety floor (good baseline)
 ```
 
-Polluted `5155578` remains in history — deliberate (audit trail of the bug).
+Polluted `5155578` remains in history; deliberate (audit trail of the bug).
 
 ### Post-push verification
 | Check | Result |

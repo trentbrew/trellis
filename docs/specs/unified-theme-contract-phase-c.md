@@ -1,12 +1,12 @@
-# Spec: Unified theme contract — Phase C
+# Spec: Unified theme contract; Phase C
 
 **Status:** Ready for impl  
 **Date:** 2026-07-21  
 **Proposal:** TRL-164  
-**Design:** TRL-165 —
+**Design:** TRL-165 : 
 [`unified-theme-contract-phase-c_design.md`](../artifacts/unified-theme-contract-phase-c_design.md) ·
 [`unified-theme-contract-phase-c_mockup.html`](../artifacts/unified-theme-contract-phase-c_mockup.html)  
-**Prior:** Phase B —
+**Prior:** Phase B : 
 [`unified-theme-contract-phase-b.md`](./unified-theme-contract-phase-b.md) (shipped)
 
 ---
@@ -23,7 +23,7 @@ those hooks on L3 operator chrome only:
    **snaps** at detents **2 / 5 / 8**.
 4. Dual-shell crossfade remains **prep / out of scope** (TRL-25).
 
-Inset (`--surface-1/2/3`) stays containment depth — **not** shell names.
+Inset (`--surface-1/2/3`) stays containment depth; **not** shell names.
 Deck present/edit stays `data-deck-mode`. Context-pack CLI vantage
 (`boot|edit|review`) is orthogonal.
 
@@ -35,8 +35,8 @@ Deck present/edit stays `data-deck-mode`. Context-pack CLI vantage
 | -------- | ----------- |
 | Theme CSS | Live `--ui-vantage: 8` in `src/ui/theme/runtime-theme.css`; demo alias comment |
 | Shell CSS | Attr selectors for `[data-trellis-shell="node|row|card"]` (disclosure rules) |
-| Visualizer | `src/ui/client.html` — scrubber + one morph host |
-| Kanban specimen | `src/ui/tml-lanes.html` — static `.issue-card` with `data-trellis-shell="card"` |
+| Visualizer | `src/ui/client.html`; scrubber + one morph host |
+| Kanban specimen | `src/ui/tml-lanes.html`; static `.issue-card` with `data-trellis-shell="card"` |
 | Unit tests | Flip Phase C test; add live `--ui-vantage` + shell selector assertions |
 | E2E | Extend `e2e/tml-lanes.spec.cjs` and/or add client vantage smoke |
 | Docs | Pointer from Phase B spec; optional BRAND note |
@@ -67,7 +67,7 @@ Inside `:root` (not comment-only):
 --ui-vantage: 8; /* default card detent; range 0–21; L3 UI uses 2|5|8 */
 ```
 
-Replace / shrink the old “Phase C hooks — not consumed” comment block. Keep a
+Replace / shrink the old “Phase C hooks; not consumed” comment block. Keep a
 short note that dual-shell crossfade and full 21-level territories are TRL-25.
 
 ### 4.2 Shell disclosure (must)
@@ -86,13 +86,13 @@ defined in page CSS **or** minimal shared rules in the theme file if reused by
 client + tml-lanes. Glass chrome rules must **not** depend on `--ui-vantage`.
 
 Optional: `clamp()` / opacity on meta cribbed from
-`demo/realtime-app/.../Thing.svelte` — **no** dual-shell layers.
+`demo/realtime-app/.../Thing.svelte`; **no** dual-shell layers.
 
 ### 4.3 Reduced motion
 
 ```css
 @media (prefers-reduced-motion: reduce) {
-  /* morph host: transition: none — instant shell snap */
+  /* morph host: transition: none; instant shell snap */
 }
 ```
 
@@ -103,7 +103,7 @@ Optional: `clamp()` / opacity on meta cribbed from
 1. Focal container (e.g. `#main` or a stage wrapper): `data-ui-vantage="8"`;
    sync `document.documentElement.style.setProperty('--ui-vantage', …)` (or
    rely on `:root` default + update both on change).
-2. **One** morphing entity with `data-trellis-shell` that snaps — not three
+2. **One** morphing entity with `data-trellis-shell` that snaps; not three
    concurrent shells.
 3. **Vantage scrubber** (drawer or stage chrome):
    - `role="radiogroup"` `aria-label="UI vantage"`
@@ -136,7 +136,7 @@ trivial; do not build a second scrubber there.
 
 ## 7. Tests
 
-### 7.1 Unit — `test/ui/runtime-theme.test.ts`
+### 7.1 Unit; `test/ui/runtime-theme.test.ts`
 
 **Flip** the Phase B test that asserts `--ui-vantage` is comment-only:
 

@@ -1,4 +1,4 @@
-# TML v0 — Trellis Markup Language
+# TML v0; Trellis Markup Language
 
 **Status:** Accepted (v0 grid) · Active (v0.1 Kanban) · **Date:** 2026-07-16
 **Issues:** TRL-147 / TRL-148 / TRL-149 · **Informed by:** ADR 0025 (DSL-first),
@@ -17,10 +17,10 @@
 
 ## 1. Why TML, and why now
 
-ADR 0025 names TML as the _companion markup language_ to TQL — declarative
+ADR 0025 names TML as the _companion markup language_ to TQL; declarative
 attributes (`tml-query`, `tml-projection`, `tml-swap`) that bind a TQL query to
 a DOM element and project results into it. `trellis-ui-dsl.md` §11.1 sharpens
-this into **four primitives** — `query`, `op`, `live`, `ref` — and warns against
+this into **four primitives**; `query`, `op`, `live`, `ref`; and warns against
 the "string form" (raw TQL in an attribute string, invisible to tooling, no
 type-check). TML v0 takes that philosophy: **attributes bind scoped field
 expressions, not inline code.**
@@ -40,14 +40,14 @@ dashboard is untouched.
    web and Tauri. The difference is the `TmlDriver` each platform provides. The
    spec is transport-agnostic.
 2. **Attributes, not strings-of-JS.** Bindings reference scoped fields
-   (`lane.id`), never inline JS. Per `trellis-ui-dsl.md` §11.1 — "reject the
+   (`lane.id`), never inline JS. Per `trellis-ui-dsl.md` §11.1; "reject the
    string form"; expressions are typed field paths, not raw code.
 3. **Snapshots feed a reactive store; live updates mutate the store.**
    `tml-live` re-renders from the store, not by re-running queries against the
    server.
 4. **No app framework.** The test page is static HTML. The dashboard
    **esbuild-bundles** `/tml-runtime.js` on the fly so the runtime can import
-   kernel pieces (`EAVStore`, `decompose`, `QueryEngine`) for `PeerDriver` —
+   kernel pieces (`EAVStore`, `decompose`, `QueryEngine`) for `PeerDriver` : 
    still no React/Svelte/Vite app.
 
 ---
@@ -63,14 +63,14 @@ dashboard is untouched.
 | `tml-op`     | Mutation on `click` → `TmlDriver.op`                | `tml-op="promote(lane.id)"`               |
 | `tml-live`   | Re-render this subtree when the store changes       | `tml-live`                                |
 | `tml-ref`    | Named identity scope for the element's query        | `tml-ref="active-lanes"`                  |
-| `tml-if`     | Conditional render (`isTmlTruthy` — see §3.2)       | `tml-if="lane.isActive"`                  |
+| `tml-if`     | Conditional render (`isTmlTruthy`; see §3.2)       | `tml-if="lane.isActive"`                  |
 
 ### 3.1 Scoping rules
 
 - A `tml-each` element introduces a **loop variable** (`lane` in
   `lane of lanes`). Child `tml-text` / `tml-attr-*` / `tml-op` / `tml-if`
   resolve against that variable.
-- `tml-query` results are addressable in `tml-each` by a **collection name** —
+- `tml-query` results are addressable in `tml-each` by a **collection name** : 
   the query's logical target. For v0, the query `find ?e where type = 'Lane'`
   exposes its rows under the collection name `lanes` (the type, lowercased).
   This is the minimal convention; a future `as <name>` clause can rename it.
@@ -175,7 +175,7 @@ runtime is driver-agnostic.
 1. **Seed.** Page load → `GET /api/lanes` → snapshot → `Store` is populated.
 2. **Query.** `tml-query` is evaluated by a **minimal client-side evaluator**
    (type filter + equality/comparison + parenthesized OR groups + **negated OR
-   groups** `not (… or …)` on snapshot fields). Not a full TQL engine — covers
+   groups** `not (… or …)` on snapshot fields). Not a full TQL engine; covers
    grid + Kanban column filters (Backlog = `not (in_progress|paused|closed)` so
    unknown statuses collapse there).
 3. **Project.** `tml-each` clones the element template once per result row;
@@ -188,7 +188,7 @@ runtime is driver-agnostic.
 
 ---
 
-## 6. Test bed — sterile route
+## 6. Test bed; sterile route
 
 ### 6.1 Route
 
@@ -260,7 +260,7 @@ with pure markup. All four primitives are exercised: `query`, `live`, `op`,
 | 2 | TML runtime: attribute parser + reactive `Store` + minimal query evaluator + `WebDriver` + render lifecycle | `src/ui/tml-runtime.ts`           |
 | 3 | Unit tests: parse, evaluate (type/eq/comparison/OR), live subscription, op dispatch                         | `test/ui/tml-runtime.test.ts`     |
 | 4 | Add `/tml-lanes` route + `POST /api/tml-mutations`                                                          | `src/ui/lanes-dashboard.ts`       |
-| 5 | Sterile test page — grid (v0) + Kanban (v0.1) in TML                                                        | `src/ui/tml-lanes.html`           |
+| 5 | Sterile test page; grid (v0) + Kanban (v0.1) in TML                                                        | `src/ui/tml-lanes.html`           |
 | 6 | Update `trellis-ui-dsl.md` §11.1 → `tml-*` vocabulary (optional polish)                                     | `docs/planning/trellis-ui-dsl.md` |
 
 ### 7.1 `tml-runtime.ts` shape (sketch)
@@ -284,18 +284,18 @@ export function mount(root: HTMLElement, driver: TmlDriver): void;
 
 ## 8. Out of scope
 
-- **TauriDriver** — deferred to TRL-9 (desktop shell prototype).
-- **Full TQL client engine on WebDriver** — evaluator stays minimal (type +
+- **TauriDriver**; deferred to TRL-9 (desktop shell prototype).
+- **Full TQL client engine on WebDriver**; evaluator stays minimal (type +
   eq/comparison + OR groups + `not` OR groups). Prefer `PeerDriver` for real
   TQL.
-- **`/api/query` server-side TQL endpoint** — future work once the projection
+- **`/api/query` server-side TQL endpoint**; future work once the projection
   model is proven.
-- **Table / stats / op-log / search in TML** — stay in production `lanes.html`.
-- **Production Kanban migration** — `/` still uses hand-written `renderKanban`
+- **Table / stats / op-log / search in TML**; stay in production `lanes.html`.
+- **Production Kanban migration**; `/` still uses hand-written `renderKanban`
   until a follow-up.
-- **SemType / Block Protocol integration** — separate workstreams.
+- **SemType / Block Protocol integration**; separate workstreams.
 
-**In scope for v0.1:** issue Kanban on `/tml-lanes` — see
+**In scope for v0.1:** issue Kanban on `/tml-lanes`; see
 [`tml-v0.1-kanban.md`](./tml-v0.1-kanban.md).
 
 ---
@@ -312,12 +312,12 @@ export function mount(root: HTMLElement, driver: TmlDriver): void;
 
 ## 10. Relationship to prior art
 
-- **ADR 0025** — TML is the "companion markup language." This spec names the
+- **ADR 0025**; TML is the "companion markup language." This spec names the
   concrete `tml-*` attributes (`tml-query` realized via `tml-query` +
   `tml-each`).
-- **`trellis-ui-dsl.md` §11.1** — takes the four primitives (`query`, `op`,
+- **`trellis-ui-dsl.md` §11.1**; takes the four primitives (`query`, `op`,
   `live`, `ref`) and resolves the open question: bind them to **scoped field
   expressions** (typed, tooling-visible) rather than raw TQL strings.
-- **§3 Option A / Option C** — explicitly rejected the novel-language and
+- **§3 Option A / Option C**; explicitly rejected the novel-language and
   string-attribute forms; TML v0 is the attribute DSL with typed bindings,
   aligned with the embedded-DSL recommendation.

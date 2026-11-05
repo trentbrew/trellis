@@ -1,4 +1,4 @@
-# ADR 0047: Datalog as the logic layer — correct recursion, rules as graph data, provenance, one IR for every query surface
+# ADR 0047: Datalog as the logic layer; correct recursion, rules as graph data, provenance, one IR for every query surface
 
 **Status:** Proposed (2026-09-26). Decision 1 is implemented (TRL-457).
 **Issues:** TRL-458 (epic), TRL-457 (decision 1)
@@ -7,7 +7,7 @@
 
 ## Context
 
-EQL-S is already a Datalog: named rules (`head :- body`), recursion (built-in transitive closure, reverse reachability, siblings), negation (`not`), disjunction (`or`), and aggregates (`count`, `sum`, `avg`, `min`, `max`, `collect`). The question that prompted this ADR — "do we need a Prolog on top of Trellis' Datalog?" — turned out to have a more urgent answer first.
+EQL-S is already a Datalog: named rules (`head :- body`), recursion (built-in transitive closure, reverse reachability, siblings), negation (`not`), disjunction (`or`), and aggregates (`count`, `sum`, `avg`, `min`, `max`, `collect`). The question that prompted this ADR; "do we need a Prolog on top of Trellis' Datalog?"; turned out to have a more urgent answer first.
 
 ### Recursive rules were silently wrong
 
@@ -117,7 +117,7 @@ Goal-directed search ("what would have to change for `laptopUsable` to hold?") i
 3. Provenance: keep the first derivation only, or all derivations (bounded) for "every reason this holds"?
 4. Do aggregates inside recursive rules need support (e.g. shortest path), or stay non-recursive?
 
-## Addendum — 2026-09-26: decision 2 implemented
+## Addendum; 2026-09-26: decision 2 implemented
 
 - **Type:** `core:Rule` (label `Rule`) with `source` (required EQL-S rule text), `description`, `enabled`. Several `Rule` entities may define clauses of one rule name; they union with code-registered rules of that name.
 - **Engine:** `execute()` loads enabled `Rule` entities from the store (`src/core/query/rules.ts`). A stored rule that fails to parse doesn't break unrelated queries; a query that uses it fails with the entity and parse error. This means `kernel.query()`, which previously had no rules at all (only `DatalogRuntime` instances did), now sees every stored rule.

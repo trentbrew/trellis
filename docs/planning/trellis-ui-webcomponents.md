@@ -1,8 +1,8 @@
-# @trellis.computer/ui — Web Component Library
+# @trellis.computer/ui; Web Component Library
 
 **Status:** planned (scaffold pending)
 **Date:** 2026-07-24
-**Updated:** 2026-07-24 (scoping session — package name, CLI, icons/fonts, theme contract)
+**Updated:** 2026-07-24 (scoping session; package name, CLI, icons/fonts, theme contract)
 **Depends on:** `trellis/browser` (existing), `trellis` >= 3.4.0
 **Supersedes:** `trellis-ui-dsl.md` (DSL approach, now archived)
 **See also:** TRL-311 (this issue), TRL-313 (CLI), TRL-314 (theme), TRL-315 (icons), TRL-316 (fonts), TRL-317 (arch decisions)
@@ -14,14 +14,14 @@
 `@trellis.computer/ui` is a **separate npm package** under the
 `@trellis.computer` scope that provides Web Components built on Lit. It
 consumes `trellis/browser` primitives (Signal, live queries, schema, realtime)
-and renders them as custom elements usable in **any framework** — Svelte, Vue,
+and renders them as custom elements usable in **any framework**; Svelte, Vue,
 React, Solid, or vanilla HTML.
 
 This is the **projection layer**, not the authoring DSL. The kernel stays
 focused on the data layer; `@trellis.computer/ui` is a consumer of the SDK, not
 part of it.
 
-**Distribution:** Shadcn pattern — `trellis add` copies source into projects.
+**Distribution:** Shadcn pattern; `trellis add` copies source into projects.
 Products own their code. No runtime dependency on the npm package.
 
 ---
@@ -36,7 +36,7 @@ Products own their code. No runtime dependency on the npm package.
 **Why:**
 
 - The kernel is the data layer (schema, op-log, sync, queries)
-- Web Components are a projection layer — they render data, they don't own it
+- Web Components are a projection layer; they render data, they don't own it
 - Separate package enables independent versioning
 - Community can fork/extend without touching the kernel
 - Follows the same pattern as any framework adapter, but universal
@@ -48,9 +48,9 @@ Products own their code. No runtime dependency on the npm package.
 
 **Why** `@trellis.computer/`* **and not** `trellis-ui` **or** `@trellis-ui`**:**
 
-- `trellis` npm name was transferred from original owner — kernel stays there
+- `trellis` npm name was transferred from original owner; kernel stays there
 - `@trellis-ui` scope was registered by a third party 2 days before this session
-- `@trellis.computer` is owned by turtle.tech — no抢注 risk
+- `@trellis.computer` is owned by turtle.tech; no抢注 risk
 - Unified namespace for all ecosystem packages (ui, icons, fonts, adapters)
 - Kernel stays standalone `trellis`; ecosystem lives under `@trellis.computer/*`
 
@@ -66,11 +66,11 @@ the CLI copies source into projects; products own their code.
 
 **Why shadcn, not npm dependency:**
 
-- Products own their code — no runtime dependency on the package
+- Products own their code; no runtime dependency on the package
 - Framework adapters can be copied per-framework (Svelte, Vue, React, Solid)
 - Community can contribute via PRs to the registry
 - No "which version am I on?" problem
-- 5 products in 4 frameworks — duplication is acceptable, each project is
+- 5 products in 4 frameworks; duplication is acceptable, each project is
 independent
 
 **The command (see TRL-313):**
@@ -92,7 +92,7 @@ determines the category.
 1. Resolves the package from the registry
 2. Copies source files into the project (not `node_modules`)
 3. Updates project-specific configuration if needed
-4. The product now owns the code — free to modify
+4. The product now owns the code; free to modify
 
 ---
 
@@ -111,11 +111,11 @@ The `@trellis.computer` npm scope hosts the registry packages:
 | `@trellis.computer/types/*` | Ontology types (SemType) | `trellis add person` |
 
 
-**UI components** — Copy source into project. Product owns the code.
-**Ontology types** — Add reference to graph schema. Type lives at URL.
-**Icons** — Semantic icon registry (TRL-315). Components reference by name, not path.
-**Fonts** — Semantic font registry (TRL-316). Components reference by role, not family.
-**Theme** — CSS custom properties (TRL-314). All tokens use oklch, data-theme switching.
+**UI components**; Copy source into project. Product owns the code.
+**Ontology types**; Add reference to graph schema. Type lives at URL.
+**Icons**; Semantic icon registry (TRL-315). Components reference by name, not path.
+**Fonts**; Semantic font registry (TRL-316). Components reference by role, not family.
+**Theme**; CSS custom properties (TRL-314). All tokens use oklch, data-theme switching.
 
 This mirrors how SemType works: types are identified by versioned URLs, not
 copied into projects. Your graph references types, it doesn't own them.
@@ -178,9 +178,9 @@ the registry, not shared runtime dependencies.
 **Framework adapters** can be copied per-framework. The registry may contain
 framework-specific variants:
 
-- `@trellis.computer/ui/button` — vanilla Web Component
-- `@trellis.computer/ui/button.svelte` — Svelte wrapper
-- `@trellis.computer/ui/button.vue` — Vue wrapper
+- `@trellis.computer/ui/button`; vanilla Web Component
+- `@trellis.computer/ui/button.svelte`; Svelte wrapper
+- `@trellis.computer/ui/button.vue`; Vue wrapper
 
 Or the products adapt the vanilla components themselves.
 
@@ -213,7 +213,7 @@ a half-finished rename."*
 
 
 
-### `<trellis-provider>` — Context provider
+### `<trellis-provider>`; Context provider
 
 Sets up `TrellisDb` client context for child components. Child components
 discover the provider via `el.closest('trellis-provider')` traversal.
@@ -226,9 +226,9 @@ discover the provider via `el.closest('trellis-provider')` traversal.
 
 **Attributes:**
 
-- `url` (required) — Trellis server URL
-- `api-key` (optional) — Authentication key
-- `tenant-id` (optional) — Multi-tenant identifier
+- `url` (required); Trellis server URL
+- `api-key` (optional); Authentication key
+- `tenant-id` (optional); Multi-tenant identifier
 
 **Programmatic access:**
 
@@ -241,7 +241,7 @@ const client = getTrellisClient(document.querySelector('trellis-provider'));
 
 
 
-### `<trellis-entity>` — Universal entity renderer
+### `<trellis-entity>`; Universal entity renderer
 
 Renders a single entity with vantage-driven shell switching. Translates the
 existing `Thing.svelte` pattern to Web Components.
@@ -252,11 +252,11 @@ existing `Thing.svelte` pattern to Web Components.
 
 **Attributes:**
 
-- `id` (required) — Entity ID
-- `type` (required) — Entity type name
-- `vantage` (0-13, default 8) — Continuous focal depth
-- `lane` (default "main") — Lane identifier
-- `editable` (boolean) — Show edit affordance in card shell
+- `id` (required); Entity ID
+- `type` (required); Entity type name
+- `vantage` (0-13, default 8); Continuous focal depth
+- `lane` (default "main"); Lane identifier
+- `editable` (boolean); Show edit affordance in card shell
 
 **Shell mapping (from** `shells.ts`**):**
 
@@ -270,12 +270,12 @@ existing `Thing.svelte` pattern to Web Components.
 
 **CSS custom properties:**
 
-- `--vantage` — Set on host, drives `clamp()` transitions
-- `data-shell` — Attribute for shell-specific styling
+- `--vantage`; Set on host, drives `clamp()` transitions
+- `data-shell`; Attribute for shell-specific styling
 
 **Events:**
 
-- `trellis-entity-update` — Dispatched on mutation
+- `trellis-entity-update`; Dispatched on mutation
 
 **Uses:** `liveEntity()` from `trellis/browser`
 
@@ -283,7 +283,7 @@ existing `Thing.svelte` pattern to Web Components.
 
 
 
-### `<trellis-entity-list>` — Live entity list
+### `<trellis-entity-list>`; Live entity list
 
 Renders a live list of entities of a given type, with optional filtering.
 
@@ -293,9 +293,9 @@ Renders a live list of entities of a given type, with optional filtering.
 
 **Attributes:**
 
-- `type` (required) — Entity type name
-- `where` (JSON string, optional) — Where filter
-- `resolve` (JSON string, optional) — Relation expansion spec
+- `type` (required); Entity type name
+- `where` (JSON string, optional); Where filter
+- `resolve` (JSON string, optional); Relation expansion spec
 
 **Default rendering:** `<trellis-entity>` per item
 **Custom rendering:** Use `<template slot="item">` or CSS parts
@@ -306,7 +306,7 @@ Renders a live list of entities of a given type, with optional filtering.
 
 
 
-### `<trellis-query>` — Live TQL query
+### `<trellis-query>`; Live TQL query
 
 Renders results of a live TQL query string.
 
@@ -316,7 +316,7 @@ Renders results of a live TQL query string.
 
 **Attribute:**
 
-- `tql` (required) — TQL query string
+- `tql` (required); TQL query string
 
 **Rendering:** Slot-based for custom templates
 
@@ -326,7 +326,7 @@ Renders results of a live TQL query string.
 
 
 
-### `<trellis-live>` — Connection status badge
+### `<trellis-live>`; Connection status badge
 
 Shows online/offline/connecting status for the Trellis connection.
 
@@ -342,7 +342,7 @@ Shows online/offline/connecting status for the Trellis connection.
 
 
 
-### `<trellis-presence>` — Peer presence avatars
+### `<trellis-presence>`; Peer presence avatars
 
 Shows live peer presence for a realtime room.
 
@@ -352,8 +352,8 @@ Shows live peer presence for a realtime room.
 
 **Attributes:**
 
-- `room` (required) — Room identifier
-- `transport` (default "broadcast") — `broadcast` | `websocket` | `memory`
+- `room` (required); Room identifier
+- `transport` (default "broadcast"); `broadcast` | `websocket` | `memory`
 
 **Rendering:** Slot-based peer customization
 
@@ -388,11 +388,11 @@ bindList(signal, container, (item) => `<div>${item.name}</div>`);
 
 **Functions:**
 
-- `bindText(signal, element)` — Bind to `textContent`
-- `bindClass(signal, element, map)` — Bind to class list via value→className map
-- `bindAttr(signal, element, name)` — Bind to attribute
-- `bindVisible(signal, element)` — Bind to `display: none` toggle
-- `bindList(signal, container, renderItem)` — Bind array to child elements
+- `bindText(signal, element)`; Bind to `textContent`
+- `bindClass(signal, element, map)`; Bind to class list via value→className map
+- `bindAttr(signal, element, name)`; Bind to attribute
+- `bindVisible(signal, element)`; Bind to `display: none` toggle
+- `bindList(signal, container, renderItem)`; Bind array to child elements
 
 ---
 
@@ -465,7 +465,7 @@ import '@trellis.computer/ui';
 ```
 /Users/trentbrew/TURTLE/Projects/trellis/trellis-ui/
 ├── packages/
-│   ├── core/                 # @trellis.computer/ui — Web Components
+│   ├── core/                 # @trellis.computer/ui; Web Components
 │   │   ├── src/
 │   │   │   ├── index.ts
 │   │   │   ├── provider.ts
@@ -507,7 +507,7 @@ import '@trellis.computer/ui';
 
 - **Vite** in library mode (each package builds independently)
 - **TypeScript** for type generation
-- **Peer dependency:** `trellis` (not `trellis/browser` — lets consumer choose entry point)
+- **Peer dependency:** `trellis` (not `trellis/browser`; lets consumer choose entry point)
 - **Entry:** `dist/index.mjs` + `dist/index.d.ts` per package
 - **Monorepo:** `trellis-ui/packages/`* with shared root config
 
@@ -521,10 +521,10 @@ import '@trellis.computer/ui';
 
 ### Phase 1: Spec + Architecture (TRL-314, TRL-315, TRL-316, TRL-317)
 
-- [ ] TRL-314 — Theme contract spec (CSS custom properties)
-- [ ] TRL-315 — Icon ontology spec
-- [ ] TRL-316 — Font ontology spec
-- [ ] TRL-317 — Architecture decisions doc
+- [ ] TRL-314; Theme contract spec (CSS custom properties)
+- [ ] TRL-315; Icon ontology spec
+- [ ] TRL-316; Font ontology spec
+- [ ] TRL-317; Architecture decisions doc
 
 
 
@@ -555,8 +555,8 @@ import '@trellis.computer/ui';
 
 ### Phase 5: Icon & Font Registry (TRL-315, TRL-316)
 
-- [ ] `@trellis.computer/icons` — core packs, registry API
-- [ ] `@trellis.computer/fonts` — core packs, registry API
+- [ ] `@trellis.computer/icons`; core packs, registry API
+- [ ] `@trellis.computer/fonts`; core packs, registry API
 
 
 
@@ -580,20 +580,20 @@ import '@trellis.computer/ui';
 
 ## Relationship to Existing Work
 
-- `trellis/browser` — The data layer this builds on (stays in kernel)
-- `trellis-ui-dsl.md` — Superseded by TML-first direction; this is the projection layer, not the authoring DSL
-- `Thing.svelte` — The reference implementation for `<trellis-entity>` vantage/shell pattern
-- `shells.ts` — Pure function for vantage→shell resolution, reused directly
-- **ADR 0025** — Naming: TQL (brand) vs eql (codename)
-- **SemType** — Ontology types follow SemType spec (types identified by URLs, not copied)
-- **Shadcn** — Distribution model: source copied into projects, products own code
-- **TRL-311** — This issue: `@trellis.computer/ui` Web Component library
-- **TRL-313** — CLI command: `trellis add` with auto-detect
-- **TRL-314** — Theme contract: CSS custom properties
-- **TRL-315** — Icon ontology: semantic registry
-- **TRL-316** — Font ontology: semantic registry
-- **TRL-317** — Architecture decisions: kernel vs UI vs types
-- **ONTOLOGY.md** — Canonical ecosystem ontology now includes UI Library layer
+- `trellis/browser`; The data layer this builds on (stays in kernel)
+- `trellis-ui-dsl.md`; Superseded by TML-first direction; this is the projection layer, not the authoring DSL
+- `Thing.svelte`; The reference implementation for `<trellis-entity>` vantage/shell pattern
+- `shells.ts`; Pure function for vantage→shell resolution, reused directly
+- **ADR 0025**; Naming: TQL (brand) vs eql (codename)
+- **SemType**; Ontology types follow SemType spec (types identified by URLs, not copied)
+- **Shadcn**; Distribution model: source copied into projects, products own code
+- **TRL-311**; This issue: `@trellis.computer/ui` Web Component library
+- **TRL-313**; CLI command: `trellis add` with auto-detect
+- **TRL-314**; Theme contract: CSS custom properties
+- **TRL-315**; Icon ontology: semantic registry
+- **TRL-316**; Font ontology: semantic registry
+- **TRL-317**; Architecture decisions: kernel vs UI vs types
+- **ONTOLOGY.md**; Canonical ecosystem ontology now includes UI Library layer
 
 ---
 
@@ -601,12 +601,12 @@ import '@trellis.computer/ui';
 
 ## What This Is NOT
 
-- **Not a cross-framework DSL** — We conceded that projections are community-driven, not owned by the kernel
-- **Not part of the kernel** — Separate package, independent versioning
-- **Not a replacement for framework adapters** — React/Vue/Svelte adapters stay in the kernel; this is the universal alternative
-- **Not the authoring DSL** — TML-first direction (Thing → shell → primitive) is separate
-- **Not an npm dependency** — Shadcn pattern: source is copied, products own their code
-- **Not a shared runtime** — Each project is independent; duplication is acceptable
-- **Not a monorepo for all UI** — `@trellis.computer/ui` is the canonical internal lib; products pick their framework for custom projections
-- **Not** `@trellis-ui` — That scope was taken 2 days before this session; `@trellis.computer/`* is the owned alternative
+- **Not a cross-framework DSL**; We conceded that projections are community-driven, not owned by the kernel
+- **Not part of the kernel**; Separate package, independent versioning
+- **Not a replacement for framework adapters**; React/Vue/Svelte adapters stay in the kernel; this is the universal alternative
+- **Not the authoring DSL**; TML-first direction (Thing → shell → primitive) is separate
+- **Not an npm dependency**; Shadcn pattern: source is copied, products own their code
+- **Not a shared runtime**; Each project is independent; duplication is acceptable
+- **Not a monorepo for all UI**; `@trellis.computer/ui` is the canonical internal lib; products pick their framework for custom projections
+- **Not** `@trellis-ui`; That scope was taken 2 days before this session; `@trellis.computer/`* is the owned alternative
 

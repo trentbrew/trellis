@@ -1,4 +1,4 @@
-# TQL full-rename scope (reference — NOT approved work)
+# TQL full-rename scope (reference; NOT approved work)
 
 **Status:** Backlog / reference only
 **Date:** 2026-07-15
@@ -17,7 +17,7 @@ scheduled.
 ## What "full rename" means
 
 Rename the internal identifiers and module name `eql` → `tql` across source,
-tests, SDK exports, and every downstream consumer — so the code matches the brand.
+tests, SDK exports, and every downstream consumer; so the code matches the brand.
 
 ## Inventory of change sites
 
@@ -47,13 +47,13 @@ tests, SDK exports, and every downstream consumer — so the code matches the br
   one major version, plus a short migration note.
 
 ### 4. Core query engine (already brand-neutral in logic)
-- `src/core/query/{types,parser,engine,index}.ts` — identifiers like
+- `src/core/query/{types,parser,engine,index}.ts`; identifiers like
   `EqlLiteral`/internal names; the syntax strings are unchanged (language is
   TQL regardless).
 - `src/core/kernel/{trellis-kernel,logic-middleware}.ts`,
   `src/server/{server,realtime}.ts`, `src/mcp/{room,docs}.ts`,
   `src/client/{sdk,sdk.browser}.ts`, `src/browser/index.ts`,
-  `src/plugins/agent-memory/graph-context-manager.ts` — `eql` token sites.
+  `src/plugins/agent-memory/graph-context-manager.ts`; `eql` token sites.
 - Comments referencing "EQL bindings" (e.g. `src/schema/entity-projection.ts:2`)
   become "TQL bindings".
 
@@ -65,7 +65,7 @@ tests, SDK exports, and every downstream consumer — so the code matches the br
 ### 6. Docs already done (no change needed)
 - `docs/` and `trellis-docs/www` already say `TQL`. ADR 0025 Naming section's
   "deliberate split" note would be **retired/updated** once the split is gone.
-- The `trellis-graph` skill already says `TQL` — unaffected.
+- The `trellis-graph` skill already says `TQL`; unaffected.
 
 ## Sequencing (if ever approved)
 1. `git mv` the module + codemod identifiers (token-bounded) in `trellis-node`.
@@ -82,5 +82,5 @@ to contributors *despite* the ADR 0025 note.
 
 ## Out of scope (separate workstream)
 - **TML** (the markup language: `tml-query`/`tml-projection`/`tml-swap`) is
-  net-new and not part of this rename — see ADR 0025 Naming note. Tracked
+  net-new and not part of this rename; see ADR 0025 Naming note. Tracked
   separately as a design spike against `demo/realtime-app/src/lib/fractal/shells.ts`.

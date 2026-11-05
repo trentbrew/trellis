@@ -1,4 +1,4 @@
-# Op-log safety — local mirror + destructive guards
+# Op-log safety; local mirror + destructive guards
 
 **Status:** Partial impl (2026-07-21)  
 **Issue:** TRL-222 (remote peer) + incident follow-up  
@@ -37,7 +37,7 @@ recoverable from hook logs; the **op chain was not**.
 **Scope (v1):** integration journal only (`<repo>/.trellis/ops.json`). Lane
 journals are high-volume; mirror those after remote peer exists.
 
-**Not the same as** `~/.trellis/ops.json` at home root — that is a separate
+**Not the same as** `~/.trellis/ops.json` at home root; that is a separate
 (historical) VCS root and must not be conflated with the mirror directory.
 
 ### Env toggles
@@ -58,9 +58,9 @@ Any command that **shrinks, replaces, or empties** durable graph state must:
 
 ### Implemented
 
-- `trellis repair` — confirm + mirror restore + `.corrupted.<ts>`
-- `trellis branch -d` / `--delete` — confirm before `vcs:branchDelete`
-- `trellis lane drop` — confirm before lane archive + `vcs:laneDrop`
+- `trellis repair`; confirm + mirror restore + `.corrupted.<ts>`
+- `trellis branch -d` / `--delete`; confirm before `vcs:branchDelete`
+- `trellis lane drop`; confirm before lane archive + `vcs:laneDrop`
 
 ### Next (same pattern)
 
@@ -83,15 +83,15 @@ target is a Trellis VCS root or trellis package checkout.
 
 ## Recovery playbook
 
-1. **Stop writers** — close agents, lane watch, IDE hooks running repair
-2. **Check mirror** — `~/.trellis/oplog-mirror/<repoKey>/journal.jsonl`
-3. **Compare line counts** — mirror vs repo `.trellis/ops.json`
-4. **Restore** — `trellis repair --confirm-destructive` (auto-prefers mirror when longer)
-5. **Remote** — `trellis remote pull` when TRL-222 lands
+1. **Stop writers**; close agents, lane watch, IDE hooks running repair
+2. **Check mirror**; `~/.trellis/oplog-mirror/<repoKey>/journal.jsonl`
+3. **Compare line counts**; mirror vs repo `.trellis/ops.json`
+4. **Restore**; `trellis repair --confirm-destructive` (auto-prefers mirror when longer)
+5. **Remote**; `trellis remote pull` when TRL-222 lands
 6. **Never** run repair on a journal that parses as valid JSONL without human triage
 
 ## Product note
 
-Local mirror is **one machine, one user** — protects against bad CLI and
+Local mirror is **one machine, one user**; protects against bad CLI and
 single-file overwrite, not disk loss or ransomware. Remote peer remains the
 cross-machine witness (GitHub-analog seed in TRL-222).

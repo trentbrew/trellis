@@ -1,8 +1,8 @@
 ---
 version: alpha
-name: trellis mograph explainer — slice 1
+name: trellis mograph explainer; slice 1
 description: >-
-  Design for TRL-429 — Two Trellis education demos in the Anime.js mograph engine:
+  Design for TRL-429; Two Trellis education demos in the Anime.js mograph engine:
   Matthew genealogy BFS (reuse TreeVisualizer) and EAV fact assert (new FactTriplePanel).
   1920×1080 scrubbable canvas, MP4-export ready.
 source:
@@ -78,9 +78,9 @@ components:
     size: 48px
 ---
 
-# Design: Trellis mograph explainer — slice 1
+# Design: Trellis mograph explainer; slice 1
 
-**Status:** Design verified — ready for Architect  
+**Status:** Design verified; ready for Architect  
 **Parent:** TRL-429  
 **Mock:** [trellis-mograph-slice1_mockup.html](./trellis-mograph-slice1_mockup.html)  
 **Impl repo:** `DevTools/ANIMEJS/clients/react`
@@ -91,14 +91,14 @@ components:
 
 Add a **Trellis** nav group to the existing Anime.js React mograph dashboard. Slice 1 ships two scrubbable explainer scenes on the established 1920×1080 virtual canvas:
 
-1. **Genealogy Traversal** — Matthew begats as BFS over a link graph (reuse `TreeVisualizer` + `CodeTracer`)
-2. **EAV Facts** — Composer task seed flattened to `(entity, attribute, value)` triples (new `FactTriplePanel` + `CodeTracer`)
+1. **Genealogy Traversal**; Matthew begats as BFS over a link graph (reuse `TreeVisualizer` + `CodeTracer`)
+2. **EAV Facts**; Composer task seed flattened to `(entity, attribute, value)` triples (new `FactTriplePanel` + `CodeTracer`)
 
-Emotional tone: same craft as E-Ink — dark inset surfaces, purposeful motion, pedagogical clarity. Not admin shell; not a marketing page. Export-safe for MP4 pipeline.
+Emotional tone: same craft as E-Ink; dark inset surfaces, purposeful motion, pedagogical clarity. Not admin shell; not a marketing page. Export-safe for MP4 pipeline.
 
 ## Colors
 
-Inherit `mograph/tokens.js` — do not introduce a second palette.
+Inherit `mograph/tokens.js`; do not introduce a second palette.
 
 | Role | Token | Use |
 | ---- | ----- | --- |
@@ -112,7 +112,7 @@ Inherit `mograph/tokens.js` — do not introduce a second palette.
 | Active row | `{colors.highlight}` at 15% bg + 1px border | Playbook `highlight` step |
 | Visited node | `{colors.visited}` | BFS `visit` event on tree |
 
-Admin causal-graph tokens (`#101010`) intentionally **not** ported — mograph canvas stays on `#0a0a0a` SSOT.
+Admin causal-graph tokens (`#101010`) intentionally **not** ported; mograph canvas stays on `#0a0a0a` SSOT.
 
 ## Typography
 
@@ -149,32 +149,32 @@ Insert new group **between Engines and AI Generate**:
 
 Tab keys: `trellis-genealogy`, `trellis-eav`.
 
-### Scene A — Genealogy Traversal
+### Scene A; Genealogy Traversal
 
 Two-panel layout (match `BFSExample.jsx` coords):
 
 | Panel | Position | Scale | Component |
 | ----- | -------- | ----- | --------- |
-| Code | `top:280, left:120` | 1.3 | `CodeTracer` — BFS pseudocode |
-| Graph | `top:280, left:780` | 1.2 | `TreeVisualizer` 520×340 — Matthew begats |
+| Code | `top:280, left:120` | 1.3 | `CodeTracer`; BFS pseudocode |
+| Graph | `top:280, left:780` | 1.2 | `TreeVisualizer` 520×340; Matthew begats |
 
 **Header copy:**
-- Title: `Matthew Genealogy — BFS Traversal`
+- Title: `Matthew Genealogy; BFS Traversal`
 - Subtitle: `1920×1080 · Link graph from trellis-node bible-claims seed`
 
 **Tree labels:** Person first names only (Abraham, Isaac, …). `nodeRadius={24}` (48px diameter). Labels truncate to 6 chars + ellipsis with full name in `title` tooltip. Long names (e.g. "Rehoboam") → "Rehobo…".
 
-### Scene B — EAV Facts
+### Scene B; EAV Facts
 
 Two-panel layout (BFS Y baseline):
 
 | Panel | Position | Scale | Component |
 | ----- | -------- | ----- | --------- |
-| Code | `top:280, left:120` | 1.3 | `CodeTracer` — `kernel.mutate('addFacts', …)` |
-| Facts | `top:280, left:780` | 1.2 | `FactTriplePanel` — 6 rows for `task-1` |
+| Code | `top:280, left:120` | 1.3 | `CodeTracer`; `kernel.mutate('addFacts', …)` |
+| Facts | `top:280, left:780` | 1.2 | `FactTriplePanel`; 6 rows for `task-1` |
 
 **Header copy:**
-- Title: `EAV Facts — Entity Assert`
+- Title: `EAV Facts; Entity Assert`
 - Subtitle: `1920×1080 · Composer task seed → (entity, attribute, value) triples`
 
 ### FactTriplePanel anatomy
@@ -203,14 +203,14 @@ Two-panel layout (BFS Y baseline):
 | Value cell | flex 1, `{colors.value}` text, truncate with title tooltip |
 | Row border | 1px `{colors.border}`, radius `{rounded.sm}` |
 | Active row | bg `highlight` @ 15% opacity, border `{colors.highlight}` |
-| Column headers | Entity · Attribute · Value — mono 10px uppercase, `{colors.text-muted}` |
+| Column headers | Entity · Attribute · Value; mono 10px uppercase, `{colors.text-muted}` |
 
 Max visible rows: 8 (slice 1 seed = 6). Panel width ~640px.
 
 ## Elevation & Depth
 
 - CodeTracer: `{colors.surface}` block, 1px `{colors.border}`, `{rounded.md}`, inset feel
-- FactTriplePanel: no outer card — rows float on canvas `{colors.canvas}`
+- FactTriplePanel: no outer card; rows float on canvas `{colors.canvas}`
 - Tree nodes: `{colors.surface-alt}` fill, 1px `{colors.border-alt}`; visit glow `{colors.visited}`
 
 ## Shapes
@@ -226,9 +226,9 @@ Max visible rows: 8 (slice 1 seed = 6). Panel width ~640px.
 | `GenealogyExample` | Canvas + Director + Scene + 2 positioned divs | idle, scrubbing, playing | New example; clones `BFSExample` structure |
 | `EAVExample` | Same shell | idle, scrubbing, playing | New example |
 | `FactTriplePanel` | Column headers + N triple rows | entering (opacity 0), active (highlight), settled (opacity 1) | **New** `src/mograph/components/FactTriplePanel.jsx` |
-| `CodeTracer` | Syntax lines + highlight bar | line highlight per playbook | Existing — no changes |
-| `TreeVisualizer` | Nodes + edges | visit, edge-highlight | Existing — no changes |
-| `ScrubberUI` | Play + range + time | playing, paused, dragging | Existing — no changes |
+| `CodeTracer` | Syntax lines + highlight bar | line highlight per playbook | Existing; no changes |
+| `TreeVisualizer` | Nodes + edges | visit, edge-highlight | Existing; no changes |
+| `ScrubberUI` | Play + range + time | playing, paused, dragging | Existing; no changes |
 
 ## Interaction matrix
 
@@ -241,7 +241,7 @@ Max visible rows: 8 (slice 1 seed = 6). Panel width ~640px.
 | Drag scrubber | ScrubberUI | any | `playbackAPI.seek(ms)`; code line + viz sync |
 | Scrub to assert step | EAV scene | scrubbing forward | Matching fact row → `active`; prior rows → `settled` (opacity 1) |
 | Scrub backward past assert | EAV scene | scrubbing reverse | Rows after seek point → `entering` (opacity 0); at-or-before → `settled` |
-| Scrub t=0 | EAV scene | start | All rows `entering` (opacity 0) — none visible until first assert event |
+| Scrub t=0 | EAV scene | start | All rows `entering` (opacity 0); none visible until first assert event |
 | Scrub to BFS visit | Genealogy scene | scrubbing | Tree node scales + visited color; edge highlight on traversal |
 | Timeline end | either scene | complete | All elements in final settled state |
 | Switch Trellis tab while playing | App nav | playing → tab change | Pause timeline, seek 0, unmount scene (existing `key={activeTab}` pattern) |
@@ -253,16 +253,16 @@ Max visible rows: 8 (slice 1 seed = 6). Panel width ~640px.
 | Event | Animation | Duration | Easing |
 | ----- | --------- | -------- | ------ |
 | Row entrance | `opacity [0→1]`, `translateY [-20→0]` | 500ms | `easeOutElastic(1, 0.6)` |
-| Stagger between rows | 120ms (compact-row variant; ArrayVisualizer uses 150ms for 48px cells) | — | — |
+| Stagger between rows | 120ms (compact-row variant; ArrayVisualizer uses 150ms for 48px cells) |; |; |
 | Active row highlight | bg `{colors.highlight}` @ 15%, `scale [1→1.02→1]` | 200ms | `easeInOutQuad` |
-| Settled row | opacity 1, no glow | — | — |
-| Entering (not yet asserted) | opacity 0 | — | — |
+| Settled row | opacity 1, no glow |; |; |
+| Entering (not yet asserted) | opacity 0 |; |; |
 
-Reuse patterns from `ArrayVisualizer` entrance + highlight — timings tightened for 56px rows.
+Reuse patterns from `ArrayVisualizer` entrance + highlight; timings tightened for 56px rows.
 
 ### Genealogy (existing BFS playbook)
 
-No new motion — reuse `generateBFSPlaybook` events: `visit`, `edge-highlight`, `line`, `pointer`.
+No new motion; reuse `generateBFSPlaybook` events: `visit`, `edge-highlight`, `line`, `pointer`.
 
 ### Reduced motion
 
@@ -275,7 +275,7 @@ When `prefers-reduced-motion: reduce`:
 
 - **Focus order:** Sidebar nav → Play/Pause → scrubber range → canvas panels are non-interactive (no click targets on viz)
 - **Labels:** Scrubber Play/Pause button text toggles; range input has implicit slider role
-- **Live regions:** None v1 — pedagogical content is visual; Architect may add `aria-label` on scene wrapper with scene name
+- **Live regions:** None v1; pedagogical content is visual; Architect may add `aria-label` on scene wrapper with scene name
 - **Color:** Entity/attribute/value distinguished by position + label header row, not color alone
 - **Motion:** Document `prefers-reduced-motion` overrides in component (see Motion section)
 
@@ -308,6 +308,6 @@ When `prefers-reduced-motion: reduce`:
 
 - [x] `docs/artifacts/trellis-mograph-slice1_design.md` (this file)
 - [x] `docs/artifacts/trellis-mograph-slice1_mockup.html`
-- [ ] Design child issue TRL-D (CLI blocked — Architect may fork from TRL-429)
+- [ ] Design child issue TRL-D (CLI blocked; Architect may fork from TRL-429)
 - [x] Interaction matrix complete
 - [x] A11y + reduced-motion documented

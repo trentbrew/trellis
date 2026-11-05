@@ -1,8 +1,8 @@
-# Spec: Lane promote — coordination metadata non-blocking (v0)
+# Spec: Lane promote; coordination metadata non-blocking (v0)
 
 **Status:** Shipped · **Date:** 2026-07-24\
 **Proposal:** TRL-286 · **Impl:** TRL-287, TRL-289 · **Unblocks:** TRL-284, TRL-279 close\
-**Follow-up:** [lane-promote-coordination-hard-conflict-v0.1.md](./lane-promote-coordination-hard-conflict-v0.1.md) (TRL-296/298) — hard axis for all `ISSUE_COORDINATION_ATTRS`
+**Follow-up:** [lane-promote-coordination-hard-conflict-v0.1.md](./lane-promote-coordination-hard-conflict-v0.1.md) (TRL-296/298); hard axis for all `ISSUE_COORDINATION_ATTRS`
 
 > Issue lifecycle ops (`issueStart`, `issueClaim`, …) write to **integration**
 > even inside a lane (`ISSUE_INTEGRATION_KINDS`). Lane journals often hold
@@ -21,16 +21,16 @@
 | hard | `description` | Strategist `describe` on integration vs lane `issueUpdate` describe |
 | soft | `description` | Integration describe diverged while lane edited other attrs (TRL-289) |
 
-Ops to replay: 1 safe op — but **blockingConflicts > 0** → auto-promote fails.
+Ops to replay: 1 safe op; but **blockingConflicts > 0** → auto-promote fails.
 
 Existing skip (lines 407–416) only handles facts where `head === lane value`. It does not handle integration-wins metadata or soft conflicts on attrs the lane op never intended to change.
 
 ## 2. Goals
 
-1. **Coordination attribute allowlist** — do not emit **blocking** soft conflicts for integration-owned issue metadata attrs the lane op did not write.
-2. **Integration-wins stale describe** — when a lane `issueUpdate` only sets `description` and integration head already changed `description` since fork, **skip replay** without hard conflict.
-3. **Integration-owned describe on soft axis** — `description` is coordination/orientation metadata; parallel lane title (or code) edits promote cleanly while integration describe is retained (TRL-289).
-4. **Close path** — after fix, `trellis issue close TRL-284 --confirm` succeeds.
+1. **Coordination attribute allowlist**; do not emit **blocking** soft conflicts for integration-owned issue metadata attrs the lane op did not write.
+2. **Integration-wins stale describe**; when a lane `issueUpdate` only sets `description` and integration head already changed `description` since fork, **skip replay** without hard conflict.
+3. **Integration-owned describe on soft axis**; `description` is coordination/orientation metadata; parallel lane title (or code) edits promote cleanly while integration describe is retained (TRL-289).
+4. **Close path**; after fix, `trellis issue close TRL-284 --confirm` succeeds.
 
 ## 3. Non-goals
 
@@ -45,7 +45,7 @@ Existing skip (lines 407–416) only handles facts where `head === lane value`. 
 Exported constant in `src/vcs/lane-promote.ts`:
 
 ```ts
-/** Integration-owned issue metadata — never block promote on cross-lane noise. */
+/** Integration-owned issue metadata; never block promote on cross-lane noise. */
 export const ISSUE_COORDINATION_ATTRS = new Set([
   'claimedLaneId',
   'claimedAt',
@@ -66,7 +66,7 @@ Rationale: claim metadata and strategist/protocol `describe` on integration are 
 In the `addFacts` hard-conflict loop, before pushing `hard`:
 
 - If `fact.a === 'description'`, entity is `issue:*`, and `headValue !== fact.v` with `headValue !== baseValue`:
-  - Treat as **integration-wins** — do not push hard conflict; let outer loop skip replay (same as redundant-fact skip).
+  - Treat as **integration-wins**; do not push hard conflict; let outer loop skip replay (same as redundant-fact skip).
 
 ### 4.3 Promote boundary unchanged
 

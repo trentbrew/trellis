@@ -38,9 +38,9 @@ Returns the ledgers hosted by this sprite. Used for discovery before cloning.
 ]
 ```
 
-### `GET /v0/ledger/tail?repoId=…` — unchanged (existing).
-### `GET /v0/ledger/checkpoints/<tailHash>` — unchanged (existing).
-### `POST /v0/ledger/push` — unchanged (existing).
+### `GET /v0/ledger/tail?repoId=…`; unchanged (existing).
+### `GET /v0/ledger/checkpoints/<tailHash>`; unchanged (existing).
+### `POST /v0/ledger/push`; unchanged (existing).
 
 ## 3. Clone flow
 
@@ -48,7 +48,7 @@ Returns the ledgers hosted by this sprite. Used for discovery before cloning.
    entry (errors if multiple and no `--repo`).
 2. `GET <url>/v0/ledger/tail?repoId=` → journal meta.
 3. `GET <url>/v0/ledger/checkpoints/<tailHash>` → ops JSONL.
-4. Create `<dir>/.trellis/config.json` — full persisted shape (rootPath,
+4. Create `<dir>/.trellis/config.json`; full persisted shape (rootPath,
    ignorePatterns, debounceMs, defaultBranch, indexWorkspace, repoId,
    agentId, createdAt) plus `remote.default = { url, repoId, lastAckHash,
    lastAckAt }`. This mirrors what `writePersistedConfig` produces in the
@@ -77,7 +77,7 @@ trellis clone <url> [dir]
   --repo <repoId>    Required when sprite hosts multiple ledgers.
   --api-key <key>    Bearer token; stored in .trellis/remote.json.
   --git <git-url>    Byte tier: git clone into dest before ops install.
-  --ops-only         Skip materialization — chain + config only.
+  --ops-only         Skip materialization; chain + config only.
 
 trellis project list <url>
   --api-key <key>    Bearer token for the discovery endpoint.

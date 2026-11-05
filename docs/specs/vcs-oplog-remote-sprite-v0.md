@@ -5,7 +5,7 @@
 **Planning seed:** `docs/planning/vcs-oplog-sprite-backup.md`
 
 > **Two peers, or it isn’t truth.** Local mirror (`~/.trellis/oplog-mirror/`) is
-> same-machine L0.5 — not a witness. This spec adds **peer #2**: default remote
+> same-machine L0.5; not a witness. This spec adds **peer #2**: default remote
 > sprite holding append-only JSONL + immutable checkpoints.
 
 ---
@@ -35,11 +35,11 @@ the same tail hash.
 
 - Cloud owning primary write path
 - Remote running Trellis engine / `repair` on bytes
-- **Blob / file-content sync** — sprite holds op log only; byte restore depends
+- **Blob / file-content sync**; sprite holds op log only; byte restore depends
   on local `.trellis/blobs/` + git checkout. See
   [`git-backed-blob-tier-v0.md`](git-backed-blob-tier-v0.md) for the local byte
   resolver and post-`install` materialize path.
-- Lane journal sync (integration only — same scope as `oplog-mirror.ts`)
+- Lane journal sync (integration only; same scope as `oplog-mirror.ts`)
 - Iroh mesh / multi-remote (L1)
 - Public ledger index / social layer (L2+)
 - Replacing `~/.trellis/oplog-mirror/` (keep both: mirror = local L0.5, sprite = L2)
@@ -50,11 +50,11 @@ the same tail hash.
 | ------- | -------------- |
 | Config | `.trellis/config.json` → `remote.default` `{ url, repoId, lastAckHash?, lastAckAt? }` |
 | Secrets | `.trellis/remote.json` (gitignored) → `{ apiKey }` or env `TRELLIS_REMOTE_KEY` |
-| Client | `src/vcs/oplog-remote.ts` — push/pull protocol, tail meta, install |
-| CLI | `src/cli/remote-cli.ts` — register on `program` from `index.ts` |
+| Client | `src/vcs/oplog-remote.ts`; push/pull protocol, tail meta, install |
+| CLI | `src/cli/remote-cli.ts`; register on `program` from `index.ts` |
 | HTTP | Sprite `POST /v0/ledger/push`, `GET /v0/ledger/tail`, `GET /v0/ledger/checkpoints/:hash` |
 | Tests | `test/vcs/oplog-remote.test.ts` (mock HTTP); extend `op-log-repair.test.ts` for remote gate |
-| **Server handler** | `docs/specs/sprite-ledger-handler-v0.md` — production Fly Sprite HTTP (TRL-222 L2) |
+| **Server handler** | `docs/specs/sprite-ledger-handler-v0.md`; production Fly Sprite HTTP (TRL-222 L2) |
 
 ### CLI (v0)
 
@@ -75,7 +75,7 @@ trellis remote install [--from <path>] [--force]  # replace ops.json with stamp
 4. On `409` (tail mismatch): print diverged tails; exit 1 unless `--force` (v0: no force merge).
 5. On success: update `config.remote.default.lastAckHash` + `lastAckAt`.
 
-Remote stores bytes only — **never** parses ops into engine.
+Remote stores bytes only; **never** parses ops into engine.
 
 ### Pull + install
 
@@ -84,7 +84,7 @@ Remote stores bytes only — **never** parses ops into engine.
 3. Refuse install if local tail is **newer** (hash compare) unless `--force`.
 
 **Byte dependency (v0):** `install` restores semantics only. For git repos,
-ensure a checkout exists (`git clone` / `git pull`) then `trellis open` —
+ensure a checkout exists (`git clone` / `git pull`) then `trellis open` : 
 materialize resolves file bytes from git + local blobs per
 [`git-backed-blob-tier-v0.md`](git-backed-blob-tier-v0.md). Non-git trees still
 require local `.trellis/blobs/` or future blob remote (L1+).
@@ -99,13 +99,13 @@ Before `JsonOpLog.repair` rewrite path:
 
 ## 5. Acceptance criteria
 
-### Static (spec issue — run now)
+### Static (spec issue; run now)
 
 - `pnpm check` passes
 - Spec file exists at `docs/specs/vcs-oplog-remote-sprite-v0.md`
 - `pnpm exec vitest run test/vcs/oplog-mirror.test.ts` passes (local mirror foundation)
 
-### Behavioral (impl issue — automated in `test/vcs/oplog-remote.test.ts`)
+### Behavioral (impl issue; automated in `test/vcs/oplog-remote.test.ts`)
 
 | # | Criterion | Test command |
 | - | --------- | ------------ |

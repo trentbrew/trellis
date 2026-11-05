@@ -17,14 +17,14 @@
 
 The cross-agent ownership guard (TRL-117 AC4) rejects a file write when a
 **different `agentId`** owns the path. That works when agents have distinct
-identities — but on the host **every session shares one per-machine identity**:
+identities; but on the host **every session shares one per-machine identity**:
 all 77 lanes in `trellis-node` carry `agentId: "agent:trentbrew"`. The agentId
 comparison therefore never distinguishes concurrent sessions, and the guard is
-**inert on the host** — the exact situation it exists for (two tabs editing the
+**inert on the host**; the exact situation it exists for (two tabs editing the
 same checkout). The distinguishing key is the **lane** (unique per session); the
 lane meta already carries `sessionId`.
 
-The policy text itself says a file "is owned by that **lane**" — so lane-scoping
+The policy text itself says a file "is owned by that **lane**"; so lane-scoping
 aligns the implementation with the stated intent.
 
 ## Decision
@@ -49,7 +49,7 @@ CLI (`trellis guard`) and host hooks are thin callers. No reimplementation.
 
 `buildActiveLaneFileOwners` loads **every** lane's op-log, so a per-edit guard is
 O(all lanes). Enforcement must cache the owner map (short TTL, invalidated on
-lane writes) or scope the scan — a guard that costs seconds per edit will be
+lane writes) or scope the scan; a guard that costs seconds per edit will be
 disabled, which is worse than no guard.
 
 ## Alternatives considered
@@ -57,14 +57,14 @@ disabled, which is worse than no guard.
 | Option | Why not |
 | ------ | ------- |
 | Per-session agentId (`agent:trentbrew:<session>`) | agentId is an identity, not a session; churns every lane and confuses provenance |
-| agentId-only (status quo) | inert on the host — cannot distinguish concurrent sessions |
+| agentId-only (status quo) | inert on the host; cannot distinguish concurrent sessions |
 | No guard | the blind-spot that lets one agent clobber another's checkout |
 
 ## Consequences
 
-**Good** — the guard actually enforces on the host; host and OS share one rule.
+**Good**; the guard actually enforces on the host; host and OS share one rule.
 
-**Costs** — lane-scoping is host-centric (cross-machine identity still uses
+**Costs**; lane-scoping is host-centric (cross-machine identity still uses
 agentId); the owner-map scan needs caching.
 
 ## Implementation phases

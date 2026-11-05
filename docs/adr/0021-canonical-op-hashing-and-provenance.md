@@ -28,10 +28,10 @@ idea-garden, agent-memory, proactive-watcher). Only `client/sdk.ts` takes the
 `core/store/eav-store.ts`.
 
 Tests: `test/core/canonical-op.test.ts` (hashing + provenance round-trip),
-`test/core/provenance-coverage.test.ts` (fitness test enforcing AC #5 — a new
+`test/core/provenance-coverage.test.ts` (fitness test enforcing AC #5; a new
 mint site without a declared provenance fails the build).
 
-> **Scope note (see §5).** The CLI does not mint kernel ops for graph writes —
+> **Scope note (see §5).** The CLI does not mint kernel ops for graph writes : 
 > it mints `VcsOp`s. Provenance therefore rides `VcsPayload` for that path,
 > hash-covered with no migration. `vcs:store*` ops are covered; other `VcsOp`
 > kinds (branch/file/milestone) are not yet.
@@ -44,7 +44,7 @@ mint site without a declared provenance fails the build).
 
 Two pressures arrive at the same line of code.
 
-**Pressure 1 — we want SemType provenance in the op-log.** SemType (working
+**Pressure 1; we want SemType provenance in the op-log.** SemType (working
 draft, Apache-2.0/MIT, consumed by HASH and hgres) mandates that every entity
 edition carry `createdById`, `origin`, and `actorType ∈ {user, machine, ai}`, and
 permits per-value `confidence ∈ [0,1]` plus `sources[]`. That is the formalized
@@ -52,7 +52,7 @@ trace format the agent-coordination (stigmergy) thesis needs: *which agent
 asserted this, how sure was it, what did it read*. It is a schema decision, and
 schema decisions are expensive to retrofit into an append-only log.
 
-**Pressure 2 — op hashing is currently not verifiable, and nobody has noticed.**
+**Pressure 2; op hashing is currently not verifiable, and nobody has noticed.**
 Investigating where provenance would live surfaced a latent correctness bug.
 
 ### The bug
@@ -72,8 +72,8 @@ shape. All three backends do this independently (`sqlite-backend.ts:161`,
 
 ```ts
 const payload = JSON.stringify({
-  facts: op.facts,          // always present — kernel coerced absent → []
-  links: op.links,          // always present — kernel coerced absent → []
+  facts: op.facts,          // always present; kernel coerced absent → []
+  links: op.links,          // always present; kernel coerced absent → []
   ...(op.deleteFacts?.length ? { deleteFacts: op.deleteFacts } : {}),
   ...(op.deleteLinks?.length ? { deleteLinks: op.deleteLinks } : {}),
   ...((op as any).vcs ? { vcs: (op as any).vcs } : {}),
@@ -81,12 +81,12 @@ const payload = JSON.stringify({
 });
 ```
 
-These disagree in three independent ways — two live, one latent:
+These disagree in three independent ways; two live, one latent:
 
 
 | #   | Divergence                                                                                                                                                                                   | Status                                                                                                                                                                                  | Effect                                                       |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| 1   | `meta` is **hashed but never stored**. The kernel splats `payload.meta` onto the op as loose top-level props (`extOp[k] = v`, line 223–229); `append()` recovers only `vcs` and `signature`. | **Latent** — no caller passes `meta` (all 8 `mutate()` sites pass only facts/links/deleteFacts/deleteLinks), and nothing sets `vcs`/`signature` on a `KernelOp`. See "dead code" below. | Would be irrecoverable if exercised.                         |
+| 1   | `meta` is **hashed but never stored**. The kernel splats `payload.meta` onto the op as loose top-level props (`extOp[k] = v`, line 223–229); `append()` recovers only `vcs` and `signature`. | **Latent**; no caller passes `meta` (all 8 `mutate()` sites pass only facts/links/deleteFacts/deleteLinks), and nothing sets `vcs`/`signature` on a `KernelOp`. See "dead code" below. | Would be irrecoverable if exercised.                         |
 | 2   | `facts`/`links` are coerced to `[]` when absent (line 213–214) but the preimage hashed the caller's object, where they may be **absent entirely**.                                           | **Live, universal**                                                                                                                                                                     | `{"facts":[…]}` hashed vs `{"facts":[…],"links":[]}` stored. |
 | 3   | Key order is the caller's at mint, fixed at persist.                                                                                                                                         | **Live**                                                                                                                                                                                | Different byte string, different digest.                     |
 
@@ -104,8 +104,8 @@ recomputed from persisted payload : trellis:op:8f28c95a…c336ce90   ✗
 recomputed from true preimage     : trellis:op:4eb294ec…6b4368   ✓
 ```
 
-**Consequence: an op's** `hash` **cannot be recomputed from the persisted op — for
-every op in every existing log.** Content addressing is nominal, not actual —
+**Consequence: an op's** `hash` **cannot be recomputed from the persisted op; for
+every op in every existing log.** Content addressing is nominal, not actual : 
 `hash` is currently a unique-ish *identifier*, not a verifiable *content address*.
 
 ### Dead code: `vcs` / `signature` on kernel ops
@@ -115,7 +115,7 @@ and they **disagree with each other** about it (`better-sqlite` drops both on
 write; `better-sqlite` and `sqljs` drop both on read; only `sqlite` restores
 them). None of this matters today: **no** `KernelOp` **ever carries these fields.**
 
-`VcsOp` and `KernelOp` are separate systems with separate logs — `VcsOp` goes to
+`VcsOp` and `KernelOp` are separate systems with separate logs; `VcsOp` goes to
 the `OpLog` interface (`vcs/op-log.ts:41`, `JsonOpLog`/`IdbOpLog`) via
 `engine.opLog.append()`; `KernelOp` goes to `KernelBackend`. The apparent bridge,
 `VcsMiddleware`, was never constructed anywhere in `src/` or `test/`, and has
@@ -126,21 +126,21 @@ deletes them rather than preserving them (see Decision §1).
 
 > `VcsMiddleware`**, deleted.** It decomposed a `VcsOp` and passed the resulting
 > synthetic ops to `next()`, expecting them to be applied. That contract never
-> existed: `handleOp` is documented as *"Can throw to block the operation"* —
-> an observe-or-throw chain — and `next()` only advances the chain. `mutate()`
+> existed: `handleOp` is documented as *"Can throw to block the operation"* : 
+> an observe-or-throw chain; and `next()` only advances the chain. `mutate()`
 > ignoring middleware output is the design, not an oversight, and the terminal
 > `next` returning early is correct chain termination. The file was also
 > redundant: `engine.ts:2520` already calls `decompose()` and applies the result
 > to the store directly, which is the path that actually runs.
 >
 > An earlier revision of this ADR called this a "middleware sink bug" that
-> "blocks VCS-on-kernel". Both claims were wrong — inferred from the broken file
+> "blocks VCS-on-kernel". Both claims were wrong; inferred from the broken file
 > rather than from the contract it violated. Nothing is blocked; `DESIGN.md`'s
 > `kernel.mutate → VcsMiddleware → decompose` sequence documented a flow that was
 > never built and has been corrected to match the engine's real path.
 
-This has gone undetected because `hashOp` **is called from exactly one place —
-mint — and nothing ever re-verifies a kernel op hash.** There is no
+This has gone undetected because `hashOp` **is called from exactly one place : 
+mint; and nothing ever re-verifies a kernel op hash.** There is no
 `verifyOpHash` for kernel ops. (`src/vcs/ops.ts` has `verifyVcsOpHash` for VCS
 ops, and notably it hashes **correctly**, via a canonical `JSON.stringify` of a
 fixed field set. The codebase already contains the right pattern; the kernel path
@@ -167,7 +167,7 @@ where hash *is* identity.
 ### Why these two pressures are one decision
 
 Provenance is only meaningful if it is **covered by the content hash** and
-**survives persistence**. The natural home for it today — `payload.meta` — is
+**survives persistence**. The natural home for it today; `payload.meta`; is
 precisely the field that is hashed and then dropped. Adding `actorType` there
 would produce provenance that is silently lost on write and unverifiable on read:
 the exact opposite of the goal. Provenance that can be altered without
@@ -186,7 +186,7 @@ cleanup. And since changing the preimage is the breaking, expensive part:
 
 > **Phasing note.** Phase A reserves the `provenance` slot in the canonical shape
 > and normalizes it to `null` when absent; Phase B populates it. Both phases run
-> the *same* normalization, so Phase B changes values, not shape — Phase-A ops
+> the *same* normalization, so Phase B changes values, not shape; Phase-A ops
 > keep verifying and provenance lands without a second preimage break. This is
 > what makes "one break" real rather than aspirational, given that A and B ship
 > separately.
@@ -201,16 +201,16 @@ Replace the positional `|`-joined preimage with a canonical JSON preimage over a
 
 ```ts
 interface OpPreimage {
-  v: 2;                       // preimage version — see §3
+  v: 2;                       // preimage version; see §3
   kind: KernelOpKind;
   timestamp: string;
   agentId: string;
   previousHash: string | null;
-  facts: Fact[];              // always present, [] when empty — normalized
-  links: Link[];              // always present, [] when empty — normalized
+  facts: Fact[];              // always present, [] when empty; normalized
+  links: Link[];              // always present, [] when empty; normalized
   deleteFacts: Fact[];
   deleteLinks: Link[];
-  provenance: OpProvenance;   // §2 — inside the hash, by construction
+  provenance: OpProvenance;   // §2; inside the hash, by construction
 }
 ```
 
@@ -242,7 +242,7 @@ from a peer. An unverifiable op is rejected at the sync boundary, not stored.
 
 Two levels, split by *what can be derived*.
 
-**Op level —** `KernelOp.provenance` (new, required, in the preimage):
+**Op level : ** `KernelOp.provenance` (new, required, in the preimage):
 
 ```ts
 interface OpProvenance {
@@ -251,12 +251,12 @@ interface OpProvenance {
 }
 ```
 
-`createdById` is **not** added — `KernelOp.agentId` already is it. `transactionTime`
-is **not** added — `KernelOp.timestamp` already is it. Both are already in the
+`createdById` is **not** added; `KernelOp.agentId` already is it. `transactionTime`
+is **not** added; `KernelOp.timestamp` already is it. Both are already in the
 preimage. This is the payoff of reading the code first: two of SemType's four
 mandatory edition fields are already present and hashed.
 
-**Value level —** `Fact.meta?` (new, optional):
+**Value level : ** `Fact.meta?` (new, optional):
 
 ```ts
 interface Fact {
@@ -272,25 +272,25 @@ interface Fact {
 ```
 
 Only carries what **cannot be derived from the op**. `actorType`/`origin`/
-`createdById` are *not* denormalized onto facts — a fact belongs to exactly one
+`createdById` are *not* denormalized onto facts; a fact belongs to exactly one
 op, so its actor provenance is the op's. `confidence` and `sources` genuinely
 vary per-fact *within* one op (an agent may assert three facts at different
 confidences from different sources in a single mutation), so they must live here.
 
-`Fact.meta` rides inside `facts[]`, which is inside the preimage — so value-level
+`Fact.meta` rides inside `facts[]`, which is inside the preimage; so value-level
 provenance is **tamper-evident for free**, with no additional preimage work.
 
 **Resolution order.** `payload.provenance ?? ctx.provenance ?? kernel default`.
 Provenance is per-*call*, not per-kernel: one `TenantPool` kernel is reached from
 both the HTTP server and the MCP room, so `origin` cannot be a property of the
 kernel instance. The kernel-level default exists for single-surface kernels (the
-CLI pattern) and defaults to `{ actorType: 'machine', origin: 'sdk' }` — the
+CLI pattern) and defaults to `{ actorType: 'machine', origin: 'sdk' }`; the
 honest description of "something called the kernel API and did not say who it
 was".
 
 **On** `actorType` **honesty.** `origin` is knowable; `actorType` is an assertion
 (see Deferred). The claims are kept defensible rather than flattering: HTTP only
-claims `user` when an authenticated session exists — signup/OAuth stay `machine`,
+claims `user` when an authenticated session exists; signup/OAuth stay `machine`,
 being unauthenticated by definition; `PROVENANCE.agent` is `ai` over
 `origin: 'sdk'` for in-process agents; the proactive watcher stays `machine`
 because it matched a rule, it did not reason.
@@ -301,12 +301,12 @@ type-widening, not a migration of call sites.
 ### 3. Migration
 
 The preimage change means **existing op hashes will not reverify under v2**.
-Since nothing verifies them today, nothing breaks *today* — but a peer running v2
+Since nothing verifies them today, nothing breaks *today*; but a peer running v2
 must not reject a v1 log.
 
 - Ops carry an explicit preimage version `v`. Absent ⇒ v1 (legacy).
 - **v1 ops are grandfathered: never reverified, treated as opaque history.**
-We cannot retroactively make them verifiable — their preimages are
+We cannot retroactively make them verifiable; their preimages are
 unrecoverable, which is the bug.
 - **v2 ops MUST verify.** All newly minted ops are v2.
 - `verifyOpHash` returns `true` for v1 (with a `legacy: true` signal for callers
@@ -322,21 +322,21 @@ unverifiable prefix of every log.
 `transactionTime` free. `decisionTime` is a genuinely good idea and a genuinely
 expensive one; add when a consumer needs it.
 - **Unit conversions**, the exhaustive `format` list, the full closure
-intersection algebra — see planning doc §7 "subset hard."
+intersection algebra; see planning doc §7 "subset hard."
 - **Signing provenance.** `actorType: 'ai'` is currently an *assertion by the
 minting process*, not a proof. Binding it to a device key is ADR 0020's
 territory; noted as a gap, not solved here.
 
 
 
-### 5. The CLI is not on the kernel path — provenance rides `VcsOp` instead
+### 5. The CLI is not on the kernel path; provenance rides `VcsOp` instead
 
 Found while wiring Phase B. CLI graph writes (`entity create`, `fact add`,
 `link add`, …) go through `TrellisVcsEngine` and mint a `VcsOp` **into**
-`ops.json` — not a `KernelOp`. `withGraphStore` routes to the VCS engine
+`ops.json`; not a `KernelOp`. `withGraphStore` routes to the VCS engine
 whenever `.trellis/config.json` exists, and `resolveRepoRoot` refuses to run
 outside a repo, so **the kernel branch of** `withGraphStore` **is unreachable**. The
-only CLI commands that boot a kernel — `query`, `repl`, `validate` — are
+only CLI commands that boot a kernel; `query`, `repl`, `validate`; are
 read-only. Verified by running the real CLI: it reports
 `Journal: ops.json (vcs:storeAssert)` and writes no `kernel.db`.
 
@@ -344,13 +344,13 @@ So Phase B's kernel provenance could never have covered the CLI.
 
 **Rejected: rerouting CLI writes through** `kernel.mutate()`**.** An earlier revision
 of this ADR proposed exactly that. It is the wrong trade: a `VcsOp` carries
-`filePath`, `branchName`, `laneId`, `milestoneId` — none of which a `KernelOp`
-models — so rerouting means abandoning the journal, lanes, branches and
+`filePath`, `branchName`, `laneId`, `milestoneId`; none of which a `KernelOp`
+models; so rerouting means abandoning the journal, lanes, branches and
 milestones to gain attribution that a far smaller change provides.
 
 **Adopted:** `VcsPayload.provenance`**.** `hashVcsOp` hashes the `vcs` payload
 wholesale, so a field placed *inside* `vcs` is covered by the op hash with **no
-preimage change and no migration** — `JSON.stringify` omits the absent key, so
+preimage change and no migration**; `JSON.stringify` omits the absent key, so
 ops minted before the field existed hash exactly as they did before and keep
 verifying. This is the opposite of the kernel's Phase A situation, and the
 reason is instructive: `verifyVcsOpHash` is genuinely called
@@ -369,8 +369,8 @@ Verified end-to-end against a real CLI run: `vcs:storeAssert` carries
 code.
 
 ## **Remaining gap.** Only `vcs/store.ts` ops (graph writes) carry provenance.
-Other `VcsOp` kinds — `vcs:branchCreate`, `vcs:branchAdvance`, `vcs:fileAdd`,
-milestone and issue ops — do not yet. File ops in particular are worth covering
+Other `VcsOp` kinds; `vcs:branchCreate`, `vcs:branchAdvance`, `vcs:fileAdd`,
+milestone and issue ops; do not yet. File ops in particular are worth covering
 for the stigmergy thesis (*which agent changed which file*); the mechanism is
 now in place and the extension is mechanical.
 
@@ -380,7 +380,7 @@ now in place and the extension is mechanical.
 
 **Good**
 
-- Content addressing becomes real — `hash` verifiable, not just unique.
+- Content addressing becomes real; `hash` verifiable, not just unique.
 - Provenance is tamper-evident by construction, because it is inside the
 preimage rather than beside it.
 - Two of SemType's four mandatory edition fields (`createdById`,
@@ -393,11 +393,11 @@ SemType is lossy *outward*, never inward.
 
 **Costs / risks**
 
-- **Every log acquires a permanent unverifiable v1 prefix.** Unavoidable — the
+- **Every log acquires a permanent unverifiable v1 prefix.** Unavoidable; the
 preimages are already unrecoverable. Cost grows daily until this lands.
 - `hashOp`'s signature changes; `mutate()`'s `meta` escape hatch is removed. No
-caller relies on it today — all 8 `mutate()` sites pass only
-facts/links/deleteFacts/deleteLinks — so this costs nothing now and closes the
+caller relies on it today; all 8 `mutate()` sites pass only
+facts/links/deleteFacts/deleteLinks; so this costs nothing now and closes the
 hole before it is used.
 - The `vcs` / `signature` handling is removed from all three backends. This is
 dead-code deletion, not a behaviour change; `VcsOp` persists via its own
@@ -409,7 +409,7 @@ the SDK/HTTP/MCP boundaries.
 **If we don't**
 
 - The unverifiable prefix grows.
-- Provenance added later either sits outside the hash (forgeable — worthless for
+- Provenance added later either sits outside the hash (forgeable; worthless for
 attribution) or forces a *second* preimage break.
 
 ---
@@ -421,7 +421,7 @@ attribution) or forces a *second* preimage break.
 1. `hashOp` and `append()` call one shared canonicalization function; neither
   constructs payload JSON independently.
 2. `verifyOpHash(mint(op)) === true` for all op kinds, including empty
-  `facts`/`links` and ops with `Fact.meta` — a round-trip property test through
+  `facts`/`links` and ops with `Fact.meta`; a round-trip property test through
    real persistence, not an in-memory equality check.
 3. A v1 op read from an existing SQLite log does not throw and is reported
   `legacy`.

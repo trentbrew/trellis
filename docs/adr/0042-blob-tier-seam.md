@@ -1,4 +1,4 @@
-# ADR 0042 — Blob tier seam and the OPFS local rung
+# ADR 0042; Blob tier seam and the OPFS local rung
 
 **Status:** accepted (2026-08-31) **Related:**
 [0016](./0016-relay-blob-serving.md) (relay `/blob` HTTP surface),
@@ -7,15 +7,15 @@
 
 ## Context
 
-[ADR 0017](./0017-blob-gc-thermal-decay.md) defines blob storage as a ladder —
+[ADR 0017](./0017-blob-gc-thermal-decay.md) defines blob storage as a ladder : 
 hot (relay NVMe) / cold (object storage) / local (client OPFS) / peer
-(iroh-blobs) — where *"a `GET` miss walks up the ladder; decay pushes down."*
+(iroh-blobs); where *"a `GET` miss walks up the ladder; decay pushes down."*
 
 Two rungs were implemented, and neither could be walked:
 
-- **`BlobStore`** (`src/vcs/blob-store.ts`) — synchronous, `Buffer`-based, disk.
+- **`BlobStore`** (`src/vcs/blob-store.ts`); synchronous, `Buffer`-based, disk.
   Synchronous because VCS diff/merge are synchronous.
-- **`BlobClient`** (`src/realtime/blob-client.ts`) — async, `ArrayBuffer`-based,
+- **`BlobClient`** (`src/realtime/blob-client.ts`); async, `ArrayBuffer`-based,
   `fetch`. Browser-safe by construction ([0016](./0016-relay-blob-serving.md)).
 
 They share an addressing scheme and nothing else: no common type, no consumer
@@ -23,7 +23,7 @@ polymorphic over both, no composition. A ladder cannot be walked when the rungs
 have no shared shape.
 
 The **local rung did not exist at all.** `src/client/vcs-client.ts` throws
-`'OPFS persistence not yet implemented'` — and that is for the *op-log*, not
+`'OPFS persistence not yet implemented'`; and that is for the *op-log*, not
 blobs. A browser page with no relay therefore had nowhere to put bytes, which
 breaks local-first operation for media specifically.
 
@@ -50,7 +50,7 @@ interface BlobTier {
 ```
 
 Only a local filesystem can answer synchronously. A synchronous signature would
-permanently exclude OPFS, IndexedDB, and every network rung — so the seam is
+permanently exclude OPFS, IndexedDB, and every network rung; so the seam is
 async and the disk rung is adapted, not the reverse.
 
 ### 2. Existing implementations are adapted, never rewritten
@@ -83,14 +83,14 @@ miss, re-warm every warmer rung on the way back. Two deliberate behaviours:
 ### 5. OPFS persistence is a correctness concern, not a nicety
 
 ADR 0017 makes the local copy an **authoritative** tier under the non-negotiable
-never-sole-copy invariant. But OPFS is evictable by default — the browser may
+never-sole-copy invariant. But OPFS is evictable by default; the browser may
 reclaim it under storage pressure. An unpersisted local tier is therefore only a
 cache, and treating it as authoritative breaks the invariant precisely when it is
 the last holder.
 
 So `OpfsBlobTier` never assumes durability:
 
-- `persisted` starts `null` — unknown until asked.
+- `persisted` starts `null`; unknown until asked.
 - `requestPersistence()` calls `navigator.storage.persist()` and records the
   real answer.
 - A denial returns `false` rather than throwing. Callers promoting this tier to
@@ -112,7 +112,7 @@ page around it cannot.)
 
 - 0017's ladder is now expressible in code rather than only in prose.
 - Local-first holds for media: a browser page works with no relay reachable.
-- One contract suite defines correctness for every rung — a new backend (cold
+- One contract suite defines correctness for every rung; a new backend (cold
   R2, iroh peer) is correct when it passes unchanged.
 - Consumers write against one store and never branch on which tier holds what.
 
@@ -140,5 +140,5 @@ page around it cannot.)
 ## References
 
 - `src/blobs/tier.ts`, `ladder.ts`, `opfs.ts`, `relay.ts`, `node.ts`, `memory.ts`
-- `test/blobs/tier-contract.test.ts` — contract suite across all four rungs
-- `src/client/vcs-client.ts` — the op-log's still-unimplemented OPFS backend
+- `test/blobs/tier-contract.test.ts`; contract suite across all four rungs
+- `src/client/vcs-client.ts`; the op-log's still-unimplemented OPFS backend

@@ -1,7 +1,7 @@
 # Trellis ontology glossary
 
 Canonical vocabulary for kernel types, product surfaces, and demo-only names.
-Use these terms consistently in code, issues, and docs — especially where English
+Use these terms consistently in code, issues, and docs; especially where English
 words collide (`collection`, `framework`, `thing`).
 
 ## Core kernel (shipped, `tier: core`)
@@ -15,14 +15,14 @@ these; they do not replace them.
 | **Record** | `core:Record` | Data row with `title`, `description`, `status`. Base for most user schemas. |
 | **Document** | `core:Document` | Rich content (`content`, `mimeType`, `fileUrl`). |
 | **Event** | `core:Event` | Time-bound row (`startDate`, `endDate`, …). |
-| **Collection** | `core:Collection` | **Folder**: optional grouping of entities (including user collections) in the graph. Not a table — that's **User collection** below (ADR 0045). Its `schema`/`recordType` fields are deprecated for table use. |
+| **Collection** | `core:Collection` | **Folder**: optional grouping of entities (including user collections) in the graph. Not a table; that's **User collection** below (ADR 0045). Its `schema`/`recordType` fields are deprecated for table use. |
 | **Tag** | `core:Tag` | Classification entity (kernel sense). |
 
 **Hierarchy (simplified):** `Thing` → `Record` → (`Document` \| `Event` \| *user types*).
 
 ## Agent / Workflow / Pipeline (`tier: system`)
 
-Shipped with the kernel but versioned — not immutable like `core` tier types.
+Shipped with the kernel but versioned; not immutable like `core` tier types.
 Defined in the same `core-ontology.ts`.
 
 | Term | `@id` | Meaning |
@@ -32,7 +32,7 @@ Defined in the same `core-ontology.ts`.
 | **Workflow Edge** | `core:WorkflowEdge` | Routing rule with `condition`, `status` (HANDOFF/CLARIFY/REJECT/BLOCKED/DECISION), and `from`/`to` relations to WorkflowStep. |
 | **Workflow Gate** | `core:WorkflowGate` | Quality gate with `type` (test/manual/ac_check/semantic_diff), `onFail` (stop/retry/route_to), and relations to Step, retryStep, failRoute (Edge). |
 | **Agent** | `core:Agent` | Agent role definition. Fields: `name`, `description`, `role` (enum), `inbox` (TQL query), `model`, `status`, `capabilities` (multi_select), `workflow` (relation). **Gap:** lacks `provider`, `systemPrompt`, `tools` (relation), `temperature`, `maxTokens` present in `AgentDef` interface. |
-| **Tool** | `core:Tool` | Tool definition for agents. Fields: `name`, `description`, `schema` (JSON), `endpoint` (URL). Standalone — no relation to Agent yet. `AgentRun.usedTool` points here. |
+| **Tool** | `core:Tool` | Tool definition for agents. Fields: `name`, `description`, `schema` (JSON), `endpoint` (URL). Standalone; no relation to Agent yet. `AgentRun.usedTool` points here. |
 | **Handoff** | `core:Handoff` | Structured agent handoff. Fields: `name`, `status` (enum), `body`, `refs`, `timestamp`, `from`/`to` (relations to Agent), `re` (generic relation). |
 | **Pipeline** | `trellis:Pipeline` | Coordination definition composing workflows across agent roles. Has `phases` (relation to PipelinePhase) and `workflow` (relation to Workflow). |
 | **Pipeline Phase** | `trellis:PipelinePhase` | Ordered step in a pipeline. Fields: `name`, `description`, `order`, `agentRole` (string enum, not a relation), `workflow` (relation to Workflow). |
@@ -48,7 +48,7 @@ Defined in the same `core-ontology.ts`.
 
 | Term | `@id` | Meaning |
 |------|-------|---------|
-| **User collection** | `trellis:CollectionMeta` | A table's header (`title`, `slug`, icon, color, description). Id is `collectionMeta:<slug>` — explicit, case-sensitive. |
+| **User collection** | `trellis:CollectionMeta` | A table's header (`title`, `slug`, icon, color, description). Id is `collectionMeta:<slug>`; explicit, case-sensitive. |
 | **Collection field** | `trellis:CollectionField` | One column: `collection`, stable `key` (row attribute, never renamed), `label`, `valueType`, `options` (JSON `{ id, label, color? }[]`, field-local), `vocabulary` (root tag id, for `tags` fields), `order`. |
 | **Vocabulary** | `core:Tag` (root) | A shared, user-extensible set of terms: child tags (`parentTag`) of a root tag. `tags` fields store term ids and compile to a relation to `core:Tag`. |
 | **Collection record** | `trellis:CollectionRecord` | One row of any user collection, scoped by `collectionId`. Rows store field keys and option **ids**; labels are derived. |
@@ -66,7 +66,7 @@ What application authors define and instantiate.
 | **Join entity** | e.g. `MyCustomEntityTag` | Sidecar-visible assignment row when graph links are not used (demo tag toggles). |
 
 **Naming rule:** Prefer **Type** for the schema handle, **entity** for a stored instance.
-Avoid overloading **Record** in prose when you mean “user-defined type” — say **Type** or
+Avoid overloading **Record** in prose when you mean “user-defined type”; say **Type** or
 **user schema**.
 
 ## Product: CMS
@@ -92,17 +92,17 @@ Names that must not be mistaken for kernel primitives.
 
 | Term | What it is |
 |------|------------|
-| **CollectionMeta** / **CollectionRecord** | *(promoted)* — now kernel system types; see **User collections** (ADR 0045). The demos still define their own copies under `DEMO_NS` until they migrate (ADR 0045 phase 3). |
-| **MyCustomEntity** | *(removed)* — superseded by **CollectionRecord**. |
-| **MyCustomEntityTag** | *(removed)* — tag join demo retired with collections v1. |
+| **CollectionMeta** / **CollectionRecord** | *(promoted)*; now kernel system types; see **User collections** (ADR 0045). The demos still define their own copies under `DEMO_NS` until they migrate (ADR 0045 phase 3). |
+| **MyCustomEntity** | *(removed)*; superseded by **CollectionRecord**. |
+| **MyCustomEntityTag** | *(removed)*; tag join demo retired with collections v1. |
 | **Thing** (fractal UI) | Representation contract: same graph identity, many shells at different **vantages**. Not a graph `type` string. |
-| **Lane** | Version / draft axis (`main` vs `agent:…`), VCS journal overlay — not an ontology tier. |
+| **Lane** | Version / draft axis (`main` vs `agent:…`), VCS journal overlay; not an ontology tier. |
 
 ## Disambiguation cheatsheet
 
 | Word | If you mean… | Say instead |
 |------|----------------|-------------|
-| **framework** | JS UI library | **UI framework** (React, Vue, Svelte) — never a graph type |
+| **framework** | JS UI library | **UI framework** (React, Vue, Svelte); never a graph type |
 | **framework** | Old demo entity type | **MyCustomEntity** (removed) |
 | **collection** | Folder / grouping | **core:Collection** |
 | **collection** | Table a person made | **User collection** (`CollectionMeta`) |

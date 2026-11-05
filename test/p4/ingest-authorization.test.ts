@@ -92,10 +92,10 @@ describe('Phase 3 ingest boundary', () => {
 
     expect(res.rejected).toHaveLength(1);
     // ADR 0036: the resolver is always wired (peerKeyResolver never null), so
-    // the gate verifies the claimed signature cryptographically first and
-    // fails closed — a garbage 'sig' from an unknown identity is rejected as
-    // invalid, not merely as a non-owner envelope claim.
-    expect(res.rejected[0]!.message).toMatch(/no valid signature/);
+    // ingest verifies the claimed signature cryptographically first and fails
+    // closed — a garbage 'sig' from an unknown identity is rejected as an
+    // unknown signer before the authority gate runs.
+    expect(res.rejected[0]!.reason).toBe('unknown-signer');
   });
 
   test('non-auth ops are unaffected by the gate', async () => {
@@ -213,7 +213,6 @@ describe('Phase 3.2 — resolver wired from the local identity', () => {
     const res = await engine.integrateOps([op]);
 
     expect(res.rejected).toHaveLength(1);
-    expect(res.rejected[0]!.reason).toBe('unauthorized');
-    expect(res.rejected[0]!.message).toMatch(/no valid signature/);
+    expect(res.rejected[0]!.reason).toBe('invalid-signature');
   });
 });

@@ -1,4 +1,4 @@
-# CLI consumer audit — footgun scan (2026-07-21)
+# CLI consumer audit; footgun scan (2026-07-21)
 
 After the array-era global `trellis repair` wipe, scan repos that invoke the
 CLI directly (not via in-process `TrellisVcsEngine`).
@@ -16,29 +16,29 @@ CLI directly (not via in-process `TrellisVcsEngine`).
 ## turtlecode/ide (`packages/opencode`)
 
 **Primary path (safe):** `TrellisVcsEngine` imported from
-`node_modules/trellis` — currently `file:../../../../../TRELLIS/trellis-node`.
+`node_modules/trellis`; currently `file:../../../../../TRELLIS/trellis-node`.
 All issue/branch/lane mutations go through the bundled engine.
 
-**Footgun A — bare global CLI (read paths):** ~~fixed 2026-07-21~~ — `trellisCliArgs()`
+**Footgun A; bare global CLI (read paths):** ~~fixed 2026-07-21~~; `trellisCliArgs()`
 resolves `node_modules/trellis` CLI before PATH fallback.
 
 ```typescript
 await Process.run(trellisCliArgs(["issue", "check", id, "--path", d]))
 ```
 
-**Footgun B — skew guard blind spot:** ~~fixed 2026-07-21~~ — hook denies bare
+**Footgun B; skew guard blind spot:** ~~fixed 2026-07-21~~; hook denies bare
 `trellis … -p <repo>` when target has `.trellis/config.json` or is a trellis
 package checkout (regardless of cwd).
 
-**Footgun C — separate graph (not a bug):**
+**Footgun C; separate graph (not a bug):**
 
 ide repo has its own `.trellis` (~62k ops). `-p` must point at the intended
-repo. Studio/opencode uses `Instance.directory` — usually correct.
+repo. Studio/opencode uses `Instance.directory`; usually correct.
 
 **Safe paths:**
 
-- `script/sync-trellis-core.ts` — probes via `bun node_modules/trellis/dist/cli/index.js`
-- HTTP routes — `Trellis.deleteBranch()` etc. use engine, not shell
+- `script/sync-trellis-core.ts`; probes via `bun node_modules/trellis/dist/cli/index.js`
+- HTTP routes; `Trellis.deleteBranch()` etc. use engine, not shell
 
 ## playlab
 
@@ -64,7 +64,7 @@ Blocked without `--confirm-destructive`:
 
 **Not yet blocked:**
 
-- IDE HTTP API calling `engine.deleteBranch` / `dropLane` (in-process — intentional for product)
+- IDE HTTP API calling `engine.deleteBranch` / `dropLane` (in-process; intentional for product)
 
 ## Operational checklist
 

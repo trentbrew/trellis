@@ -1,7 +1,7 @@
 ---
 version: alpha
-name: Unified theme contract — Phase C
-description: Design artifact for TRL-164 — activate fractal vantage hooks on L3 runtime (scalar + shell snap; dual-shell prep only)
+name: Unified theme contract; Phase C
+description: Design artifact for TRL-164; activate fractal vantage hooks on L3 runtime (scalar + shell snap; dual-shell prep only)
 source:
   tool: greenfield
   mock: docs/artifacts/unified-theme-contract-phase-c_mockup.html
@@ -90,7 +90,7 @@ vantage:
 
 Phase B activated Studio dark values, inset substrate, and glass on L3 runtime
 surfaces. Phase C **activates the fractal hooks** already documented in
-`runtime-theme.css` comments — on L3 operator chrome only:
+`runtime-theme.css` comments; on L3 operator chrome only:
 
 1. Live **`--ui-vantage`** scalar (0–21 range; L3 UI exposes **three detents**).
 2. **`data-ui-vantage="{n}"`** on the focal container.
@@ -98,14 +98,14 @@ surfaces. Phase C **activates the fractal hooks** already documented in
 4. **Dual-shell crossfade** stays **prep / annotated only** (TRL-25 full engine).
 
 Tone: dense L3 operator. Inset ladder (`--surface-1/2/3`) remains containment
-depth — **not** shell names. Deck present/edit stays `data-deck-mode` (out of
+depth; **not** shell names. Deck present/edit stays `data-deck-mode` (out of
 scope). Context-pack CLI vantage (`boot|edit|review`) is orthogonal.
 
 ---
 
 ## Colors
 
-Carry Phase B Studio dark unchanged. Phase C adds **no new palette tokens** —
+Carry Phase B Studio dark unchanged. Phase C adds **no new palette tokens** : 
 vantage modulates **disclosure / layout**, not fill hue.
 
 Glass chrome (`--tml-glass-surface`) stays **invariant** across vantage (sticky
@@ -147,7 +147,7 @@ Full 0–21 continuous scrub + named territories table = TRL-25 / Phase C+.
 ### Mount semantics
 
 **One live shell at a time.** The morph host’s `data-trellis-shell` **snaps**
-among `node|row|card` — do not render three concurrent shell nodes.
+among `node|row|card`; do not render three concurrent shell nodes.
 
 ```
 html[data-trellis-band="L3"]
@@ -156,7 +156,7 @@ html[data-trellis-band="L3"]
 ```
 
 Separate **static** specimen (right rail): always `data-trellis-shell="card"` as
-tml-lanes `.issue-card` anatomy reference — **not** driven by scrubber.
+tml-lanes `.issue-card` anatomy reference; **not** driven by scrubber.
 
 Glass `#topbar` / drawer sit **outside** the morphing host (invariant chrome).
 
@@ -167,7 +167,7 @@ Glass `#topbar` / drawer sit **outside** the morphing host (invariant chrome).
 | `client.html` | Primary: scrubber + one morphing entity on graph/stage |
 | `tml-lanes` `.issue-card` | Secondary specimen: `data-trellis-shell="card"` |
 | `lanes.html` | Optional later; mock uses cropped card column only |
-| Dual-shell layers | Annotated prep panel — not interactive |
+| Dual-shell layers | Annotated prep panel; not interactive |
 
 ### Delivery (for Architect)
 
@@ -240,7 +240,7 @@ matches `.issue-card` density (10px radius, ~14px padding).
 
 ## Accessibility
 
-- **Focus order:** scrubber radiogroup (roving — Tab hits selected detent) → optional
+- **Focus order:** scrubber radiogroup (roving; Tab hits selected detent) → optional
   morph host only if it gains real actions (mock: decorative, no tabindex).
 - **Radiogroup:** `role="radiogroup"` / `role="radio"`; only checked radio has
   `tabindex="0"`, others `-1`; arrows move check **and** focus.
@@ -281,7 +281,7 @@ matches `.issue-card` density (10px radius, ~14px padding).
 4. **CSS:** shell rules using attr selectors; optional `clamp()` opacity on meta
    (crib `Thing.svelte` pattern) without dual-shell layers.
 5. **A11y AC:** radiogroup with roving tabindex; ←/→ moves focus + check.
-6. **AC:** unit + e2e — assert `--ui-vantage` present; assert `data-ui-vantage` /
+6. **AC:** unit + e2e; assert `--ui-vantage` present; assert `data-ui-vantage` /
    shell snap on client or `/tml-lanes`; reduced-motion behavioral.
 7. **Out of scope:** dual-shell crossfade; band ACL L1/L2; full TRL-25 registry;
    lanes.html full-page vantage (unless cheap).

@@ -8,7 +8,7 @@ The `@trellis.computer` registry will publish ontology packages (workflows, agen
 
 The core problem: ontologies change over time. A workflow built against `core:WorkflowStep v1.0.0` may break if the schema adds a new required field. A pipeline that depends on multiple workflows needs to resolve compatible versions of all transitive dependencies simultaneously.
 
-This spec addresses versioning, resolution, and lockfiles — borrowing from Nix's approach to content-addressed, reproducible dependency management.
+This spec addresses versioning, resolution, and lockfiles; borrowing from Nix's approach to content-addressed, reproducible dependency management.
 
 ---
 
@@ -20,7 +20,7 @@ Nix identifies packages by the cryptographic hash of their **content**, not by t
 
 - A package that hasn't changed gets the same identity across machines
 - A single byte change produces a completely different identity
-- No "semver drift" — the version string is metadata; the hash is the truth
+- No "semver drift"; the version string is metadata; the hash is the truth
 
 **Applied to our registry:** Each package JSON is hashed (SHA-256). The hash becomes part of the package's identity. When `trellis add` resolves a dependency, it records the content hash in the lockfile, not just the version range.
 
@@ -48,7 +48,7 @@ Nix's closure is the set of all transitive dependencies, deduplicated by content
 
 ### 5. Input-addressed derivation (bonus)
 
-Nix's experimental content-addressed derivations compute the store path from a hash of the build output — the output name is derived from its content, not from the build recipe. This is the strongest form of reproducibility.
+Nix's experimental content-addressed derivations compute the store path from a hash of the build output; the output name is derived from its content, not from the build recipe. This is the strongest form of reproducibility.
 
 **Applied to our registry:** Package content hashes serve as derivation identifiers. If a package's JSON-LD content changes, its hash changes, and the graph treats it as a new entity. This makes the registry content-addressed end-to-end.
 
@@ -99,8 +99,8 @@ Each package `package.json` declares:
 | Field | Purpose |
 |-------|---------|
 | `name` | Registry origin + package name |
-| `version` | Semver — human-readable version string |
-| `content` | SHA-256 hash of the canonicalized package body — the true identity |
+| `version` | Semver; human-readable version string |
+| `content` | SHA-256 hash of the canonicalized package body; the true identity |
 | `schemas` | List of ontology schemas this package contributes, each with their own `depends` |
 | `depends` | Top-level dependency constraints |
 
@@ -223,7 +223,7 @@ Like Nix's `.follows`, the lockfile can instruct the resolver to share a single 
 }
 ```
 
-This means both the feature-dev pipeline and bug-fix pipeline share the same `core:Workflow` entity in the graph — no duplication.
+This means both the feature-dev pipeline and bug-fix pipeline share the same `core:Workflow` entity in the graph; no duplication.
 
 ### 5. Update Mechanism
 
@@ -235,7 +235,7 @@ trellis update workflow           # update only workflows package
 trellis update --locked           # only update if lockfile exists (CI-safe)
 ```
 
-`trellis update` verifies content hashes against the registry before writing the lockfile — it never trusts a remote registry without verification.
+`trellis update` verifies content hashes against the registry before writing the lockfile; it never trusts a remote registry without verification.
 
 ### 6. Registry Index
 
@@ -285,9 +285,9 @@ The `depends` field in each schema lets the resolver enforce these rules at inst
 
 ### 8. Relationship to `core:Workflow` and `trellis:Pipeline`
 
-The existing `core:Workflow` schema (tier: core, immutable) acts as the **anchor** — it's the oldest, most stable schema in the system. All new schemas depend on it. The versioning system ensures that:
+The existing `core:Workflow` schema (tier: core, immutable) acts as the **anchor**; it's the oldest, most stable schema in the system. All new schemas depend on it. The versioning system ensures that:
 
-- `core:Workflow` never breaks the graph — it's `tier: 'core'`, so the kernel rejects runtime mutations
+- `core:Workflow` never breaks the graph; it's `tier: 'core'`, so the kernel rejects runtime mutations
 - Newer schemas (`core:WorkflowStep`, etc.) can extend it safely by adding optional fields
 - If `core:WorkflowStep` adds a required field in v2.0.0, the resolver enforces that all consumers upgrade simultaneously (via the `depends` constraint)
 
@@ -297,20 +297,20 @@ The existing `core:Workflow` schema (tier: core, immutable) acts as the **anchor
 
 The versioning system covers:
 
-1. **`trellis add <type> <name>`** — fetch from registry, resolve constraints, verify hashes, write lockfile, register in graph
-2. **`trellis update [--scope <type>]`** — re-resolve constraints, verify hashes, update lockfile
-3. **`trellis list`** — show installed packages with versions and content hashes from lockfile
-4. **`trellis remove <type> <name>`** — remove from lockfile, check if dependent schemas remain, unregister from graph
-5. **Lockfile management** — `.trellis/deps.json` with all resolution metadata
-6. **Registry index client** — fetch and parse registry manifests
-7. **Constraint solver** — semver range matching with transitive closure and conflict detection
+1. **`trellis add <type> <name>`**; fetch from registry, resolve constraints, verify hashes, write lockfile, register in graph
+2. **`trellis update [--scope <type>]`**; re-resolve constraints, verify hashes, update lockfile
+3. **`trellis list`**; show installed packages with versions and content hashes from lockfile
+4. **`trellis remove <type> <name>`**; remove from lockfile, check if dependent schemas remain, unregister from graph
+5. **Lockfile management**; `.trellis/deps.json` with all resolution metadata
+6. **Registry index client**; fetch and parse registry manifests
+7. **Constraint solver**; semver range matching with transitive closure and conflict detection
 
 ### What's deferred
 
-- Registry hosting — the `@trellis.computer` npm org serves as the registry today
-- Authentication for publishing — not needed for the initial implementation
-- Binary artifact support — ontologies are JSON-LD, no binary dependencies
-- Content-addressed store (Nix store analog) — the graph serves as the content-addressable store
+- Registry hosting; the `@trellis.computer` npm org serves as the registry today
+- Authentication for publishing; not needed for the initial implementation
+- Binary artifact support; ontologies are JSON-LD, no binary dependencies
+- Content-addressed store (Nix store analog); the graph serves as the content-addressable store
 
 ---
 

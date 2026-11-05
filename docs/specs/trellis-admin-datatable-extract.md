@@ -1,4 +1,4 @@
-# Spec: trellis admin — extract Operate datatable module
+# Spec: trellis admin; extract Operate datatable module
 
 **Status:** Ready for impl  
 **Date:** 2026-07-21  
@@ -13,7 +13,7 @@
 ## 1. Intent
 
 Extract Operate `#view-table` **behavior + CSS** from `admin.html` into a typed
-module before inline cell edit. Harden packaging only — **no** new chrome, **no**
+module before inline cell edit. Harden packaging only; **no** new chrome, **no**
 cell editors this wedge.
 
 ---
@@ -22,15 +22,15 @@ cell editors this wedge.
 
 | Decision | Choice |
 | -------- | ------ |
-| Boundary | **Option B** — `src/ui/admin-datatable.ts` → `GET /admin-datatable.js` (esbuild, mirror `/tml-runtime.js`) |
+| Boundary | **Option B**; `src/ui/admin-datatable.ts` → `GET /admin-datatable.js` (esbuild, mirror `/tml-runtime.js`) |
 | CSS | `src/ui/admin-datatable.css` → `GET /admin-datatable.css` via `findUiAsset` static read |
 | Bundle | DOM-only ESM; **no** imports from `../core/**` / VCS / kernel |
 | Markup | `#view-table` thead + TML tbody **stay in** `admin.html` |
 | Search | Shell keeps multi-view `applySearchFilter` (cards/ops); module `applySearchQuery(q)` owns **table rows + empty only** |
 | Utility CSS | `.hidden-by-search` stays in **shell** `admin.html` |
-| Empty channel | Prefer `onEmptyChange` callback **or** `trellis:table-empty` — pick **one** normative (recommend callback for shell; optional event OK if unused) |
+| Empty channel | Prefer `onEmptyChange` callback **or** `trellis:table-empty`; pick **one** normative (recommend callback for shell; optional event OK if unused) |
 | Edit attrs | Add `data-col`, `data-editable="false"`, `data-field` on each `td` in **TML template** |
-| Cell edit | **Out of scope** — no `contenteditable`, no `trellis:cell-*`, no edit CSS |
+| Cell edit | **Out of scope**; no `contenteditable`, no `trellis:cell-*`, no edit CSS |
 | Host | Routes only on `lanes-dashboard.ts` (admin host); do not half-wire `server.ts` |
 | Density | Preserve TRL-203 locks (42/36, sort, empty, `--surface-hover`) |
 
@@ -40,16 +40,16 @@ cell editors this wedge.
 
 | File | Change |
 | ---- | ------ |
-| `src/ui/admin-datatable.ts` | **New** — `mountAdminDatatable`, sort/empty/observer, `applySearchQuery` / `refresh` / `destroy` |
-| `src/ui/admin-datatable.css` | **New** — table well/sort/empty styles + local `--table-*` vars moved from `admin.html` |
+| `src/ui/admin-datatable.ts` | **New**; `mountAdminDatatable`, sort/empty/observer, `applySearchQuery` / `refresh` / `destroy` |
+| `src/ui/admin-datatable.css` | **New**; table well/sort/empty styles + local `--table-*` vars moved from `admin.html` |
 | `src/ui/lanes-dashboard.ts` | `GET /admin-datatable.js` (esbuild), `GET /admin-datatable.css` (static) |
 | `src/ui/admin.html` | Remove moved CSS/JS; link CSS; import+mount module after TML; search seam; edit-ready `td` attrs |
-| `test/ui/admin-datatable.test.ts` | **New** — pure sort/empty helper unit tests |
+| `test/ui/admin-datatable.test.ts` | **New**; pure sort/empty helper unit tests |
 | `e2e/admin.spec.cjs` | Existing datatable cases must stay green (no selector renames) |
 | `docs/specs/trellis-admin-datatable-extract.md` | This file |
 | `package.json` build | Ensure `admin-datatable.css` copied to `dist/ui/` if build copies other UI static assets |
 
-**Out of touch:** `runtime-theme.css` palette, OPERATE_NAV, view-header markup contracts, `server.ts` (unless already serving admin — it does not today).
+**Out of touch:** `runtime-theme.css` palette, OPERATE_NAV, view-header markup contracts, `server.ts` (unless already serving admin; it does not today).
 
 ---
 
@@ -121,10 +121,10 @@ const adminTable = mountAdminDatatable(document.getElementById('view-table'));
 
 ## 7. e2e / unit
 
-- **Unit:** `test/ui/admin-datatable.test.ts` — exportable pure helpers for sort
+- **Unit:** `test/ui/admin-datatable.test.ts`; exportable pure helpers for sort
   comparator and empty-state resolution (or test via small DOM harness). Include
   in default `pnpm test` / vitest discovery.
-- **e2e:** `CI=1 pnpm test:e2e e2e/admin.spec.cjs` — all existing cases green,
+- **e2e:** `CI=1 pnpm test:e2e e2e/admin.spec.cjs`; all existing cases green,
   especially datatable sort / 42px / table-empty. Selectors unchanged:
   `#view-table`, `.table-wrap`, `.sort-btn`, `#table-empty`, `.lanes-table`.
 

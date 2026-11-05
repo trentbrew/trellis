@@ -1,8 +1,8 @@
 ---
 version: alpha
-name: trellis admin — visual parity harden
+name: trellis admin; visual parity harden
 description: >-
-  Design for TRL-183 — bring kernel /admin projections (dialog, grid, kanban, table)
+  Design for TRL-183; bring kernel /admin projections (dialog, grid, kanban, table)
   to visual/layout parity with lanes.html / tml-lanes; CSS/markup only; theme SSOT.
 source:
   tool: greenfield
@@ -76,7 +76,7 @@ components:
     width: 280px
 ---
 
-# Design: trellis admin — visual parity harden
+# Design: trellis admin; visual parity harden
 
 **Status:** Design complete (handoff to Architect)  
 **Parent:** TRL-183 · **Design issue:** TRL-184  
@@ -94,7 +94,7 @@ the same operator language as `lane watch`, without inventing new components or
 porting playground `SpreadsheetTable`.
 
 Emotional tone stays L3 operator: dense, dark, mono labels, inset kanban bodies.
-The signature of this pass is **full-bleed projections** — content uses the main pane
+The signature of this pass is **full-bleed projections**; content uses the main pane
 width; dialogs sit in the viewport center, not the origin.
 
 ## Colors
@@ -120,7 +120,7 @@ Shell grid unchanged: rail | main | op-log (`280px`). Embed mode unchanged.
 | Kanban | `16px` | `--bg` | flex row; columns `300–340px`; inset on col-body only |
 | Table | `16px` | `--bg` | `.table-wrap` border shell fills content box (`width: 100%`) |
 
-**Do not** paint `--tml-kanban-body-inset` on the entire `.proj` (current admin bug —
+**Do not** paint `--tml-kanban-body-inset` on the entire `.proj` (current admin bug : 
 washes the stage and fights lanes).
 
 ### Dialog (locked)
@@ -130,24 +130,24 @@ explicit `dialog { margin: auto; }` (and `max-width: 560px`) so the universal
 `* { margin: 0 }` reset cannot pin it top-left. Use `dialog::backdrop` for
 `rgba(0,0,0,0.6)`. `showModal()` / `close()` keep focus trap + Esc.
 
-**Rejected alternate:** migrating to lanes’ `.dialog-backdrop` flex div — visual
+**Rejected alternate:** migrating to lanes’ `.dialog-backdrop` flex div; visual
 twin only; not required if native dialog centers correctly. Mock demos the
 **native** path so Executor does not thrash markup.
 
 ## Elevation & Depth
 
 Cards / table wrap on `--surface` / `--surface-raised-base`. Dialog above backdrop
-(z ≥ 900). Op-log stays right rail — not part of this polish.
+(z ≥ 900). Op-log stays right rail; not part of this polish.
 
 ## Shapes
 
-Card / col head `10px`; table wrap `12px`; dialog `14px` — match lanes.
+Card / col head `10px`; table wrap `12px`; dialog `14px`; match lanes.
 
 ## Components
 
 | Component | Anatomy | States | Maps to codebase |
 | --------- | ------- | ------ | ---------------- |
-| Centered dialog | native `<dialog>` + `::backdrop` + head + body + promote CTA | open / closed; Esc / backdrop / × | `admin.html` `#dlg` — `margin: auto` fix |
+| Centered dialog | native `<dialog>` + `::backdrop` + head + body + promote CTA | open / closed; Esc / backdrop / × | `admin.html` `#dlg`; `margin: auto` fix |
 | Lane grid | host + lane cards filling tracks | hover / focus-visible / flash | `#view-grid` `.grid-host` → lanes `.grid` |
 | Issue kanban | 3 cols + head (title + optional count) + body + cards | empty col | `#view-kanban` → lanes / `tml-lanes` `.kanban*` |
 | Lanes table | `.table-wrap` > `table.lanes-table` | row hover; sticky th | `#view-table` → lanes `.table-wrap` + `table.lanes-table` |
@@ -166,8 +166,8 @@ Card / col head `10px`; table wrap `12px`; dialog `14px` — match lanes.
 | Filtered empty | Search matches nothing | Existing `.hidden-by-search`; optional “no matches” (inherited) |
 | Dialog open | Esc / × / backdrop click | `dialog.close()`; focus returns to opener |
 | Dialog open | Promote lane | Toast + close (existing behavior) |
-| Search active | Type in search | Filter cards/rows (**behavior inherited — not re-mocked**) |
-| Embed `?embed=1` | Load | Rail hidden; projections still full-bleed (**inherited — not re-mocked**) |
+| Search active | Type in search | Filter cards/rows (**behavior inherited; not re-mocked**) |
+| Embed `?embed=1` | Load | Rail hidden; projections still full-bleed (**inherited; not re-mocked**) |
 
 ### Accessibility
 
@@ -183,7 +183,7 @@ Card / col head `10px`; table wrap `12px`; dialog `14px` — match lanes.
 **Do**
 
 - Copy lanes/tml-lanes layout blocks literally where they already solve the bug.
-- Keep TML bindings on inner hosts (`.grid-host` / col-body / tbody) — outer `#view-*` ids stay unique.
+- Keep TML bindings on inner hosts (`.grid-host` / col-body / tbody); outer `#view-*` ids stay unique.
 - Make table columns share width (`table-layout: fixed` or % widths) so the wrap is visually full-bleed.
 
 **Don't**
@@ -196,6 +196,6 @@ Card / col head `10px`; table wrap `12px`; dialog `14px` — match lanes.
 ## Open for Architect
 
 1. Encode the four layout contracts as AC (dialog center measure, grid ≥2 tracks at ≥1100px main, kanban `display:flex`, table wrap width 100%, stage padding `16px` all views).
-2. Dialog is **locked** to native `<dialog>` + `margin: auto` + `::backdrop` — do not migrate to backdrop div unless native centering fails in target browsers.
+2. Dialog is **locked** to native `<dialog>` + `margin: auto` + `::backdrop`; do not migrate to backdrop div unless native centering fails in target browsers.
 3. e2e smoke: open dialog → assert `getBoundingClientRect` roughly viewport-centered; grid host computed `grid-template-columns` has 2+ tracks when viewport wide; table wrap `clientWidth` ≈ main content box.
 4. Out of scope AC: kill-gate, SpreadsheetTable, playground chrome, search/embed re-mocks.

@@ -57,7 +57,7 @@ Ship failures print a step summary + write `rug/ship-report-*.json`. Ensure
 ## Lane dashboard (shipped)
 
 ```bash
-trellis lane watch              # http://localhost:3939 — SSE updates ~1s
+trellis lane watch              # http://localhost:3939; SSE updates ~1s
 trellis lane watch --no-open --port 3940
 # prefer:
 trellis admin
@@ -71,7 +71,7 @@ in-progress issues with claims. Useful for demos and multi-tab sanity checks.
 **Issue:** TRL-219 · **Doc:** `docs/planning/admin-write-agents-pipeline.md`
 
 Phased: (A) surgical board writes via `tml-mutations`; (B) agents roster;
-(C) pipeline as Trellis-owned data; (D) xyflow canvas — park until C.
+(C) pipeline as Trellis-owned data; (D) xyflow canvas; park until C.
 
 ## VCS remote peer / GitHub analog seed (backlog)
 
@@ -84,18 +84,18 @@ and the GitHub analog on causal op journals.
 ## Tab-close abandonment (`sessionEnd` hook) (not yet)
 
 **Goal:** Trellis knows when a Cursor Agent tab closes without promoting lane
-work — so unpromoted journals don't linger as phantom active lanes.
+work; so unpromoted journals don't linger as phantom active lanes.
 
 **Cursor surface:** No dedicated `tabClose` hook. Use `sessionEnd`
 (fire-and-forget) with `reason: "user_close"` or `"window_close"`. Cannot block
-close or show a promote-first modal. `stop` is per-turn only — not tab disposal.
+close or show a promote-first modal. `stop` is per-turn only; not tab disposal.
 
 **Proposed wiring:**
 
 1. `~/.cursor/hooks.json` → `sessionEnd: hooks/trellis-session-end.mjs`
 2. Handler reads `session_id`, looks up lane via `findLaneForSession`
 3. If lane `status === 'active'` and has unpromoted ops → mark abandoned (not
-   `drop` — preserve journal for Idea Garden / manual revive)
+   `drop`; preserve journal for Idea Garden / manual revive)
 4. Release issue claim (`claimedSessionId`) when applicable
 5. Optional CLI: `trellis lane abandon --session <id>` (idempotent)
 

@@ -20,8 +20,8 @@ Four conflict classes during `ws promote`:
 | Class | Detection | Auto-merge? | Example |
 | ----- | --------- | ----------- | ------- |
 | **safe** | Disjoint entity IDs (and file paths for Tier-0) | Yes | Agent A edits `issue:TRL-10`, Agent B edits `issue:TRL-11` |
-| **soft** | Same entity, different attributes | No — pick ours/theirs/combine | Both update `issue:TRL-10` `description` |
-| **hard** | Same entity + same attribute, different values | No — block promote | Both set `issue:TRL-10` `status` to different values |
+| **soft** | Same entity, different attributes | No; pick ours/theirs/combine | Both update `issue:TRL-10` `description` |
+| **hard** | Same entity + same attribute, different values | No; block promote | Both set `issue:TRL-10` `status` to different values |
 | **file** | Tier-0 modify-modify same path | Use `threeWayMerge` | Both edit `src/engine.ts` |
 
 ### Detection order (per replayed op)
@@ -68,7 +68,7 @@ interface WorkspaceConflict {
 **Negative**
 
 - Entity-level detection requires stable entity IDs in decompose output
-- Soft conflicts block v1 promote (strict) — may require manual rebase of workspace
+- Soft conflicts block v1 promote (strict); may require manual rebase of workspace
 
 ## Test matrix (W3)
 

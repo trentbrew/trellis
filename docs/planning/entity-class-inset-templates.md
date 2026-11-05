@@ -13,7 +13,7 @@ related:
 # Entity-class inset templates
 
 **Status:** spec (TRL-16)  
-**Repo:** `demo/realtime-app` — `src/lib/registry/entity-class-insets.ts`  
+**Repo:** `demo/realtime-app`; `src/lib/registry/entity-class-insets.ts`  
 **Replaces:** trellis-client `TemporalDialogShell`, `DocumentDialogShell`, `ActorDialogShell`, `ContainerDialogShell` as **permanent routes**
 
 ## Goal
@@ -29,7 +29,7 @@ Map the four `ENTITY_CLASSES` archetypes to **anchored L3 inset templates** per 
 | **Anchored** | `selection` set (entity class + id) | Selection identity chip | Filtered to selection subgraph | Return to L2; preserve main vantage |
 | **Ambient** | `selection === null` | “Graph” / workspace | Full topological tools (TQL, entities, stats) | Explicit “left artifact” state |
 
-Heteromorphic tools **leak** into homomorphic binding when selection exists — same inset component, two mount semantics.
+Heteromorphic tools **leak** into homomorphic binding when selection exists; same inset component, two mount semantics.
 
 ## Mapping table
 
@@ -40,7 +40,7 @@ Heteromorphic tools **leak** into homomorphic binding when selection exists — 
 | `actor` | `actor-inset` | `ActorDialogShell` | 10 (profile card) | Identity / contact fields |
 | `container` | `container-inset` | `ContainerDialogShell` | 8 (card) | Collection / folder grouping |
 
-Resolver: `resolveInsetTemplate({ entityClass?, dialogShell? })` — `dialogShell` override accepts legacy shell name or bare class string.
+Resolver: `resolveInsetTemplate({ entityClass?, dialogShell? })`; `dialogShell` override accepts legacy shell name or bare class string.
 
 ## Per-class spec
 
@@ -76,7 +76,7 @@ Resolver: `resolveInsetTemplate({ entityClass?, dialogShell? })` — `dialogShel
 AppShell
 ├── GraphNav (L1 nav)
 ├── main slot (projection canvas)
-├── edit-chrome slot (L2 — future TRL-25)
+├── edit-chrome slot (L2; future TRL-25)
 └── operator-inset slot (L3)
     ├── FAB → toggle insetOpen
     ├── selection via app-shell context (not per-page props)
@@ -102,7 +102,7 @@ AppShell
 
 - `resolveShell(vantage)` → continuous territory (`node` | `row` | `card`) for homomorphic edit on the projection canvas.
 - `resolveInsetTemplate(entityClass)` → discrete class template for heteromorphic→homomorphic L3 tools.
-- **Convergence target:** anchored inset + optional vantage jump — not N permanent dialog components.
+- **Convergence target:** anchored inset + optional vantage jump; not N permanent dialog components.
 
 `defaultVantage` on each inset spec seeds territory when opening from a collection row until dual-shell crossfade lands (TRL-25).
 
@@ -120,6 +120,6 @@ AppShell
 
 ## References
 
-- trellis-client `apps/web/app/config/entityRegistry.ts` — `ENTITY_CLASSES` source
-- ADR 0012 — anchored vs ambient binding model
-- `demo/realtime-app/src/lib/ui/AppShell.svelte` — mount point
+- trellis-client `apps/web/app/config/entityRegistry.ts`; `ENTITY_CLASSES` source
+- ADR 0012; anchored vs ambient binding model
+- `demo/realtime-app/src/lib/ui/AppShell.svelte`; mount point

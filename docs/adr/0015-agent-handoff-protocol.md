@@ -12,13 +12,13 @@
 
 The trellis-agent-pipeline coordinates multi-role agent loops via:
 
-1. **Protocol IR** — `from` / `to` / `re` / `status` YAML footer + turn banner (`trellis-handoffs`)
-2. **Work substrate** — Trellis-VCS issues, lanes, promote
-3. **Transport** — Cursor hooks, session JSON (`pipeline_auto`, `pipeline_run_log`)
+1. **Protocol IR**; `from` / `to` / `re` / `status` YAML footer + turn banner (`trellis-handoffs`)
+2. **Work substrate**; Trellis-VCS issues, lanes, promote
+3. **Transport**; Cursor hooks, session JSON (`pipeline_auto`, `pipeline_run_log`)
 
 Steps 1–2 were split: envelopes lived in chat and issue descriptions without queryability. Step 3 duplicated run state outside the graph.
 
-Phase **1a** (this ADR) promotes the envelope to **first-class issue children** and adds **`trellis whereami`** for human re-entry — without replacing Cursor transport.
+Phase **1a** (this ADR) promotes the envelope to **first-class issue children** and adds **`trellis whereami`** for human re-entry; without replacing Cursor transport.
 
 ## Decision
 
@@ -63,7 +63,7 @@ Cursor hooks                                ← execution runtime
 - Graph-queryable open decisions and messages
 - `whereami` replaces ad-hoc footer parsing for re-entry
 - Dogfoods W5 concurrent lane isolation (shipped **3.2.3**)
-- Portable IR — MCP/headless runtimes can write same envelope shape
+- Portable IR; MCP/headless runtimes can write same envelope shape
 
 **Negative**
 
@@ -75,7 +75,7 @@ Cursor hooks                                ← execution runtime
 
 | Phase | Scope |
 | ----- | ----- |
-| **1a** (TRL-41) | ✅ **3.2.3** — `src/protocol/*`, `trellis protocol send`, `trellis whereami`, tests, this ADR |
+| **1a** (TRL-41) | ✅ **3.2.3**; `src/protocol/*`, `trellis protocol send`, `trellis whereami`, tests, this ADR |
 | **1b** | Pipeline stop hook writes graph + session; `core:Workflow` data instance |
 | **2** | `ProtocolMessage` entity; TQL filters on `to`, `status`, stall thresholds |
 

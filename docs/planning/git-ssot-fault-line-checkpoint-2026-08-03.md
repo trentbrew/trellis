@@ -1,6 +1,6 @@
 # Checkpoint: git ↔ op-log fault line (2026-08-03)
 
-> **Status:** PAUSED — safety floor shipped; local ownership decided (B / graph-first). Next: graph-native write path (PostToolUse hook). TrellisHub deferred as separable distribution problem.
+> **Status:** PAUSED; safety floor shipped; local ownership decided (B / graph-first). Next: graph-native write path (PostToolUse hook). TrellisHub deferred as separable distribution problem.
 > **Tone:** get it right, not quick. Do not resume with more bandages until the ownership question is answered.
 > **Studio / turtlecode fork:** OFF LIMITS until separately cleaned up. Do not touch.
 
@@ -9,7 +9,7 @@
 ## One-line summary
 
 We proved a silent data-loss class (`git sync` materializes stale op-log over newer disk),
-shipped a **refuse-before-clobber** floor in the kernel, and stopped — because the dual-SSoT
+shipped a **refuse-before-clobber** floor in the kernel, and stopped; because the dual-SSoT
 fault line is architectural rot, not a missing feature.
 
 ---
@@ -17,7 +17,7 @@ fault line is architectural rot, not a missing feature.
 ## What happened (the trap)
 
 ### Class name
-**9801056-class silent revert** — named after an earlier regression commit that wiped work
+**9801056-class silent revert**; named after an earlier regression commit that wiped work
 and left a "clean" tree.
 
 ### Mechanism
@@ -61,9 +61,9 @@ flowchart LR
   `reentryStatus` 1→0, tree "clean". Exact reproduction of the 9801056 class.
 
 ### What is NOT a fix path
-- `trellis import --from . --path .` — **destroys** ops.json (wholesale overwrite at
+- `trellis import --from . --path .`; **destroys** ops.json (wholesale overwrite at
   `src/git/git-importer.ts` ~301–303). Never use as catch-up on a live op-log.
-- Promoting empty lane journals — unblocks nothing; journals had 0 ops.
+- Promoting empty lane journals; unblocks nothing; journals had 0 ops.
 - More guard redirects into the same sync path without journaling first.
 
 ---
@@ -78,7 +78,7 @@ flowchart LR
     decompose/sync-policy/types, planning doc, tests
   - **Phase C floor:**
     - `journalWorkingTreeToOps({ branch? })` in `src/engine.ts`
-      — scan disk via FileWatcher, diff vs `buildFileStateAtOp`, journal
+     ; scan disk via FileWatcher, diff vs `buildFileStateAtOp`, journal
       fileAdd/fileModify/fileDelete, **advance the sync-target branch** to last op
     - `syncGitIntegration` is **async**: catch-up first, **hard-refuse**
       (`GitSyncResult.refused` + `reason`) when still unreconciled
@@ -90,7 +90,7 @@ flowchart LR
 - Content **survived** (`reentryStatus=1`, `authority.ts` PRESENT)
 - Sync commit carried the work; second sync = no-op ("already matches integration")
 - Mid-flight fix: first attempt (sim-kernel2) journaled onto `issue/TRL-421` (currentBranch)
-  while sync resolves **main** head — added explicit branch-advance of the **sync-target** branch
+  while sync resolves **main** head; added explicit branch-advance of the **sync-target** branch
 
 ### Invariant that shipped (survives any redesign)
 > **The op-log may never materialize over state it has not journaled.**
@@ -127,16 +127,16 @@ File: `~/.cursor/hooks/trellis-lane-guard-lib.mjs` (shared by Cursor + opencode 
 
 **Caveat:** long-lived opencode sessions cache the lib in memory. Restart session to load
 the new behavior. Plugin throws on non-`allow` (so `ask` still surfaces as a blocking
-message to the agent — "safer" semantics the human chose).
+message to the agent; "safer" semantics the human chose).
 
 ### Health at pause
 | Surface | State |
 | ------- | ----- |
 | Kernel tree | clean, `b941575` == `origin/main` |
 | `pnpm check` | clean |
-| `pnpm test` | 1752/1756 — only 4 failures are pre-existing `test/core/workflow-pipeline-primitives.test.ts` (DAG 30s timeouts + orchestration; untouched) |
+| `pnpm test` | 1752/1756; only 4 failures are pre-existing `test/core/workflow-pipeline-primitives.test.ts` (DAG 30s timeouts + orchestration; untouched) |
 | dist | rebuilt; contains `journalWorkingTreeToOps` (gitignored, local) |
-| Studio / turtlecode fork | **OFF LIMITS** — messy in-flight staged set (~1600 files), desk hooks/TUI work existed untracked/partially staged; do not resume from this checkpoint without a separate fork cleanup |
+| Studio / turtlecode fork | **OFF LIMITS**; messy in-flight staged set (~1600 files), desk hooks/TUI work existed untracked/partially staged; do not resume from this checkpoint without a separate fork cleanup |
 
 ---
 
@@ -145,8 +145,8 @@ message to the agent — "safer" semantics the human chose).
 ### Dual SSoT fault line
 Two kings on one board:
 
-1. **Op-log** (`.trellis/ops.json`) — files as entities, causal stream, product thesis
-2. **Git** (branch + worktree + disk) — what humans and most tools actually edit
+1. **Op-log** (`.trellis/ops.json`); files as entities, causal stream, product thesis
+2. **Git** (branch + worktree + disk); what humans and most tools actually edit
 
 `syncGitIntegration` exists only to reconcile them. Every bug in it is a **data-loss** bug.
 The hybrid is the only mode that produces silent reverts.
@@ -171,8 +171,8 @@ flowchart TD
     subgraph symptom["Bandage stack (locally rational, globally a smell)"]
         direction TB
         L1["Layer 1: guard deny git commit → redirect to sync"]
-        L2["Layer 2: Phase C — journal catch-up + refuse"]
-        L3["Layer 3: Phase D — guard ask instead of deny"]
+        L2["Layer 2: Phase C; journal catch-up + refuse"]
+        L3["Layer 3: Phase D; guard ask instead of deny"]
         L4["Layer N: next bandage..."]
         L1 --> L2 --> L3 --> L4
     end
@@ -209,13 +209,13 @@ flowchart TD
 
 
 ### Related docs / ADRs
-- `docs/planning/trellis-tui-fork-cycle.md` — desk cycle plan (Phases 0–4); kernel side partially shipped in `b941575`
-- `docs/planning/lane-gc-regression-recovery.md` — prior 9801056-class recovery
-- `docs/planning/oplog-safety-mirror-and-destructive-guards.md` — guard posture
-- ADR 0014 — git as rebuildable blob-tree mirror (op-log is carrier of record)
-- ADR 0015 — handoff protocol / lane ownership
-- ADR 0038 — **git-authoritative file tier** (2026-08-04): supersedes ADR 0014's
-  file-authority clauses and ADR 0037's capture model — git sole byte authority,
+- `docs/planning/trellis-tui-fork-cycle.md`; desk cycle plan (Phases 0–4); kernel side partially shipped in `b941575`
+- `docs/planning/lane-gc-regression-recovery.md`; prior 9801056-class recovery
+- `docs/planning/oplog-safety-mirror-and-destructive-guards.md`; guard posture
+- ADR 0014; git as rebuildable blob-tree mirror (op-log is carrier of record)
+- ADR 0015; handoff protocol / lane ownership
+- ADR 0038; **git-authoritative file tier** (2026-08-04): supersedes ADR 0014's
+  file-authority clauses and ADR 0037's capture model; git sole byte authority,
   op-log demoted to non-materializing provenance
 
 ADR 0014 already says git is a **mirror**, not the carrier of record. Practice drifted:
@@ -245,7 +245,7 @@ flowchart TB
     end
 
     subgraph A["Path A: Git-first"]
-        A1["Git owns file content — SSoT"]
+        A1["Git owns file content; SSoT"]
         A2["Graph owns metadata only"]
         A3["git sync → shrinks or dies"]
         A1 --> A2 --> A3
@@ -288,18 +288,18 @@ The A/B framing above conflates two separate axes:
 | **Distributed sync** | TrellisHub/Iroh, multi-peer. | **Deferred.** A scaling concern; a lot to build solo. |
 
 The paralysis read as "graph-first feels right but TrellisHub isn't built, so
-maybe git-first for now" — but local ownership does not require distributed sync
+maybe git-first for now"; but local ownership does not require distributed sync
 to be solved.
 
 **B is already the de facto answer**, codified twice:
 
-1. **ADR 0014** — git as rebuildable blob-tree mirror, op-log as carrier of record
-2. **Refuse-before-clobber** — `journalWorkingTreeToOps` treats disk drift as
+1. **ADR 0014**; git as rebuildable blob-tree mirror, op-log as carrier of record
+2. **Refuse-before-clobber**; `journalWorkingTreeToOps` treats disk drift as
    something to be *absorbed into* the op-log before anything proceeds, and
    refuses if it can't be reconciled. That **is** graph-first behavior: the
    op-log must reflect all reality; git is reconciled up into it.
 
-So the unresolved question isn't "which one is canonical" — the shape of the fix
+So the unresolved question isn't "which one is canonical"; the shape of the fix
 already answered that. The real question is: **what is the mandatory write path?**
 
 #### The seam
@@ -307,14 +307,14 @@ already answered that. The real question is: **what is the mandatory write path?
 Right now agents (Claude Code, opencode, etc.) edit files directly on disk. The
 journal catches up *after the fact* via the disk scan in
 `journalWorkingTreeToOps`, which currently only fires right before a sync. That
-gap — writes bypassing the op-log — is the exact seam that produced the
+gap; writes bypassing the op-log; is the exact seam that produced the
 9801056-class clobber.
 
 #### The fix
 
 Wire `journalWorkingTreeToOps` to a `PostToolUse` hook on `Write | Edit | Bash`
 tool calls. The same scan-and-diff stops being a pre-sync patch and becomes the
-**actual write path** — every agent edit is journaled immediately. Git falls
+**actual write path**; every agent edit is journaled immediately. Git falls
 out as a real mirror, by construction, without touching TrellisHub.
 
 ```mermaid
@@ -345,7 +345,7 @@ flowchart LR
 #### Lane accretion: killed for free
 
 Once a worktree is a disposable render of an op-log branch instead of a
-first-class lane container, there's nothing to GC — you regenerate it when you
+first-class lane container, there's nothing to GC; you regenerate it when you
 need it and throw it away when you don't, like a build artifact. This is the
 "lane ≠ worktree forever" instinct from above, with a mechanism attached.
 
@@ -355,19 +355,19 @@ need it and throw it away when you don't, like a build artifact. This is the
 |-----------|-----------|
 | Lane GC | Worktrees become ephemeral renders; no persistent ref pileup |
 | Guard simplification | No deny-redirect-promote-sync chain; agent writes are journaled at source |
-| Desk chrome | "Disk ahead of log" banners become the natural UX — the graph owns truth, disk is a view |
+| Desk chrome | "Disk ahead of log" banners become the natural UX; the graph owns truth, disk is a view |
 | TrellisHub | Remains a separable distribution problem, not gating local correctness |
 
-**TrellisHub is now correctly a later problem** — about distribution, not about
+**TrellisHub is now correctly a later problem**; about distribution, not about
 who owns the truth. The truth is the op-log, locally, now.
 
 ### Consensus we keep re-reaching (2026-08-03 reminder)
 
 Stated again in conversation, and believed to have been agreed **several times** before:
 
-1. **Endgame is a custom distributed TrellisHub** — graph-native, op-log/Iroh shaped,
+1. **Endgame is a custom distributed TrellisHub**; graph-native, op-log/Iroh shaped,
    not "GitHub with extra steps." Still open to it. Still the aim.
-2. **Git was the meantime** — leverage it while building TrellisHub out, not as the
+2. **Git was the meantime**; leverage it while building TrellisHub out, not as the
    permanent dual SSoT.
 3. **TrellisHub never got built.** The meantime became the system. That is what we are
    feeling now (9801056-class, lane accretion, guard stack).
@@ -375,16 +375,16 @@ Stated again in conversation, and believed to have been agreed **several times**
    mode; write it down so the next session does not optimize for "ship the hybrid harder."
 
 Avoiding git fights a strong current. So does anything worth doing. The mistake was not
-choosing git as scaffolding — it was letting scaffolding become load-bearing without a
+choosing git as scaffolding; it was letting scaffolding become load-bearing without a
 build schedule for the real structure.
 
 **Implication for later work:** interim git use is allowed and expected; new investment
-that *deepens* the hybrid (more sync glue, more lane↔worktree ceremony) is not — unless
+that *deepens* the hybrid (more sync glue, more lane↔worktree ceremony) is not; unless
 it is explicitly on the TrellisHub path or the safety floor (refuse-before-clobber class).
 
 ---
 
-## Instincts (not decisions) — leave for the next conversation
+## Instincts (not decisions); leave for the next conversation
 
 1. **The floor stays either way.** Refuse-before-clobber is not a bandage to delete; it is
    the honest behavior of any two-writer system and the export-safety check of a one-writer
@@ -400,14 +400,14 @@ it is explicitly on the TrellisHub path or the safety floor (refuse-before-clobb
    prototype and a bad steady state. Lifecycle (create/promote/gc including refs) has to be
    designed with the ownership answer, not before it.
 
-4. **Desk is the right product surface for the answer** — merge views, conflict UI, "disk
-   ahead of log" banners — but Studio is off-limits right now. Kernel-side honesty first;
+4. **Desk is the right product surface for the answer**; merge views, conflict UI, "disk
+   ahead of log" banners; but Studio is off-limits right now. Kernel-side honesty first;
    chrome later.
 
 5. **Do not add more sync features** (import improvements, bidirectional fancy merge,
    auto-promote expansions) until ownership is explicit. More glue deepens the hybrid.
 
-6. **Client must not allow invalid ops that contaminate the graph.** User's words —
+6. **Client must not allow invalid ops that contaminate the graph.** User's words : 
    keep that as a hard product constraint regardless of A vs B. Refuse > silent fix-forward.
 
 ---
@@ -425,14 +425,14 @@ pnpm check && pnpm test       # 4 pre-existing workflow-pipeline failures OK
 rg -n "journalWorkingTreeToOps|refused" src/engine.ts src/git/git-sync.ts
 rg -n "DESTRUCTIVE_GIT_RE|COMMIT_RE" ~/.cursor/hooks/trellis-lane-guard-lib.mjs
 
-# Sim dirs (may be gone — ephemeral)
+# Sim dirs (may be gone; ephemeral)
 # /var/folders/.../T/opencode/sim-kernel   trap proof (7c0e0f6)
 # /var/folders/.../T/opencode/sim-kernel3  fix verified (b254c06)
 # /var/folders/.../T/opencode/ship-snapshot-20260802-220052
 ```
 
 **First question on re-entry (only one):**
-> Graph-first (B) is decided — ADR 0014 + refuse-before-clobber. The open work is
+> Graph-first (B) is decided; ADR 0014 + refuse-before-clobber. The open work is
 > making the **write path graph-native** for agents: hook `journalWorkingTreeToOps`
 > to `PostToolUse` on `Write | Edit | Bash`, so the op-log absorbs every edit at
 > source. TrellisHub remains a separable distribution problem.
@@ -442,7 +442,7 @@ Everything else (lane shape, guard tone, Studio desk chrome, branch GC) unblocks
 **Do not:**
 - Touch Studio / turtlecode fork from this thread's leftover state
 - Run `trellis import` as catch-up on a live repo
-- Assume `trellis git sync` is unsafe — Phase C made it refuse rather than clobber;
+- Assume `trellis git sync` is unsafe; Phase C made it refuse rather than clobber;
   still prefer understanding ownership before leaning on it as product UX
 - Stack another guard/sync layer without answering the question above
 
@@ -452,15 +452,15 @@ Everything else (lane shape, guard tone, Studio desk chrome, branch GC) unblocks
 
 - [x] Architecture decision record: file-content ownership (B decided; → [ADR 0037](../adr/0037-graph-native-write-path-opt-out-capture.md))
 - [ ] **Graph-native write path:** `PostToolUse` hook → `journalWorkingTreeToOps` on `Write | Edit | Bash` (shipped in `5155578`)
-- [ ] Continuous FileWatcher daemon (opt-out capture — per ADR 0037)
+- [ ] Continuous FileWatcher daemon (opt-out capture; per ADR 0037)
 - [ ] `.trellisignore` exclusion surface
 - [ ] Lane/worktree/branch GC (simplifies: worktrees become disposable renders)
 - [ ] Guard session-reload story (opencode caches ESM helpers)
 - [ ] Pretty-up commit message on `b941575` if it bothers anyone (optional amend/follow-up)
 - [ ] Pre-existing `workflow-pipeline-primitives` 4 failures (unrelated, still red)
-- [ ] Studio desk ship — separate cleanup when Studio is back on-limits
+- [ ] Studio desk ship; separate cleanup when Studio is back on-limits
 - [ ] TRL issue AC updates for 424/425 if still open when desk resumes
-- [ ] **Versioning strategy (deferred):** Trellis is a CLI, not a library — nobody pins it in `dependencies`. 3.x already signals breaking changes are expected. Ship 4.0 when write-path/daemon lands rather than walking backward to alpha. If stability signal is needed: README banner ("op-log format and EAV kernel are stable; CLI/MCP/Studio surface under active development"). Dist-tags are movable, versions are permanent — don't deprecate three majors for a stability claim.
+- [ ] **Versioning strategy (deferred):** Trellis is a CLI, not a library; nobody pins it in `dependencies`. 3.x already signals breaking changes are expected. Ship 4.0 when write-path/daemon lands rather than walking backward to alpha. If stability signal is needed: README banner ("op-log format and EAV kernel are stable; CLI/MCP/Studio surface under active development"). Dist-tags are movable, versions are permanent; don't deprecate three majors for a stability claim.
 
 ---
 

@@ -8,8 +8,8 @@ envelope. The normative rules are
 
 | File | Purpose |
 | --- | --- |
-| `validate.mjs` | Independent validator — reimplements §3 from the spec text, imports **no kernel code**. Runs on Node ≥ 20 or Bun. |
-| `make-fixtures.mjs` | Fixture generator — mints the fixtures with the **reference implementation** (`src/vcs/ops.ts`, `src/identity/signing-middleware.ts`). Bun only. |
+| `validate.mjs` | Independent validator; reimplements §3 from the spec text, imports **no kernel code**. Runs on Node ≥ 20 or Bun. |
+| `make-fixtures.mjs` | Fixture generator; mints the fixtures with the **reference implementation** (`src/vcs/ops.ts`, `src/identity/signing-middleware.ts`). Bun only. |
 | `run-conformance.mjs` | Runs every fixture against the validator and asserts the expected verdict. |
 | `fixtures/*.jsonl` | Journal fixtures (one op per line). |
 | `fixtures/keys.json` | Trusted keyring for signature verification (identity id → SPKI DER base64). |
@@ -35,7 +35,7 @@ bun docs/spec/conformance/make-fixtures.mjs
 | `linear-signed.jsonl` | **valid** | signed genesis + two chained signed ops |
 | `unsigned-prefix.jsonl` | **valid** | unsigned genesis is admissible before the first signed op |
 | `signed-then-unsigned.jsonl` | **invalid** | unsigned op after the first signed op (§3.4.5) |
-| `tampered-hash.jsonl` | **invalid** | payload mutated after minting — hash recompute fails (§3.4.2) |
+| `tampered-hash.jsonl` | **invalid** | payload mutated after minting; hash recompute fails (§3.4.2) |
 | `broken-chain.jsonl` | **invalid** | `previousHash` does not chain (§3.4.3) |
 | `diverged-dag.jsonl` | **valid** | v2 `parents[]`: two roots + a merge op |
 | `unknown-parent.jsonl` | **invalid** | v2 op references a parent not in the journal |
@@ -51,8 +51,8 @@ the signature fields; `hash` covers them). The validator dispatches on
 
 ## Rules the fixtures do not yet cover
 
-- Device-key resolution (`signedWith`) — covered by identity tests, not here.
-- Legacy v1 kernel ops (`{valid: true, legacy: true}` grandfathering) — see
+- Device-key resolution (`signedWith`); covered by identity tests, not here.
+- Legacy v1 kernel ops (`{valid: true, legacy: true}` grandfathering); see
   `src/core/persist/canonical-op.ts`; belongs in its own kernel-op corpus.
 
 ## Note on fixture regeneration

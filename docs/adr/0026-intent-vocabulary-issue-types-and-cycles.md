@@ -1,4 +1,4 @@
-# ADR 0026: An intent vocabulary — issue types, cycles, and what stays retrospective
+# ADR 0026: An intent vocabulary; issue types, cycles, and what stays retrospective
 
 > **Terminology:** **Retrospective** = an assertion about ops that already exist.
 > **Prospective** = a statement about work that does not exist yet. **Epic** = a
@@ -33,7 +33,7 @@ titled "Epic:"**. The hierarchy habit is real; the type is missing.
 ### 2. There is no prospective vocabulary at all
 
 `grep -inE "dueDate|deadline|cycle|sprint|estimate|effort"` over the op payload
-returns **nothing**. Not underused — absent.
+returns **nothing**. Not underused; absent.
 
 ### 3. Milestones are retrospective by construction, and that is correct
 
@@ -42,7 +42,7 @@ as a range of ops that already exist*. It is structurally incapable of describin
 future work. 18 exist and all are bookmarks.
 
 This is not a defect. Everything in an append-only causal log is an assertion
-about the past — even `status: backlog` means "I asserted this exists". A log of
+about the past; even `status: backlog` means "I asserted this exists". A log of
 what happened cannot, by its nature, hold what we intend. **The gap is real and
 the log is not the place to close it by accident.**
 
@@ -73,7 +73,7 @@ type IssueType = 'epic' | 'issue' | 'spike' | 'msg';
 
 **A deadline does not belong on an issue.** An issue has no capacity and nothing
 to reconcile against, so a per-issue due date is a promise the graph cannot keep
-— it is a field that looks like a plan. A cycle's target date is falsifiable:
+:  it is a field that looks like a plan. A cycle's target date is falsifiable:
 *this set of work, by this date, and here is what got cut.* That is what turns
 "right direction" into "right pace".
 
@@ -84,7 +84,7 @@ a field on every member.**
 date and acceptance criteria. That is all.
 
 - **Burndown, velocity, projection, the Studio calendar view are QUERIES, not
-  fields.** We have EQL-S; TRL-107's rule applies verbatim — ingest and join,
+  fields.** We have EQL-S; TRL-107's rule applies verbatim; ingest and join,
   do not recompute and store. The moment a cycle carries estimates *and* rollups
   *and* velocity, we have rebuilt Jira inside an op log.
 - **No event types.** A deadline is not an event, it is a fact with a date
@@ -94,7 +94,7 @@ date and acceptance criteria. That is all.
 
 ### 3. Milestones stay retrospective. Explicitly.
 
-Milestones are honest as bookmarks. **Do not overload them with intent** — that
+Milestones are honest as bookmarks. **Do not overload them with intent**; that
 is what cycles are for. The two are complements: a cycle says what we mean to do
 by when; a milestone says what happened, as a range of ops. Conflating them would
 put a mutable plan inside an immutable record, which is the same category error
@@ -102,12 +102,12 @@ as a mutable pointer inside op identity (TRL-102).
 
 ### 4. Every issue rolls up to an epic; every epic roots in the telos
 
-Enforced as a **readiness check**, not a mint-time throw — doodling is necessary,
+Enforced as a **readiness check**, not a mint-time throw; doodling is necessary,
 and an issue you cannot yet place is a real state. `trellis issue readiness`
 reports orphans; `issue create` does not refuse them.
 
 Marketing, legal, hardware, licensing are not different *kinds* of work. They are
-different epics. The graph does not need new machinery for them — it needs the
+different epics. The graph does not need new machinery for them; it needs the
 type.
 
 ## Consequences
@@ -125,7 +125,7 @@ type.
 - **The Jira gradient is real.** Every field added to a cycle is a step toward
   reimplementing a tracker. The discipline is: containers and links in the graph;
   everything derived is a query.
-- `issueType` is a new bounded-domain register — it passes ADR 0022 §2's audit
+- `issueType` is a new bounded-domain register; it passes ADR 0022 §2's audit
   (enumerable ⇒ delete-then-add is exhaustive), so `decompose` can project it
   safely.
 - Cycle membership is a link, so an issue in two cycles is expressible. Decide
@@ -152,15 +152,15 @@ type.
 
 ## Phasing
 
-- **Phase 1 — `issueType`. LANDED** (`vcs:types.ts`, `decompose.ts`, `issue.ts`,
+- **Phase 1; `issueType`. LANDED** (`vcs:types.ts`, `decompose.ts`, `issue.ts`,
   CLI `--type` on create/update/list; `test/vcs/issue-type.test.ts`). Kills the
   title convention and makes telos→work a query.
   - **Backfill of TRL-3/11/17 is NOT done.** The three `vcs:issueUpdate` ops were
-    minted and then *lost from the journal* by a concurrent engine — see the
+    minted and then *lost from the journal* by a concurrent engine; see the
     op-log clobber note below. Re-run once that is understood; the ops are cheap
     to remint, but doing so now would just feed the same race.
-- **Phase 2 — cycles.** Container + `targetDate` + link. Follow-on.
-- **Phase 3 — projections.** Studio calendar / burndown as EQL-S queries. No
+- **Phase 2; cycles.** Container + `targetDate` + link. Follow-on.
+- **Phase 3; projections.** Studio calendar / burndown as EQL-S queries. No
   kernel work.
 
 Phase 1 stands alone and is worth landing on its own.
@@ -171,7 +171,7 @@ Phase 1 stands alone and is worth landing on its own.
 
 Backfilling three epics minted three `vcs:issueUpdate` ops carrying `issueType`.
 They were verified present in `ops.json`. Minutes later they were **gone**, and
-the journal had grown — so a concurrent writer had rewritten it without them.
+the journal had grown; so a concurrent writer had rewritten it without them.
 
 `JsonOpLog.append` locks, re-reads disk and reconciles, so it is *designed* for
 concurrency. The hole is the optimisation:
@@ -185,13 +185,13 @@ private canUseMemoryWithoutDiskRead(): boolean {
 
 Staleness is judged by **mtime + size**. A long-lived engine (another agent, a
 `lane watch` server) whose cache matches on both keeps its stale `this.ops`,
-pushes onto it, and `writeOpsToDisk()` writes the *whole array* — silently
+pushes onto it, and `writeOpsToDisk()` writes the *whole array*; silently
 dropping ops it never read. `shouldReconcileFromDisk` then sets
 `this.ops = diskOps`, so the loss propagates into memory as well.
 
 This is not a papercut: **the causal log is the source of truth, and it can lose
 entries when two agents share a repo.** It is the same root cause as the commit
-sweeps (`7703da4`) and the mid-edit build breaks — agents sharing one tree — and
+sweeps (`7703da4`) and the mid-edit build breaks; agents sharing one tree; and
 it is the strongest argument yet for lanes-with-worktrees as the default
 (ADR 0026 is not the place to fix it; it needs its own issue).
 

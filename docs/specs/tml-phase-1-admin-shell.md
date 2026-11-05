@@ -1,9 +1,9 @@
-# Spec: TML Phase 1 — admin-shell + driver-unified writes
+# Spec: TML Phase 1; admin-shell + driver-unified writes
 
 **Status:** Ready for impl\
 **Date:** 2026-07-21\
 **Parent wedge:** TRL-249 (Phase 1) · **Epic:** TRL-247\
-**Amends:** Phase 0 causal loop (TRL-248) — grid `tml-op` promote\
+**Amends:** Phase 0 causal loop (TRL-248); grid `tml-op` promote\
 **Spec issue:** TRL-SPEC (created at handoff)
 
 ---
@@ -16,8 +16,8 @@ call sites** and **inline driver wiring** (~40 lines) in `admin.html`.
 
 Phase 1 extracts a small **`admin-shell.ts`** module that owns:
 
-1. **Connect / seed / mount** — single `WebDriver` lifecycle for TML projections
-2. **Mutations** — all admin writes go through `shell.op(action, args)` (which
+1. **Connect / seed / mount**; single `WebDriver` lifecycle for TML projections
+2. **Mutations**; all admin writes go through `shell.op(action, args)` (which
    delegates to `TmlDriver.op`)
 
 No new TML attributes. No PeerDriver default (Phase 2). No visual changes.
@@ -45,7 +45,7 @@ driver.connect({ snapshotUrl, streamUrl }).then(() => mount(...));
 
 ---
 
-## 3. Module contract — `src/ui/admin-shell.ts`
+## 3. Module contract; `src/ui/admin-shell.ts`
 
 ### 3.1 Public API
 
@@ -53,7 +53,7 @@ driver.connect({ snapshotUrl, streamUrl }).then(() => mount(...));
 import type { TmlDriver } from './tml-runtime.js';
 
 export interface AdminShellOptions {
-  /** DOM subtree root for `mount()` — typically `.main` */
+  /** DOM subtree root for `mount()`; typically `.main` */
   mountRoot: Element;
   /** Called on every snapshot seed (initial connect + SSE snapshot events) */
   onSnapshot?: (snap: unknown) => void;
@@ -85,7 +85,7 @@ export function createAdminShell(opts: AdminShellOptions): AdminShell;
 **`connect()`**
 
 - Calls `driver.connect({ snapshotUrl, streamUrl })` (defaults above).
-- Awaits `mount(opts.mountRoot, driver)` — same as today.
+- Awaits `mount(opts.mountRoot, driver)`; same as today.
 - Idempotent guard: second `connect()` is a no-op or throws; pick one and
   document in unit test (recommend: no-op resolve).
 
@@ -100,7 +100,7 @@ export function createAdminShell(opts: AdminShellOptions): AdminShell;
 
 - Do not move chrome helpers (`applySnapshot`, sidebar, op log) into shell.
 - Do not change `/api/tml-mutations` server map (`promote`, `updateLaneMeta` only).
-- Do not extract all of `admin.html` script — only driver lifecycle + op facade.
+- Do not extract all of `admin.html` script; only driver lifecycle + op facade.
 
 ---
 
@@ -121,7 +121,7 @@ await shell.connect();
 // … adminTable.refresh(), applySearchFilter(), connectOps() unchanged …
 ```
 
-**Mutations — retire raw fetch:**
+**Mutations; retire raw fetch:**
 
 | Call site | After |
 | --------- | ----- |
@@ -150,7 +150,7 @@ Add `'admin-shell.ts'` to `UI_DEV_ENTRIES` so `--dev` watch rebuilds it.
 
 ## 5. Tests
 
-### 5.1 Unit — `test/ui/admin-shell.test.ts` (new)
+### 5.1 Unit; `test/ui/admin-shell.test.ts` (new)
 
 | Case | Assert |
 | ---- | ------ |
@@ -165,10 +165,10 @@ Use vitest + fetch mock (same patterns as `test/ui/tml-runtime.test.ts`).
 
 Existing Phase 0 test must stay green:
 
-- `e2e/admin.spec.cjs` — `tml-op: grid promote posts to /api/tml-mutations`
+- `e2e/admin.spec.cjs`; `tml-op: grid promote posts to /api/tml-mutations`
 
 No new e2e required unless executor adds datatable mutation coverage (optional
-stretch — not blocking).
+stretch; not blocking).
 
 ---
 
@@ -176,11 +176,11 @@ stretch — not blocking).
 
 | File | Action |
 | ---- | ------ |
-| `src/ui/admin-shell.ts` | **Add** — shell factory |
-| `test/ui/admin-shell.test.ts` | **Add** — unit tests |
-| `src/ui/admin.html` | **Edit** — import shell; remove raw mutation fetch |
-| `src/ui/lanes-dashboard.ts` | **Edit** — serve `/admin-shell.js` |
-| `src/ui/ui-dev.ts` | **Edit** — dev watch entry |
+| `src/ui/admin-shell.ts` | **Add**; shell factory |
+| `test/ui/admin-shell.test.ts` | **Add**; unit tests |
+| `src/ui/admin.html` | **Edit**; import shell; remove raw mutation fetch |
+| `src/ui/lanes-dashboard.ts` | **Edit**; serve `/admin-shell.js` |
+| `src/ui/ui-dev.ts` | **Edit**; dev watch entry |
 
 ---
 

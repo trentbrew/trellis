@@ -1,4 +1,4 @@
-# Spec: trellis admin — Operate datatable (SpreadsheetTable TML)
+# Spec: trellis admin; Operate datatable (SpreadsheetTable TML)
 
 **Status:** Ready for impl  
 **Date:** 2026-07-21  
@@ -26,14 +26,14 @@ React/shadcn.
 | -------- | ------ |
 | DOM | Keep semantic `<table class="lanes-table">` (not div-grid SpreadsheetTable) |
 | Density | `--table-row-h: 42px`; `--table-header-h: 36px` |
-| Wrap radius | **12px** (`border-radius: 12px` / visual-parity `rounded.xl`) — do **not** set theme `--radius-lg` to 12px |
+| Wrap radius | **12px** (`border-radius: 12px` / visual-parity `rounded.xl`); do **not** set theme `--radius-lg` to 12px |
 | Column dividers | `border-right: 1px solid` quiet `--border-column` (`rgba(255,255,255,0.06)` or local var) |
-| Row hover | `#222` / `--surface-hover` — **never** `--surface2`; **never** accent wash |
+| Row hover | `#222` / `--surface-hover`; **never** `--surface2`; **never** accent wash |
 | Sort UI | `<th scope="col"><button type="button" class="sort-btn">` + glyph; `aria-sort` **only on `th`** |
 | Sort cycle | none → asc → desc → none (single key) |
 | Sort vs TML | **Re-apply** comparator after `tml-live` tbody updates (MutationObserver on `#table-lanes` / tbody, or hook after TML render) |
 | Sort persistence | Prefer `sessionStorage` key/dir for table view (optional; default OK if session-only in memory) |
-| Search | Toolbar `#search-input` only — no in-table search (`showToolbar={false}`) |
+| Search | Toolbar `#search-input` only; no in-table search (`showToolbar={false}`) |
 | Empty | Sibling `.table-empty` inside `.table-wrap`; `role="status"`; veil `pointer-events: none` so headers stay interactive |
 | Empty copy | Zero rows: title “No lanes”; all `.hidden-by-search`: “No matches” |
 | Columns | Keep six: Lane · Agent · Ops · Files · Branch · Issue |
@@ -65,13 +65,13 @@ React/shadcn.
 <section class="proj table-view" id="view-table" data-view="table">
   <div class="table-wrap">
     <table class="lanes-table" aria-label="Lanes">
-      <caption class="sr-only">Lane inventory — sortable columns</caption>
+      <caption class="sr-only">Lane inventory; sortable columns</caption>
       <thead>
         <tr>
           <th scope="col" aria-sort="none" data-key="lane">
             <button type="button" class="sort-btn">Lane <span class="sort-ind" aria-hidden="true">⇅</span></button>
           </th>
-          <!-- agent | ops | files | branch | issue — same pattern; data-key matches cell order -->
+          <!-- agent | ops | files | branch | issue; same pattern; data-key matches cell order -->
         </tr>
       </thead>
       <tbody tml-query="…" tml-each="…" tml-live tml-ref="table-lanes">
@@ -86,7 +86,7 @@ React/shadcn.
 </section>
 ```
 
-Use `hidden` attribute and/or `data-visible` — e2e may assert visibility; prefer
+Use `hidden` attribute and/or `data-visible`; e2e may assert visibility; prefer
 toggling `hidden` for simplicity.
 
 ### 4.2 CSS locks
@@ -128,7 +128,7 @@ accent token (match mock). Active sort glyph: `--text-interactive-base` /
 
 Add / extend:
 
-1. `/?view=table` — `.table-wrap` visible; headers have `.sort-btn`
+1. `/?view=table`; `.table-wrap` visible; headers have `.sort-btn`
 2. Click a sort button → corresponding `th[aria-sort="ascending"]` (then
    descending on second click)
 3. First data row `td` computed height ≈ `42px` (allow ±1px) **or**

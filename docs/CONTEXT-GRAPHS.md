@@ -23,13 +23,13 @@
 
 The last generation of enterprise software created a trillion-dollar ecosystem by becoming **systems of record**. Salesforce for customers. Workday for employees. SAP for operations. Own the canonical data, own the workflow, own the lock-in.
 
-The debate right now is whether those systems survive the shift to agents. Jamin Ball's recent post "Long Live Systems of Record" hit a nerve. Pushing back on the "agents kill everything" narrative, he argues that agents don't replace systems of record—they raise the bar for what a good one looks like.
+The debate right now is whether those systems survive the shift to agents. Jamin Ball's recent post "Long Live Systems of Record" hit a nerve. Pushing back on the "agents kill everything" narrative, he argues that agents don't replace systems of record: they raise the bar for what a good one looks like.
 
 We agree. Agents are cross-system and action-oriented. The UX of work is separating from the underlying data plane. Agents become the interface, but something still has to be canonical underneath.
 
 Where we go further is this: Ball's framing assumes the data agents need already lives somewhere, and agents just need better access to it plus better governance, semantic contracts, and explicit rules about which definition wins for which purpose.
 
-That's half the picture. The other half is the missing layer that actually runs enterprises: **the decision traces**—the exceptions, overrides, precedents, and cross-system context that currently live in Slack threads, deal desk conversations, escalation calls, and people's heads.
+That's half the picture. The other half is the missing layer that actually runs enterprises: **the decision traces**: the exceptions, overrides, precedents, and cross-system context that currently live in Slack threads, deal desk conversations, escalation calls, and people's heads.
 
 ### The Distinction That Matters
 
@@ -41,21 +41,21 @@ Agents don't just need rules. They need access to the decision traces that show 
 
 This is where **systems of agents startups** have a structural advantage. They sit in the execution path. They see the full context at decision time: what inputs were gathered across systems, what policy was evaluated, what exception route was invoked, who approved, and what state was written. If you persist those traces, you get something that doesn't exist in most enterprises today: a queryable record of how decisions were made.
 
-We call the accumulated structure formed by those traces a **context graph**: not "the model's chain-of-thought," but a living record of decision traces stitched across entities and time so precedent becomes searchable. Over time, that context graph becomes the real source of truth for autonomy—because it explains not just _what_ happened, but _why_ it was allowed to happen.
+We call the accumulated structure formed by those traces a **context graph**: not "the model's chain-of-thought," but a living record of decision traces stitched across entities and time so precedent becomes searchable. Over time, that context graph becomes the real source of truth for autonomy: because it explains not just _what_ happened, but _why_ it was allowed to happen.
 
-The core question isn't whether existing systems of record survive. It's whether entirely new ones emerge—systems of record for decisions, not just objects—and whether those become the next trillion-dollar platforms.
+The core question isn't whether existing systems of record survive. It's whether entirely new ones emerge: systems of record for decisions, not just objects: and whether those become the next trillion-dollar platforms.
 
 ---
 
 ## What systems of record don't capture
 
-Agents are shipping into real workflows—contract review, quote-to-cash, support resolution—and teams are hitting a wall that governance alone can't solve.
+Agents are shipping into real workflows: contract review, quote-to-cash, support resolution: and teams are hitting a wall that governance alone can't solve.
 
 The wall isn't missing data. It's **missing decision traces**. Agents run into the same ambiguity humans resolve every day with judgment and organizational memory. But the inputs to those judgments aren't stored as durable artifacts. Specifically:
 
 1. **Exception logic that lives in people's heads.** "We always give healthcare companies an extra 10% because their procurement cycles are brutal." That's not in the CRM. It's tribal knowledge passed down through onboarding and side conversations.
 
-2. **Precedent from past decisions.** "We structured a similar deal for Company X last quarter—we should be consistent." No system links those two deals or records why the structure was chosen.
+2. **Precedent from past decisions.** "We structured a similar deal for Company X last quarter: we should be consistent." No system links those two deals or records why the structure was chosen.
 
 3. **Cross-system synthesis.** The support lead checks the customer's ARR in Salesforce, sees two open escalations in Zendesk, reads a Slack thread flagging churn risk, and decides to escalate. That synthesis happens in their head. The ticket just says "escalated to Tier 3."
 
@@ -92,7 +92,7 @@ Companies can now:
 
 Captured decision traces become searchable precedent. And every automated decision adds another trace to the graph.
 
-None of this requires full autonomy on day one. It starts with human-in-the-loop: the agent proposes, gathers context, routes approvals, and records the trace. Over time, as similar cases repeat, more of the path can be automated because the system has a structured library of prior decisions and exceptions. Even when a human still makes the call, the graph keeps growing—because the workflow layer captures the inputs, approval, and rationale as durable precedent instead of letting it die in Slack.
+None of this requires full autonomy on day one. It starts with human-in-the-loop: the agent proposes, gathers context, routes approvals, and records the trace. Over time, as similar cases repeat, more of the path can be automated because the system has a structured library of prior decisions and exceptions. Even when a human still makes the call, the graph keeps growing: because the workflow layer captures the inputs, approval, and rationale as durable precedent instead of letting it die in Slack.
 
 ---
 

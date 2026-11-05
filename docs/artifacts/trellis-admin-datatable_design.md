@@ -1,8 +1,8 @@
 ---
 version: alpha
-name: trellis admin — Operate datatable
+name: trellis admin; Operate datatable
 description: >-
-  Design for TRL-200 — raise admin #view-table / .lanes-table to SpreadsheetTable
+  Design for TRL-200; raise admin #view-table / .lanes-table to SpreadsheetTable
   density in TML (sort headers, 42px rows, empty states). No React port.
 source:
   tool: greenfield
@@ -66,14 +66,14 @@ components:
     gap: "{spacing.xs}"
 ---
 
-# Design: trellis admin — Operate datatable
+# Design: trellis admin; Operate datatable
 
-**Status:** Design verified — ready for Architect  
+**Status:** Design verified; ready for Architect  
 **Parent:** TRL-200 · **Design issue:** TRL-201  
 **Mock:** [trellis-admin-datatable_mockup.html](./trellis-admin-datatable_mockup.html)  
 **Canon:** `fractal-playground/components/boards/spreadsheet/SpreadsheetTable.tsx`  
 (+ `collection-records-projection.tsx` table mode, `showToolbar={false}`)  
-**Amends:** visual-parity table density only — not shell/toolbar chrome  
+**Amends:** visual-parity table density only; not shell/toolbar chrome  
 **Preserves:** OPERATE_NAV, operate-toolbar, statusbar, embed, TML live tbody, row→`#dlg`
 
 ---
@@ -81,12 +81,12 @@ components:
 ## Overview
 
 Raise the Operate **table projection** from a bare `.lanes-table` to
-**SpreadsheetTable browse density** — still semantic `<table>` + TML, not a React
+**SpreadsheetTable browse density**; still semantic `<table>` + TML, not a React
 port. Signature: **42px data rows**, **36px sticky sort headers** with cycle
 none→asc→desc, column hairlines, and honest empty / no-match states. Toolbar
 owns search; table is an embedded well.
 
-Emotional tone: dense database-tool scan — mono data, uppercase column labels,
+Emotional tone: dense database-tool scan; mono data, uppercase column labels,
 muted hover, accent only for focus and active sort.
 
 ## Colors
@@ -94,7 +94,7 @@ muted hover, accent only for focus and active sort.
 Inherit `runtime-theme.css`. Table well uses `{colors.surface-raised-base}` /
 `--surface`. Column dividers use quieter `{colors.border-column}` so the grid
 reads without competing with row separators. Row hover uses
-`{colors.surface-hover}` (`#222`) — **not** `--surface2` / inset `#161616`
+`{colors.surface-hover}` (`#222`); **not** `--surface2` / inset `#161616`
 (that token darkens raised rows incorrectly) and **not** accent wash. Active
 sort glyph uses `{colors.text-interactive-base}`.
 
@@ -130,7 +130,7 @@ cell row. No multi-layer shadows.
 
 ## Shapes
 
-- Wrap radius `{rounded.xl}` (**12px**) — same as visual-parity `rounded.xl`; do
+- Wrap radius `{rounded.xl}` (**12px**); same as visual-parity `rounded.xl`; do
   **not** redefine theme `--radius-lg` (10px) to 12px  
 - Internal cells: no radius; hairline column borders only  
 - Sort control: text button flush in `th` (no pill)
@@ -214,6 +214,6 @@ table sort headers → table rows → op-log → statusbar → dialog when open.
 
 ## Design research (summary)
 
-Full research: design-research TRL-200. Anchors — SpreadsheetTable
+Full research: design-research TRL-200. Anchors; SpreadsheetTable
 `ROW_HEIGHT=42` / header `h-9`; collection projection `showToolbar={false}`;
 admin `.lanes-table` sticky but unsorted; lanes.html sortable + `.table-empty`.

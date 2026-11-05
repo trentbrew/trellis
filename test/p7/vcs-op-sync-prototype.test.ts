@@ -598,7 +598,7 @@ describe('ingest authorization gate (ADR 0022 Phase 3)', () => {
     );
   });
 
-  test('stranger-signed grant is rejected (unauthorized)', async () => {
+  test('stranger-signed grant is rejected (unknown-signer)', async () => {
     const engine = await initPeer('gate-b');
     await defineZone(engine.capabilityContext(), {
       zoneId: ZONE,
@@ -608,7 +608,7 @@ describe('ingest authorization gate (ADR 0022 Phase 3)', () => {
 
     const res = await engine.integrateOps([await grantOp('agent:gate-b', STRANGER)]);
     expect(res.rejected).toHaveLength(1);
-    expect(res.rejected[0].reason).toBe('unauthorized');
+    expect(res.rejected[0].reason).toBe('unknown-signer');
     expect(resolveCapability(engine.getEavStore(), MEMBER, ZONE)).toBe(
       CapabilityLevel.None,
     );
@@ -699,7 +699,7 @@ describe('ingest authorization gate (ADR 0022 Phase 3)', () => {
     );
   });
 
-  test('signed auth op from an unknown signer is rejected (unauthorized)', async () => {
+  test('signed auth op from an unknown signer is rejected (unknown-signer)', async () => {
     const { engine: owner } = await initSignedPeer('gate-peer-owner-3');
     const ownerDid = owner.capabilityContext().agentId.replace(/^identity:/, '');
     const zone = makeZoneId(ownerDid, 'z1');
@@ -717,7 +717,7 @@ describe('ingest authorization gate (ADR 0022 Phase 3)', () => {
     );
 
     // Peer B is identity-backed (wires a resolver) but does NOT know the
-    // owner's key — so the signature cannot be verified → unauthorized.
+    // owner's key — so the signature cannot be verified → unknown-signer.
     // The full journal is sent so the rejection is about the *signer* rather
     // than a dangling `previousHash`.
     const { engine: peerB } = await initSignedPeer('gate-peer-b-3');
@@ -730,17 +730,17 @@ describe('ingest authorization gate (ADR 0022 Phase 3)', () => {
     // The zoneDefine is rejected outright: its signer's key is unknown.
     expect(
       authRejects.some(
-        (r) => r.op.kind === 'vcs:zoneDefine' && r.reason === 'unauthorized',
+        (r) => r.op.kind === 'vcs:zoneDefine' && r.reason === 'unknown-signer',
       ),
     ).toBe(true);
 
-    // The grant then CASCADES — it chains to the rejected zoneDefine, so its
-    // `previousHash` never becomes known and it fails as a missing dependency
-    // rather than on its own merits. Rejecting an op necessarily strands its
-    // causal descendants; the batch converges on "nothing applied" either way.
+    // Every op in the journal carries the same unknown signer, so the grant is
+    // rejected on its own signature at validation; were it not, it would
+    // cascade as a missing dependency of the rejected zoneDefine. The batch
+    // converges on "nothing applied" either way.
     expect(
       authRejects.every(
-        (r) => r.reason === 'unauthorized' || r.reason === 'missing-dependency',
+        (r) => r.reason === 'unknown-signer' || r.reason === 'missing-dependency',
       ),
     ).toBe(true);
     expect(

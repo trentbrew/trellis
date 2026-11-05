@@ -1,11 +1,11 @@
-# Spec: Lane promote — coordination hard-conflict skip (v0.1)
+# Spec: Lane promote; coordination hard-conflict skip (v0.1)
 
 **Status:** Ready for impl  
 **Date:** 2026-07-24  
 **Proposal:** TRL-296  
 **Parent:** TRL-286 coordination-metadata v0 (TRL-287/289)  
 **Unblocks:** TRL-281, TRL-170 close (theme scrubber harden)  
-**Sibling:** [lane-promote-snapshot-head-v0.1.md](./lane-promote-snapshot-head-v0.1.md) — post-start head race on issue branches (required for spec-parent close batch)
+**Sibling:** [lane-promote-snapshot-head-v0.1.md](./lane-promote-snapshot-head-v0.1.md); post-start head race on issue branches (required for spec-parent close batch)
 
 ---
 
@@ -28,7 +28,7 @@ Lifecycle flow:
 3. Auto-promote on close treats stale lane `status` as **hard** blocking conflict.
 
 Soft loop already skips `status` when the lane op did not write that attr.
-The **addFacts hard loop** does not — only `description` gets integration-wins
+The **addFacts hard loop** does not; only `description` gets integration-wins
 treatment today.
 
 Same class of bug will hit `startedAt`, claim fields, and strategist `describe`
@@ -36,12 +36,12 @@ when lane journal holds redundant lifecycle facts.
 
 ## 2. Goals
 
-1. **Generalize integration-wins stale skip** — any `ISSUE_COORDINATION_ATTRS`
+1. **Generalize integration-wins stale skip**; any `ISSUE_COORDINATION_ATTRS`
    fact where integration head diverged from fork base and lane value is stale
    must not emit a hard conflict and must not replay.
-2. **Close path** — `trellis issue close TRL-281 --confirm` succeeds after
+2. **Close path**; `trellis issue close TRL-281 --confirm` succeeds after
    `pnpm build` (CLI uses `dist/`).
-3. **Regression safety** — real attribute edits (title, labels, code paths) still
+3. **Regression safety**; real attribute edits (title, labels, code paths) still
    hard-conflict when integration changed since fork.
 
 ## 3. Non-goals
@@ -85,7 +85,7 @@ journal copies are orientation / lifecycle noise once integration head moved.
 `detectEntityConflicts` addFacts loop already calls `isIntegrationWinsStaleFact`
 before pushing `hard`. No new branches required beyond the helper generalization.
 
-Outer replay skip (lines ~452–461) uses `shouldSkipStaleLaneOp` — skips when
+Outer replay skip (lines ~452–461) uses `shouldSkipStaleLaneOp`; skips when
 all addFacts are stale/redundant **and** all deleteFacts are stale coordination
 deletes (`oldIssueStatus` on `issueUpdate`).
 
@@ -111,7 +111,7 @@ export const ISSUE_COORDINATION_ATTRS = new Set([
 | `non-coordination attr still hard-conflicts` | Lane + integration diverge on `title` → blocking hard remains |
 
 Optional regression: fold existing describe tests still pass (description now
-covered by generalized helper — behavior unchanged).
+covered by generalized helper; behavior unchanged).
 
 ## 6. Files
 
@@ -134,14 +134,14 @@ trellis issue close TRL-170 --confirm
 
 ## Acceptance criteria
 
-**Spec (static — architect gate):**
+**Spec (static; architect gate):**
 
 ```text
 test:pnpm check
 test:pnpm exec vitest run test/p4/lane-promote.test.ts
 ```
 
-**Impl (close gate — after build):**
+**Impl (close gate; after build):**
 
 ```text
 test:pnpm build && pnpm exec trellis issue close TRL-281 --confirm

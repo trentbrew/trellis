@@ -4,7 +4,7 @@
 **Proposal:** TRL-282
 
 > Regression guard for the agent-facing query path: EQL-S over materialized
-> EAV, hierarchy links, and context pack budget — not TML `evaluateQuery`.
+> EAV, hierarchy links, and context pack budget; not TML `evaluateQuery`.
 
 ---
 
@@ -21,14 +21,14 @@ Desk stress test (2026-07-24) found:
 ## 2. Goals
 
 1. **`runQueryStress(engine)`** library in `src/query/stress.ts`
-2. **`trellis query-stress`** CLI — human/agent runnable on any repo
-3. **Vitest fixture** — seeds parent/child issue + decision, requires childOf +
+2. **`trellis query-stress`** CLI; human/agent runnable on any repo
+3. **Vitest fixture**; seeds parent/child issue + decision, requires childOf +
    Decision projection
-4. **Optional live test** — passes on `trellis-node` when `.trellis` present
+4. **Optional live test**; passes on `trellis-node` when `.trellis` present
 
 ## 3. Non-goals
 
-- PeerDriver default flip (admin shell — separate issue)
+- PeerDriver default flip (admin shell; separate issue)
 - `.tml` compiler
 - File entity projection
 - Labels-as-set query ergonomics
@@ -44,7 +44,7 @@ Desk stress test (2026-07-24) found:
 | `issue.priority_order` | ORDER BY priority runs |
 | `decision.projection` | `--require-decisions` fails if empty |
 | `context_pack.boot_budget` | boot pack ≤ budget |
-| `issue.labels_scalar` | v0.1 — documents comma-string label storage |
+| `issue.labels_scalar` | v0.1; documents comma-string label storage |
 
 See also: `docs/specs/query-path-credibility-v0.1.md` (agent hints footer).
 

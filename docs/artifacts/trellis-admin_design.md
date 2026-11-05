@@ -1,8 +1,8 @@
 ---
 version: alpha
-name: trellis admin — AffordanceShell + TML projections
+name: trellis admin; AffordanceShell + TML projections
 description: >-
-  Design for TRL-173 — `trellis admin` as Operate/VCS console in fractal-playground;
+  Design for TRL-173; `trellis admin` as Operate/VCS console in fractal-playground;
   TML-mounted projections; kernel theme SSOT; replaces lane watch at parity.
 source:
   tool: greenfield
@@ -98,7 +98,7 @@ components:
 ## Overview
 
 `trellis admin` is the **operator console** for a Trellis repo: lanes, issues, live
-ops — eventually the whole-graph admin. It lives visually in
+ops; eventually the whole-graph admin. It lives visually in
 **fractal-playground** (AffordanceShell), but **projections are TML**, and
 **tokens come only from** kernel `runtime-theme.css`.
 
@@ -117,7 +117,7 @@ playground OKLCH for VCS/TML surfaces.
 ## Typography
 
 System UI for chrome; monospace for data (lane ids, op kinds, search, view
-toggle). Match lanes.html instrument density — not marketing type.
+toggle). Match lanes.html instrument density; not marketing type.
 
 ## Layout
 
@@ -125,8 +125,8 @@ toggle). Match lanes.html instrument density — not marketing type.
 
 | Slot | Content |
 | ---- | ------- |
-| Primary rail (56px) | Operate icons; **VCS** active (peer to Collections/Cron — not buried in Demos) |
-| Secondary | Empty / optional filters later — not required for v1 |
+| Primary rail (56px) | Operate icons; **VCS** active (peer to Collections/Cron; not buried in Demos) |
+| Secondary | Empty / optional filters later; not required for v1 |
 | Header | Brand crumb · live · repo path · stats chips · view toggle + search (same height 34px) |
 | Content | TML mount: `grid` \| `kanban` \| `table` via `?view=` |
 | Detail | **Op-log** always on desktop (≥1100px); drawer below |
@@ -145,7 +145,7 @@ kernel `/theme/runtime-theme.css`. Kernel fallback: `src/ui/admin.html` if CLI
 cannot reach playground.
 
 **System Visualizer** (`client.html`): separate Operate destination or VCS
-sub-tab later — different data (`/api/graph`). Out of v1 parity for lane watch
+sub-tab later; different data (`/api/graph`). Out of v1 parity for lane watch
 replacement.
 
 ### Wireframe
@@ -183,7 +183,7 @@ persist last choice in `localStorage` key `trellis-admin-view`).
 
 ### Stats chips
 
-Active lanes · total lanes · integration branch · issues — compact mono,
+Active lanes · total lanes · integration branch · issues; compact mono,
 non-interactive in v1.
 
 ### Issue card (TML)
@@ -195,7 +195,7 @@ promote). Parity with `lanes.html` kanban cards.
 ### Lane card (Grid / Table row)
 
 Lane id · agent · session · ops/files counts · branch · worktree · linked
-issue — parity with `lanes.html` grid/table.
+issue; parity with `lanes.html` grid/table.
 
 ### Op-log row
 
@@ -226,7 +226,7 @@ Green pulse when SSE connected; dim + “reconnecting…” on disconnect.
 | Promote lock live | lock held by active promote | warning banner (live copy) |
 | Promote lock stale | lock file aged / orphaned | warning banner (stale copy) |
 | Narrow &lt;1100px | resize | op-log → bottom drawer; rail icons only |
-| Embed `?embed=1` | query | hide primary rail; keep toolbar + projection + op-log — **v1.1** |
+| Embed `?embed=1` | query | hide primary rail; keep toolbar + projection + op-log; **v1.1** |
 | Kill gate | N/A | soft-deprecate `lane watch` only after parity checklist |
 
 ## Accessibility
@@ -245,7 +245,7 @@ Green pulse when SSE connected; dim + “reconnecting…” on disconnect.
    target only for v1)? Prefer: CLI opens playground route when available, falls
    back to kernel-hosted admin HTML that mirrors this shell.
 2. **SSE hybrid:** TML kanban may use `events=snapshot`; op-log needs full op
-   stream — dual subscription or one stream + split bindings.
+   stream; dual subscription or one stream + split bindings.
 3. **Parity checklist (must pass before remove `lane watch`):** grid, kanban,
    table, search, stats, lock banner, op-log live, issue dialog, lane card
    fields, promote mutation, SSE reconnect. Orphans section: **cut** unless

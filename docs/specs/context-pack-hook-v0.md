@@ -4,7 +4,7 @@
 **Proposal:** TRL-136 · **Parent pack:**
 [context-pack-v0.md](./context-pack-v0.md) · **Issue:** TRL-138
 
-> Desk session boot must emit a **budgeted** VCS orientation pack — not rely on
+> Desk session boot must emit a **budgeted** VCS orientation pack; not rely on
 > agents to discover `trellis context pack` after a fat dump.
 
 ---
@@ -13,7 +13,7 @@
 
 TRL-129 shipped `trellis context pack` (CLI + MCP). Desk `session-context.sh`
 still only prints trail + graph-briefing + docs-drift + lane edit root. Agents
-never see the pack unless they opt in — so the token win does not land on the
+never see the pack unless they opt in; so the token win does not land on the
 default boot path.
 
 ## 2. Goals
@@ -27,7 +27,7 @@ default boot path.
 ## 3. Non-goals
 
 - Rewriting global `~/.cursor` `hooks_context` manifesto (Manager follow-up)
-- Replacing or deleting graph-briefing (different domain — see §5)
+- Replacing or deleting graph-briefing (different domain; see §5)
 - Changing pack clamp algorithm / library API (already shipped)
 - RAG, lane engine, pipeline-benchmark gate (optional note only)
 
@@ -35,8 +35,8 @@ default boot path.
 
 | Path                                                            | Role                                                                                 |
 | --------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `Projects/TRELLIS/.cursor/hooks/session-context.sh`             | **Required** — invoke pack when VCS root known                                       |
-| `Projects/TRELLIS/.cursor/hooks/trellis-harness/trellis-cli.sh` | **Preferred** — add `trellis_harness_context_pack` helper (CLI resolution + capture) |
+| `Projects/TRELLIS/.cursor/hooks/session-context.sh`             | **Required**; invoke pack when VCS root known                                       |
+| `Projects/TRELLIS/.cursor/hooks/trellis-harness/trellis-cli.sh` | **Preferred**; add `trellis_harness_context_pack` helper (CLI resolution + capture) |
 | `trellis-node/docs/specs/context-pack-hook-v0.md`               | This contract                                                                        |
 | `trellis-node/docs/specs/context-pack-v0.md` §8                 | Point at this consumer spec (one-paragraph link)                                     |
 
@@ -110,7 +110,7 @@ Do not invent a third detection path.
    - default budget 2000
    - `TRELLIS_CONTEXT_PACK_BUDGET` override
    - failure omits pack; session start still succeeds
-3. `context-pack-v0.md` §8 — replace the “optional desk snippet” with a link to
+3. `context-pack-v0.md` §8; replace the “optional desk snippet” with a link to
    this consumer spec and note that desk wiring is TRL-136 / TRL-138.
 
 ## 10. Acceptance criteria
@@ -121,7 +121,7 @@ test:rg -q "context pack" Projects/TRELLIS/.cursor/hooks/session-context.sh
 test:rg -q "TRELLIS_CONTEXT_PACK_BUDGET|budget 2000|--budget" \
   session-context.sh trellis-harness/trellis-cli.sh
 test:bash -n session-context.sh
-Pack call is non-fatal under set -e (|| true / subshell) — manual read
+Pack call is non-fatal under set -e (|| true / subshell); manual read
 test:pnpm check   # trellis-node; docs-only change must stay green
 ```
 
@@ -134,7 +134,7 @@ Mirror on issue TRL-138.
   edit root).
 - Do not change `graph-briefing.sh` in this wedge.
 - Do not edit `~/.cursor` global hooks.
-- Desk hooks are **outside** the trellis-node git spoke — commit on the desk /
+- Desk hooks are **outside** the trellis-node git spoke; commit on the desk /
   lab tree that owns `.cursor/hooks` if tracked; otherwise land and note path in
   impl SUMMARY.
 - Smoke (recommended, not hard AC): from a VCS cwd,

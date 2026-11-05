@@ -46,11 +46,11 @@ flowchart TB
 
 ### Regression class (gizmo loss)
 
-Unmerged in-flight work was lost when a **shared dirty tree** was cleared (`git stash`, checkout, or another agent's edits) — not because Trellis lacked lane history, but because there is **no mechanism** binding lane state to an isolated filesystem or git ref. Commit-on-promote alone does not fix this: the work was never promoted.
+Unmerged in-flight work was lost when a **shared dirty tree** was cleared (`git stash`, checkout, or another agent's edits); not because Trellis lacked lane history, but because there is **no mechanism** binding lane state to an isolated filesystem or git ref. Commit-on-promote alone does not fix this: the work was never promoted.
 
-`promoteLane` today replays to the integration journal only — no git side effect (`src/engine.ts`). `enterLane` / `leaveLane` overlay the materialized store but do **not** sync files to disk. `LaneMeta.worktreePath` exists but is metadata-only (`src/vcs/lane.ts`). Offline `exportToGit` (`src/git/git-exporter.ts`) already materializes milestones from the blob store; there is no live hook on promote.
+`promoteLane` today replays to the integration journal only; no git side effect (`src/engine.ts`). `enterLane` / `leaveLane` overlay the materialized store but do **not** sync files to disk. `LaneMeta.worktreePath` exists but is metadata-only (`src/vcs/lane.ts`). Offline `exportToGit` (`src/git/git-exporter.ts`) already materializes milestones from the blob store; there is no live hook on promote.
 
-ADR 0001 rejected **git worktree only** for semantic isolation (`.trellis` is gitignored). This ADR adds worktrees as a **filesystem bind** alongside lane journals — not as a replacement for them.
+ADR 0001 rejected **git worktree only** for semantic isolation (`.trellis` is gitignored). This ADR adds worktrees as a **filesystem bind** alongside lane journals; not as a replacement for them.
 
 ### Two problems
 
@@ -61,7 +61,7 @@ ADR 0001 rejected **git worktree only** for semantic isolation (`.trellis` is gi
 
 ## Decision
 
-**Trellis owns semantics; git is downstream materialization** — the same shape as "Trellis owns semantics, Iroh moves bytes." Git is never authoritative for branch head, lane status, or integration history.
+**Trellis owns semantics; git is downstream materialization**; the same shape as "Trellis owns semantics, Iroh moves bytes." Git is never authoritative for branch head, lane status, or integration history.
 
 ```mermaid
 flowchart LR
@@ -84,7 +84,7 @@ Implementation is **two phases**. Phase 1 is safe on a shared working tree. Phas
 
 ### Trigger
 
-`vcs:lanePromoteComplete` after successful `promoteLane` (ADR 0002). **Not** `trellis merge` — branch merge and lane promote are different primitives.
+`vcs:lanePromoteComplete` after successful `promoteLane` (ADR 0002). **Not** `trellis merge`; branch merge and lane promote are different primitives.
 
 ```mermaid
 sequenceDiagram
@@ -120,15 +120,15 @@ ON vcs:lanePromoteComplete(laneId, completeOpHash):
     commitHash ← gitWriteTreeAndCommit(tree, msg, trailers)
     APPEND .trellis/git-sync.json
   CATCH:
-    LOG warning — DO NOT roll back Trellis promote
+    LOG warning; DO NOT roll back Trellis promote
 ```
 
 ### Commit construction (required)
 
 1. Gather Tier-0 file ops replayed in the promote transaction (`plan.opsToReplay` / integration tail delta).
-2. Build file tree from **blob store** content hashes — same pattern as `exportToGit` file-state tracker, scoped to one promote.
+2. Build file tree from **blob store** content hashes; same pattern as `exportToGit` file-state tracker, scoped to one promote.
 3. Create git tree / staged index for **exact paths only**.
-4. **Never** `git add -A` on the shared working tree — racy with concurrent agents and may sweep unrelated dirty files.
+4. **Never** `git add -A` on the shared working tree; racy with concurrent agents and may sweep unrelated dirty files.
 
 One **squash commit per promote** on the git side. Trellis integration ops remain granular per ADR 0002.
 
@@ -178,7 +178,7 @@ trellis lane promote <id> --no-git                 # escape hatch
 
 ### Future module
 
-`src/git/git-materializer.ts` — shared between the promote hook and a later `exportToGit` refactor.
+`src/git/git-materializer.ts`; shared between the promote hook and a later `exportToGit` refactor.
 
 ---
 
@@ -236,7 +236,7 @@ flowchart TB
 - Auto-promote on session close (ADR 0006 non-goal, reaffirmed)
 - Materializing Idea Garden / dropped / abandoned lanes to git
 - Making git authoritative for Trellis branch head or lane status
-- Squashing Trellis integration ops (ADR 0002 deferred — git squash only)
+- Squashing Trellis integration ops (ADR 0002 deferred; git squash only)
 - Replacing lane journals with git branches
 - Prototype merge automation on desks with many active lanes without spec review
 
@@ -244,12 +244,12 @@ flowchart TB
 
 | Alternative | Verdict |
 | ----------- | ------- |
-| `git add` scoped paths from dirty tree | Rejected — racy; unrelated dirty files may enter commit |
-| Commit on every lane op (continuous checkpoint) | Deferred — Phase 2 worktrees provide safety; optional v2 |
+| `git add` scoped paths from dirty tree | Rejected; racy; unrelated dirty files may enter commit |
+| Commit on every lane op (continuous checkpoint) | Deferred; Phase 2 worktrees provide safety; optional v2 |
 | Copy whole `.trellis` per agent | Rejected in ADR 0001 |
 | Git worktree without Trellis lane journals | Rejected in ADR 0001 |
-| Trigger on `trellis merge` instead of lane promote | Rejected — different primitive |
-| Rely on human `git commit` after promote | Rejected — root cause of desk/git drift |
+| Trigger on `trellis merge` instead of lane promote | Rejected; different primitive |
+| Rely on human `git commit` after promote | Rejected; root cause of desk/git drift |
 
 ## Consequences
 
@@ -263,10 +263,10 @@ flowchart TB
 **Negative**
 
 - Disk overhead per active worktree
-- All worktrees share one `.git` while `.trellis` stays gitignored — paths must stay under repo root
+- All worktrees share one `.git` while `.trellis` stays gitignored; paths must stay under repo root
 - Promote succeeds but git materialize fails → drift until retry
 - Enter-time materialize can be slow for large lanes
-- Abandoned lanes (Idea Garden) intentionally never hit git — in-flight safety must come from isolation, not commit-on-promote
+- Abandoned lanes (Idea Garden) intentionally never hit git; in-flight safety must come from isolation, not commit-on-promote
 
 ## Implementation sequencing
 

@@ -1,12 +1,12 @@
-# ADR 0045: User-Defined Collections — One Model for "a Table People Make"
+# ADR 0045: User-Defined Collections; One Model for "a Table People Make"
 
 **Status:** Proposed (2026-09-26)
 **Related:**
 [0018](./0018-explicit-ids-and-field-sync-tiers.md) (explicit entity IDs and field sync tiers),
 [0038](./0038-git-authoritative-file-tier.md) (git-authoritative file tier),
-turtleOS [ADR-0013](../../../os-sandbox/docs/adr/0013-derived-references.md) (derived references — ids stored, names computed),
+turtleOS [ADR-0013](../../../os-sandbox/docs/adr/0013-derived-references.md) (derived references; ids stored, names computed),
 turtleOS [ADR-0016 §6](../../../os-sandbox/docs/adr/0016-tsh-command-language.md) (vocabulary comes from the schema),
-turtleOS [ADR-0018](../../../os-sandbox/docs/adr/0018-user-defined-collections.md) (turtleOS alignment — two graph planes, guardrails, tsh)
+turtleOS [ADR-0018](../../../os-sandbox/docs/adr/0018-user-defined-collections.md) (turtleOS alignment; two graph planes, guardrails, tsh)
 
 **Impacted components:**
 `src/core/ontology/core-ontology.ts`, `src/core/kernel/schema-middleware.ts`,
@@ -157,7 +157,7 @@ its status: it's labelled a demo when it's the model the kernel actually enforce
 5. **`laneId` on `CollectionRecord`.** Is it a data field or a VCS concern? It probably belongs to the lane layer, not
    the row.
 
-## Addendum — Phase 1 spike results (2026-09-26)
+## Addendum; Phase 1 spike results (2026-09-26)
 
 The FINANCE spike is done: `client-svelte` `a46f593` (storage) and `8ebdf25` (UI races). User databases now
 store as `CollectionMeta` (explicit `collectionMeta:<uuid>` id) + `Field` entities, uniform `CollectionRecord`
@@ -197,7 +197,7 @@ validation.** As shipped, per-collection validation enforces nothing beyond `tit
 
 Minor: there is no `GET /ontologies/:id`. An empty `PATCH` was the only way to read a registered schema back.
 
-## Addendum — Phase 2: kernel promotion (2026-09-26)
+## Addendum; Phase 2: kernel promotion (2026-09-26)
 
 Done. The spike's defects are fixed (`1a618f6`, `e8b2f8d`, plus `aa65534` for a regression the zod fix
 exposed: array values were rejected as `multi_select`). User collections are kernel types.
@@ -225,7 +225,7 @@ Remaining phases: 3 (migrate fractal-playground and realtime-app, whose own copi
 when a release carries them: its `Field` type becomes `CollectionField`, and its compiler calls
 `compileCollectionSchema`.
 
-## Addendum — Phase 3 progress (2026-09-27)
+## Addendum; Phase 3 progress (2026-09-27)
 
 - **Migration helper** (`62809b4`): `migrateCollectionOptions` / `migrateOptionValue` convert legacy option
   shapes (`string[]`, `{value,label,color}[]`) and stored row values to option ids. Ids are derived from labels
@@ -243,7 +243,7 @@ when a release carries them: its `Field` type becomes `CollectionField`, and its
 - **fractal-playground: deferred** until its in-progress collections work is committed and a trellis
   release carries the kernel types. It is still on `trellis ^3.2.0`.
 
-## Addendum — Scope change and Phase 4: tag vocabularies (2026-09-28)
+## Addendum; Scope change and Phase 4: tag vocabularies (2026-09-28)
 
 **fractal-playground is prior art, not a migration target.** Phase 3 no longer includes it. The FINANCE client
 (`lab/apps/FINANCE/client-svelte`) is the app this ADR is proven in. fractal's collections UI (schema editor,

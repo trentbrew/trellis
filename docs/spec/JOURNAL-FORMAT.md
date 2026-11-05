@@ -1,9 +1,9 @@
-# The `.trellis` journal format — op envelope & hashing spec
+# The `.trellis` journal format; op envelope & hashing spec
 
 > **Status:** v0.1 draft (2026-10-10). Freeze target for independent
 > reimplementation and for the proposed `v2` envelope (`parents[]`).
 > Written against the canonical checkout at `2bc2804` (trellis 4.0.x).
-> **Conformance:** [`conformance/`](./conformance/README.md) — fixtures + a
+> **Conformance:** [`conformance/`](./conformance/README.md); fixtures + a
 > zero-dependency validator implementing the rules in §3.
 
 ## 1. Scope
@@ -12,8 +12,8 @@ Two op families exist in the kernel today:
 
 | Family | Storage | Preimage | Status |
 | --- | --- | --- | --- |
-| **Journal (VCS) ops** | `.trellis/ops.json` (JSONL) | §3 — `hashVcsOp` | **Current; specified here** |
-| Kernel graph ops | SQLite `payload` column | §5 — ADR 0021 (`canonical-op`) | Referenced for completeness |
+| **Journal (VCS) ops** | `.trellis/ops.json` (JSONL) | §3; `hashVcsOp` | **Current; specified here** |
+| Kernel graph ops | SQLite `payload` column | §5; ADR 0021 (`canonical-op`) | Referenced for completeness |
 
 This document specifies the journal envelope precisely enough that a reader
 without the source can (a) recompute every op's hash, (b) verify signatures,
@@ -25,7 +25,7 @@ freeze should adopt.
 ```text
 .trellis/
   config.json                # repo config (sample fields in §2.1)
-  ops.json                   # append-only JSONL journal — one op per line
+  ops.json                   # append-only JSONL journal; one op per line
   blobs/                     # content-addressed file bodies
   agents/AGENTS.md           # generated agent context
   devices/local.json         # delegated device key (ADR 0020), if paired
@@ -53,10 +53,10 @@ A journal is a single causal sequence (§3.4 step 3).
 }
 ```
 
-## 3. Journal op envelope (v1 — implemented)
+## 3. Journal op envelope (v1; implemented)
 
 A journal op is a single JSON object. Its fields split into **hashed** and
-**unhashed** (envelope) groups (the split is deliberate — TRL-102):
+**unhashed** (envelope) groups (the split is deliberate; TRL-102):
 
 | Field | Hashed? | Notes |
 | --- | --- | --- |
@@ -64,7 +64,7 @@ A journal op is a single JSON object. Its fields split into **hashed** and
 | `timestamp` | yes | ISO-8601 string |
 | `agentId` | yes | self-asserted writer label; **not** proof of authorship |
 | `previousHash` | yes | causal parent; **omitted entirely** on genesis |
-| `vcs` | yes | the payload — key order is significant (see §3.1) |
+| `vcs` | yes | the payload; key order is significant (see §3.1) |
 | `hash` | no | content address; derived (§3.2) |
 | `facts`, `links` | no | envelope annotations on ops we did not mint (TRL-102) |
 | `laneId` | no | ambient mint context; not identity (see §3.5) |
@@ -101,7 +101,7 @@ Signing happens **after** the initial hash and **inside the payload**:
 1. Compute the **body hash**: the §3.1 preimage with `signature`, `signedBy`,
    and `signedWith` removed from `vcs` (remaining key order preserved):
    `bodyHash = "trellis:op:" + hex(sha256(utf8(preimage({…, vcs: rest}))))`
-2. `signature = Ed25519_sign(privateKey, utf8(bodyHash))` — base64.
+2. `signature = Ed25519_sign(privateKey, utf8(bodyHash))`; base64.
    Keys: private = **PKCS#8 DER, base64**; public = **SPKI DER, base64**.
 3. Stamp `vcs.signedBy` (identity entity id, e.g. `identity:did:key:…`),
    `vcs.signedWith` (device id, optional, ADR 0020), `vcs.signature`.
@@ -110,42 +110,42 @@ Signing happens **after** the initial hash and **inside the payload**:
 
 ### 3.4 Verification (normative order)
 
-1. **Structure** — `hash` matches `^trellis:op:[0-9a-f]{64}$`; `kind`,
+1. **Structure**; `hash` matches `^trellis:op:[0-9a-f]{64}$`; `kind`,
    `timestamp`, `agentId` are strings.
-2. **Hash** — recompute §3.1–§3.2 over the op as stored; must equal `hash`.
-3. **Chain** — the first op of a journal may omit `previousHash`; every later
+2. **Hash**; recompute §3.1–§3.2 over the op as stored; must equal `hash`.
+3. **Chain**; the first op of a journal may omit `previousHash`; every later
    op must carry it and it must equal the previous op's `hash`.
-4. **Signature**, when present — recompute the body hash (§3.3); resolve the
+4. **Signature**, when present; recompute the body hash (§3.3); resolve the
    key via a trusted keyring (`signedBy`; prefer `signedWith` device key when
    known); `verify(spkiPublicKey, signature, utf8(bodyHash))` must hold.
-5. **Signing policy** — unsigned ops are admissible only **before** the first
+5. **Signing policy**; unsigned ops are admissible only **before** the first
    signed op (repo initialization precedes identity creation); an unsigned op
    after a signed one is a violation. A signature from an unknown identity is
    a violation (no silent downgrade).
 
 Verification is per-journal and total: a single violation rejects from that
-point on (consumers may keep the verified prefix — that is replica policy, not
+point on (consumers may keep the verified prefix; that is replica policy, not
 format policy).
 
-### 3.5 Envelope annotations (NOT hashed — by design)
+### 3.5 Envelope annotations (NOT hashed; by design)
 
-- `facts`, `links` — added when pulling another peer's op
+- `facts`, `links`; added when pulling another peer's op
   (`{ e: 'op', a: 'remote', v: <name> }`), so we can annotate without
   invalidating their hash. Not to be confused with `vcs.facts`, which is
   payload and **is** hashed (`vcs:storeAssert`).
-- `laneId` — the lane an op was minted in. Ambient context, not identity: the
+- `laneId`; the lane an op was minted in. Ambient context, not identity: the
   same semantic op minted in two lanes must hash identically, or dedup and
   cross-lane cherry-picking break (TRL-102).
 
 ## 4. Writer identity & branch refs (brief)
 
-- `writerPrincipal(op) = op.vcs?.signedBy ?? op.agentId` — the signed principal
+- `writerPrincipal(op) = op.vcs?.signedBy ?? op.agentId`; the signed principal
   when present, self-asserted `agentId` for unsigned ops (ADR 0022 §4).
 - Per-writer branch heads: `branch:NAME@<principal>` for non-default branches;
   `defaultBranch` and `integration` collapse to the shared `branch:NAME`.
 - Branch merge semantics are out of scope for this document.
 
-## 5. Kernel graph ops (ADR 0021 — for reference, not refrozen here)
+## 5. Kernel graph ops (ADR 0021; for reference, not refrozen here)
 
 Kernel mutation ops use a different, stricter canonicalization
 (`src/core/persist/canonical-op.ts`):
@@ -156,34 +156,34 @@ JSON.stringify({ v: 2, kind, timestamp, agentId, previousHash: x ?? null,
 ```
 
 - `previousHash` is normalized to **`null`** (present key), unlike journal v1
-  where it is omitted — do not conflate the two.
+  where it is omitted; do not conflate the two.
 - `body` keys are always present in a fixed order; fact/link/meta/source key
   order is canonicalized.
-- `provenance: { actorType, origin, commandId? }` — `commandId` emitted only
+- `provenance: { actorType, origin, commandId? }`; `commandId` emitted only
   when present (ADR 0058) so older v2 ops keep verifying.
 - Ops without `v` are legacy v1: **grandfathered opaque** (their preimages are
   unrecoverable by construction). `verifyOpHash` reports `{valid: true,
   legacy: true}` for them.
 
-## 6. Proposed v2 envelope (freeze agenda — NOT implemented)
+## 6. Proposed v2 envelope (freeze agenda; NOT implemented)
 
-1. **`v: 2`** on journal ops — a version field so migration is explicit
+1. **`v: 2`** on journal ops; a version field so migration is explicit
    (today only kernel ops carry `v`).
-2. **`parents: string[]`** replacing `previousHash` — the DAG required for
+2. **`parents: string[]`** replacing `previousHash`; the DAG required for
    concurrent agents/devices and lineage merges. Keep `previousHash` as an
    alias for `parents[0]` for one version, then retire it.
-3. **Canonical `vcs` key order** — remove mint-order sensitivity (§3.1).
+3. **Canonical `vcs` key order**; remove mint-order sensitivity (§3.1).
    Recommended: per-kind declared field order, hashed exactly as declared.
-4. **Signature placement decision** — status quo (`hash` covers the signature;
+4. **Signature placement decision**; status quo (`hash` covers the signature;
    body hash excludes it) vs **envelope signature** (`hash` covers content
    only; signing/re-signing never changes the content address). Recommended:
-   envelope signature — it makes `hash` stable under re-signing and keeps
+   envelope signature; it makes `hash` stable under re-signing and keeps
    tamper evidence identical.
-5. **`author`** — primary writer identity = DID (`signedBy`), with `agentId`
+5. **`author`**; primary writer identity = DID (`signedBy`), with `agentId`
    demoted to a display label.
 6. **Kind namespace registry + per-kind `schemaVersion`** where payload shape
    evolves independently of the envelope.
-7. **Conformance corpus extension** — add a diverged-DAG fixture when v2
+7. **Conformance corpus extension**; add a diverged-DAG fixture when v2
    lands; the validator's chain rule in §3.4.3 becomes a parents-set rule.
 
 ## 7. Non-goals

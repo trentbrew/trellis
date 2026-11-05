@@ -1,4 +1,4 @@
-# Theme Contract — CSS Custom Properties for @trellis.computer/ui
+# Theme Contract; CSS Custom Properties for @trellis.computer/ui
 
 **Status:** spec
 **Date:** 2026-07-24
@@ -9,7 +9,7 @@
 
 ## TL;DR
 
-All `@trellis.computer/ui` components reference CSS custom properties — never
+All `@trellis.computer/ui` components reference CSS custom properties; never
 hardcoded values. Tokens are grouped semantically, use `oklch` color format, and
 support `data-theme` switching (default, dark, nested). Products override by
 setting their own values on `:root` or a scoped container.
@@ -23,7 +23,7 @@ All color tokens use `oklch`:
 ```
 
 **Why oklch:** perceptual uniformity, wide gamut, intuitive lightness (L) +
-chroma (C) + hue (H). Unlike HSL, oklch lightness is perceptually linear —
+chroma (C) + hue (H). Unlike HSL, oklch lightness is perceptually linear : 
 `oklch(0.5 …)` is visually halfway regardless of hue.
 
 ## Semantic Groups
@@ -144,7 +144,7 @@ chroma (C) + hue (H). Unlike HSL, oklch lightness is perceptually linear —
 
 The icon pack is a **theme concern**: the same markup renders Lucide under one
 theme and Tabler under another. Components never hardcode `set:` prefixes in
-markup — the pack token owns it.
+markup; the pack token owns it.
 
 ### Motion tokens
 
@@ -163,7 +163,7 @@ own *what* animates, never *how fast* or *with what feel*.
 
 ### Prose & rhythm tokens (typeset model)
 
-For rendered content surfaces — editor output, markdown, chat, docs. The
+For rendered content surfaces; editor output, markdown, chat, docs. The
 shadcn/typeset model is adopted as a **token group**, not a vendored CSS file:
 three controls drive the reading rhythm; headings, list indents, and block
 spacing derive from them.
@@ -178,7 +178,7 @@ spacing derive from them.
 | `--prose-font-mono` | `var(--font-mono)` | Inline code family |
 | `--prose-measure` | `65ch` | Max line length for the content column (layout owns it; token sets it) |
 
-Presets are themes — a `reading` type with serif body + roomier rhythm, a
+Presets are themes; a `reading` type with serif body + roomier rhythm, a
 `chat` type with tighter flow:
 
 ```css
@@ -195,10 +195,10 @@ Presets are themes — a `reading` type with serif body + roomier rhythm, a
 }
 ```
 
-**Streaming contract:** prose styling is append-stable — no `:last-child`,
+**Streaming contract:** prose styling is append-stable; no `:last-child`,
 `:has()`, or `:empty` in layout rules; spacing flows one direction
 (`margin-block-start` only) so a new block never restyles the blocks above it.
-Surfaces may opt out per-container (the `not-typeset` pattern) — components own
+Surfaces may opt out per-container (the `not-typeset` pattern); components own
 that opt-out via a scoped token, not a hardcoded class.
 
 ## Theme Switching
@@ -232,19 +232,19 @@ Products ship one or more `[data-theme="..."]` blocks. Consumers pick:
 
 ### Theme names
 
-- `default` — Light theme (aliased to `[data-theme]` omitted)
-- `dark` — Dark theme
-- `high-contrast` — Accessibility theme
-- `uithing` — First-party theme that adopts the ui-thing visual language
+- `default`; Light theme (aliased to `[data-theme]` omitted)
+- `dark`; Dark theme
+- `high-contrast`; Accessibility theme
+- `uithing`; First-party theme that adopts the ui-thing visual language
   (colors, radii, shadows, motion, icon pack, typography). **Every pixel
-  decision of ui-thing lives in this theme block** — animations via
+  decision of ui-thing lives in this theme block**; animations via
   `--motion-*`, color scheme via the semantic groups, icon set via
   `--icon-pack`. Products opt in with `<html data-theme="uithing">`.
 
 Themes are additive: a dark theme block only overrides tokens that differ from
 default. Nested themes inherit unset tokens from parent. Theme extensions that
 ui-thing needs but the contract lacks today (e.g. scrollbar styling, glass
-effects, new motion presets) are added here as named tokens first — never as
+effects, new motion presets) are added here as named tokens first; never as
 component-specific hardcodes.
 
 ## Component Usage
@@ -260,7 +260,7 @@ trellis-entity {
 }
 ```
 
-Components never hardcode values. Token names form the API contract — products
+Components never hardcode values. Token names form the API contract; products
 customize by overriding the CSS property, not by patching component styles.
 
 ## Token File Structure

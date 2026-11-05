@@ -23,7 +23,7 @@ Trellis UI theming is split across four disconnected layers:
 | **Kernel runtime HTML**  | `src/ui/lanes.html`, `tml-lanes.html`                      | Ad-hoc inline `:root` (purple accent, Inter/JetBrains)                 | Duplicated; diverges from Studio and client                        |
 
 ADR 0011 defines **shell bands** (L1/L2/L3), **fractal vantage**, and **lane**
-as orthogonal axes — but trellis-node has no shared chromatic substrate or token
+as orthogonal axes; but trellis-node has no shared chromatic substrate or token
 apply path. `demo/realtime-app` has a partial port (`page-variants.ts`, stub
 `band.ts`) without theme linkage.
 
@@ -48,17 +48,17 @@ From `trellis-client/docs/architecture/INSET_SURFACES.md`:
 | **Fractal vantage** | How much of this projection is revealed? | continuous `--vantage`, dual-shell crossfade        | **North star** (not shipped as continuous system) |
 
 **Rule:** sticky chrome and scroll surfaces use opaque `surface-*`. Do not fake
-depth with `bg-card/50` + `backdrop-blur`. Fractal morph is TRL-25 — not a theme
+depth with `bg-card/50` + `backdrop-blur`. Fractal morph is TRL-25; not a theme
 workaround.
 
 ### 2.2 Framework-agnostic theme engine exists
 
 `packages/trellis-theme` (today published as `@turtle.tech/trellis-theme` in
-client — **rename target: `trellis/theme`** per npm namespace policy):
+client; **rename target: `trellis/theme`** per npm namespace policy):
 
-- `THEME_STYLE_KEYS` — closed set of CSS custom property names
-- `ThemeStyleProps` / `ThemePreset` — typed light + dark token maps
-- `applyThemeStyles()` / `applyActiveTheme()` — writes `--*` to
+- `THEME_STYLE_KEYS`; closed set of CSS custom property names
+- `ThemeStyleProps` / `ThemePreset`; typed light + dark token maps
+- `applyThemeStyles()` / `applyActiveTheme()`; writes `--*` to
   `documentElement`, toggles `.dark`
 - Default preset `graphite` byte-synced with `:root` CSS
 
@@ -78,13 +78,13 @@ per-preset surface tokens in graph.
 ### 2.4 Runtime binding is a preset pointer, not Theme entities
 
 Client binds theme via `brandConfig.theme.presetId` on a per-app **settings
-blob** — not a graph `Theme` type. Preset dictionaries live in code
+blob**; not a graph `Theme` type. Preset dictionaries live in code
 (`theme-presets.ts`).
 
 ### 2.5 Page variants are layout chrome, not color
 
 `Page.vue` `VARIANT_CONFIGS` (`canvas`, `browse`, `prose`, …) governs
-header/tabs/padding — same family as explorer `page-variants.ts`. Orthogonal to
+header/tabs/padding; same family as explorer `page-variants.ts`. Orthogonal to
 tokens and ADR bands.
 
 ### 2.6 Naming collisions to resolve in v0
@@ -95,7 +95,7 @@ tokens and ADR bands.
 | `surface` | Chromatic inset ladder (`surface-1/2/3`)            | Ad-hoc `--surface` in `tml-lanes.html`                               |
 | `brand`   | Live `useBrandConfig` (preset id)                   | `BrandGuide` plugin (AI catalogs)                                    |
 
-**Recommend:** prefix disambiguation in new contracts — `data-trellis-band`,
+**Recommend:** prefix disambiguation in new contracts; `data-trellis-band`,
 `data-ui-vantage` (fractal), `data-deck-mode` (present/edit), `ax-vantage`
 (context pack CLI).
 
@@ -118,7 +118,7 @@ Runtime surfaces get:
    pattern)
 
 Introduce graph `Theme` / `SurfaceToken` entities only if a later wedge needs
-operator-authored palettes with audit trail — not for Phase A.
+operator-authored palettes with audit trail; not for Phase A.
 
 ### 3.2 Adopt a three-package mental model (names under `trellis/*`)
 
@@ -136,17 +136,17 @@ during migration.
 | Surface          | Contract element                                                                                              | Phase                            |
 | ---------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------- |
 | **CSS vars**     | Primitives (`background`, `card`, `foreground`, …) + derived `surface-1/2/3` + legacy aliases for kernel HTML | A                                |
-| **Band**         | `html[data-trellis-band="L1\|L2\|L3"]` — chrome depth gate per ADR 0011                                       | A (attribute only)               |
+| **Band**         | `html[data-trellis-band="L1\|L2\|L3"]`; chrome depth gate per ADR 0011                                       | A (attribute only)               |
 | **Inset**        | `bg-surface-*` / `var(--surface-*)` for structural chrome; no `card/50` hacks                                 | B (values align to client oklch) |
 | **Vantage**      | `data-ui-vantage`, `--ui-vantage` scalar, shell slot hooks                                                    | C (TRL-25)                       |
 | **TML**          | `<link href="/theme/runtime-theme.css">`; component tokens `--tml-*`; no inline `:root`                       | A                                |
-| **Page variant** | `VARIANT_CONFIGS` table (layout chrome) — stays in framework shells, not theme pkg                            | out of scope                     |
+| **Page variant** | `VARIANT_CONFIGS` table (layout chrome); stays in framework shells, not theme pkg                            | out of scope                     |
 
 ### 3.4 Relationship to TRL-25 and TRL-38
 
 - **TRL-25 (fractal shell contract):** owns
   `{ main, edit-chrome, operator-inset }` slots, vantage × band rules,
-  `resolveShell()`. Theme contract **does not** implement fractal morph — only
+  `resolveShell()`. Theme contract **does not** implement fractal morph; only
   documents Phase C hook comments and reserves `data-ui-vantage` /
   `data-trellis-shell`.
 - **TRL-38 (L3 operator inset):** consumes `data-trellis-band="L3"` +
@@ -154,7 +154,7 @@ during migration.
   TRL-38 supplies component chrome.
 
 Convergence rule (from client): vantage may modulate disclosure **on top of** a
-fixed `surface-2` host — substrate and fractal stay separate ADRs.
+fixed `surface-2` host; substrate and fractal stay separate ADRs.
 
 ### 3.5 Token dialect convergence (Studio vs client)
 
@@ -166,7 +166,7 @@ Two live dialects exist:
 | **Client shadcn/oklch** | `--background`, `--muted-foreground`, `--card`             | trellis-client `tailwind.css`      |
 
 **Phase A:** kernel runtime uses Studio semantic names + **legacy aliases**
-(`--bg`, `--accent`, …) with **current TML pixels** (purple accent) — dedupe
+(`--bg`, `--accent`, …) with **current TML pixels** (purple accent); dedupe
 only, no visual redesign.
 
 **Phase B:** publish alias map (`--background-base` ↔ `--background`) and align
@@ -179,7 +179,7 @@ new tokens.
 
 ## 4. Phased plan
 
-### Phase A — Shared runtime CSS (smallest wedge)
+### Phase A; Shared runtime CSS (smallest wedge)
 
 **Goal:** one CSS file, both kernel HTML pages, zero pixel change on
 `/tml-lanes`.
@@ -193,7 +193,7 @@ new tokens.
 
 Spec: [`unified-theme-contract.md`](./unified-theme-contract.md)
 
-### Phase B — `trellis/theme` package + oklch convergence
+### Phase B; `trellis/theme` package + oklch convergence
 
 - Extract `packages/trellis-theme` from trellis-client → publish as
   `trellis/theme` from desk
@@ -203,13 +203,13 @@ Spec: [`unified-theme-contract.md`](./unified-theme-contract.md)
 - Alias map between Studio semantic and client keys; update `BRAND.md`
   convergence table
 
-### Phase C — Fractal + band runtime (TRL-25)
+### Phase C; Fractal + band runtime (TRL-25)
 
 - Implement `data-ui-vantage`, shell slots, vantage × band gating
 - Hook comments in CSS only until TRL-25 lands behavior
-- Discrete deck present/edit crossfade stays `data-deck-mode` — not `vantage`
+- Discrete deck present/edit crossfade stays `data-deck-mode`; not `vantage`
 
-### Phase D — Operator inset (TRL-38)
+### Phase D; Operator inset (TRL-38)
 
 - L3 chrome on `surface-1` frame; Bits UI + shared tokens
 
@@ -256,11 +256,11 @@ yet.
 
 ## 8. References
 
-- `BRAND.md` — Studio canonical tokens (semantic dialect)
-- `docs/adr/0011-app-shell-three-bands.md` — L1/L2/L3 bands
-- `Packages/trellis-client/docs/architecture/INSET_SURFACES.md` — substrate vs
+- `BRAND.md`; Studio canonical tokens (semantic dialect)
+- `docs/adr/0011-app-shell-three-bands.md`; L1/L2/L3 bands
+- `Packages/trellis-client/docs/architecture/INSET_SURFACES.md`; substrate vs
   fractal
-- `Packages/trellis-client/packages/trellis-theme/` — apply engine (rename →
+- `Packages/trellis-client/packages/trellis-theme/`; apply engine (rename →
   `trellis/theme`)
-- `src/plugins/brand/ontology.ts` — AI catalog tokens (orthogonal)
-- `src/ui/tml-lanes.html` — current divergence example
+- `src/plugins/brand/ontology.ts`; AI catalog tokens (orthogonal)
+- `src/ui/tml-lanes.html`; current divergence example

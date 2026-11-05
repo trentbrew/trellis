@@ -17,9 +17,9 @@ Lanes isolate an **agent session** well:
 - `lane promote` replays a lane onto integration before `issue close`.
 
 But the **unit of isolation** (the session) is not the **unit of coherence**
-(the task / domain you milestone and promote). A session that hops domains —
+(the task / domain you milestone and promote). A session that hops domains : 
 e.g. "rename docs to TQL" → "CLI display strings" → "design TML" → "edit a
-separate repo's docs site" — collapses into one catch-all lane with no clean
+separate repo's docs site"; collapses into one catch-all lane with no clean
 promote boundary. That is why it feels unclear _when to milestone or promote_:
 there is no coherent unit to promote.
 
@@ -47,7 +47,7 @@ rewrite is proposed.
   any), forks a fresh isolated journal from the integration head, and enters it.
   No issue required. Optional `--name` stores a domain slug on lane meta. Parent
   lineage is recorded as sibling when splitting from an active lane.
-- Convention: when the topic jumps, split — don't continue in the catch-all
+- Convention: when the topic jumps, split; don't continue in the catch-all
   lane.
 - Fully independent promote unit (not auto-bound as a child of the parent).
 
@@ -56,7 +56,7 @@ rewrite is proposed.
 - **Verified:** `issue start` creates+enters a lane by default (`--no-lane` to
   opt out). Covered by `test/vcs/issue-start-lane-branch.test.ts` and
   `test/vcs/issue-close-promote-boundary.test.ts`.
-- **Verified:** `issue close --confirm` enforces promote replay — auto-promotes
+- **Verified:** `issue close --confirm` enforces promote replay; auto-promotes
   the linked lane when it has journal ops; `--no-promote` refuses close until an
   explicit `trellis lane promote` (promote boundary == issue boundary).
 - Documented in AGENTS.md "Agent Lanes" and CLI help for `issue start` /
@@ -96,7 +96,7 @@ signal.
 ## Out of scope
 
 - Rewriting the lane engine or worktree mechanism (ADR 0014 stands).
-- The actual TQL rename / TML work that prompted this reflection — that work is
+- The actual TQL rename / TML work that prompted this reflection; that work is
   tracked separately and must itself be split across lanes per §Principles.
 - Full handoff UX beyond what ADR 0015 already specifies.
 
@@ -114,5 +114,5 @@ signal.
 
 ## Note to implementers
 
-Per Principle 1, **implement this issue inside its own dedicated lane** — do not
+Per Principle 1, **implement this issue inside its own dedicated lane**; do not
 fold it into a catch-all session lane.

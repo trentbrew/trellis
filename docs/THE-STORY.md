@@ -1,5 +1,5 @@
 ---
-title: The Story — Why Trellis Exists
+title: The Story | Why Trellis Exists
 description: Trellis is a structured runtime for the agentic era; the system of record for decisions.
 created: 2026-05-30
 updated: 2026-11-04
@@ -23,7 +23,7 @@ The wall isn't a lack of intelligence. The wall is a **lack of structured state*
 
 ### The Wall Agents Hit
 
-When an AI agent is deployed into a complex environment—handling a code migration, managing a support queue, or orchestrating a multi-step financial workflow—it immediately faces three existential problems:
+When an AI agent is deployed into a complex environment: handling a code migration, managing a support queue, or orchestrating a multi-step financial workflow: it immediately faces three existential problems:
 
 1. **Amnesia**: The agent's context window is fleeting. It forgets the nuances of decisions it made ten minutes ago, leading to repetitive mistakes or "hallucinated" progress.
 2. **Opacity**: When an agent makes a mistake (like deleting a critical file or misinterpreting a policy), humans have no way to audit *why* it did what it did. The reasoning is trapped in a non-deterministic black box.
@@ -54,7 +54,7 @@ If a different agent solved a similar problem last week, those "lessons learned"
 
 What if an agent's reasoning wasn't just transient text, but **first-class data**?
 
-In Trellis, every action—every file change, every tool call, every rationale—is recorded as an immutable **Decision Trace** in a causal graph.
+In Trellis, every action: every file change, every tool call, every rationale: is recorded as an immutable **Decision Trace** in a causal graph.
 
 When an agent refactors that auth module in Trellis, it doesn't just change the lines. It:
 - **Gathers Context**: It queries the graph for prior decisions linked to this file.
@@ -114,7 +114,7 @@ Trellis is the kernel for this new layer. It provides:
 
 The last generation of enterprise software was built on owning the **System of Record for Objects** (Salesforce for customers, Workday for employees).
 
-The next generation—the Agentic Era—will be won by whoever owns the **System of Record for Decisions**.
+The next generation: the Agentic Era: will be won by whoever owns the **System of Record for Decisions**.
 
 Trellis is that layer.
 

@@ -24,9 +24,9 @@ updated: 2026-06-08
 
 ## Scope
 
-- `apps/docs/content/**` — Nuxt Content documentation pages
-- `docs/**` — Design documents, ADRs, specs
-- `skills/**` — Agent skill definitions (adds to existing `name`/`description`)
+- `apps/docs/content/**`; Nuxt Content documentation pages
+- `docs/**`; Design documents, ADRs, specs
+- `skills/**`; Agent skill definitions (adds to existing `name`/`description`)
 - Root `README.md`
 
 ## Tooling

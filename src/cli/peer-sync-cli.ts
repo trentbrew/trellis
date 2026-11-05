@@ -120,6 +120,8 @@ export function registerPeerSyncCommands(program: Command): void {
       });
       let applied = 0;
       let rejected = 0;
+      let unattributed = 0;
+      const reasons = new Map<string, number>();
       const peer = new TrellisVcsSyncPeer({
         peerId: transport.localId(),
         engine,
@@ -127,6 +129,10 @@ export function registerPeerSyncCommands(program: Command): void {
         onIntegrate: (r) => {
           applied += r.applied;
           rejected += countRejected(r);
+          unattributed += r.unattributed.length;
+          for (const x of r.rejected) {
+            reasons.set(x.reason, (reasons.get(x.reason) ?? 0) + 1);
+          }
         },
       });
 
@@ -148,6 +154,11 @@ export function registerPeerSyncCommands(program: Command): void {
 
       const after = engine.getOpCount();
       console.log(`applied ${applied} rejected ${rejected}`);
+      for (const [reason, n] of reasons) console.log(`  ${reason} ${n}`);
+      if (reasons.has('unknown-signer')) {
+        console.log("  peer's signing key is unknown here; pair the device first (trellis pair)");
+      }
+      if (unattributed > 0) console.log(`unattributed ${unattributed} (unsigned)`);
       console.log(`ops ${before} -> ${after}`);
       await transport.close();
       process.exit(0);

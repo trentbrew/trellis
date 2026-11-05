@@ -1,4 +1,4 @@
-# Spec: trellis admin v1.1 — fractal-playground AffordanceShell host
+# Spec: trellis admin v1.1; fractal-playground AffordanceShell host
 
 **Status:** Ready for impl  
 **Date:** 2026-07-21  
@@ -23,14 +23,14 @@ source and **CLI fallback**. Do not rebuild boards in React. Do not soft-depreca
 
 | Decision | Choice |
 | -------- | ------ |
-| Playground route | `/vcs` — add to `OPERATE_NAV` (not Demos `/issues`) |
+| Playground route | `/vcs`; add to `OPERATE_NAV` (not Demos `/issues`) |
 | Mount | **iframe** → `{kernelBase}/admin?embed=1&view={view}` |
-| Same-origin proxy | **Out of v1.1** — cross-origin iframe OK; SSE/mutations run **inside** iframe (kernel origin) |
+| Same-origin proxy | **Out of v1.1**; cross-origin iframe OK; SSE/mutations run **inside** iframe (kernel origin) |
 | Kernel auto-start | **`trellis admin` always starts** lanes-dashboard (unchanged), **then** probes playground |
 | CLI open order | `TRELLIS_ADMIN_URL` → probe playground `/vcs` → else kernel `/admin` |
 | Theme | Island loads only kernel `runtime-theme.css`; no Phase B copy into playground `globals.css` |
-| Double rail | Forbidden — kernel `.rail` hidden when `embed=1`; playground rail hidden only when playground `?embed=1` |
-| React TML remount | **Forbidden** — no second kanban/grid implementation |
+| Double rail | Forbidden; kernel `.rail` hidden when `embed=1`; playground rail hidden only when playground `?embed=1` |
+| React TML remount | **Forbidden**; no second kanban/grid implementation |
 | Kill `lane watch` | **Out of scope** (parity harden follow-up) |
 | `trellis watch` | Untouched (file watcher) |
 
@@ -38,10 +38,10 @@ source and **CLI fallback**. Do not rebuild boards in React. Do not soft-depreca
 
 1. **Kernel auto-start:** Always start dashboard server in `trellis admin` (today’s behavior). Playground host assumes kernel reachable at configured base (default `http://127.0.0.1:<port>`).
 2. **Proxy:** Deferred. Iframe `src` points at kernel origin directly.
-3. **`admin.html` embed:** Minimal flag — `?embed=1` or `embed=true` adds class on `html` (e.g. `admin-embed`); CSS hides `.rail` and retargets `.shell` grid to 2 columns (main \| op-log). No separate HTML file.
+3. **`admin.html` embed:** Minimal flag; `?embed=1` or `embed=true` adds class on `html` (e.g. `admin-embed`); CSS hides `.rail` and retargets `.shell` grid to 2 columns (main \| op-log). No separate HTML file.
 4. **AppShell header:** On pathname `/vcs` (and `/vcs/*`): hide secondary sidebar, suppress default breadcrumb header, `fullBleedMain` / `p-0` main so iframe fills the column.
 5. **Config:** Document `TRELLIS_ADMIN_URL`, `TRELLIS_PLAYGROUND_URL` (default `http://127.0.0.1:3000/vcs`), `--port` for kernel.
-6. **E2E:** Kernel Playwright remains SSOT; add embed case to `e2e/admin.spec.cjs`. Playground smoke optional if harness exists — not blocking.
+6. **E2E:** Kernel Playwright remains SSOT; add embed case to `e2e/admin.spec.cjs`. Playground smoke optional if harness exists; not blocking.
 7. **Promote CORS:** N/A for iframe (form POST stays kernel-origin).
 
 ---
@@ -99,7 +99,7 @@ When `pathname === '/vcs' \|\| pathname.startsWith('/vcs/')`:
 
 - `hideSecondarySidebar` (or equivalent) = true  
 - Suppress default header (RoomSelector / breadcrumb row)  
-- Main: full-bleed, no padding — child owns layout  
+- Main: full-bleed, no padding; child owns layout  
 
 Reuse existing console-embed branch for playground `?embed=1` (hide primary rail + ConsoleEmbedBar).
 
@@ -158,10 +158,10 @@ CI=1 pnpm test:e2e e2e/admin.spec.cjs
 
 Minimum **new** case:
 
-1. `goto('/admin?embed=1')` — **no** visible `.rail` (count 0 or not visible); view toggle + `#oplog` still present; kanban default (or persisted).
+1. `goto('/admin?embed=1')`; **no** visible `.rail` (count 0 or not visible); view toggle + `#oplog` still present; kanban default (or persisted).
 
 Existing admin cases remain green. Regression suite optional same as TRL-175
-(`tml-lanes` + `client-vantage`) if time — not required for this AC list if
+(`tml-lanes` + `client-vantage`) if time; not required for this AC list if
 admin.spec stays green.
 
 **Playground:** `pnpm check` in fractal-playground when TS touched; e2e smoke

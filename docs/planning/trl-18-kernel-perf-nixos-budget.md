@@ -10,8 +10,8 @@ updated: 2026-08-08
 Tracking epic: **TRL-18** · Plan: `docs/planning/trl-18-kernel-perf-nixos-budget.md`
 
 Adopts the methodology of [TurboFieldfare](https://github.com/drumih/turbo-fieldfare)
-(Gemma 4 26B-A4B in ~2 GB RAM) — hard budgets, explicit bounded I/O, end-to-end
-gating, and an honest experiment inventory — for the trellis graph kernel as a
+(Gemma 4 26B-A4B in ~2 GB RAM); hard budgets, explicit bounded I/O, end-to-end
+gating, and an honest experiment inventory; for the trellis graph kernel as a
 NixOS substrate on real machines.
 
 ## Why this exists
@@ -60,7 +60,7 @@ runs with cold caches.
 - Tuning for a single hardware profile before the methodology lands.
 - Prediction-driven I/O or sync prefetch (explicitly rejected by TRL-22).
 
-## Bench step — locked (2026-08-08)
+## Bench step; locked (2026-08-08)
 
 **Decision:** the bench step is **one kernel cycle**, transport-tolerant, not a
 per-protocol benchmark. Realtime-sync and op-sync are *arrival sources* feeding
@@ -71,9 +71,9 @@ kernel cycle = boot → load op-log/mirror → apply/merge inbound ops
              → serve fixed query mix → push/pull sync round → measure
 ```
 
-- **Tiered arrival (locked):** Tier A (V1 op-path — `have/want/ops` and
+- **Tiered arrival (locked):** Tier A (V1 op-path; `have/want/ops` and
   JSONL/SQLite replay) is the *runnable* first-pass corpus. Tier B (V2
-  full-state — `graph-snapshot` via `VACUUM INTO`, `entity-delta`, `lane-journal`,
+  full-state; `graph-snapshot` via `VACUUM INTO`, `entity-delta`, `lane-journal`,
   per TRL-333/334) plugs into the **same bench slot** as an arrival mode once it
   lands. This keeps the frozen protocol exercised against real data now instead
   of waiting on an unbuilt wire.
@@ -89,14 +89,14 @@ kernel cycle = boot → load op-log/mirror → apply/merge inbound ops
 
 ## Work items and surfaces
 
-### TRL-19 — Bounded op-log tail reads (cold-path discipline)
+### TRL-19; Bounded op-log tail reads (cold-path discipline)
 
 Replace whole-journal/mirror loads with bounded range reads.
 
 Surfaces: `src/vcs/op-log.ts`, `src/vcs/oplog-mirror.ts`, tail/lookbehind on
 `Append*` ops. Guardrail: tail replay bytes identical to whole-file parse.
 
-### TRL-20 — SQLite read-path scaling + chunked tail reads
+### TRL-20; SQLite read-path scaling + chunked tail reads
 
 Benchmark the read path at scale and add a streamed/chunked tail-read API so
 the sync replay path never materializes the full table.
@@ -104,26 +104,26 @@ the sync replay path never materializes the full table.
 Surfaces: `src/core/persist/sqlite-backend.ts` (`readAll`, `readAfter`,
 `readUntil*`, `findCommonAncestor`), `bench/` harness data.
 
-### TRL-21 — LFU-with-recency hot-op cache experiment
+### TRL-21; LFU-with-recency hot-op cache experiment
 
 A/B bounded LFU+recency cache behind the `OpLog` surface vs LRU vs none on a
 realistic op/query mix with a cache-drop protocol. Keep only a repeatable
 end-to-end win.
 
-### TRL-22 — Coarse-overlap sync (epoch batching, no speculative prefetch)
+### TRL-22; Coarse-overlap sync (epoch batching, no speculative prefetch)
 
 Batch Iroh send+receive on commit epochs; overlap only at coarse boundaries;
 explicitly no prediction-driven I/O.
 
-### TRL-23 — NixOS budget substrate
+### TRL-23; NixOS budget substrate
 
 NixOS module wrapping the kernel service with `MemoryMax`, CPU quota, and
 `io.max` disk throttle; per-run accounting via cgroup v2 `memory.peak`
 and `/proc` MaxRSS. Slow-disk/weak-host reproducible sim.
 
-### TRL-24 — Golden A/B benchmark + CI budget corridor (+ bench harness)
+### TRL-24; Golden A/B benchmark + CI budget corridor (+ bench harness)
 
-- Bench step = **one kernel cycle** (see "Bench step — locked" above), tiered
+- Bench step = **one kernel cycle** (see "Bench step; locked" above), tiered
   V1-now / V2-when-live, with `flood-cold` and `live-trickle` arrival modes.
 - A/B runner alternating candidate/control with `drop_caches` between runs,
   medians reported.

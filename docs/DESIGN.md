@@ -1,6 +1,6 @@
 ---
 title: TrellisVCS Architecture Design
-description: Design document for the TrellisVCS subsystem — causal streams, branches, milestones, and merge.
+description: Design document for the TrellisVCS subsystem; causal streams, branches, milestones, and merge.
 created: 2026-05-30
 updated: 2026-05-30
 ---
@@ -40,18 +40,18 @@ The trellis-core kernel already provides several primitives that map directly to
 
 | Kernel Primitive      | Location                            | VCS Role                                                                                                                                                    | Reuse Status                                                                                                                                |
 | :-------------------- | :---------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
-| `KernelOp`            | `src/persist/backend.ts`            | **Causal stream atom.** Each VCS change becomes an op in the append-only log. Content-addressed via SHA-256, causally chained via `previousHash`.           | **Extend** — add new `kind` variants for VCS-specific operations.                                                                           |
-| `KernelBackend`       | `src/persist/backend.ts`            | **Durable storage.** SQLite backend already provides `append`, `readAll`, `readUntil`, `readAfter`, `readUntilTimestamp`, and snapshot support.             | **Reuse as-is** — the interface is sufficient for the causal stream. May need a secondary index for branch-scoped reads.                    |
-| `SqliteKernelBackend` | `src/persist/sqlite-backend.ts`     | **Local persistence.** WAL-mode SQLite with ops table and snapshots table.                                                                                  | **Extend** — add tables/indexes for branch pointers, milestone metadata, and file-hash lookups.                                             |
-| `EAVStore`            | `src/store/eav-store.ts`            | **In-memory graph.** Repository structure (files, directories, AST nodes) lives here as facts and links. Triple indexes (EAV, AEV, AVE) enable fast lookup. | **Reuse as-is** — the EAV model naturally represents file trees, code structure, and VCS metadata.                                          |
+| `KernelOp`            | `src/persist/backend.ts`            | **Causal stream atom.** Each VCS change becomes an op in the append-only log. Content-addressed via SHA-256, causally chained via `previousHash`.           | **Extend**; add new `kind` variants for VCS-specific operations.                                                                           |
+| `KernelBackend`       | `src/persist/backend.ts`            | **Durable storage.** SQLite backend already provides `append`, `readAll`, `readUntil`, `readAfter`, `readUntilTimestamp`, and snapshot support.             | **Reuse as-is**; the interface is sufficient for the causal stream. May need a secondary index for branch-scoped reads.                    |
+| `SqliteKernelBackend` | `src/persist/sqlite-backend.ts`     | **Local persistence.** WAL-mode SQLite with ops table and snapshots table.                                                                                  | **Extend**; add tables/indexes for branch pointers, milestone metadata, and file-hash lookups.                                             |
+| `EAVStore`            | `src/store/eav-store.ts`            | **In-memory graph.** Repository structure (files, directories, AST nodes) lives here as facts and links. Triple indexes (EAV, AEV, AVE) enable fast lookup. | **Reuse as-is**; the EAV model naturally represents file trees, code structure, and VCS metadata.                                          |
 | `Fact` / `Link`       | `src/store/eav-store.ts`            | **Graph atoms.** `Fact{e, a, v}` models entity attributes. `Link{e1, a, e2}` models relationships (file→directory, function→module, milestone→op-range).    | **Reuse as-is.**                                                                                                                            |
 | `jsonEntityFacts`     | `src/store/eav-store.ts`            | **Ingestion.** Converts JSON objects into EAV facts with path-aware flattening. Used to ingest file metadata, AST node properties, etc.                     | **Reuse as-is** for metadata. Code-structure ingestion needs a parser adapter (see §9).                                                     |
-| `KernelMiddleware`    | `src/kernel/middleware.ts`          | **Policy enforcement.** Intercepts ops (mutations) and queries. Maps directly to governance policies, schema validation, and access control.                | **Reuse as-is** — the `handleOp` / `handleQuery` / `next` chain is exactly the hook point for branch protection, signing requirements, etc. |
-| `SecurityMiddleware`  | `src/kernel/security-middleware.ts` | **Capability-based auth.** Already implements agent-based `can(capability)` checks on mutations and queries.                                                | **Extend** — add VCS-specific capabilities (`push`, `merge`, `createBranch`, `createMilestone`).                                            |
-| `SyncProvider`        | `src/kernel/sync.ts`                | **P2P replication.** `broadcast(op)` and `onRemoteOp(callback)` enable distributed op propagation.                                                          | **Reuse as-is** — the interface is sync-transport-agnostic. Iroh integration is already a declared dependency.                              |
-| `TrellisKernel`       | `src/kernel/trellis-kernel.ts`      | **Composition root.** Orchestrates store, backend, middleware, evaluator, and sync. Provides `boot()`, `mutate()`, `query()`, `checkpoint()`, time-travel.  | **Extend** — add VCS-specific high-level methods (`ingest`, `milestone`, `branch`, `merge`, `diff`).                                        |
-| `WorkspaceConfig`     | `src/kernel/workspace.ts`           | **Declarative config.** `.trellis` files define ontologies, projections, and graph data.                                                                    | **Extend** — add VCS-specific workspace fields (tracked paths, ignore patterns, branch policies).                                           |
-| `TQL` / `Datalog`   | `src/query/`                        | **Query layer.** Structured queries over the graph.                                                                                                         | **Reuse as-is** — VCS queries ("find all milestones that touched module X") compile to existing TQL/Datalog.                              |
+| `KernelMiddleware`    | `src/kernel/middleware.ts`          | **Policy enforcement.** Intercepts ops (mutations) and queries. Maps directly to governance policies, schema validation, and access control.                | **Reuse as-is**; the `handleOp` / `handleQuery` / `next` chain is exactly the hook point for branch protection, signing requirements, etc. |
+| `SecurityMiddleware`  | `src/kernel/security-middleware.ts` | **Capability-based auth.** Already implements agent-based `can(capability)` checks on mutations and queries.                                                | **Extend**; add VCS-specific capabilities (`push`, `merge`, `createBranch`, `createMilestone`).                                            |
+| `SyncProvider`        | `src/kernel/sync.ts`                | **P2P replication.** `broadcast(op)` and `onRemoteOp(callback)` enable distributed op propagation.                                                          | **Reuse as-is**; the interface is sync-transport-agnostic. Iroh integration is already a declared dependency.                              |
+| `TrellisKernel`       | `src/kernel/trellis-kernel.ts`      | **Composition root.** Orchestrates store, backend, middleware, evaluator, and sync. Provides `boot()`, `mutate()`, `query()`, `checkpoint()`, time-travel.  | **Extend**; add VCS-specific high-level methods (`ingest`, `milestone`, `branch`, `merge`, `diff`).                                        |
+| `WorkspaceConfig`     | `src/kernel/workspace.ts`           | **Declarative config.** `.trellis` files define ontologies, projections, and graph data.                                                                    | **Extend**; add VCS-specific workspace fields (tracked paths, ignore patterns, branch policies).                                           |
+| `TQL` / `Datalog`   | `src/query/`                        | **Query layer.** Structured queries over the graph.                                                                                                         | **Reuse as-is**; VCS queries ("find all milestones that touched module X") compile to existing TQL/Datalog.                              |
 
 ### 1.2 Gaps: What's Missing
 
@@ -70,7 +70,7 @@ The trellis-core kernel already provides several primitives that map directly to
 
 ## 2. VCS Data Model
 
-TrellisVCS models everything — repositories, files, code structure, branches, milestones — as entities in the Trellis EAV graph. This section defines the entity types, their attributes, and the links between them.
+TrellisVCS models everything; repositories, files, code structure, branches, milestones; as entities in the Trellis EAV graph. This section defines the entity types, their attributes, and the links between them.
 
 ### 2.1 Entity Type Hierarchy
 
@@ -257,7 +257,7 @@ interface VcsOp extends KernelOp {
 
 When a `VcsOp` is applied to the kernel, a **VCS middleware** decomposes it into primitive store operations. This keeps the core `EAVStore` unchanged while adding semantic meaning at the op layer.
 
-Example — `vcs:fileAdd` for `src/utils/math.ts`:
+Example; `vcs:fileAdd` for `src/utils/math.ts`:
 
 ```
 Input op:
@@ -276,7 +276,7 @@ Decomposed into:
      ])
 ```
 
-Example — `vcs:fileRename` from `src/old.ts` to `src/new.ts`:
+Example; `vcs:fileRename` from `src/old.ts` to `src/new.ts`:
 
 ```
 Input op:
@@ -290,7 +290,7 @@ Decomposed into:
   4. addLinks([ { e1: 'dir:h(src/)', a: 'contains', e2: 'file:h(src/new.ts)' } ])
 
 Note: The entity ID does NOT change. 'file:h(src/old.ts)' retains its identity
-even though its path attribute changed. This is the key insight — identity
+even though its path attribute changed. This is the key insight; identity
 tracking survives renames.
 ```
 
@@ -302,12 +302,12 @@ tracking survives renames.
 
 ### 3.1 Design Principle
 
-The causal stream is the **append-only backbone** of TrellisVCS. Every change — from a file save to a branch creation — is recorded as a `VcsOp` in the stream. The stream is:
+The causal stream is the **append-only backbone** of TrellisVCS. Every change; from a file save to a branch creation; is recorded as a `VcsOp` in the stream. The stream is:
 
-- **Immutable** — ops are never modified or deleted.
-- **Causally ordered** — each op references its predecessor via `previousHash`.
-- **Content-addressed** — each op's hash covers its content + causal link.
-- **Agent-attributed** — every op carries an `agentId` (human or CI).
+- **Immutable**; ops are never modified or deleted.
+- **Causally ordered**; each op references its predecessor via `previousHash`.
+- **Content-addressed**; each op's hash covers its content + causal link.
+- **Agent-attributed**; every op carries an `agentId` (human or CI).
 
 ### 3.2 Mapping to Kernel
 
@@ -370,8 +370,8 @@ The watcher's responsibilities:
 
 1. **Debounce** rapid saves into a single change event.
 2. **Filter** ignored paths (node_modules, build artifacts, etc.).
-3. **Detect renames** — correlate a delete + add of identical content hashes.
-4. **Hash content** — compute SHA-256 of file content for change detection.
+3. **Detect renames**; correlate a delete + add of identical content hashes.
+4. **Hash content**; compute SHA-256 of file content for change detection.
 5. **Emit `FileChangeEvent`s** to the ingestion layer.
 
 ### 3.4 Granularity Tiers
@@ -384,7 +384,7 @@ The causal stream operates at increasing levels of granularity:
 | **1** | File-as-entity | Same as Tier 0 + line-level metadata                             | Path, content hash, line count, language, line-level diff hunks | Day one (enhanced)      |
 | **2** | AST-as-graph   | `symbolRename`, `symbolMove`, `symbolExtract`, `signatureChange` | AST node identities, structural diffs, cross-file refactors     | Requires parser adapter |
 
-Tiers are **additive** — Tier 2 ops coexist with Tier 0 ops in the same stream. A file change might be recorded as both a `vcs:fileModify` (Tier 0) and a `vcs:symbolRename` (Tier 2) for richer queryability. The Tier 0 op is always present as a fallback.
+Tiers are **additive**; Tier 2 ops coexist with Tier 0 ops in the same stream. A file change might be recorded as both a `vcs:fileModify` (Tier 0) and a `vcs:symbolRename` (Tier 2) for richer queryability. The Tier 0 op is always present as a fallback.
 
 ### 3.5 Branch-Scoped Streams
 
@@ -412,10 +412,10 @@ interface BranchPolicy {
 
 | Mode            | Behavior                                                                                                                                        | Use Case                                         |
 | :-------------- | :---------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------- |
-| `linear: true`  | Classic Git behavior — one head, fast-forward only. Push rejected if remote has diverged.                                                       | `main`, release branches, CI-gated branches      |
+| `linear: true`  | Classic Git behavior; one head, fast-forward only. Push rejected if remote has diverged.                                                       | `main`, release branches, CI-gated branches      |
 | `linear: false` | CRDT-style concurrent appends. A background reconciler merges divergent op sub-chains into a consistent state using patch commutativity (§4.4). | Feature branches, multi-device real-time editing |
 
-Ship `linear: true` as the default for P0. The `linear: false` path is the clear upgrade toward the "Live Repository" vision — it requires the merkle-CRDT reconciler but no changes to the `KernelBackend` interface.
+Ship `linear: true` as the default for P0. The `linear: false` path is the clear upgrade toward the "Live Repository" vision; it requires the merkle-CRDT reconciler but no changes to the `KernelBackend` interface.
 
 For branch-divergence scenarios, we need one new backend method:
 
@@ -540,10 +540,10 @@ Two patches **commute** (can be applied in either order with the same result) wh
 | Patch A                          | Patch B                 | Commutes? | Resolution                                                                                |
 | :------------------------------- | :---------------------- | :-------- | :---------------------------------------------------------------------------------------- |
 | `symbolModify(f1)`               | `symbolModify(f2)`      | Yes       | Apply both                                                                                |
-| `symbolModify(f1)`               | `symbolModify(f1)`      | **No**    | Structural conflict — present both versions                                               |
-| `symbolRename(f1, "old", "new")` | `symbolModify(f1)`      | **No**    | The modify references the old name — auto-resolve by applying rename to the modified body |
+| `symbolModify(f1)`               | `symbolModify(f1)`      | **No**    | Structural conflict; present both versions                                               |
+| `symbolRename(f1, "old", "new")` | `symbolModify(f1)`      | **No**    | The modify references the old name; auto-resolve by applying rename to the modified body |
 | `symbolMove(f1, A→B)`            | `symbolModify(f1)`      | Yes       | Apply modify to f1 at its new location                                                    |
-| `symbolRemove(f1)`               | `symbolModify(f1)`      | **No**    | Delete/edit conflict — requires human decision                                            |
+| `symbolRemove(f1)`               | `symbolModify(f1)`      | **No**    | Delete/edit conflict; requires human decision                                            |
 | `importAdd(fileX, mod)`          | `importAdd(fileX, mod)` | Yes       | Deduplicate (idempotent)                                                                  |
 
 The merge engine computes commutativity by checking entity ID overlap between patch sets. When patches don't commute, it produces a **structured conflict** (not `<<<<<<<` text markers) that names the entities and operations involved:
@@ -671,7 +671,7 @@ WHERE ?m.affectsFile = "src/auth/provider.ts"
 RETURN ?m.message, ?m.createdBy
 ```
 
-The `affectsFile` attribute would be computed by the VCS middleware when a milestone is created — it inspects the ops in the milestone's range and extracts the set of affected file paths, storing them as multi-valued facts on the milestone entity.
+The `affectsFile` attribute would be computed by the VCS middleware when a milestone is created; it inspects the ops in the milestone's range and extracts the set of affected file paths, storing them as multi-valued facts on the milestone entity.
 
 ### 5.4 Auto-Proposed Milestones
 
@@ -695,10 +695,10 @@ interface MilestoneProposalStrategy {
 
 Built-in strategies:
 
-- **Green-build boundary** — Propose after tests pass following a series of changes.
-- **Context-switch detector** — Propose when the user starts editing a different module.
-- **Time-based** — Propose after N minutes of continuous work without a milestone.
-- **Size-based** — Propose after N ops accumulate without a milestone.
+- **Green-build boundary**; Propose after tests pass following a series of changes.
+- **Context-switch detector**; Propose when the user starts editing a different module.
+- **Time-based**; Propose after N minutes of continuous work without a milestone.
+- **Size-based**; Propose after N ops accumulate without a milestone.
 
 ### 5.5 CLI Sketch
 
@@ -862,7 +862,7 @@ class GovernanceMiddleware implements KernelMiddleware {
 }
 ```
 
-This maps cleanly onto the existing `KernelMiddleware` contract — the `handleOp(op, ctx, next)` signature is exactly what we need. The governance middleware slots into the middleware chain alongside the existing `SecurityMiddleware`.
+This maps cleanly onto the existing `KernelMiddleware` contract; the `handleOp(op, ctx, next)` signature is exactly what we need. The governance middleware slots into the middleware chain alongside the existing `SecurityMiddleware`.
 
 ---
 
@@ -901,9 +901,9 @@ interface IdeaCluster {
 1. **Detection trigger:** When the cluster detector (§7.4) identifies a new cluster, it queues an intent summarization job.
 2. **LLM call:** The job calls a small LLM (local via Ollama, or remote via the kernel's `NaturalLanguageQueryProvider`) with the cluster's semantic patches as context.
 3. **Storage:** The one-sentence summary is written as `{ e: 'cluster:{id}', a: 'estimatedIntent', v: '...' }`. A vector embedding is also stored for semantic search.
-4. **Recomputation:** If the cluster's ops change (rare — only on revive/extend), the intent is regenerated.
+4. **Recomputation:** If the cluster's ops change (rare; only on revive/extend), the intent is regenerated.
 
-This turns the garden into a genuine "search your memory" tool — both keyword (`CONTAINS`) and semantic (vector similarity) search work against materialized facts.
+This turns the garden into a genuine "search your memory" tool; both keyword (`CONTAINS`) and semantic (vector similarity) search work against materialized facts.
 
 ### 7.4 Cluster Detection Heuristics
 
@@ -1204,7 +1204,7 @@ This dual-storage approach means:
 
 - **Checkout** reads from the blob store (fast, exact).
 - **Query/search** reads from the graph (rich, structural).
-- The graph is a **derived index** over the blob store — it can be rebuilt from blobs + ops.
+- The graph is a **derived index** over the blob store; it can be rebuilt from blobs + ops.
 
 ---
 
@@ -1236,8 +1236,8 @@ This dual-storage approach means:
 
 - **Snapshots** already exist in the kernel (`checkpoint()` / `loadLatestSnapshot()`). Frequent snapshots reduce replay cost.
 - **Branch-scoped reads** (§3.5) avoid reading the full stream.
-- **Op compression** — consecutive file-level ops on the same file can be compacted into a single op during archival.
-- **Lazy loading** — the graph for old files / AST entities doesn't need to be in memory; load on demand.
+- **Op compression**; consecutive file-level ops on the same file can be compacted into a single op during archival.
+- **Lazy loading**; the graph for old files / AST entities doesn't need to be in memory; load on demand.
 
 **Open question:** What's the target scale? A single developer's project (thousands of ops)? A team project (millions of ops)? A Linux-kernel-scale monorepo (billions)?
 
@@ -1263,7 +1263,7 @@ TrellisVCS                          Git
 **Recommendation:** The bridge should be **bidirectional from day one**, but asymmetric:
 
 - **Export (Trellis → Git):** Serialize milestones into Git commits. Straightforward.
-- **Import (Git → Trellis):** A one-time `trellis import` command that bootstraps an existing Git repo into TrellisVCS. This is the **only realistic adoption on-ramp** — without it, no one can try TrellisVCS on a real project.
+- **Import (Git → Trellis):** A one-time `trellis import` command that bootstraps an existing Git repo into TrellisVCS. This is the **only realistic adoption on-ramp**; without it, no one can try TrellisVCS on a real project.
 
 #### `trellis import` Design
 
@@ -1289,7 +1289,7 @@ The result: a TrellisVCS repo with a milestone for every Git commit, fully query
 
 **Risk:** If two devices (or two watcher processes) are writing to the same causal stream concurrently, `previousHash` chaining breaks.
 
-**Mitigation:** Each device maintains its own local causal chain. Sync (via `SyncProvider`) reconciles divergent chains. This is where the CRDT-like properties of semantic patches (§4.4) become important — patches that commute can be auto-merged; patches that conflict are surfaced to the user.
+**Mitigation:** Each device maintains its own local causal chain. Sync (via `SyncProvider`) reconciles divergent chains. This is where the CRDT-like properties of semantic patches (§4.4) become important; patches that commute can be auto-merged; patches that conflict are surfaced to the user.
 
 **Open question:** Should the causal stream be strictly linear (one chain per branch, like Git), or should it support concurrent appends that are later reconciled (like a CRDT)?
 
@@ -1313,7 +1313,7 @@ The result: a TrellisVCS repo with a milestone for every Git commit, fully query
 | **Milestone creation** | On every `vcs:milestoneCreate`   | Milestones are natural stability boundaries |
 | **Manual**             | `trellis checkpoint` CLI command | Escape hatch for power users                |
 
-On boot: load latest snapshot → replay only ops after it. This is already supported by the kernel's `loadLatestSnapshot()` / `readAfter(hash)` flow — we just need to wire the automatic triggers.
+On boot: load latest snapshot → replay only ops after it. This is already supported by the kernel's `loadLatestSnapshot()` / `readAfter(hash)` flow; we just need to wire the automatic triggers.
 
 ### 10.8 GUI / IDE Plugin
 
@@ -1325,9 +1325,9 @@ On boot: load latest snapshot → replay only ops after it. This is already supp
 
 **Recommendation:** Add a **P0.5 phase** to the roadmap: a VS Code extension (or Electron app) that wraps the CLI and provides a visual timeline. Without it, the causal stream is invisible to the user and the "just work" paradigm feels indistinguishable from autosave. The extension needs only three views to be compelling:
 
-1. **Stream timeline** — scrollable list of ops, grouped by checkpoint/milestone.
-2. **Status panel** — current branch, ops since last milestone, pending changes.
-3. **Milestone composer** — select an op range, see semantic diff, write a message.
+1. **Stream timeline**; scrollable list of ops, grouped by checkpoint/milestone.
+2. **Status panel**; current branch, ops since last milestone, pending changes.
+3. **Milestone composer**; select an op range, see semantic diff, write a message.
 
 ---
 
@@ -1352,12 +1352,12 @@ Based on the sequencing from SCRATCH.md, adapted for this architecture:
 | :------- | :----------------------------------------------------------------------------- | :---------- | :--- |
 | **P0**   | Causal stream engine + file watcher + basic CLI (`init`, `status`, `log`)      | 1           | 0    |
 | **P0.5** | VS Code extension / visual timeline (stream, status panel, milestone composer) | 1, 3        | 0    |
-| **P1**   | Git import bridge (`trellis import`) + milestone export to Git                 | —           | 0    |
+| **P1**   | Git import bridge (`trellis import`) + milestone export to Git                 |;           | 0    |
 | **P2**   | Branch model + milestone creation + auto-checkpoints                           | 1, 3        | 0    |
 | **P3**   | File-level diff + merge (text-based fallback)                                  | 2 (partial) | 1    |
-| **P4**   | Identity + op signing + governance middleware                                  | 4           | —    |
+| **P4**   | Identity + op signing + governance middleware                                  | 4           |;    |
 | **P5**   | Tree-sitter parser adapter + AST entity ingestion                              | 2           | 2    |
 | **P6**   | Semantic diff + merge engine                                                   | 2           | 2    |
 | **P7**   | Idea Garden: cluster detection + search                                        | 5           | 0-2  |
 
-Each phase is independently useful and builds on the previous. Git import (P1) is deliberately early — it's the only realistic on-ramp for adoption on real projects.
+Each phase is independently useful and builds on the previous. Git import (P1) is deliberately early; it's the only realistic on-ramp for adoption on real projects.

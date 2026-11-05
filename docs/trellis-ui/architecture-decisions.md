@@ -1,4 +1,4 @@
-# Architecture Decisions — Kernel vs UI vs Types
+# Architecture Decisions; Kernel vs UI vs Types
 
 **Status:** spec
 **Date:** 2026-07-24
@@ -27,7 +27,7 @@ the architectural decisions governing their boundaries.
 ## Decision 1: Kernel Stays Pure Data Layer
 
 **Context:** Earlier attempts bundled UI primitives or framework adapters into
-the kernel. This created coupling — kernel releases required UI coordination,
+the kernel. This created coupling; kernel releases required UI coordination,
 and UI changes blocked kernel patches.
 
 **Decision:** The kernel (`trellis`) exports only the data layer: schema,
@@ -47,7 +47,7 @@ SDK, not part of it.
 in 4 frameworks. Products couldn't customize components without forking the
 package.
 
-**Decision:** `@trellis.computer/ui` follows the shadcn pattern — the npm
+**Decision:** `@trellis.computer/ui` follows the shadcn pattern; the npm
 package is the registry source of truth, but `trellis add` copies source into
 projects. Products own their code. No runtime dependency on the npm package
 after copy.
@@ -61,7 +61,7 @@ after copy.
 
 ## Decision 3: Ontology Types Are Referenced, Not Copied
 
-**Context:** Earlier approach treated types like code — copied into projects,
+**Context:** Earlier approach treated types like code; copied into projects,
 modified locally, drift inevitable. SemType introduced URL-identified types with
 immutable versioning.
 
@@ -105,7 +105,7 @@ framework-specific wrappers in their own code.
 - Universal framework consumption
 - Lit-specific patterns (reactive properties, lifecycle, slots)
 - Products that need deep framework integration write wrappers locally
-- No DSL layer — just HTML custom elements
+- No DSL layer; just HTML custom elements
 
 ## Decision 6: CSS Custom Properties Over Design Tokens Build Step
 

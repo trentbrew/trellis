@@ -1,7 +1,7 @@
 ---
 version: alpha
-name: Unified theme contract — Phase B
-description: Design artifact for TRL-159 — client.html migration, Studio dark value alignment, inset surface ladder
+name: Unified theme contract; Phase B
+description: Design artifact for TRL-159; client.html migration, Studio dark value alignment, inset surface ladder
 source:
   tool: greenfield
   mock: docs/artifacts/unified-theme-contract-phase-b_mockup.html
@@ -98,7 +98,7 @@ Tone stays L3 operator chrome: dense, dark-first, no metaphor. Fractal vantage r
 | `--background-weak` | `#0f1015` | `#1e1e1e` |
 | `--surface-raised-base` | `#15161b` | `#1c1c1c` (opaque D3-safe) |
 | `--surface-inset-base` | `#1a1b22` | `#161616` (opaque; keeps `--surface2` alias safe for lanes) |
-| `--surface-inset-alpha` | — | `rgba(0,0,0,0.5)` (Studio inset; use via `--surface-1` mixes, not `--surface2`) |
+| `--surface-inset-alpha` |; | `rgba(0,0,0,0.5)` (Studio inset; use via `--surface-1` mixes, not `--surface2`) |
 | `--border-base` | `#25262e` | `rgba(255,255,255,0.195)` |
 | `--border-strong` | `#32333d` | `rgba(255,255,255,0.266)` |
 | `--text-strong` | `#e4e4e7` | `rgba(255,255,255,0.936)` |
@@ -126,7 +126,7 @@ Tone stays L3 operator chrome: dense, dark-first, no metaphor. Fractal vantage r
 
 **Inset ≠ fractal.** These answer containment depth only.
 
-**Legacy `--surface2` (blocker fix):** Keep `--surface2: var(--surface-inset-base)` on the **opaque** `#161616` step. Do not alias `--surface2` to Studio's alpha inset — that would wash lanes hover/chrome. Alpha inset is consumed only via `--surface-1` / `--surface-inset-alpha`.
+**Legacy `--surface2` (blocker fix):** Keep `--surface2: var(--surface-inset-base)` on the **opaque** `#161616` step. Do not alias `--surface2` to Studio's alpha inset; that would wash lanes hover/chrome. Alpha inset is consumed only via `--surface-1` / `--surface-inset-alpha`.
 
 ### Badge tokens (re-derive)
 
@@ -186,7 +186,7 @@ Phase B removes Google Fonts from `client.html`. System stacks only (BRAND allow
 | Sans / header | `-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif` |
 | Mono | `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace` |
 
-**Font strategy (locked — option A):** Update `--font-family-*` to system stacks in `runtime-theme.css` and **remove Google Fonts `<link>` from all runtime HTML** (`client.html`, `lanes.html`, and any other Phase B-touched pages). No deferred lanes exception.
+**Font strategy (locked; option A):** Update `--font-family-*` to system stacks in `runtime-theme.css` and **remove Google Fonts `<link>` from all runtime HTML** (`client.html`, `lanes.html`, and any other Phase B-touched pages). No deferred lanes exception.
 
 ## Layout
 
@@ -274,7 +274,7 @@ Align client `--radius` / `--radius-lg` (today 8/12) to contract `--radius-md` /
 2. AC: `client.html` has no `:root`; links `/theme/runtime-theme.css`; `data-trellis-band="L3"`; **zero** remaining `#6d5bfa` / purple rgba islands (map orphans to contract tokens).
 3. AC: `runtime-theme.css` Phase B Studio values; `--surface-1/2/3`; `--surface-inset-base` opaque `#161616` with `--surface2` alias; `--surface-inset-alpha` separate; `--tml-glass-*`; `--entity-*`; **re-derived `--tml-badge-*`** + `--tml-accent-glow` via color-mix.
 4. AC: unit tests assert new tokens + badge mixes; e2e `tml-lanes` still green after value shift; smoke theme route via `trellis ui --legacy` or unit-level server handler test.
-5. Entity color JS: `getComputedStyle` map — no hardcoded `ENTITY_COLORS` hex.
+5. Entity color JS: `getComputedStyle` map; no hardcoded `ENTITY_COLORS` hex.
 6. Fonts: system stacks + strip Google Fonts from **all** runtime HTML (locked).
 7. Radius: client aliases to contract `--radius-md` / `--radius-lg` (8/10); BRAND 6/8 out of scope.
 8. Cmd palette focus-trap + reduced-motion for drawer/live-dot: encode as behavioral AC even if mock is static specimen.

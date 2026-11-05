@@ -1,6 +1,6 @@
 ---
 title: Remote MCP gateway
-description: Spec for Trellis Room MCP — shared graph access for third-party AI agents over Streamable HTTP.
+description: Spec for Trellis Room MCP; shared graph access for third-party AI agents over Streamable HTTP.
 created: 2026-06-15
 status: draft
 phase: 3-hosted-product
@@ -11,21 +11,21 @@ related:
 
 # Remote MCP gateway
 
-Mount MCP (Streamable HTTP) on Trellis room nodes so Claude, ChatGPT, Cursor, and other MCP clients can **query and CRUD one shared graph** over the wire — without a local checkout or stdio subprocess.
+Mount MCP (Streamable HTTP) on Trellis room nodes so Claude, ChatGPT, Cursor, and other MCP clients can **query and CRUD one shared graph** over the wire; without a local checkout or stdio subprocess.
 
 ## Problem
 
 | Surface today | Remote? | Gap |
 | ------------- | ------- | --- |
 | trellis-graph MCP (trellis-client) | Local only (`localhost:1414`) | 48 tools, no hosted URL |
-| TurtleDB REST/WS (`trellis db serve`) | Yes | No MCP — agents need SDK or raw HTTP |
+| TurtleDB REST/WS (`trellis db serve`) | Yes | No MCP; agents need SDK or raw HTTP |
 | trellis-vcs MCP (`src/mcp/`) | stdio + broken SSE | Repo-scoped, not room graph |
 
 Playground proves remote **UI → graph**. Remote MCP proves remote **agents → same graph**.
 
 ## Decision
 
-**MCP is a capability surface on the room server** — same kernel as `/entities`, `/query`, `/realtime`. Not a second API or a new data model.
+**MCP is a capability surface on the room server**; same kernel as `/entities`, `/query`, `/realtime`. Not a second API or a new data model.
 
 ```
 https://<room>/mcp          Streamable HTTP (primary)
@@ -33,7 +33,7 @@ https://<room>/entities     REST (SDK)
 https://<room>/realtime     WebSocket subscriptions
 ```
 
-## Phase 0 — Spike (this PR)
+## Phase 0; Spike (this PR)
 
 **Shipped:**
 
@@ -70,12 +70,12 @@ With API key:
 }
 ```
 
-## Phase 1 — Deploy + bridge
+## Phase 1; Deploy + bridge
 
 **Shipped:**
 
 - MCP bundled in `trellis deploy` via `startServer` (same `/mcp` route as local serve)
-- `trellis mcp bridge --room <url>` — stdio proxy for Claude Desktop / stdio-only clients
+- `trellis mcp bridge --room <url>`; stdio proxy for Claude Desktop / stdio-only clients
 - Permission checks on writes (reuse `PermissionRegistry` in `src/mcp/room.ts`)
 - Deploy success output includes MCP URL + Cursor / Claude config snippets
 - `GET /health` includes `mcp: "/mcp"` for discovery
@@ -104,14 +104,14 @@ With API key:
 }
 ```
 
-## Phase 2 — Agent ergonomics
+## Phase 2; Agent ergonomics
 
 **Shipped:**
 
-- `get_graph_summary` — compact introspection (health, types, ontologies, attrs, links, recent ops)
-- `link_nodes` — semantic relations between entities
+- `get_graph_summary`; compact introspection (health, types, ontologies, attrs, links, recent ops)
+- `link_nodes`; semantic relations between entities
 - Lane param + `X-Trellis-Lane` header on writes (`agent:<client-id>` op attribution)
-- **Playground tenant targeting** — optional `tenantId` / `room` on all graph tools; `X-Trellis-Tenant` header; bridge `--playground-room` / `--tenant` (`embed-{slug}` matches `?room=` on playground.trellis.computer)
+- **Playground tenant targeting**; optional `tenantId` / `room` on all graph tools; `X-Trellis-Tenant` header; bridge `--playground-room` / `--tenant` (`embed-{slug}` matches `?room=` on playground.trellis.computer)
 - Rate limiting via `UsageMeter.assertGraphIoBudget` (`TRELLIS_MCP_GRAPH_IO_LIMIT`)
 - trellis-graph skill: `TRELLIS_ROOM_URL` + remote tool parity documented
 - `test/mcp/graph-summary.test.ts` + extended gateway tests
@@ -125,7 +125,7 @@ With API key:
 - [x] Rate limit enforced when `TRELLIS_MCP_GRAPH_IO_LIMIT` set
 - [x] Remote room dogfood: MCP write visible in Playground (`cursor-dogfood-test` / `mcp-dogfood`, verified 2026-06-29)
 
-## Phase 3 — Hosted product
+## Phase 3; Hosted product
 
 **Shipped:**
 
@@ -140,18 +140,18 @@ With API key:
 **Deploy to Sprites:**
 
 ```bash
-# From desk root — merges ~/.trellis/vm.json + .trellis-db.json into room registry
+# From desk root; merges ~/.trellis/vm.json + .trellis-db.json into room registry
 trellis mcp gateway deploy --name mcp-gateway --public-url https://mcp.trellis.computer
 
 # Dry-run
 trellis mcp gateway deploy --name mcp-gateway --stub
 ```
 
-Then point **`mcp.trellis.computer`** at the gateway. Sprites does not issue TLS for custom hostnames — use one of:
+Then point **`mcp.trellis.computer`** at the gateway. Sprites does not issue TLS for custom hostnames; use one of:
 
 **A. Vercel reverse proxy (recommended if you already proxy on Vercel)**
 
-Deploy `trellis-node/apps/mcp-gateway-proxy/` — external rewrite to the Sprite origin:
+Deploy `trellis-node/apps/mcp-gateway-proxy/`; external rewrite to the Sprite origin:
 
 ```bash
 cd trellis-node/apps/mcp-gateway-proxy
@@ -165,7 +165,7 @@ vercel --prod
 
 Cursor: `{ "url": "https://mcp.trellis.computer/gateway/mcp" }`
 
-**B. Direct CNAME to Sprites** — DNS resolves, but HTTPS on the vanity host fails until Sprites adds custom domains. Use the Sprite origin URL in clients until then.
+**B. Direct CNAME to Sprites**; DNS resolves, but HTTPS on the vanity host fails until Sprites adds custom domains. Use the Sprite origin URL in clients until then.
 
 **Local dev:**
 
@@ -194,10 +194,10 @@ Then `list_rooms` → `connect_room` → point graph client at room `/mcp`.
 - [x] MCP writes emit `Decision` audit entities
 - [x] `trellis mcp gateway serve` for hosted discovery
 - [x] `trellis mcp gateway serve` for hosted discovery
-- [x] `trellis mcp gateway deploy` — Sprites bundle + room registry upload
+- [x] `trellis mcp gateway deploy`; Sprites bundle + room registry upload
 - [x] `mcp.trellis.computer` DNS CNAME → Vercel proxy → Sprite (verified 2026-06-29: `/health`, `/gateway/mcp`, `list_rooms`)
 
-## Campus convergence (Phase 4) — not retiring the analogy
+## Campus convergence (Phase 4); not retiring the analogy
 
 Phase 4 **does not** retire the campus mental model (facilities, zones, lanes, agents).
 It retires **duplicate implementation surfaces**:
@@ -206,13 +206,13 @@ It retires **duplicate implementation surfaces**:
 | ---- | ----------------- |
 | Campus ontology (facility, zone, agent, wallet, decision, artifact) | Duplicate trellis-graph MCP in trellis-client (48 tools on localhost only) |
 | Spatial authority model in graph | Second HTTP stack parallel to room kernel |
-| Lane / promote semantics | — |
+| Lane / promote semantics |; |
 
 **Target:** one EAV room kernel; campus types become **ontology on that kernel**;
-MCP + Playground + REST share one graph. Agents still think in zones and facilities —
+MCP + Playground + REST share one graph. Agents still think in zones and facilities : 
 they just query one remote room instead of a separate local Nuxt graph process.
 
-## Phase 4 — Convergence (implementation)
+## Phase 4; Convergence (implementation)
 
 - Retire duplicate local-only graph MCP in trellis-client
 - Campus zones/facilities as room ontology
@@ -226,10 +226,10 @@ they just query one remote room instead of a separate local Nuxt graph process.
 
 ## Architecture constraints
 
-1. **Room does not own state** — relay/accelerator; local op-log remains canonical.
-2. **One graph, many surfaces** — Playground, MCP, REST, WS share one kernel (ADR 0012).
-3. **Auth on every tool call** — same `AuthContext` path as REST.
-4. **Lane-aware agent writes** — default draft lane; promote is explicit.
+1. **Room does not own state**; relay/accelerator; local op-log remains canonical.
+2. **One graph, many surfaces**; Playground, MCP, REST, WS share one kernel (ADR 0012).
+3. **Auth on every tool call**; same `AuthContext` path as REST.
+4. **Lane-aware agent writes**; default draft lane; promote is explicit.
 
 ## Acceptance criteria (Phase 0)
 
@@ -244,7 +244,7 @@ Prove **agent write → Playground UI** on the same tenant (`embed-{room}`).
 
 ### 1. Find your room URL
 
-Not the Playground UI — the **TurtleDB Sprite** behind it:
+Not the Playground UI; the **TurtleDB Sprite** behind it:
 
 ```bash
 cat ~/.trellis/vm.json          # sprites with hasTrellis + apiKey
@@ -328,7 +328,7 @@ Phases 0–3 shipped. Dogfood PASS. `mcp.trellis.computer` live.
 
 **Cursor (room graph):** room `…/trellis/mcp` on `*.sprites.app` (local `db serve` uses `…/mcp`).
 
-**Ship:** milestone `milestone:ee4b08b6763c` — "Remote MCP: dogfood PASS + mcp.trellis.computer discovery live" (2026-06-29)
+**Ship:** milestone `milestone:ee4b08b6763c`; "Remote MCP: dogfood PASS + mcp.trellis.computer discovery live" (2026-06-29)
 
 **Follow-up:** Redeploy gateway Sprite for registry `mcpUrl` fix; Phase 4 campus convergence.
 

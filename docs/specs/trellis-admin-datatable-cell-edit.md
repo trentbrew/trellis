@@ -1,4 +1,4 @@
-# Spec: trellis admin — Operate inline cell edit
+# Spec: trellis admin; Operate inline cell edit
 
 **Status:** Ready for impl  
 **Date:** 2026-07-21  
@@ -25,7 +25,7 @@ the admin host (`lanes-dashboard`), not `server.ts`.
 | Decision | Choice |
 | -------- | ------ |
 | Editable cols | **branch** + **issue** only (`data-editable="true"`); lane/agent/ops/files stay `false` |
-| Edit host | Extend `admin-datatable.ts` / `.css` — DOM-only; no kernel imports |
+| Edit host | Extend `admin-datatable.ts` / `.css`; DOM-only; no kernel imports |
 | Chrome | `td.cell-editing` inset ring (`outline: 2px solid var(--accent); outline-offset: -2px`); `.cell-edit-input` fills cell |
 | Error UI | `#cell-edit-error` under `.table-wrap`, `role="alert"`; wired via `aria-describedby` |
 | Keyboard enter-edit | Row focused + **F2** or **e** → first editable cell (`branch`); no `#dlg` |
@@ -34,8 +34,8 @@ the admin host (`lanes-dashboard`), not `server.ts`.
 | Sort while editing | **Commit then** sort |
 | Search hide editing row | **Cancel** then apply `.hidden-by-search` |
 | Live refresh | **Skip `refresh()`** while any `.cell-editing` exists |
-| Issue validation | Empty → null / display `—`; non-empty `/^TRL-\d+$/i` |
-| Empty branch | **Reject** — keep editing; message “Branch required” |
+| Issue validation | Empty → null / display `: `; non-empty `/^TRL-\d+$/i` |
+| Empty branch | **Reject**; keep editing; message “Branch required” |
 | Mutation fail | `#toast` + **restore** prior text + exit edit |
 | Events | `trellis:cell-activate` on begin; `trellis:cell-commit` on successful local validate (before/alongside host mutate) |
 | Mutation wire | Extend `POST /api/tml-mutations` with `action: "updateLaneMeta"` on `lanes-dashboard.ts` only |
@@ -111,7 +111,7 @@ Extend existing `POST /api/tml-mutations`:
 
 - Patch only provided keys among `targetBranch` | `issueId`
 - Persist via `loadLaneMeta` + `saveLaneMeta` (or engine wrapper if already exposed)
-- Normalize `issueId`: store `issue:TRL-N` or plain id consistently with snapshot (`lanes-snapshot` already strips `issue:` for display — match existing meta convention)
+- Normalize `issueId`: store `issue:TRL-N` or plain id consistently with snapshot (`lanes-snapshot` already strips `issue:` for display; match existing meta convention)
 - 400 on unknown lane / invalid body
 - Do **not** add this to `server.ts`
 
@@ -128,7 +128,7 @@ viewTable.addEventListener('trellis:cell-commit', async (e) => {
 });
 ```
 
-(Exact restore API: module owns restore on failed `onCellCommit`, or shell dispatches a cancel — prefer `onCellCommit` promise rejection.)
+(Exact restore API: module owns restore on failed `onCellCommit`, or shell dispatches a cancel; prefer `onCellCommit` promise rejection.)
 
 ---
 
@@ -161,7 +161,7 @@ viewTable.addEventListener('trellis:cell-commit', async (e) => {
 | Search hide row | Cancel then filter |
 | Invalid issue | Keep editing + `#cell-edit-error` |
 | Empty branch | Keep editing + “Branch required” |
-| Empty issue | Commit null → `—` |
+| Empty issue | Commit null → `: ` |
 | Mutation fail | Toast + restore + exit edit |
 
 ---
@@ -170,7 +170,7 @@ viewTable.addEventListener('trellis:cell-commit', async (e) => {
 
 **Unit** (`test/ui/admin-datatable.test.ts`): `isValidIssueId`, `normalizeIssueCommit`, `isValidBranchCommit` (+ any pure commit-prep helpers).
 
-**e2e** (`e2e/admin.spec.cjs`) — add cases; keep existing suite green:
+**e2e** (`e2e/admin.spec.cjs`); add cases; keep existing suite green:
 
 - Click branch cell → `.cell-editing` / input visible
 - F2 on focused row → edit branch

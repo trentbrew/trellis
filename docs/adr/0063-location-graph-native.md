@@ -10,7 +10,7 @@ status: accepted
 
 **Status:** Accepted
 **Date:** 2026-10-27
-**Issues:** TRL-78 (Locations 3D tactical observatory — os desk graph)
+**Issues:** TRL-78 (Locations 3D tactical observatory; os desk graph)
 **Depends on:** [0045](./0045-user-defined-collections.md) (user-defined collections), [0048](./0048-types-relations-objects.md) (types, relations, objects)
 **Related:** [0018](./0018-explicit-ids-and-field-sync-tiers.md) (field sync tiers), [0032](./0032-identity-addressed-clone.md) (identity-scoped entities)
 **Supersedes:** [`docs/specs/geodata-proposal.md`](../specs/geodata-proposal.md) as the decision of record for location. Spatial predicates, federated geometry, and the full geodata layer remain future work.
@@ -19,8 +19,8 @@ status: accepted
 ## Context
 
 Trellis has no first-class geographic property type. `PropertyTypeSchema`
-(`src/core/ontology/types.ts`) is a closed set — `title`, `rich_text`, `number`,
-`select`, `date`, `relation`, `json`, and the rest — with no `location`, `geo`,
+(`src/core/ontology/types.ts`) is a closed set; `title`, `rich_text`, `number`,
+`select`, `date`, `relation`, `json`, and the rest; with no `location`, `geo`,
 `coordinates`, or `point`. `core:Event.location` is `rich_text`
 (`src/core/ontology/core-ontology.ts`), not structured geography. That is
 intentional at the kernel layer: types are schema, values are EAV facts.
@@ -38,10 +38,10 @@ The application layer already has a location model, though it is implicit:
 
 So three different things are currently called "location":
 
-1. **A place** — a durable thing with coordinates and a name ("Ferry Building").
-2. **A role** — how a record relates to a place ("happened at", "departed from",
+1. **A place**; a durable thing with coordinates and a name ("Ferry Building").
+2. **A role**; how a record relates to a place ("happened at", "departed from",
    "going to").
-3. **A label** — human text on a record ("Ferry Building, SF"), which may be
+3. **A label**; human text on a record ("Ferry Building, SF"), which may be
    geocoded on demand.
 
 A `location` property type would collapse all three into one column and force
@@ -65,11 +65,11 @@ A place is a record, not an attribute. It may become a core type later
 (`core:Place`); today a user-defined `Place` collection is sufficient and does
 not require a kernel release. A place carries:
 
-- `title` — the display name.
-- `latitude` / `longitude` — `number` fields, WGS84 decimal degrees. These names
+- `title`; the display name.
+- `latitude` / `longitude`; `number` fields, WGS84 decimal degrees. These names
   are the compatibility contract with the existing map extractor.
-- `address` — optional `rich_text`.
-- `geometry` — optional `json`, a GeoJSON object, validated by the consumer
+- `address`; optional `rich_text`.
+- `geometry`; optional `json`, a GeoJSON object, validated by the consumer
   (app-side schema), not the kernel.
 
 `json` is deliberate: geometry is opaque to the EAV kernel and must not become a
@@ -80,8 +80,8 @@ only need pins ignore the field.
 
 How a record points at a place is a relation, not a string:
 
-- `locatedAt` — the general case.
-- `origin` / `destination` — travel roles.
+- `locatedAt`; the general case.
+- `origin` / `destination`; travel roles.
 - Domain-specific roles (`venue`, `meetingPoint`, …) are user relations.
 
 A record MAY also keep a text label (`core:Event.location`, trip

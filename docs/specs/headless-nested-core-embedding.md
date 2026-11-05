@@ -34,13 +34,13 @@ ADR 0034 says heavy code editing **swaps a code-core instance into editor-core a
 
 ## 3. Embedding modes
 
-Code-core runs in three modes — one factory, config-driven:
+Code-core runs in three modes; one factory, config-driven:
 
 | Mode | Host | `CodeCoreConfig.mode` | Lifecycle |
 | ---- | ---- | --------------------- | --------- |
 | **Standalone** | Form field, desk file panel, query bar | `eql` \| `formula` \| `json` \| `plain` | Always active; commits to entity field / file entity |
 | **Embedded block** | `editor-core` `code_block` node | `plain` + `language` attr | Swap-in on focus; commit replaces node content on blur |
-| **Embedded inline** | Future: inline `code` mark with expanded edit | `plain` | Out of v1 — marks stay PM-native |
+| **Embedded inline** | Future: inline `code` mark with expanded edit | `plain` | Out of v1; marks stay PM-native |
 
 All modes share: `HeadlessCore` bridge, composed `undoHistory`, schema-derived completions (standalone EQL/formula only).
 
@@ -51,14 +51,14 @@ All modes share: `HeadlessCore` bridge, composed `undoHistory`, schema-derived c
 ### 4.1 ProseMirror node (canonical persist shape)
 
 ```ts
-/** Persisted in EditorState.doc — one code block node. */
+/** Persisted in EditorState.doc; one code block node. */
 interface CodeBlockNodeJSON {
   type: 'code_block';
   attrs?: {
-    /** Lezer/language id — 'eql', 'json', 'javascript', 'plain', … */
+    /** Lezer/language id; 'eql', 'json', 'javascript', 'plain', … */
     language?: string;
   };
-  /** Single text child — PM convention for code_block. */
+  /** Single text child; PM convention for code_block. */
   content?: Array<{ type: 'text'; text: string }>;
 }
 ```
@@ -69,14 +69,14 @@ interface CodeBlockNodeJSON {
 
 ### 4.2 Editor core extensions (minimal)
 
-Add to `editor-core` — behavior only, no CM/PM view:
+Add to `editor-core`; behavior only, no CM/PM view:
 
 ```ts
 interface EditorEmbedState {
   /** Active nested editor, or null. At most one embed per editor core. */
   embed: {
     kind: 'code_block';
-    /** Path to the block in doc JSON — stable identity across structural edits. */
+    /** Path to the block in doc JSON; stable identity across structural edits. */
     blockId: string;
     language: string;
     /** Snapshot of node text at embed open (for dirty detection). */
@@ -92,7 +92,7 @@ interface EditorEmbedActions {
 }
 ```
 
-`blockId` assignment: editor-core assigns stable ids to block nodes on first mutation (internal map `blockId ↔ doc position`), same pattern as table row ids. **Ids are core data**, not DOM attrs — adapters render them as `data-block-id` for hit-testing.
+`blockId` assignment: editor-core assigns stable ids to block nodes on first mutation (internal map `blockId ↔ doc position`), same pattern as table row ids. **Ids are core data**, not DOM attrs; adapters render them as `data-block-id` for hit-testing.
 
 ### 4.3 Code-core embed config
 
@@ -148,7 +148,7 @@ Standalone cores omit `embed`; embedded cores receive `onCommit` / `onCancel` fr
 
 1. **At most one embed** per editor-core instance.
 2. **Opening an embed** snapshots `committed` text; code-core `initial` = that snapshot.
-3. **While embed open:** editor-core `type()` / `toggleMark()` on the parent document are **no-ops** (or queue until close — **v1: no-op**).
+3. **While embed open:** editor-core `type()` / `toggleMark()` on the parent document are **no-ops** (or queue until close; **v1: no-op**).
 4. **Commit path:** adapter calls `codeCore.state` draft → `editor.actions.closeCodeEmbed({ commit: true, draft })` → PM node update → one undo step on **editor** stack.
 5. **Discard path:** close without PM mutation; code-core discarded.
 6. **Structural edits** (delete block, split doc) while embed open → **auto-discard** embed (same as colorpicker close-on-outside-click).
@@ -183,12 +183,12 @@ interface EmbedFocusController {
 
 - React: ref handoff between PM view and CM view
 - Vue/Svelte: same controller, framework-specific refs
-- **No focus logic in cores** — cores expose `embed` state; adapters bind DOM focus
+- **No focus logic in cores**; cores expose `embed` state; adapters bind DOM focus
 
 ### 6.1 a11y
 
 - Embedded: code textarea/contenteditable has `aria-label` from block language + "code block"
-- Parent doc exposes `aria-activedescendant` or roving tabindex — adapter responsibility
+- Parent doc exposes `aria-activedescendant` or roving tabindex; adapter responsibility
 - `canUndo` / `canRedo` from the **active** stack surface in UI chrome (see §7)
 
 ---
@@ -205,7 +205,7 @@ interface EmbedFocusController {
 | Toggle mark / block | editor-core command | no |
 | Typing in embedded code | code-core command | `coalesceKey: 'type'` |
 | Commit embed (text changed) | **single** editor-core command: replace block content | no |
-| Cancel embed | nothing | — |
+| Cancel embed | nothing |; |
 
 ### 7.2 Commit as one editor undo step
 
@@ -220,7 +220,7 @@ Embed commit is **one editor push**, not a code-core push + structural push:
 }
 ```
 
-Typing *inside* the embed before commit accumulates on code-core's local buffer only — **not** on the shared undo stack until commit. Alternative considered: push every code keystroke to shared stack — **rejected** (pollutes prose undo timeline).
+Typing *inside* the embed before commit accumulates on code-core's local buffer only; **not** on the shared undo stack until commit. Alternative considered: push every code keystroke to shared stack; **rejected** (pollutes prose undo timeline).
 
 ### 7.3 Standalone code-core
 
@@ -233,7 +233,7 @@ File panel / EQL bar: code-core pushes directly to composed or standalone `undoH
 | `undo-history-core` | In-session edits (ergonomic) |
 | Op-log + semantic merge | Applied entity writes (durable) |
 
-Embed commit that triggers `onCellEdit` / entity write: **local undo** reverts buffer; **durable reversal** goes through op-log machinery — same as table-core today.
+Embed commit that triggers `onCellEdit` / entity write: **local undo** reverts buffer; **durable reversal** goes through op-log machinery; same as table-core today.
 
 ---
 
@@ -261,7 +261,7 @@ Embed commit that triggers `onCellEdit` / entity write: **local undo** reverts b
 ### 8.1 Factory helper (adapter tier, not core)
 
 ```ts
-/** Optional convenience — lives in adapter package, not core. */
+/** Optional convenience; lives in adapter package, not core. */
 function createEditorWithCodeEmbed(config: {
   editor: EditorConfig;
   codeDefaults?: Partial<CodeCoreConfig>;
@@ -276,7 +276,7 @@ Cores stay independent; helper wires `openCodeEmbed` ↔ `createCodeCore({ embed
 
 ### 8.2 Vanilla / wedge-smoke path
 
-v1 smoke test: **standalone code-core only** in gallery; editor gallery gains one action **"Open code embed (simulated)"** that exercises `openCodeEmbed` / `closeCodeEmbed` without CM DOM — behavior test in Node, textarea stand-in for CM in browser (matches current editor gallery pattern).
+v1 smoke test: **standalone code-core only** in gallery; editor gallery gains one action **"Open code embed (simulated)"** that exercises `openCodeEmbed` / `closeCodeEmbed` without CM DOM; behavior test in Node, textarea stand-in for CM in browser (matches current editor gallery pattern).
 
 Full CM NodeView lands in adapter follow-up.
 
@@ -296,7 +296,7 @@ createCodeCore({
 ```
 
 - **Single line enforced in core:** `actions.insert('\n')` rejected or transforms to commit in formula mode
-- Form/table bind via schema affordance (`code` / `formula`) — see schema-to-surface spec
+- Form/table bind via schema affordance (`code` / `formula`); see schema-to-surface spec
 - Same factory as embed; `embed` config absent
 
 ---
@@ -326,12 +326,12 @@ createCodeCore({
 
 ## 11. Implementation order
 
-1. **Editor embed state machine** — `EditorEmbedState`, `openCodeEmbed`, `closeCodeEmbed` in `editor-core` (no CodeMirror)
-2. **Tests** — Node suite for lifecycle + undo (§10)
-3. **Code-core factory** — standalone first; `embed` config stub
-4. **Adapter helper** — `createEditorWithCodeEmbed` in `editor/react` (one framework first)
-5. **CM view** — CodeMirror 6 adapter binds embed focus controller
-6. **Wedge-smoke** — simulated embed action on editor entry
+1. **Editor embed state machine**; `EditorEmbedState`, `openCodeEmbed`, `closeCodeEmbed` in `editor-core` (no CodeMirror)
+2. **Tests**; Node suite for lifecycle + undo (§10)
+3. **Code-core factory**; standalone first; `embed` config stub
+4. **Adapter helper**; `createEditorWithCodeEmbed` in `editor/react` (one framework first)
+5. **CM view**; CodeMirror 6 adapter binds embed focus controller
+6. **Wedge-smoke**; simulated embed action on editor entry
 
 **Gate:** steps 1–2 complete before CodeMirror dependency lands.
 
@@ -339,6 +339,6 @@ createCodeCore({
 
 ## 12. Open questions
 
-- **Block identity:** stable `blockId` map vs path-based `(child index[])` — **Recommend:** opaque `blockId` assigned by editor-core (survives index shifts via internal mapping).
-- **Partial commit:** commit on every blur vs explicit Save in modal code block — **Recommend:** blur commits when dirty (Notion-like); modal variant uses dialog draft/commit wrapper for long scripts.
-- **Language pickers:** `language` attr on node vs inferred from schema — **Recommend:** attr on node; schema sets default when inserting block from toolbar.
+- **Block identity:** stable `blockId` map vs path-based `(child index[])`; **Recommend:** opaque `blockId` assigned by editor-core (survives index shifts via internal mapping).
+- **Partial commit:** commit on every blur vs explicit Save in modal code block; **Recommend:** blur commits when dirty (Notion-like); modal variant uses dialog draft/commit wrapper for long scripts.
+- **Language pickers:** `language` attr on node vs inferred from schema; **Recommend:** attr on node; schema sets default when inserting block from toolbar.

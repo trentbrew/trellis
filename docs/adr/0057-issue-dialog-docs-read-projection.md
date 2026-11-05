@@ -78,7 +78,7 @@ For **`appId === 'issues'`**, the dialog **body is read-only** in v1.
   3. **Bypass the write data path:** in `operator-docs` mode, **do not construct**
      `RecordPage` with a live `entityMutations(client, RecordBody)` subscription
      (`record-page.svelte.ts` holds the bodies store). Read-only rendering alone is
-     insufficient — subscription must not run.
+     insufficient; subscription must not run.
 - A dedicated `Record:issue-docs` projection is **optional** (belt-and-suspenders);
   the flag + skipped `RecordPage` body path is sufficient.
 - **Non-goal v1:** Editable body autosaving to UI-state `RecordBody`.
@@ -93,7 +93,7 @@ defines an HTTP append verb.
 ladder; fall through to `summary.md`, then `description`, then empty state.
 
 The server computes **`rendered`**; the client **must** use `rendered` (and the
-matching field) as authoritative — no client-side re-ladder (avoids divergence).
+matching field) as authoritative; no client-side re-ladder (avoids divergence).
 
 | Step | Condition | `rendered` |
 | ---- | --------- | ---------- |
@@ -124,7 +124,7 @@ the admin dialog in v1.
 
 Kernel **`src/vcs/issue-doc.ts`** grows:
 
-- `assertIssueDocId(id)` — after stripping `issue:` and trim, bare id must match
+- `assertIssueDocId(id)`; after stripping `issue:` and trim, bare id must match
   `/^[A-Za-z0-9][A-Za-z0-9._-]*$/`; reject `.`, `..`, empty, and ids that sanitize
   to empty. Used by HTTP handler **before** path join (decoded `%2e%2e` must fail here).
 - `issueDocsRoot(rootPath)` → absolute `join(rootPath, 'docs', 'issues')` (fixed
@@ -209,13 +209,13 @@ projection**, not UI-state pages.
 
 1. `assertIssueDocId(id)` on the URL segment (after `decodeURIComponent`).
 2. **Confinement root:** `canonicalRoot = realpath(join(rootPath, 'docs', 'issues'))`
-   (must exist or be creatable-only for reads — if missing, no files match; still
+   (must exist or be creatable-only for reads; if missing, no files match; still
    validate ids). All allowed file paths must satisfy
    `resolvedFile.startsWith(canonicalRoot + sep)`.
 3. Per file (`journal.md`, `summary.md`): `candidate = join(canonicalRoot, safeSegment, basename)`;
    `resolved = realpath(candidate)` when the file exists; if `ENOENT`, treat as absent
    (`null`). If resolved escapes `canonicalRoot`, **reject the read** (403 or omit field
-   per implementation — tests must cover escape).
+   per implementation; tests must cover escape).
 4. **Symlink:** resolved path must remain under `canonicalRoot`; symlink pointing outside
    → reject.
 5. **Read:** bounded read at fd (`read` / `fs.read` with max length), then UTF-8 decode
@@ -240,10 +240,10 @@ surface.
 
 | Option | Pros | Cons | Why not |
 | ------ | ---- | ---- | ------- |
-| **A — read projection (chosen)** | Git is source; matches 0053 | No in-app edit v1 | — |
-| B — sync into `RecordBody` | Reuses editor save | Forks UI db | Violates 0053 §6 |
-| C — editable + HTTP write | Notion-like | Append semantics | Defer |
-| D — full asset proxy v1 | Images work | Scope + attack surface | P2 |
+| **A; read projection (chosen)** | Git is source; matches 0053 | No in-app edit v1 |; |
+| B; sync into `RecordBody` | Reuses editor save | Forks UI db | Violates 0053 §6 |
+| C; editable + HTTP write | Notion-like | Append semantics | Defer |
+| D; full asset proxy v1 | Images work | Scope + attack surface | P2 |
 
 ## Consequences
 
@@ -273,9 +273,9 @@ Verification bar for review (do not skip at PASS):
 | Phase | Scope | Verification |
 | ----- | ----- | -------------- |
 | **P0 Engine** | `assertIssueDocId`, confined reads, route | `test/vcs/issue-doc.test.ts`; `test/ui/` (.., `%2e%2e`, symlink, oversize, whitespace journal); `pnpm check` |
-| **P1 app-svelte** | `recordBodyMode`; no `RecordBody` subscription; markdown→editor init | **Vitest** unit test (e.g. markdown init helper); `pnpm test` in app-svelte — not manual-only |
+| **P1 app-svelte** | `recordBodyMode`; no `RecordBody` subscription; markdown→editor init | **Vitest** unit test (e.g. markdown init helper); `pnpm test` in app-svelte; not manual-only |
 | **P2 admin** | API client, dialog wiring, version-skew fallback, catalog | `bun run check` **and** `bun run test` in `os/admin` |
-| **P3 E2E** | **Owner: `os/admin`.** Add `@playwright/test` config + fixture repo(s): issue with `journal.md`; issue with no docs. Assert rendered markdown and empty-state copy. Part of the same wedge — kernel Playwright cannot drive the turtleOS dialog. | `needs-e2e` on TRL-N; `bun run test:e2e` (script added in admin) |
+| **P3 E2E** | **Owner: `os/admin`.** Add `@playwright/test` config + fixture repo(s): issue with `journal.md`; issue with no docs. Assert rendered markdown and empty-state copy. Part of the same wedge; kernel Playwright cannot drive the turtleOS dialog. | `needs-e2e` on TRL-N; `bun run test:e2e` (script added in admin) |
 | **Review** | UI wedge | QA subagent before Reviewer PASS |
 
 **ADR acceptance:** Status moves to **Accepted** by human/architect sign-off after
@@ -292,7 +292,7 @@ follows Accepted unless an explicit spike waiver is recorded in the issue.
 
 <!-- Append dated notes here. Do not rewrite accepted decision text above. -->
 
-### 2026-10-02 — Reviewer consult (security, e2e owner, staleness)
+### 2026-10-02; Reviewer consult (security, e2e owner, staleness)
 
 Captured blocking fixes: `assertIssueDocId` + fixed `docs/issues` confinement (not
 `issueDocRelDir` prefix alone); fd-level read cap; admin-owned Playwright; refetch

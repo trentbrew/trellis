@@ -1,10 +1,10 @@
-# Spec: trellis admin — causal history graph (Logs · Branches)
+# Spec: trellis admin; causal history graph (Logs · Branches)
 
 **Status:** Ready for impl  
 **Date:** 2026-07-21  
 **Proposal:** TRL-261  
 **Design:** TRL-262 · [`docs/artifacts/trellis-admin-causal-graph_design.md`](../artifacts/trellis-admin-causal-graph_design.md) · [`trellis-admin-causal-graph_mockup.html`](../artifacts/trellis-admin-causal-graph_mockup.html)  
-**Amends:** [`trellis-admin-vcs-layout-ide.md`](./trellis-admin-vcs-layout-ide.md) — replaces `logs/branches` stub  
+**Amends:** [`trellis-admin-vcs-layout-ide.md`](./trellis-admin-vcs-layout-ide.md); replaces `logs/branches` stub  
 **Preserves:** Logs/Ops SSE linear stream, Work/Milestones cards, `runtime-theme.css` SSOT, embed mode  
 **Labels:** `spec`, `tml`, `admin`, `needs-e2e`
 
@@ -12,7 +12,7 @@
 
 ## 1. Intent
 
-Replace the **Logs → Branches** stub in admin with a **Causal History Graph** — vertical
+Replace the **Logs → Branches** stub in admin with a **Causal History Graph**; vertical
 git-client topology of integration milestones, agent lane forks, and promote merges.
 Complements (does not replace) the Logs/Ops linear op tail.
 
@@ -25,21 +25,21 @@ row select, React/shadcn island.
 
 | Decision | Choice |
 | -------- | ------ |
-| IA route | `logs/branches` only — not Work/Milestones |
-| Snapshot builder | **Dedicated** `buildCausalGraphSnapshot()` in `src/ui/causal-graph-snapshot.ts` — do not overload `buildLanesSnapshot()` |
+| IA route | `logs/branches` only; not Work/Milestones |
+| Snapshot builder | **Dedicated** `buildCausalGraphSnapshot()` in `src/ui/causal-graph-snapshot.ts`; do not overload `buildLanesSnapshot()` |
 | HTTP | `GET /api/causal-graph` on admin server (`lanes-dashboard.ts`) |
-| UI primitive | `mountAdminCausalGraph()` in `src/ui/admin-causal-graph.ts` — DOM/SVG only, no kernel imports |
+| UI primitive | `mountAdminCausalGraph()` in `src/ui/admin-causal-graph.ts`; DOM/SVG only, no kernel imports |
 | Bundle | Serve as `/admin-causal-graph.js` via existing esbuild path (mirror `admin-datatable.ts`) |
 | Mount target | `#causal-graph-host` inside `[data-panel="logs/branches"]` |
 | Route lifecycle | Mount + initial fetch on `setVcsRoute('logs','branches')`; `destroy()` when leaving route |
 | Refresh | `handle.refresh()` on admin snapshot SSE (`onSnapshot`) when graph mounted |
-| Data scope | Milestones + lane fork/head/promote events — **not** full op journal |
+| Data scope | Milestones + lane fork/head/promote events; **not** full op journal |
 | Promote nodes | Emit when `LaneMeta.status === 'promoted'`; `hash` from `headOpHash` or latest `vcs:lanePromoteComplete` on integration journal |
-| Lane columns | `lane: 0` = integration trunk; side lanes from fork tree (`parentLaneId`, `forkKind`) — stable sort by `createdAt` then `id` |
+| Lane columns | `lane: 0` = integration trunk; side lanes from fork tree (`parentLaneId`, `forkKind`); stable sort by `createdAt` then `id` |
 | Merge shape | Multi-parent promote → hollow ring on trunk (`parents.length > 1`) |
-| Selection | Inline meta `{hash · agentId · date}` — no `#dlg` v1 |
-| Theme | Read lane colors from CSS vars (`--text-weak`, `--accent` / design tokens via `runtime-theme.css`) — no hardcoded hex in TS |
-| View meta | `#view-meta` on `logs/branches`: `{N events · M active forks · integration: {branch}}` — replace "Coming soon" |
+| Selection | Inline meta `{hash · agentId · date}`; no `#dlg` v1 |
+| Theme | Read lane colors from CSS vars (`--text-weak`, `--accent` / design tokens via `runtime-theme.css`); no hardcoded hex in TS |
+| View meta | `#view-meta` on `logs/branches`: `{N events · M active forks · integration: {branch}}`; replace "Coming soon" |
 | Loading / empty | Skeleton (3 rows) until first fetch; empty copy per design when `commits.length === 0` |
 | a11y | SVG `aria-hidden`; row `<button aria-selected>` + `aria-label`; `:focus-visible` ring; `@media (prefers-reduced-motion: reduce)` disables transitions |
 
@@ -119,7 +119,7 @@ Pure layout helpers (`laneColor`, `buildEdges`, `formatViewMeta`) exported for u
 
 ## 4. Projection rules (`buildCausalGraphSnapshot`)
 
-Input: `TrellisVcsEngine` — `listMilestones()`, `listLanes()`, integration branch name
+Input: `TrellisVcsEngine`; `listMilestones()`, `listLanes()`, integration branch name
 from config / snapshot.
 
 **Emit nodes (newest first after sort):**
@@ -145,12 +145,12 @@ excluding trunk).
 
 | File | Change |
 | ---- | ------ |
-| `src/ui/causal-graph-snapshot.ts` | **New** — types + `buildCausalGraphSnapshot` + pure helpers |
-| `src/ui/admin-causal-graph.ts` | **New** — primitive mount/render/selection |
+| `src/ui/causal-graph-snapshot.ts` | **New**; types + `buildCausalGraphSnapshot` + pure helpers |
+| `src/ui/admin-causal-graph.ts` | **New**; primitive mount/render/selection |
 | `src/ui/lanes-dashboard.ts` | `GET /api/causal-graph`; bundle `/admin-causal-graph.js` |
 | `src/ui/admin.html` | Replace stub panel; graph CSS; import mount; route lifecycle; `updateViewMeta` for branches |
-| `test/ui/causal-graph-snapshot.test.ts` | **New** — projection + lane assignment |
-| `test/ui/admin-causal-graph.test.ts` | **New** — edge path + selection helpers |
+| `test/ui/causal-graph-snapshot.test.ts` | **New**; projection + lane assignment |
+| `test/ui/admin-causal-graph.test.ts` | **New**; edge path + selection helpers |
 | `e2e/admin.spec.cjs` | Branches route: host visible, row select meta, view-meta counts |
 | `docs/specs/trellis-admin-causal-graph.md` | This file |
 
@@ -192,7 +192,7 @@ Script block (after `createAdminShell`):
 
 Add:
 
-1. `/?vcs=logs/branches` — `#causal-graph-host` visible; `.route-panel-stub` count 0 on branches panel
+1. `/?vcs=logs/branches`; `#causal-graph-host` visible; `.route-panel-stub` count 0 on branches panel
 2. With seeded repo data (or demo snapshot): first `.graph-list button` click → row has `aria-selected="true"` and meta matching `/[a-f0-9]{6,}/i`
 3. `#view-meta` text matches `/events · .*integration:/i` (not `/coming soon/i`)
 4. Existing admin cases remain green

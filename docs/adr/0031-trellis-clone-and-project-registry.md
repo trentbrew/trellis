@@ -22,7 +22,7 @@ add/status/push/pull/install`, `deployLedgerSprite`, repair hard-gate, auth in
    same remote ledger. Clone is impossible until repoId becomes a property of
    the ledger, not of the checkout.
 3. **No discovery surface.** `GET /v0/ledger/tail` requires knowing `repoId`
-   up front. There is no way to enumerate what ledgers a sprite holds — the
+   up front. There is no way to enumerate what ledgers a sprite holds; the
    L2 "public ledger index" is a documented roadmap row, not an endpoint.
 4. **Blobs are out of protocol by design.** The sprite stores ops only
    (`vcs-oplog-remote-sprite-v0.md` non-goal: blob/file-content sync). A clone
@@ -32,7 +32,7 @@ add/status/push/pull/install`, `deployLedgerSprite`, repair hard-gate, auth in
 
 ## Decision
 
-### 1. `trellis clone <url> [dir]` — one-command bootstrap
+### 1. `trellis clone <url> [dir]`; one-command bootstrap
 
 A clone connects to a sprite, discovers the repo, fetches the latest immutable
 checkpoint, initializes a fresh `.trellis/` at `dir`, installs the ops, and
@@ -52,7 +52,7 @@ Flow:
 2. `GET <url>/v0/ledger/tail?repoId=<id>` → journal meta.
 3. `GET <url>/v0/ledger/checkpoints/<tailHash>` → ops JSONL (existing).
 4. Init fresh `.trellis/config.json` at `dir` with
-   `remote.default = { url, repoId, lastAckHash: tailHash, lastAckAt: now }` —
+   `remote.default = { url, repoId, lastAckHash: tailHash, lastAckAt: now }` : 
    **the clone is a peer from second zero** and pushes to the *same* ledger.
 5. Install ops (existing `installPulledOps` path), validate JSONL.
 6. Bytes: if `--git <git-url>` → `git clone` then `trellis open`
@@ -69,7 +69,7 @@ with a second peer from day one (the planning-doc row), no pull.
 The path-derived `repoKeyFromRoot` is the clone blocker. Change the identity
 contract:
 
-- **On clone/import:** the local repo adopts the **source repoId** — never
+- **On clone/import:** the local repo adopts the **source repoId**; never
   re-derives from its own path. This is what makes push-back after clone target
   the same ledger.
 - **On `trellis init`:** persist a stable repoId in `.trellis/config.json` at
@@ -95,7 +95,7 @@ new product:
 
 ### 4. Blob story for clone
 
-Bytes are **not** in the sprite protocol for v0 — no protocol change here.
+Bytes are **not** in the sprite protocol for v0; no protocol change here.
 Clone composes what exists:
 
 | Repo type | Clone byte path |
@@ -124,7 +124,7 @@ index. Do not overload it:
 
 ### Positive
 
-- **One command restores a repo on a fresh machine** — the wipe-recovery story
+- **One command restores a repo on a fresh machine**; the wipe-recovery story
   graduates from `git clone` + 4 manual steps to `trellis clone`.
 - **repoId stability across machines** unblocks fork, multi-device push-back,
   and the eventual social layer.
@@ -134,12 +134,12 @@ index. Do not overload it:
 
 ### Negative
 
-- **Non-git clones are semantics-only** until blob sync ships — clone must
+- **Non-git clones are semantics-only** until blob sync ships; clone must
   say so loudly rather than silently drop bytes.
 - **Legacy repos** keep path-derived repoId until they adopt a persisted id
   (migration is lazy/optional).
 - **repoId change touches identity-sensitive code** (`addRemote`, push ack
-  bookkeeping) — must not break the repair gate's `lastAckHash` contract.
+  bookkeeping); must not break the repair gate's `lastAckHash` contract.
 
 ### Security Considerations
 
@@ -152,12 +152,12 @@ index. Do not overload it:
 
 1. Server: `GET /v0/ledger/repos` in `src/server/ledger-handler.ts` +
    `LedgerStore.listRepos()` + `MemoryRemoteSprite` test parity.
-2. Client: `src/vcs/oplog-remote.ts` — `listRemoteRepos()`, persist adopted
+2. Client: `src/vcs/oplog-remote.ts`; `listRemoteRepos()`, persist adopted
    repoId on install; keep `repoKeyFromRoot` as fallback only.
 3. CLI: `trellis clone <url> [dir]` (new `src/cli/clone-cli.ts`), `trellis
    project list <url>`; wire into `src/cli/index.ts`.
 4. Init: persist stable repoId in `.trellis/config.json`.
-5. Tests: `test/vcs/oplog-clone.test.ts` — mock sprite round-trip to a fresh
+5. Tests: `test/vcs/oplog-clone.test.ts`; mock sprite round-trip to a fresh
    dir on a *different* path (assert same repoId + tail), git-backed
    materialize round-trip, ops-only, repos listing.
 

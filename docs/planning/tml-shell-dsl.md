@@ -1,4 +1,4 @@
-# TML Shell DSL — north-star authoring language
+# TML Shell DSL; north-star authoring language
 
 **Status:** north-star / non-normative (planning)  
 **Date:** 2026-07-24  
@@ -13,7 +13,7 @@
 
 ## 0. Three primitives to nail early
 
-Before DSL compiler polish, lock these **host primitives** — they carry most of Operate UX:
+Before DSL compiler polish, lock these **host primitives**; they carry most of Operate UX:
 
 | # | Primitive | Job |
 | - | --------- | --- |
@@ -23,9 +23,9 @@ Before DSL compiler polish, lock these **host primitives** — they carry most o
 
 ```mermaid
 flowchart LR
-  Browse["browse shell — view mode"]
-  Mention["richtext mark — mention"]
-  Stack["stacked dialog — inspect"]
+  Browse["browse shell; view mode"]
+  Mention["richtext mark; mention"]
+  Stack["stacked dialog; inspect"]
   Thing["Thing"]
   Browse -->|"select / open"| Stack
   Mention -->|"activate"| Stack
@@ -36,15 +36,15 @@ flowchart LR
 
 **Test bed:** trellis-node **admin** for #1 and #2 (locked). Scope docs: [`primitive-stacked-dialog.md`](./primitive-stacked-dialog.md) · [`primitive-richtext.md`](./primitive-richtext.md).
 
-**Why this order:** #1 is chrome + stack policy. #3 is resolve × view mode. #2 is the largest product bet — own a **mark/doc IR** + slash→op bridge. Do **not** wait on `.tml` compile.
+**Why this order:** #1 is chrome + stack policy. #3 is resolve × view mode. #2 is the largest product bet; own a **mark/doc IR** + slash→op bridge. Do **not** wait on `.tml` compile.
 
 **Scope before build:** lock #1 and #2 before implementing either or starting #3. Phase 4–5 not blocked; stack/richtext can land as parallel admin wedges.
 
-**Activity tab:** one feed — op/change history **and** ad-hoc comments (not separate top-level tabs).
+**Activity tab:** one feed; op/change history **and** ad-hoc comments (not separate top-level tabs).
 
-**Inspect shells:** universal **host** chrome + **fallback** `thing.inspect` + **per-kind** preview shells via resolve — not one mega-dialog per kind and not a single shell that switches on every type.
+**Inspect shells:** universal **host** chrome + **fallback** `thing.inspect` + **per-kind** preview shells via resolve; not one mega-dialog per kind and not a single shell that switches on every type.
 
-**Plate / Slate:** [Plate](https://github.com/udecode/plate) and [Slate examples](https://www.slatejs.org/examples/richtext) are **references** (and fine spike substrate). **Owning** a Notion-class richtext primitive — TrellisDoc, mention→inspect, slash→ops — *is* the point; avoid only accidental demos without those contracts. TipTap may remain an adapter in Vue hosts.
+**Plate / Slate:** [Plate](https://github.com/udecode/plate) and [Slate examples](https://www.slatejs.org/examples/richtext) are **references** (and fine spike substrate). **Owning** a Notion-class richtext primitive; TrellisDoc, mention→inspect, slash→ops; *is* the point; avoid only accidental demos without those contracts. TipTap may remain an adapter in Vue hosts.
 
 **Browse:** `projection` + `resolve` keyed by `view` / density. Open → #1; rich cells → #2. Scope #3 after #1+#2 stick.
 
@@ -52,7 +52,7 @@ flowchart LR
 
 ## 1. Why this exists
 
-Attribute soup (`tml-*`, `data-trellis-*`, `tml-attr-data-*`, `data-shell-*`) is a DX smell. The fractal model is clear — Thing → resolve → shell → optional primitive — but authoring was never given a grammar of its own.
+Attribute soup (`tml-*`, `data-trellis-*`, `tml-attr-data-*`, `data-shell-*`) is a DX smell. The fractal model is clear; Thing → resolve → shell → optional primitive; but authoring was never given a grammar of its own.
 
 This DSL is that grammar. It does **not** replace:
 
@@ -138,7 +138,7 @@ shell issue.card (kind: issue, density: card) {
 | `kind: issue` | `data-kind="issue"` |
 | `entity=@x` | `tml-attr-data-entity-id="…"` |
 | `#title { @issue.title }` | element + `data-trellis-slot="title"` + `tml-text` |
-| `shell` registry id on template | `data-trellis-shell="issue.card"` on `<template>` *(split from density — see attribute taxonomy)* |
+| `shell` registry id on template | `data-trellis-shell="issue.card"` on `<template>` *(split from density; see attribute taxonomy)* |
 
 North-star attribute split (future IR): `data-tml-shell` = registry id; `data-trellis-shell` = density only. Sandbox `ir/` still mirrors **live admin** where they collide.
 
@@ -146,7 +146,7 @@ North-star attribute split (future IR): `data-tml-shell` = registry id; `data-tr
 
 ## 4. Twin: issue.card
 
-**DSL** — also [`sandbox/tml-admin/shells/issue.card.tml`](../../sandbox/tml-admin/shells/issue.card.tml):
+**DSL**; also [`sandbox/tml-admin/shells/issue.card.tml`](../../sandbox/tml-admin/shells/issue.card.tml):
 
 ```tml
 shell issue.card (kind: issue, density: card) {
@@ -162,7 +162,7 @@ shell issue.card (kind: issue, density: card) {
 }
 ```
 
-**Resolved HTML IR** — [`sandbox/tml-admin/ir/issue.card.html`](../../sandbox/tml-admin/ir/issue.card.html):
+**Resolved HTML IR**; [`sandbox/tml-admin/ir/issue.card.html`](../../sandbox/tml-admin/ir/issue.card.html):
 
 ```html
 <template id="shell-issue-card" data-trellis-shell="issue.card">
@@ -209,12 +209,12 @@ Fixture: [`sandbox/tml-admin/resolve/`](../../sandbox/tml-admin/resolve/).
 
 ## 6. Formulas
 
-Pure derived **presentation** and **predicates** — not free JS (ADR 0025).
+Pure derived **presentation** and **predicates**; not free JS (ADR 0025).
 
 **Allowed:** field paths, literals, `+` concat, `||` `&&`, comparisons, `?` presence, context (`vantage`, `salience`, `host`, `me`).  
 **Forbidden:** arbitrary JS calls, graph writes, `fetch`, loops (use `each`).
 
-**Live updates:** yes when the host is `live` — same re-render path as `tml-text`.
+**Live updates:** yes when the host is `live`; same re-render path as `tml-text`.
 
 Promote repeated formulas to **graph fields** when multiple shells share the meaning.
 
@@ -268,7 +268,7 @@ Today’s UI allowlist (`POST /api/tml-mutations`):
 
 **Shared capability registry** (north-star): one catalog for MCP / UI / CLI with `surfaces: [mcp\|ui\|cli]`. Shells only see `ui`. Do **not** mirror every MCP tool as a button.
 
-Prefer **generic verbs** (`remove`, `create`, `update`, `set`, `promote`) with entity id / kind in args — not per-type names (`removeTodo`). Kind is implied by id prefix or bind scope.
+Prefer **generic verbs** (`remove`, `create`, `update`, `set`, `promote`) with entity id / kind in args; not per-type names (`removeTodo`). Kind is implied by id prefix or bind scope.
 
 ```tml
 action remove {
@@ -288,7 +288,7 @@ Interactive roots derive accessible name:
 3. Else kind + `#id`
 4. Else `entity` string
 
-`#meta` decorative by default (`aria-hidden`) unless `expose`. No DOM `#id` from entity ids — use `entity` data attrs.
+`#meta` decorative by default (`aria-hidden`) unless `expose`. No DOM `#id` from entity ids; use `entity` data attrs.
 
 ---
 
@@ -327,7 +327,7 @@ src/ui/   (or desk project)
 Reference Operate tree: [`sandbox/tml-admin/`](../../sandbox/tml-admin/).  
 Packs (`trellis shell add`) copy into `shells/` (and optionally `resolve/`). Extension: **`.tml`**.
 
-Icons (future): logical registry beside theme (`icon status/in_progress`) — scaffold exists in trellis-client; **not** in trellis-node admin yet.
+Icons (future): logical registry beside theme (`icon status/in_progress`); scaffold exists in trellis-client; **not** in trellis-node admin yet.
 
 ---
 
@@ -383,14 +383,14 @@ resolve todo {
 </div>
 ```
 
-Prefer **generic** registry verbs (`remove`, `create`, `update`, `promote`) keyed by entity id / kind — not `removeTodo` / `addTodo`. Type comes from the id (or bind scope), same as MCP delete/update. Teaching surface for the registry; `remove` is not in today’s admin allowlist yet (`promote`, `updateLaneMeta` only).
+Prefer **generic** registry verbs (`remove`, `create`, `update`, `promote`) keyed by entity id / kind; not `removeTodo` / `addTodo`. Type comes from the id (or bind scope), same as MCP delete/update. Teaching surface for the registry; `remove` is not in today’s admin allowlist yet (`promote`, `updateLaneMeta` only).
 
 Fixture copy: [`sandbox/tml-todo/`](../../sandbox/tml-todo/).  
 **Five-surface twin** (TML · HTML · React · Vue · Svelte): [`sandbox/tml-todo/crosswalk/`](../../sandbox/tml-todo/crosswalk/).
 
 ---
 
-## 13b. Crosswalk — same app, five surfaces
+## 13b. Crosswalk; same app, five surfaces
 
 Teaching aid: one todo list expressed five ways. **Operate stays TML**; framework files show external SDK equivalence, not an alternate admin stack.
 
@@ -421,7 +421,7 @@ Two surface syntaxes, **one AST**. Brace form stays valid; this flavor is for hu
 
 ### Naming: `projection` not `project`
 
-`project` reads as a verb (“project these rows”) *and* collides with “software project.” Prefer the noun **`projection`** — a named query host that fills shells.
+`project` reads as a verb (“project these rows”) *and* collides with “software project.” Prefer the noun **`projection`**; a named query host that fills shells.
 
 ```html
 <projection id="todo.list" live ref="todos"
@@ -432,9 +432,9 @@ Two surface syntaxes, **one AST**. Brace form stays valid; this flavor is for hu
 
 Folder rename (north-star): `projects/` → `projections/`. Sandbox may lag until we bulk-rename.
 
-### Root tags are normal HTML — not Vue `<template>`
+### Root tags are normal HTML; not Vue `<template>`
 
-`<article>`, `<button>`, `<tr>`, `<label>` are **whatever the shell’s root should be in the DOM**. Only this lane card used `<article>`; issue cards use `<button>`, table shells use `<tr>`. There is no required wrapper analogous to Vue’s `<template>` — `<shell>` is the compile-time boundary; its first element child is the runtime root.
+`<article>`, `<button>`, `<tr>`, `<label>` are **whatever the shell’s root should be in the DOM**. Only this lane card used `<article>`; issue cards use `<button>`, table shells use `<tr>`. There is no required wrapper analogous to Vue’s `<template>`; `<shell>` is the compile-time boundary; its first element child is the runtime root.
 
 ### Lets live outside `<shell>` (no script tag required)
 
@@ -480,7 +480,7 @@ Convention: **shared kinds → `resolve/*.tml`**; one-off apps may colocate.
 
 ### Directive style (`each` / `when`) over block syntax
 
-Agree with the Vue lean: **attributes on the element** beat Svelte `{#each}` blocks for TML — fewer nest levels, greppable, fits `<use>` / `<slot>`.
+Agree with the Vue lean: **attributes on the element** beat Svelte `{#each}` blocks for TML; fewer nest levels, greppable, fits `<use>` / `<slot>`.
 
 ```html
 <!-- list -->
@@ -494,7 +494,7 @@ Agree with the Vue lean: **attributes on the element** beat Svelte `{#each}` blo
 <slot name="meta" when="todo.laneIds">{todo.laneIds}</slot>
 ```
 
-Prefer `each="todo of todos"` (matches today’s `tml-each`) over `todos as todo` unless we deliberately align with Vue’s `v-for="todo in todos"` — recommend **`each="todo of todos"`** for continuity with IR.
+Prefer `each="todo of todos"` (matches today’s `tml-each`) over `todos as todo` unless we deliberately align with Vue’s `v-for="todo in todos"`; recommend **`each="todo of todos"`** for continuity with IR.
 
 `when` on `<use>` is a **local pin** (this call site). Kind-wide policy still belongs in `<resolve>` so you don’t repeat vantage/salience matrices on every projection.
 
@@ -504,16 +504,16 @@ Prefer `each="todo of todos"` (matches today’s `tml-each`) over `todos as todo
 
 A mention is **not** a separate widget type. It’s the same Thing at **mention density** (chip / pip / compact row), embedded in a richtext primitive.
 
-**Default for all text:** any human-authored string field that could gain meaning from links should use the **richtext primitive** (titles may stay plain until they need marks; bodies, notes, descriptions, comments, commit messages in UI — default richtext). Mentions and references must work **everywhere** the same way, not only in “document” surfaces.
+**Default for all text:** any human-authored string field that could gain meaning from links should use the **richtext primitive** (titles may stay plain until they need marks; bodies, notes, descriptions, comments, commit messages in UI; default richtext). Mentions and references must work **everywhere** the same way, not only in “document” surfaces.
 
 ```mermaid
 flowchart LR
-  Doc["Doc Thing — body fact"]
+  Doc["Doc Thing; body fact"]
   Link["graph link / mention mark"]
   Target["Referenced Thing"]
   RT["primitive richtext"]
-  Shell["shell via resolve — density mention"]
-  Inspect["inspect host — stacked dialog"]
+  Shell["shell via resolve; density mention"]
+  Inspect["inspect host; stacked dialog"]
   Doc --> Link
   Link --> Target
   Doc --> RT
@@ -527,8 +527,8 @@ flowchart LR
 
 | Layer | What lives there |
 | ----- | ---------------- |
-| **Graph** | Durable reference: doc ↔ target (link, mention list, or marks serialized as entity refs — not only plain text) |
-| **Richtext primitive** | Host editor adapter: caret, IME, suggester, mark boundaries. **Not** a locked lib in the DSL — TipTap/ProseMirror is the current GUI default where those apps already use it; TUI/AI hosts use other adapters over the same mark model |
+| **Graph** | Durable reference: doc ↔ target (link, mention list, or marks serialized as entity refs; not only plain text) |
+| **Richtext primitive** | Host editor adapter: caret, IME, suggester, mark boundaries. **Not** a locked lib in the DSL; TipTap/ProseMirror is the current GUI default where those apps already use it; TUI/AI hosts use other adapters over the same mark model |
 | **Shell** | How the target **looks** at mention vantage: `todo.mention`, `issue.pip`, … |
 | **Inspect host** | How activation presents the target at denser vantage (below) |
 
@@ -542,7 +542,7 @@ flowchart LR
 </shell>
 
 <shell id="issue.inspect" kind="issue" density="inspect">
-  <!-- main preview area — denser projection of the Thing -->
+  <!-- main preview area; denser projection of the Thing -->
   <slot name="preview">
     <use shell="issue.detail" />
   </slot>
@@ -569,7 +569,7 @@ flowchart LR
 </resolve>
 ```
 
-In-flow marks pin `issue.mention` (or resolve at mention density). Activation does **not** invent a one-off popover — it opens the **inspect host**.
+In-flow marks pin `issue.mention` (or resolve at mention density). Activation does **not** invent a one-off popover; it opens the **inspect host**.
 
 ### Activate mention → inspect host (canonical)
 
@@ -593,16 +593,16 @@ Shared pattern across turtlecode IDE, trellis-client (Nodebook), Raster, Toolkit
 2. **Push** onto an inspect **stack** (origin stays under; scale/dim lower frames; only top interactive)  
 3. If target already in stack → **jump / pop-to** that frame (no duplicate)  
 4. Back pops; deep-link / hash restore where the host supports it  
-5. Nested mentions inside the preview body push further — same stack rules  
+5. Nested mentions inside the preview body push further; same stack rules  
 
 **Presentation variants** (same inspect shell + tabs; chrome changes):
 
 | Variant | When |
 | ------- | ---- |
-| **Stacked dialog** (default GUI) | Resizable modal stack — primary desktop/web |
+| **Stacked dialog** (default GUI) | Resizable modal stack; primary desktop/web |
 | **Sidebar / inset** | Docked inspect rail (graph select, IDE EntitySurface) |
 | **Fullscreen** | Immersive / mobile sheet / focus mode |
-| **Floating node / window** | Canvas / spatial desk — inspect as a windowed node |
+| **Floating node / window** | Canvas / spatial desk; inspect as a windowed node |
 | **Tabs / horizontal panes** | Context where stack-of-cards is wrong; still same three sidebar regions |
 | **Fractal zoom** | Vantage escalate in-place (board → card → detail) without a separate dialog chrome |
 | **VR / spatial** | Easier: walk-to / grab inspect volume; stack = depth layers in space |
@@ -616,12 +616,12 @@ Mentions and inspect must degrade without losing the **meaning** (graph link + o
 | Host | Mentions look like | Activate does |
 | ---- | ------------------ | ------------- |
 | **TUI / terminal** | `@id` / styled chip in TUI markup | Push inspect **screen** or split pane (preview + tab strip as keybinds: `p`/`r`/`a`) |
-| **E-paper** | Underlined / bold ref; no animation | Full-screen inspect page; no stack chrome — history back |
+| **E-paper** | Underlined / bold ref; no animation | Full-screen inspect page; no stack chrome; history back |
 | **A11y / screen reader** | Announced as “link, {kind}, {label}” | Focus moves to inspect region; tabs are real tablist |
 | **AI / MCP / context pack** | Structured ref in pack (`entityId`, kind, label) | Tool: `get_node` / open-in-host; “stack” = conversation focus trail |
 | **Plain export (md/pdf)** | Wiki-link or footnote | Dead link or resolved URL if published |
 
-**Invariant:** activate always means **navigate focus to the referenced Thing** at inspect density for that host — never a dead chip.
+**Invariant:** activate always means **navigate focus to the referenced Thing** at inspect density for that host; never a dead chip.
 
 **Editor UX loop:**
 
@@ -633,7 +633,7 @@ Mentions and inspect must degrade without losing the **meaning** (graph link + o
 
 **What the primitive must not do:** invent a parallel “MentionCard” tree that bypasses shells, or open an ad-hoc popover that isn’t the shared inspect host.
 
-**Editor dependency (GUI):** TipTap (ProseMirror) is the **practical default** for web/desktop hosts that already share it (trellis-client, turtlecode) — mention extension, Vue/React bindings, collaboration path. It is a **host adapter**, not part of TML grammar or graph schema. Durable body = structured doc + entity-ref marks (JSON/PM doc or a thin Trellis mark IR). Swap adapter without changing mention→inspect semantics.
+**Editor dependency (GUI):** TipTap (ProseMirror) is the **practical default** for web/desktop hosts that already share it (trellis-client, turtlecode); mention extension, Vue/React bindings, collaboration path. It is a **host adapter**, not part of TML grammar or graph schema. Durable body = structured doc + entity-ref marks (JSON/PM doc or a thin Trellis mark IR). Swap adapter without changing mention→inspect semantics.
 
 **Serialization:** structured refs (marks / links), not only `@TRL-1` plain text. Display text from target `#label` / `#title`.
 
@@ -656,7 +656,7 @@ my-app/
   src/
     index.html
     shells/
-    projections/            # was "projects" — noun: query hosts
+    projections/            # was "projects"; noun: query hosts
       main.tml
     resolve/
     primitives/
@@ -696,7 +696,7 @@ Manifest fields (sketch): `host`, `theme`, `ops: ui[]`, `entryProject`.
 
 | Layer | Timing |
 | ----- | ------ |
-| **File assoc + TextMate / tree-sitter grammar** | **Not too early** — highlight `shell` / `project` / `@` / `#` on sandbox files now |
+| **File assoc + TextMate / tree-sitter grammar** | **Not too early**; highlight `shell` / `project` / `@` / `#` on sandbox files now |
 | **Snippets** (`shell`, `project`, `resolve`) | Fine early; ship with grammar |
 | **LSP: autocomplete ops, jump to shell id, diagnostics** | **Early** until grammar + op registry stabilize and a check CLI exists |
 | **Compile-on-save → IR preview** | After compiler spike |
@@ -739,7 +739,7 @@ Optional TextMate grammar; LSP after check CLI
 ## 18. Open questions
 
 1. Expression ceiling: add `matches` / list length without inviting JS?
-2. Nested `use` — always pin, or allow `use resolve`?
+2. Nested `use`; always pin, or allow `use resolve`?
 3. Pack file layout vs desk `src/ui/shells/` precedence
 4. Formula IR encoding before compiler (comments only vs `tml-expr` attr)
 5. Inspect host: one universal shell (`thing.inspect`) with slot adapters per kind, or per-kind `issue.inspect`?
@@ -754,17 +754,17 @@ Optional TextMate grammar; LSP after check CLI
 - Surface flavors: brace form **and** HTML-adjacent (same AST); prefer noun **`projection`** over `project`  
 - HTML-adjacent: `each`/`when` directives on `<use>`/`<slot>` (Vue-like), not Svelte `{#each}` blocks; `let` above `<shell>`; root tag = real DOM element  
 - Resolve: separate file by convention for shared kinds; colocation allowed  
-- Mentions: density/vantage of the target Thing inside richtext — not a separate component family  
+- Mentions: density/vantage of the target Thing inside richtext; not a separate component family  
 - **Richtext = default** for text fields that should support mentions/refs everywhere  
-- Richtext **engine**: GUI adapters — [Plate](https://github.com/udecode/plate) as Notion-UX reference (React/Slate/shadcn registry); TipTap/PM where Vue hosts already use it. Not a TML/kernel dependency — durable model is structured marks + entity refs + slash→op  
-- **Early wedge:** stacked dialog · richtext (mentions/slash) · browse multi-view — before DSL compiler  
+- Richtext **engine**: GUI adapters; [Plate](https://github.com/udecode/plate) as Notion-UX reference (React/Slate/shadcn registry); TipTap/PM where Vue hosts already use it. Not a TML/kernel dependency; durable model is structured marks + entity refs + slash→op  
+- **Early wedge:** stacked dialog · richtext (mentions/slash) · browse multi-view; before DSL compiler  
 - **Activate mention** → shared **inspect host** (stacked resizable dialog by default): main preview + sidebar tabs Properties · References/backlinks · Activity/ops ‖ comments  
 - Inspect **presentation variants** (same shell): sidebar/inset · fullscreen · floating canvas node · tabs/fractal zoom · VR depth; TUI/e-paper/a11y/AI degrade to focus-navigate the Thing  
 - Spec examples: always DSL + HTML twins  
 - Salience: resolver-first  
 - Formulas: pure, live with host  
 - Ops: UI ⊆ shared registry with MCP; generic verbs (`remove`, not `removeTodo`)  
-- Frameworks / 3D / anime.js: primitives or external — not shell grammar  
+- Frameworks / 3D / anime.js: primitives or external; not shell grammar  
 - UI chrome state: off-graph by default (stack depth, dialog size, active inspect tab)  
 - VS Code: grammar early OK; LSP later  
 - Scaffold: `shells/` + `projections/` + `resolve/` + thin `index.html`

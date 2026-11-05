@@ -1,4 +1,4 @@
-# ADR 0052: Agent liveness census — one derived "who is working right now" read
+# ADR 0052: Agent liveness census; one derived "who is working right now" read
 
 > **Terminology:** **Presence** = a live heartbeat that an agent session is
 > working in a repo (ADR 0024). **Census** = a *derived* read over presence +
@@ -19,7 +19,7 @@
 (session JSONL), [0040](./0040-lane-boundary-oss-and-hosted-platform.md) (host vs platform)
 **Supersedes:** nothing
 **Impacted components:** `src/cli/presence.ts`, `src/cli/index.ts` (`who`, new
-`census`/`agents`), `src/core/ontology/` (census projection only — no new
+`census`/`agents`), `src/core/ontology/` (census projection only; no new
 durable entity), harness hooks (`agent-ops/hooks/*`), `src/svelte/` +
 `src/vue/` (presence panel, agents roster)
 
@@ -33,11 +33,11 @@ provider, and model, and on what?* Producing the answer required hand-stitching
 1. **`.trellis/presence/*.json` is stale.** ADR 0024 Layer 1 is implemented
    (`trellis who`), but every record on disk was from Aug 20 / Sep 24. The
    heartbeat is written on `issue start` and on running `who`, then never
-   refreshed. A working session that does not restart an issue is invisible —
+   refreshed. A working session that does not restart an issue is invisible : 
    and `who` for the engine repo printed *"No other agents active"* while three
    agents were, in fact, working.
 2. **`presence.status` is self-reported and never expires.** `lane/*/meta.json`
-   also carries `status: "active"` forever — lanes from August are still
+   also carries `status: "active"` forever; lanes from August are still
    "active". Status fields are unreliable by construction; only recency is.
 3. **The record cannot express the question.** `PresenceInfo` has `client` but no
    `provider`, no `model`, and no current task beyond `claimedIssueTitle`. The
@@ -77,8 +77,8 @@ works for six hours stays live without re-announcing.
 ### 3. The presence ledger is refreshed at the harness boundary, not on `issue start`
 
 ADR 0024 keyed heartbeats to the canonical "heads down" moment. That is too
-coarse. The heartbeat is (re)written wherever a **turn is observed** — the same
-boundary ADR 0051 d5 already establishes for usage — so one hook serves both
+coarse. The heartbeat is (re)written wherever a **turn is observed**; the same
+boundary ADR 0051 d5 already establishes for usage; so one hook serves both
 metrics and presence. Extend `PresenceInfo` with: `provider`, `model`,
 `harness`, `task` (short, derived from lane/issue/plan title), and `dir`
 (the workspace subtree, so a sub-repo like `OS/admin` is distinguishable).
@@ -89,18 +89,18 @@ Not every harness will announce, and third-party IDEs never will. A census
 adapter derives liveness from each harness's native record when no heartbeat is
 fresh: `opencode` → `opencode.db` `session.time_updated`; `claude` → session
 JSONL mtime; any → process `cwd` under the scope root. Adapters are **local,
-read-only, and best-effort** — they supplement the ledger, never replace it.
+read-only, and best-effort**; they supplement the ledger, never replace it.
 Adapters report `verified: false` (see d7) because activity is inferred, not
 asserted.
 
 ### 5. Scope is a directory tree, and host == turtleOS
 
 The census resolves against a **scope path** (default: the repo root; override
-`--path ~/TURTLE/OS`), matching any session whose `dir` is under it — so
+`--path ~/TURTLE/OS`), matching any session whose `dir` is under it; so
 "agents working in `~/TURTLE/OS`" includes `OS/admin`. The **same generator**
 backs both projections: the host CLI (`trellis who --census`, alias
 `trellis agents`) and turtleOS surfaces (desk presence panel, admin roster,
-TRL-219 B). There is no host-only code path — dogfooding the host is the
+TRL-219 B). There is no host-only code path; dogfooding the host is the
 acceptance test for the product.
 
 ### 6. Local-first; no silent telemetry
@@ -120,10 +120,10 @@ identically. Precision beats a confident wrong label.
 
 | Option | Pros | Cons | Why not |
 | ------ | ---- | ---- | ------- |
-| A — derived census over ledger + adapters (chosen) | Always current; no maintenance; works for non-cooperating IDEs | More code; adapters are per-harness | Only option that survives third-party harnesses |
-| B — extend ADR 0024 ledger only, require heartbeat | Simple; one mechanism | Depends on every harness cooperating; blind to Cursor/Codex | Fails the case that motivated this (3 agents, 0 heartbeats) |
-| C — hand-maintained roster entity | Trivial to read | Drifts immediately (ADR 0050 d3) | This is the bug being removed |
-| D — put presence in the op log | Queryable like everything else | Pollutes milestones/garden/sync (ADR 0024 alt) | Already rejected in 0024; liveness is ephemeral |
+| A; derived census over ledger + adapters (chosen) | Always current; no maintenance; works for non-cooperating IDEs | More code; adapters are per-harness | Only option that survives third-party harnesses |
+| B; extend ADR 0024 ledger only, require heartbeat | Simple; one mechanism | Depends on every harness cooperating; blind to Cursor/Codex | Fails the case that motivated this (3 agents, 0 heartbeats) |
+| C; hand-maintained roster entity | Trivial to read | Drifts immediately (ADR 0050 d3) | This is the bug being removed |
+| D; put presence in the op log | Queryable like everything else | Pollutes milestones/garden/sync (ADR 0024 alt) | Already rejected in 0024; liveness is ephemeral |
 
 ## Consequences
 
@@ -142,7 +142,7 @@ identically. Precision beats a confident wrong label.
 - **Verification ambiguity.** Inferred model/provider can be wrong; mitigated by
   d7's tri-state, but the UI must not imply certainty.
 - **Boundary discipline.** The heartbeat hook must stay cheap and non-blocking
-  (as `issue start` announce already is) — a census that slows a turn is worse
+  (as `issue start` announce already is); a census that slows a turn is worse
   than no census.
 - **Privacy.** Presence reveals work patterns even without content; keep local,
   and keep ADR 0051 d6's posture.
@@ -161,7 +161,7 @@ identically. Precision beats a confident wrong label.
   with `--path` scope + `--json`.
 - **P1:** harness adapters (opencode.db, claude JSONL, process cwd) with
   tri-state verification and staleness pruning; `trellis agents` alias.
-- **P2:** turtleOS projections — desk presence panel (TRL-425) and admin agents
+- **P2:** turtleOS projections; desk presence panel (TRL-425) and admin agents
   roster (TRL-219 B) reading the same generator.
 - **P3:** opt-in desk broadcast of a census snapshot (ADR 0046), and populate the
   desk op-log identity fields (ADR 0051 P3) so census and metrics share one
@@ -169,7 +169,7 @@ identically. Precision beats a confident wrong label.
 
 ## Addenda
 
-### 2026-09-29 — implementation: one generator, one module boundary
+### 2026-09-29; implementation: one generator, one module boundary
 
 P0/P1 shipped. To make d5 structural rather than conventional, the generator was
 lifted out of `src/cli/` into `src/presence/` (`ledger.ts` + `census.ts`) and

@@ -1,7 +1,7 @@
 ---
 version: alpha
-name: Unified theme contract — runtime surfaces
-description: Design artifact for TRL-156 — shared token contract for static HTML runtime surfaces (lanes, TML kanban, client)
+name: Unified theme contract; runtime surfaces
+description: Design artifact for TRL-156; shared token contract for static HTML runtime surfaces (lanes, TML kanban, client)
 source:
   tool: greenfield
   mock: docs/artifacts/unified-theme-contract_mockup.html

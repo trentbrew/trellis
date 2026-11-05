@@ -29,6 +29,11 @@ import {
   listFormableTypes,
 } from '../forms/index.js';
 import type { FormDescriptor, FormMode } from '../forms/index.js';
+import {
+  listKernelOpsFromJournal,
+  type KernelOpsPage,
+  type ListKernelOpsOptions,
+} from './kernel-ops.js';
 
 // ---------------------------------------------------------------------------
 // Result types
@@ -59,6 +64,13 @@ export interface QueryResult {
   bindings: Record<string, unknown>[];
   executionTime: number;
 }
+
+export type {
+  KernelOpSummary,
+  KernelOpsPage,
+  ListKernelOpsOptions,
+} from './kernel-ops.js';
+export { listKernelOpsFromJournal } from './kernel-ops.js';
 
 export interface UploadResult {
   hash: string;
@@ -104,6 +116,7 @@ export interface TrellisDbClient {
   update(id: string, attributes: Record<string, unknown>): Promise<void>;
   delete(id: string): Promise<void>;
   query(eql: string): Promise<QueryResult>;
+  listKernelOps(opts?: ListKernelOpsOptions): Promise<KernelOpsPage>;
   subscribe<T = EntityData>(
     eql: string,
     callback: SubscriptionCallback<T>,
@@ -439,6 +452,34 @@ export class TrellisDb {
     );
   }
 
+  /**
+   * Recent causal ops from the embedded or remote TurtleDB kernel.
+   * Not the VCS repo journal (`trellis log`).
+   */
+  async listKernelOps(opts: ListKernelOpsOptions = {}): Promise<KernelOpsPage> {
+    const limit = Math.min(opts.limit ?? 100, 500);
+    const offset = opts.offset ?? 0;
+
+    if (isRemote(this.opts)) {
+      const params = new URLSearchParams({
+        limit: String(limit),
+        offset: String(offset),
+      });
+      if (opts.kind) params.set('kind', opts.kind);
+      if (opts.entity) params.set('entity', opts.entity);
+      return (await this._fetch('GET', `/ops?${params}`)) as KernelOpsPage;
+    }
+
+    const pool = await this._getPool();
+    const tenantId = (this.opts as TrellisDbLocalOptions).tenantId ?? null;
+    const kernel = pool.get(tenantId);
+    return listKernelOpsFromJournal(kernel.readAllOps(), {
+      ...opts,
+      limit,
+      offset,
+    });
+  }
+
   /** List entity types with registered schemas (form derivable). */
   async listForms(): Promise<
     Array<{ entityType: string; schemaId: string; label: string }>
@@ -635,10 +676,15 @@ export class TrellisDb {
   private async _getPool(): Promise<TenantPool> {
     if (this._pool) return this._pool;
     if (!this._poolPromise) {
-      this._poolPromise = import('../server/tenancy.js').then(({ TenantPool }) => {
-        const path = (this.opts as TrellisDbLocalOptions).path;
-        this._pool = new TenantPool(path);
-        return this._pool;
+      this._poolPromise = import('../server/tenancy.js').then(async ({ TenantPool }) => {
+        const { path, tenantId } = this.opts as TrellisDbLocalOptions;
+        const pool = new TenantPool(path);
+        // Off Bun, `get()` has no synchronous SQLite to open lazily — open the async
+        // backend (better-sqlite3 / sql.js) up front. Bun keeps its bun:sqlite path.
+        const isBun = typeof process !== 'undefined' && Boolean(process.versions?.bun);
+        if (!isBun) await pool.preload(tenantId ?? null);
+        this._pool = pool;
+        return pool;
       });
     }
     return this._poolPromise;

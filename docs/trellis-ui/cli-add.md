@@ -1,4 +1,4 @@
-# CLI Spec: trellis add — UI Components & Ontology Types
+# CLI Spec: trellis add; UI Components & Ontology Types
 
 **Status:** spec
 **Date:** 2026-07-24
@@ -75,7 +75,7 @@ When resolving an `category: "ui"` response:
 2. Copy matched files into project (default: `src/lib/trellis/ui/`)
 3. Update project configuration if needed (tailwind, tsconfig paths)
 4. Print summary of copied files
-5. The project now owns the code — free to modify
+5. The project now owns the code; free to modify
 
 ## Ontology Type Reference
 
@@ -85,7 +85,7 @@ When resolving an `category: "type"` response:
 2. Register the type reference in the project's graph schema config
 3. Add import/resolution path to project configuration
 4. Print summary with type URL
-5. The type remains hosted at the URL — project references it
+5. The type remains hosted at the URL; project references it
 
 ## Icon & Font Commands
 

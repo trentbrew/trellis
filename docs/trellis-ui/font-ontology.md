@@ -1,4 +1,4 @@
-# Font Registry & Ontology — @trellis.computer/fonts
+# Font Registry & Ontology; @trellis.computer/fonts
 
 **Status:** spec
 **Date:** 2026-07-24
@@ -36,7 +36,7 @@ interface FontEntry {
 | `mono` | JetBrains Mono | mono | `'Fira Code', 'Cascadia Code', monospace` | Code |
 | `serif` | Georgia | serif | `'Times New Roman', serif` | Long-form |
 | `display` | Cabinet Grotesk | display | `sans-serif` | Headings |
-| `handwriting` | N/A | — | `cursive` | Notes (optional) |
+| `handwriting` | N/A |; | `cursive` | Notes (optional) |
 
 ## Base Font Specs
 

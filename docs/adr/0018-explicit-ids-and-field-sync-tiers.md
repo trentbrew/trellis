@@ -1,4 +1,4 @@
-# ADR 0018 — Explicit entity ids + field sync tiers
+# ADR 0018; Explicit entity ids + field sync tiers
 
 **Status:** accepted (2026-07-10) **Related:**
 [0009](./0009-kernel-formula-syntax.md) (kernel formulas = derived-on-read),
@@ -14,8 +14,8 @@
 
 ## Context
 
-Downstream game worlds (threlte-skeleton) already speak Trellis’s language —
-entities, attribute bags, durable vs ephemeral state — but today they store a
+Downstream game worlds (threlte-skeleton) already speak Trellis’s language : 
+entities, attribute bags, durable vs ephemeral state; but today they store a
 whole JSON-LD graph as one **`WorldBundle` blob** and **poll + diff** for
 durable edits. The engine’s own comment names the blocker:
 
@@ -29,7 +29,7 @@ That blocker is real at the **SDK / HTTP boundary**, not in the kernel:
 | `TrellisKernel.createEntity(id, …)` | Accepts any caller-supplied id     |
 | CLI `trellis entity create --id`    | Passes explicit id through         |
 | `TrellisDb.create(type, attrs)`     | Always generates `${type}:${uuid}` |
-| `POST /entities`                    | Same — ignores any client `id`     |
+| `POST /entities`                    | Same; ignores any client `id`     |
 
 So JSON-LD authors cannot mint stable `entity:player-1` nodes that survive
 reload and match the world file. Without stable ids, per-entity EAV and
@@ -58,7 +58,7 @@ Extend create so callers may supply an id; omit → keep today’s
 `${type.toLowerCase()}:${uuid}` generation.
 
 ```ts
-// SDK — additive overload / options bag (no break of create(type, attrs))
+// SDK; additive overload / options bag (no break of create(type, attrs))
 await db.create("Thing", { label: "Player" }, { id: "entity:player-1" });
 // or:
 await db.create("Thing", attrs, links, { id: "entity:player-1" });
@@ -91,7 +91,7 @@ export interface PropertyValueSpecification {
   /**
    * Persistence / replication policy.
    * - durable (default): KernelOp / causal op-log
-   * - realtime: ephemeral mesh only — never append to causal history
+   * - realtime: ephemeral mesh only; never append to causal history
    * - derived: computed locally; strip from durable writes
    */
   sync?: FieldSyncTier;
@@ -128,20 +128,20 @@ Trellis entity and each durable component field to an attribute (or
 find ?e where ?e type Thing
 ```
 
-(or per-id `useEntity`) then fires on attribute updates — retiring WorldBundle
+(or per-id `useEntity`) then fires on attribute updates; retiring WorldBundle
 poll+diff as the _primary_ durable path. Blob store
 ([0016](./0016-relay-blob-serving.md)) remains for GLB/bytes; the graph owns
 which hash a field references.
 
 WorldBundle may remain a **seed / import** format, not the live store shape.
 
-## Sketch — game component → Trellis schema
+## Sketch; game component → Trellis schema
 
 ```ts
 import { defineType, sync } from "trellis/schema";
 import { z } from "zod";
 
-// Illustrative — sync() helper lands with this ADR’s Phase 1 schema DX.
+// Illustrative; sync() helper lands with this ADR’s Phase 1 schema DX.
 const Transform = defineType("Transform", {
   // Nested bags may flatten to Transform.position etc. via existing jsonEntityFacts
   position: z.tuple([z.number(), z.number(), z.number()]),
@@ -158,7 +158,7 @@ const Transform = defineType("Transform", {
 
 const Thing = defineType("Thing", {
   label: z.string().optional(),
-  // component bags as json or flattened attrs — engine chooses projection
+  // component bags as json or flattened attrs; engine chooses projection
 }, {/* … */});
 
 // Stable id from JSON-LD @id

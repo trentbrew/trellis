@@ -28,7 +28,7 @@ ADR 0027 defined the architecture. Parts are implemented; the core full-state me
 ### Not Implemented (Gap)
 | Component | Status |
 |-----------|--------|
-| Daemon: `handleGraphSnapshot()` | ❌ Not wired — room core returns `[]` |
+| Daemon: `handleGraphSnapshot()` | ❌ Not wired; room core returns `[]` |
 | Daemon: `handleLaneJournal()` | ❌ Not wired |
 | Daemon: `handleDecisionTrace()` | ❌ Not wired |
 | Daemon: `handleEntityDelta()` | ❌ Not wired |
@@ -47,7 +47,7 @@ ADR 0027 defined the architecture. Parts are implemented; the core full-state me
 
 Each full-state message type flows through the daemon independently, bypassing `SyncRoomCore` and `SyncEngine`.
 
-### 2.1 `graph-snapshot` — Full DB Transfer
+### 2.1 `graph-snapshot`; Full DB Transfer
 
 **Purpose:** Transfer the complete SQLite database to bootstrap or recover a peer.
 
@@ -67,7 +67,7 @@ Sender                            Receiver
 ```
 
 **Design decisions:**
-- Snapshots are full DB exports, not incremental — safe for initial bootstrap
+- Snapshots are full DB exports, not incremental; safe for initial bootstrap
 - `VACUUM INTO` ensures a consistent, compact snapshot
 - Backup-before-swap provides rollback
 - Post-swap op replay catches up to any ops received during transfer
@@ -87,7 +87,7 @@ async handleGraphSnapshot(msg: SyncGraphSnapshotMessage): Promise<void> {
 }
 ```
 
-### 2.2 `lane-journal` — Multi-Agent Isolation Sync
+### 2.2 `lane-journal`; Multi-Agent Isolation Sync
 
 **Purpose:** Sync lane-specific op journals so lane state is available across environments.
 
@@ -105,12 +105,12 @@ Sender                            Receiver
 ```
 
 **Design decisions:**
-- Lane journals are independent of integration ops — synced separately
+- Lane journals are independent of integration ops; synced separately
 - `headHash` enables causal integrity check
 - Merge is fast-forward only (linear lane policy)
 - If lane doesn't exist locally, create it
 
-### 2.3 `decision-trace` — Audit Trail Replication
+### 2.3 `decision-trace`; Audit Trail Replication
 
 **Purpose:** Sync decision traces so audit/history is available on all environments.
 
@@ -127,10 +127,10 @@ Sender                            Receiver
 
 **Design decisions:**
 - Decision traces are idempotent (dedup by `traceId`)
-- No conflict resolution needed — traces are append-only
+- No conflict resolution needed; traces are append-only
 - `relatedOpId` links to specific operations for cross-referencing
 
-### 2.4 `entity-delta` — Incremental Graph Sync
+### 2.4 `entity-delta`; Incremental Graph Sync
 
 **Purpose:** Efficiently transfer only changed entities (add/modify/delete) rather than full snapshots.
 
@@ -150,7 +150,7 @@ Sender                            Receiver
 ```
 
 **Design decisions:**
-- Deltas reference a `baseSnapshotHash` — receiver must have that snapshot or request it
+- Deltas reference a `baseSnapshotHash`; receiver must have that snapshot or request it
 - Deletes are classified as destructive by `sync-policy.ts` and may be quarantined
 - Large deltas (>1000 entities) should be chunked
 - Apply is wrapped in a transaction for atomicity
@@ -238,24 +238,24 @@ transport.onMessage(async (message) => {
 ### Cross-Cutting Safety
 
 All four message types pass through the existing safety pipeline:
-1. **Rate limiter** — token bucket check
-2. **Risk classification** — `classifyChangeRisk()` per type
-3. **Policy check** — `shouldBlockMessage()` with env-specific policy
-4. **Quarantine** — encrypted store if blocked
+1. **Rate limiter**; token bucket check
+2. **Risk classification**; `classifyChangeRisk()` per type
+3. **Policy check**; `shouldBlockMessage()` with env-specific policy
+4. **Quarantine**; encrypted store if blocked
 
 ---
 
 ## 6. Open Questions
 
-1. **Snapshot compression** — Should `graph-snapshot` data be gzip-compressed before base64 encoding? 100 MB base64 = ~75 MB raw SQLite. Proposal: yes, compress.
+1. **Snapshot compression**; Should `graph-snapshot` data be gzip-compressed before base64 encoding? 100 MB base64 = ~75 MB raw SQLite. Proposal: yes, compress.
 
-2. **Chunking** — Should `entity-delta` messages > 1000 entities be auto-chunked by the sender? Proposal: yes, with sequence numbers for reassembly.
+2. **Chunking**; Should `entity-delta` messages > 1000 entities be auto-chunked by the sender? Proposal: yes, with sequence numbers for reassembly.
 
-3. **Conflict resolution for deltas** — If two peers send entity-deltas concurrently, how do we resolve? Proposal: last-writer-wins with `updatedAt` timestamp comparison, logged to audit trail.
+3. **Conflict resolution for deltas**; If two peers send entity-deltas concurrently, how do we resolve? Proposal: last-writer-wins with `updatedAt` timestamp comparison, logged to audit trail.
 
-4. **Lane journal pruning** — Lane journals grow unbounded. Should we snapshot + truncate after sync? Proposal: yes, with a `lane-snapshot` sub-message type.
+4. **Lane journal pruning**; Lane journals grow unbounded. Should we snapshot + truncate after sync? Proposal: yes, with a `lane-snapshot` sub-message type.
 
-5. **Snapshot scheduling** — Should `graph-snapshot` be sent on a schedule (e.g., daily) in addition to bootstrap? Proposal: not for MVP; only on bootstrap or explicit request.
+5. **Snapshot scheduling**; Should `graph-snapshot` be sent on a schedule (e.g., daily) in addition to bootstrap? Proposal: not for MVP; only on bootstrap or explicit request.
 
 ---
 

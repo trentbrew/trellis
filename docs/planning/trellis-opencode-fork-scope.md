@@ -1,8 +1,8 @@
-# Trellis-aware Harness — Fork Scope
+# Trellis-aware Harness; Fork Scope
 
 > **Date:** 2026-08-02
 > **Status:** Scoping (open decisions at bottom)
-> **Trigger:** TRL-409 lane-gc regression — a reset destroyed ~100 files of
+> **Trigger:** TRL-409 lane-gc regression; a reset destroyed ~100 files of
 > in-flight kernel work because (a) git was the carrier of record, (b) the
 > guard layer was shell-level and bypassable, (c) sessions/lanes were never
 > lifecycle-owned by anything Trellis could trust.
@@ -24,12 +24,12 @@ regression class:
 
 The root gap is the same in every row: **nothing in the harness knows Trellis
 state, and nothing in Trellis controls the harness.** Lane guards are
-`.cursor`/Claude/OpenCode shell hooks — conventions, not enforcement.
+`.cursor`/Claude/OpenCode shell hooks; conventions, not enforcement.
 
 ## 2. Requirements (derived, not aspirational)
 
 1. **Session → lane ownership.** A session starts in a lane (or explicitly
-   opts out). On session end/abort/compaction, the lane is checkpointed —
+   opts out). On session end/abort/compaction, the lane is checkpointed : 
    never left dangling with uncommitted state and no record of where it was.
 2. **Tool-layer git enforcement.** Destructive git on the shared tree is
    denied/redirected at the **tool executor**, not via shell aliases. A forced
@@ -49,9 +49,9 @@ state, and nothing in Trellis controls the harness.** Lane guards are
 opencode's plugin surface covers a surprising amount (see
 `customize-opencode` skill):
 
-- `event()` — session start/end, tool execution, compaction
-- `tool.execute.before/after` — mutate args / deny before a tool runs
-- `permission.ask` — gate destructive ops
+- `event()`; session start/end, tool execution, compaction
+- `tool.execute.before/after`; mutate args / deny before a tool runs
+- `permission.ask`; gate destructive ops
 - `chat.message`, `shell.env`, `experimental.*` transforms
 - Custom tools via `tool: {}` registration
 
@@ -59,13 +59,13 @@ So the **enforcement logic** (reqs 2, 3, 5, 6) is implementable as a
 default-enabled plugin bundle today, in any harness with an equivalent hook
 surface. That is Phase A below.
 
-## 4. The fork delta — what plugins cannot do
+## 4. The fork delta; what plugins cannot do
 
 | Capability | Plugin | Fork |
 | ---------- | ------ | ---- |
-| Enforce at tool-executor layer (bypass-proof) | Partial (hook is in-process, disable-able) | Yes — enforcement lives in the executor, not the plugin |
+| Enforce at tool-executor layer (bypass-proof) | Partial (hook is in-process, disable-able) | Yes; enforcement lives in the executor, not the plugin |
 | TUI chrome: statusline lane badge, colors, keybinds | No | Yes |
-| Block session close while lane dirty | Observe only | Yes — lifecycle is owned |
+| Block session close while lane dirty | Observe only | Yes; lifecycle is owned |
 | Ship Trellis built-in (no plugin install/config) | No | Yes |
 | Deep control of session lifecycle (spawn/abort/compaction policy) | Observe only | Yes |
 
@@ -95,7 +95,7 @@ default-enabled. Upgrade path = rebase the thin diff onto upstream.
 | --- | --- | --- | --- |
 | Session lifecycle control | Fork owns it | Depends on harness internals | Depends on harness internals |
 | TUI affordances | Full (Ink/React) | Minimal | Minimal |
-| Plugin/hook surface | Rich (event, tool.execute, permission) | TBD — evaluate | TBD — evaluate |
+| Plugin/hook surface | Rich (event, tool.execute, permission) | TBD; evaluate | TBD; evaluate |
 | Ecosystem / models | Broad | Narrow | Narrow |
 | Fit with Trellis | Existing lane guard hooks already target opencode | Rebuild guards | Rebuild guards |
 | Cost | Highest (fork maintenance) | Low | Low |
@@ -106,7 +106,7 @@ fork question becomes purely "do we need the TUI layer."
 
 ## 7. Phasing
 
-**Phase A — Plugin bundle (no fork, this week):**
+**Phase A; Plugin bundle (no fork, this week):**
 - Trellis lane/milestone/verify tools registered as built-ins
 - `tool.execute.before` git guard: deny `add -A`, `reset`, `checkout`, stash
   on Trellis-owned trees; redirect to `trellis lane promote`
@@ -114,20 +114,20 @@ fork question becomes purely "do we need the TUI layer."
 - `permission.ask` GC-confirm gate
 - Dirty-tree warning on session start (req 6)
 
-**Phase B — Fork (after Phase A proves the logic):**
+**Phase B; Fork (after Phase A proves the logic):**
 - Statusline lane/issue/dirty badge + lane colors
 - Session lifecycle ownership (start-in-lane, end-checkpoint)
 - Executor-level guards (moved from plugin hook to core)
 - Default-enabled bundle; thin-diff maintenance model
 
-**Phase C — Multi-agent desk:** presence indicators, lane contention surface
+**Phase C; Multi-agent desk:** presence indicators, lane contention surface
 (who owns which file), handoff affordances (ADR 0015) rendered in TUI.
 
 ## 8. Decisions (resolved 2026-08-02)
 
 1. **Enforcement posture: hard-deny.** The fork refuses destructive git on
    Trellis-owned trees; the only path is `trellis lane promote`/CLI. Matches
-   the incident lesson — the reset was "forced" by bypassing a guard.
+   the incident lesson; the reset was "forced" by bypassing a guard.
 2. **Session-end policy: checkpoint-only.** Always checkpoint lane state +
    `whereami` record on session end; never auto-promote. Promote remains a
    human decision at a coherent boundary.
@@ -135,14 +135,14 @@ fork question becomes purely "do we need the TUI layer."
    committing to the fork. If they expose tool-execution + lifecycle hooks,
    the Phase A plugin bundle ports over and the fork is only needed for the
    TUI layer.
-4. **Target scale:** open — phase A/B serve the solo desk; Phase C (multi-
+4. **Target scale:** open; phase A/B serve the solo desk; Phase C (multi-
    agent desk) gated on the spike and Phase A outcomes.
 5. **Dependency order:** the git-mirror fix + journal-only lanes (W3) land
    first; the fork assumes lanes are journals.
 
 ## 9. Next actions
 
-1. **Phase 0 recovery** (see `lane-gc-regression-recovery.md`) — restore the
+1. **Phase 0 recovery** (see `lane-gc-regression-recovery.md`); restore the
    150 files + inspector fork + `headless/core.ts`, verify `pnpm check`/`test`.
 2. **Phase A spike:** audit pi + little-coder hook surfaces (tool-execution
    interception, session lifecycle, permission gating). Deliverable: one-page

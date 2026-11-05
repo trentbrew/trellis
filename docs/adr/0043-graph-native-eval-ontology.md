@@ -1,4 +1,4 @@
-# ADR 0043: Graph-Native Evals — Op-Log Delta Assertions, Run Capture, and File-First Ingestion
+# ADR 0043: Graph-Native Evals; Op-Log Delta Assertions, Run Capture, and File-First Ingestion
 
 **Status:** Proposed (2026-09-08)  
 **Related:**  
@@ -7,7 +7,7 @@
 [0015](./0015-agent-handoff-protocol.md) (agent handoff protocol & signed ops),  
 [0018](./0018-explicit-ids-and-field-sync-tiers.md) (explicit entity IDs and field sync tiers),  
 [0021](./0021-canonical-op-hashing-and-provenance.md) (canonical op hashing and provenance),  
-[0030](./0030-agent-execution-infrastructure.md) (agent execution infrastructure — WorkerPool & DAG Scheduler),  
+[0030](./0030-agent-execution-infrastructure.md) (agent execution infrastructure; WorkerPool & DAG Scheduler),  
 [0035](./0035-safety-gatekeeper-consensus-ops.md) (safety gatekeeper & validated op acceptance)  
 
 **Impacted components:**  

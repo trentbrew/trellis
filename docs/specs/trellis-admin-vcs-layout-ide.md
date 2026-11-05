@@ -1,4 +1,4 @@
-# Spec: trellis admin — VCS layout IDE-aligned Work/Logs
+# Spec: trellis admin; VCS layout IDE-aligned Work/Logs
 
 **Status:** Ready for impl  
 **Date:** 2026-07-21  
@@ -14,11 +14,11 @@
 
 Regroup kernel admin **VCS secondary navigation** to IDE **Work / Logs** zones,
 move browse tools into a **per-view header** inside main (AffordanceShell
-analogue), and make **Logs → Ops** the canonical ops timeline — retiring the
+analogue), and make **Logs → Ops** the canonical ops timeline; retiring the
 always-visible 280px op-log column in the default layout. Optional **Pin live
 tail** reuses existing op-log inspector markup as a companion panel.
 
-Static HTML/CSS/JS in `admin.html` only — no React port.
+Static HTML/CSS/JS in `admin.html` only; no React port.
 
 ---
 
@@ -27,14 +27,14 @@ Static HTML/CSS/JS in `admin.html` only — no React port.
 | Decision | Choice |
 | -------- | ------ |
 | Secondary IA | **WORK** (Board · Milestones · Workflows stub) + **LOGS** (Ops · Decisions stub · Branches stub) |
-| Retired peers | Remove `data-secondary="issues"` and `data-secondary="lanes"` — both → **Board** |
+| Retired peers | Remove `data-secondary="issues"` and `data-secondary="lanes"`; both → **Board** |
 | Secondary head | Remove `#secondary-head` “VCS” title; zone eyebrows **WORK** / **LOGS** only |
 | Default route | **`work/board`** on first load |
 | Route state | Query param **`?vcs=<zone>/<tab>`** (e.g. `?vcs=work/board`, `?vcs=logs/ops`); sync on nav + `history.replaceState` |
 | localStorage | Key **`trellis-admin-vcs-route`** value `zone/tab`; migrate legacy `trellis-admin-secondary` (see §8) |
 | Global toolbar | **Remove** standalone `.operate-toolbar` grid row; relocate controls to **`.view-header`** |
-| Board tools | View picker + search + Filters stub + Export disabled + New issue disabled — **Work · Board only** |
-| Logs tools | View title + meta + **Pin live tail** toggle only — no search row |
+| Board tools | View picker + search + Filters stub + Export disabled + New issue disabled; **Work · Board only** |
+| Logs tools | View title + meta + **Pin live tail** toggle only; no search row |
 | Ops home | **`#ops-main`** timeline in main under Logs → Ops; reuse `.op` row markup from `#oplog .ops` |
 | Default op-log | **`html.oplog-collapsed` by default** (no 4th column); `--oplog-w: 0px` in default shell grid |
 | Pin inspector | Class **`html.inspector-pinned`** adds 4th column; reuse `#oplog` as **Live ops** inspector; title **“Live ops”** (not “Op log”) |
@@ -84,7 +84,7 @@ grid-template-columns: var(--sidebar-w) var(--secondary-w) minmax(0, 1fr) var(--
 
 | Region | Grid |
 | ------ | ---- |
-| `.header` | row 1 · col 3 (main column only — inspector head aligns to col 4) |
+| `.header` | row 1 · col 3 (main column only; inspector head aligns to col 4) |
 | `.main` | row 2 · col 3 |
 | `#oplog.inspector` | row 1 / -1 · col 4; head title **Live ops** |
 
@@ -222,7 +222,7 @@ Add / migrate:
 7. **Ops badge:** on `work/board`, Ops nav badge visible when stream live (or mock ops count > 0); hidden on `logs/ops`
 8. **Legacy migration:** seed `localStorage trellis-admin-secondary=lanes` → reload → Board active
 9. **Embed:** primary sidebar hidden; `.view-header` + secondary remain
-10. Existing shell/visual-parity cases updated for new selectors — remain green
+10. Existing shell/visual-parity cases updated for new selectors; remain green
 
 Run (impl / reviewer): `CI=1 pnpm test:e2e e2e/admin.spec.cjs`
 

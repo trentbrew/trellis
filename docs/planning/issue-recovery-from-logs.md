@@ -1,8 +1,8 @@
 # Issue recovery (journal rehydrate)
 
-**Status:** Rehydrated 2026-07-21 — metadata restored from Cursor hook logs + specs.
+**Status:** Rehydrated 2026-07-21; metadata restored from Cursor hook logs + specs.
 
-The integration journal wipe (2026-07-21) truncated `.trellis/ops.json`. Issue **cards** were rebuilt from shell output captured in `cursor.hooks.*.log` and proposal/spec/design docs. This is **not** a full ledger restore — acceptance-criteria pass history, claims, and milestone hashes were not replayed.
+The integration journal wipe (2026-07-21) truncated `.trellis/ops.json`. Issue **cards** were rebuilt from shell output captured in `cursor.hooks.*.log` and proposal/spec/design docs. This is **not** a full ledger restore; acceptance-criteria pass history, claims, and milestone hashes were not replayed.
 
 ## Artifacts
 

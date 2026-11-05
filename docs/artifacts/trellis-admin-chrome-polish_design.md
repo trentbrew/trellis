@@ -1,8 +1,8 @@
 ---
 version: alpha
-name: trellis admin — chrome polish (post TRL-229)
+name: trellis admin; chrome polish (post TRL-229)
 description: >-
-  Design for TRL-233 — stack collapsible WORK/LOGS zones, header band above secondary,
+  Design for TRL-233; stack collapsible WORK/LOGS zones, header band above secondary,
   icon breadcrumbs with route tab, full-width search, slim view header, oplog day groups.
 source:
   tool: greenfield
@@ -77,9 +77,9 @@ components:
     disclosureSize: 12px
 ---
 
-# Design: trellis admin — chrome polish
+# Design: trellis admin; chrome polish
 
-**Status:** Design verified — ready for Architect  
+**Status:** Design verified; ready for Architect  
 **Parent:** TRL-233 · **Design issue:** TRL-236 · **Amends:** TRL-229 / [trellis-admin-vcs-layout-ide_design.md](./trellis-admin-vcs-layout-ide_design.md)  
 **Mock:** [trellis-admin-chrome-polish_mockup.html](./trellis-admin-chrome-polish_mockup.html)
 
@@ -97,9 +97,9 @@ Inherit `runtime-theme.css` and TRL-226 tokens. Zone chevrons use `{colors.text-
 
 ## Typography
 
-- Zone collapse headers: `{typography.label}` — WORK / LOGS with chevron.
-- Breadcrumb trail: `{typography.crumb}` — repo · operate · vcs · **board** (active tab emphasized).
-- View meta (when shown): `{typography.view-meta}` — **not** on `work/board` (counts live in header stats only).
+- Zone collapse headers: `{typography.label}`; WORK / LOGS with chevron.
+- Breadcrumb trail: `{typography.crumb}`; repo · operate · vcs · **board** (active tab emphasized).
+- View meta (when shown): `{typography.view-meta}`; **not** on `work/board` (counts live in header stats only).
 
 ## Layout
 
@@ -126,7 +126,7 @@ Two-row band above content; primary sidebar full height.
 
 Embed (`?embed=1`): hide primary sidebar; header still spans cols 1 / -1 above secondary+main.
 
-### Secondary sidebar — stacked collapsible zones
+### Secondary sidebar; stacked collapsible zones
 
 Replace equal-height nav split (`flex: 1` on both `.secondary-nav`).
 
@@ -148,11 +148,11 @@ Replace equal-height nav split (`flex: 1` on both `.secondary-nav`).
 
 ### View header (slim)
 
-- **Remove** `#view-title` block (`Work · …`) — route lives in breadcrumbs.
+- **Remove** `#view-title` block (`Work · …`); route lives in breadcrumbs.
 - **Hide** `#view-meta` on `work/board` always; show contextual meta only on routes that need it:
   - `logs/ops`: op count + live state
   - stubs: "Coming soon"
-  - `work/milestones`: optional count (not duplicate of header stats — use milestone count only)
+  - `work/milestones`: optional count (not duplicate of header stats; use milestone count only)
 - Board toolbar row: view picker + **flex-1 search** + filters/export/new issue.
 
 ### Breadcrumbs (icon segments)
@@ -169,7 +169,7 @@ Trail: `{repo}` / `{operate}` / `{vcs}` / `{tab}`
 - Last segment = active route tab; `aria-current="page"` on crumb span.
 - `setVcsRoute` updates `#crumb-tab` text + icon, not `#view-title`.
 
-### Live ops inspector — day groups
+### Live ops inspector; day groups
 
 When `#oplog` pinned, group `.op` rows under collapsible headers:
 
@@ -181,7 +181,7 @@ When `#oplog` pinned, group `.op` rows under collapsible headers:
 
 - `<details class="oplog-day">` or button+region pattern with `aria-expanded`.
 - Default: Today expanded; Yesterday expanded; older collapsed.
-- `#ops-main` timeline **unchanged** (flat stream) — day groups **inspector only** in this wedge.
+- `#ops-main` timeline **unchanged** (flat stream); day groups **inspector only** in this wedge.
 - New ops append to correct day section; create section if missing.
 
 ## Elevation & Depth
@@ -225,7 +225,7 @@ Zone toggle chevron 12px; breadcrumb icons 14px in 18px hit box; oplog disclosur
 6. Main content (`.view-body` / `#tml-root` / `#ops-main`)
 7. `#oplog` day toggles → `.op` rows (when inspector pinned)
 
-Crumb segments are presentational inside `nav[aria-label="Location"]` — not individually tabbable.
+Crumb segments are presentational inside `nav[aria-label="Location"]`; not individually tabbable.
 
 ### Labels and expanded state
 
@@ -239,7 +239,7 @@ Crumb segments are presentational inside `nav[aria-label="Location"]` — not in
 ### prefers-reduced-motion (documented)
 
 - Zone chevron + nav collapse: `transition` ≤180ms default; under `@media (prefers-reduced-motion: reduce)` set `transition: none` and toggle `display` instantly.
-- Oplog day disclosure: same rule — no height animation when reduced motion preferred.
+- Oplog day disclosure: same rule; no height animation when reduced motion preferred.
 
 ## Do's and Don'ts
 
@@ -258,9 +258,9 @@ Crumb segments are presentational inside `nav[aria-label="Location"]` — not in
 ## Open for Architect
 
 - Exact grid CSS for embed + inspector-pinned breakpoints (match TRL-228 §4).
-- Crumb icon map per `work/*` and `logs/*` tab — normative SVG paths in spec.
+- Crumb icon map per `work/*` and `logs/*` tab; normative SVG paths in spec.
 - JS: `updateCrumbTab(zone, tab)` replaces view title updates in `setVcsRoute`.
-- Oplog: `groupOpsByDay(ops)` + DOM regroup on pin open (not on every SSE tick if perf issue — batch on append).
+- Oplog: `groupOpsByDay(ops)` + DOM regroup on pin open (not on every SSE tick if perf issue; batch on append).
 - E2e: update crumb assertions, remove secondary-toggle tests, add zone collapse + icon crumb tests.
 - Remove dead `.secondary-head` CSS while touching secondary styles.
 
@@ -276,5 +276,5 @@ Crumb segments are presentational inside `nav[aria-label="Location"]` — not in
 - interaction matrix: 7 rows, 0 empty cells
 - a11y: focus order + prefers-reduced-motion documented
 - token parity: YAML ↔ mock :root verified
-- design.md lint: N/A — manual Stitch format
+- design.md lint: N/A; manual Stitch format
 - design critique: 1 round, 0 blockers remaining

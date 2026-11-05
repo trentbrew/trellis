@@ -10,19 +10,19 @@
 
 ## Context
 
-Trellis Studio and turtlecode/OpenCode expose **session fork** — a user or agent branches a chat into a sibling conversation while continuing the parent thread. In Trellis VCS:
+Trellis Studio and turtlecode/OpenCode expose **session fork**; a user or agent branches a chat into a sibling conversation while continuing the parent thread. In Trellis VCS:
 
 | Primitive | What it isolates today |
 | --------- | ---------------------- |
 | **Branch** (`main`, `feature/x`) | Metadata + `headOpHash` pointer; **not** a separate op journal in P0 |
 | **Agent Lane** | Isolated `ops.json` forked from integration `baseOpHash`; explicit promote |
 
-Forking a session must not be modeled as “create a Trellis branch” alone — concurrent agents would still contend on one integration journal and lose lane-scoped attribution.
+Forking a session must not be modeled as “create a Trellis branch” alone; concurrent agents would still contend on one integration journal and lose lane-scoped attribution.
 
 Two fork shapes appear in product UX:
 
-1. **Sibling fork** — new session continues from the **same integration snapshot** the parent lane had at fork time (`baseOpHash` unchanged). Both lanes replay from integration + their own journals. Promote conflicts are detectable via ADR 0003.
-2. **Child fork** — new session continues from the **parent lane’s current head** (parent journal ops included). Promote planner today only diffs against integration state at `baseOpHash`; child fork requires virtual integration, promote-chain, or lane-on-lane replay — **not implemented in W1–W4**.
+1. **Sibling fork**; new session continues from the **same integration snapshot** the parent lane had at fork time (`baseOpHash` unchanged). Both lanes replay from integration + their own journals. Promote conflicts are detectable via ADR 0003.
+2. **Child fork**; new session continues from the **parent lane’s current head** (parent journal ops included). Promote planner today only diffs against integration state at `baseOpHash`; child fork requires virtual integration, promote-chain, or lane-on-lane replay; **not implemented in W1–W4**.
 
 `LaneMeta` already carries optional `sessionId` and `issueId` (`kernel/src/vcs/lane.ts`). `trellis issue start` creates and enters a lane. Studio W5 must wire session lifecycle (create, fork, leave) without breaking promote invariants.
 
@@ -49,7 +49,7 @@ Parent session (lane A, active)
     → Child subprocess: TRELLIS_LANE_ID=<new lane id>
 ```
 
-**Sibling fork only in v1.** Child fork (`forkKind: 'child'`, parent head as virtual base) is **deferred** — see [Deferred](#deferred-child-fork).
+**Sibling fork only in v1.** Child fork (`forkKind: 'child'`, parent head as virtual base) is **deferred**; see [Deferred](#deferred-child-fork).
 
 ### LaneMeta extensions (W5+)
 
@@ -61,7 +61,7 @@ Add optional fields to `LaneMeta` / `CreateLaneParams`:
 | `forkKind?` | `'sibling'` \| `'child'` | v1: only `'sibling'` emitted |
 | `forkedAt?` | ISO8601 | When fork occurred |
 
-No new op kinds for fork — `vcs:laneCreate` + extended meta is sufficient.
+No new op kinds for fork; `vcs:laneCreate` + extended meta is sufficient.
 
 ### Issue ↔ lane rule
 
@@ -69,7 +69,7 @@ No new op kinds for fork — `vcs:laneCreate` + extended meta is sufficient.
 - Multiple lanes per issue are allowed when prior lanes are `promoted`, `dropped`, or parent was left inactive after fork.
 - Fork creates a **new** active lane; Studio must **leave or freeze** the parent lane before the child enters (engine already forbids two concurrent `activeLaneId` writers).
 
-Strict 1:1 issue↔lane for all time is **not** required — fork history is intentional.
+Strict 1:1 issue↔lane for all time is **not** required; fork history is intentional.
 
 ### Promote behavior (unchanged)
 
@@ -105,19 +105,19 @@ Thin wrapper around `createLane` with sibling defaults; Studio may call engine A
 
 **Positive**
 
-- Fork UX aligns with existing lane promote and conflict machinery — no P0 branch journal required.
+- Fork UX aligns with existing lane promote and conflict machinery; no P0 branch journal required.
 - Clear provenance via `parentLaneId` for Studio UI (fork tree, unpromoted warnings).
 - Issue workflow stays coherent: one active lane, explicit promote per fork line.
 
 **Negative**
 
 - Child fork (“continue from where parent agent left off”) needs a follow-on ADR and engine work (ADR 0007 candidate).
-- Sibling forks from the same `baseOpHash` can produce ADR 0003 conflicts at promote time — expected; Studio should set expectations in UX.
+- Sibling forks from the same `baseOpHash` can produce ADR 0003 conflicts at promote time; expected; Studio should set expectations in UX.
 - `parentLaneId` is metadata only until child fork lands; no kernel enforcement of fork DAG in v1.
 
 ## Deferred: child fork
 
-Implemented in **[ADR 0007](./0007-child-fork-lane-base.md)** — virtual integration base at `parent.headOpHash`.
+Implemented in **[ADR 0007](./0007-child-fork-lane-base.md)**; virtual integration base at `parent.headOpHash`.
 
 ## Alternatives considered
 

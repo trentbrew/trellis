@@ -1,4 +1,4 @@
-# ADR 0030: Agent Execution Infrastructure — WorkerPool & DAG Scheduler
+# ADR 0030: Agent Execution Infrastructure; WorkerPool & DAG Scheduler
 
 **Status**: Accepted  
 **Date**: 2026-07-30  
@@ -22,7 +22,7 @@ concurrency and DAG orchestration on top of the existing harness.
 
 ## Decision
 
-### 1. WorkerPool — Queue-based concurrency control
+### 1. WorkerPool; Queue-based concurrency control
 
 A `WorkerPool` sits between callers and `AgentHarness`. Every run request
 goes through the pool, which:
@@ -47,7 +47,7 @@ channel semantics and avoids subtle microtask ordering issues. The
 poll interval is trivially configurable and the `_tick` approach makes
 queue state observable at any point.
 
-### 2. DAGScheduler — Multi-step workflow orchestration
+### 2. DAGScheduler; Multi-step workflow orchestration
 
 A `DAGScheduler` composes agent runs into directed acyclic graphs. Each
 workflow step specifies zero or more `dependsOn` predecessor step IDs.

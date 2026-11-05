@@ -10,7 +10,7 @@
 **Date:** 2026-09-29
 **Depends on:** [0018](./0018-explicit-ids-and-field-sync-tiers.md) (field sync
 tiers), [0019](./0019-graph-native-cron.md) (graph-native cron), [0026](./0026-intent-vocabulary-issue-types-and-cycles.md)
-(cycles; retrospective vs prospective), [0046](./0046-agent-forum.md) (forum —
+(cycles; retrospective vs prospective), [0046](./0046-agent-forum.md) (forum : 
 agent-scoped notes), [0047](./0047-datalog-logic-layer.md) (rules as graph data)
 **Related:** [0044](./0044-plan-artifact-capture.md) (plan artifact capture),
 [0015](./0015-agent-handoff-protocol.md) (handoff / `whereami` re-entry)
@@ -38,7 +38,7 @@ Observed on the os-sandbox desk (2026-09-28/29), and general:
 4. **Drift is tier confusion.** A hand-maintained mirror (issue tree, ADR index,
    briefing) is treated as durable, so it lags. A status asserted without
    reading it ("landed"-but-open) is the same error.
-5. **ADR 0046 (forum) covers agent-scoped, decaying notes** — a *different
+5. **ADR 0046 (forum) covers agent-scoped, decaying notes**; a *different
    audience* (agents, stigmergic) from the operator's own capture.
 
 ## Decision
@@ -59,7 +59,7 @@ has **no acceptance criteria, no lane, no assignment, no commitment**.
 
 ### 2. Capture is frictionless; promotion is the only act that commits
 
-- `trellis note "<text>"` (alias `note add`) appends one durable note — as cheap
+- `trellis note "<text>"` (alias `note add`) appends one durable note; as cheap
   as a shell line.
 - `trellis note promote <id> --issue|--adr|--cycle` is the deliberate, explicit
   act that creates committed work. This is the anti-thrash mechanism: the note
@@ -71,10 +71,10 @@ has **no acceptance criteria, no lane, no assignment, no commitment**.
 
 One generator over ops + rules, several projections:
 
-- `trellis wip` — **active** (in_progress / queue), **shipped** (closed in the
+- `trellis wip`; **active** (in_progress / queue), **shipped** (closed in the
   last N days), **next** (ready, unblocked). Replaces the hand-cached briefing.
-- `trellis cadence` — due checks (below).
-- `trellis report [--day]` — ops → issues → epics → telos rollup (ADR 0026 d4;
+- `trellis cadence`; due checks (below).
+- `trellis report [--day]`; ops → issues → epics → telos rollup (ADR 0026 d4;
   requires the telos/epic rollup).
 - **Mirrors and indexes are generated** (issue tree, ADR index) from the graph.
   Hand-maintaining a derived artifact is disallowed.
@@ -83,7 +83,7 @@ One generator over ops + rules, several projections:
 
 Cadence is a Datalog rule (ADR 0047) over durable facts, optionally scheduled by
 a `CronJob` (ADR 0019): `cadenceDue(session)`, `stale(mirror)`. **Its only
-purpose is to gate** — refuse `issue close` on unreconciled drift, surface
+purpose is to gate**; refuse `issue close` on unreconciled drift, surface
 due-soon in `wip`. Derived-without-a-gate is theater and is disallowed.
 
 ### 5. Notes are first-class for refs and search
@@ -103,7 +103,7 @@ and the `wip` "notes awaiting triage" line.
 
 - **The note / issue / forum boundary must hold.** The gradient is real; the
   discipline is audience + commitment, not fields.
-- A generator is more work than a written file, once — the payoff is every
+- A generator is more work than a written file, once; the payoff is every
   future reconcile.
 - Cadence gating can annoy; it must gate *something real* or be removed.
 
@@ -124,7 +124,7 @@ and the `wip` "notes awaiting triage" line.
 
 ## Addenda
 
-### 2026-09-29 — module boundary for derived reads
+### 2026-09-29; module boundary for derived reads
 
 d3 says the operator surface is derived, never stored; it did not say *where the
 derived read lives*. Rule adopted (see [0052](./0052-agent-liveness-census.md)):

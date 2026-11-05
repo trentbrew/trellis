@@ -1,4 +1,4 @@
-# SPEC-v1.1 — the two open sections, mapped
+# SPEC-v1.1; the two open sections, mapped
 
 Companion to `docs/specs/spec-v1.1-graph-op-sync.md`. §1–§4 are settled or
 mechanical. **§2a (refs) and §5 (read authorization) are the two that need
@@ -6,7 +6,7 @@ decisions**, and they are the two that are genuinely hard. This is the landscape
 
 ---
 
-## Part 1 — §2a: refs
+## Part 1; §2a: refs
 
 ### First, a correction
 
@@ -18,7 +18,7 @@ result.addFacts.push({ e: `branch:${name}`, a: 'headOpHash', v: targetOpHash });
 ```
 
 Branch heads *are* in the graph. A peer replaying every op **does** learn what
-`main` points at. `state.json` holds only `currentBranch` — a name, not a hash —
+`main` points at. `state.json` holds only `currentBranch`; a name, not a hash : 
 which is local checkout state and correctly local.
 
 So the model isn't "refs live outside the graph". It's worse and more interesting.
@@ -27,7 +27,7 @@ So the model isn't "refs live outside the graph". It's worse and more interestin
 
 ```mermaid
 flowchart TD
-    subgraph store["branch:main — facts accumulated in the store"]
+    subgraph store["branch:main; facts accumulated in the store"]
         F1["headOpHash = op:aaa<br/><i>from branchAdvance #1</i>"]
         F2["headOpHash = op:bbb<br/><i>from branchAdvance #2</i>"]
         F3["headOpHash = op:ccc<br/><i>from branchAdvance #3</i>"]
@@ -37,12 +37,12 @@ flowchart TD
 ```
 
 `branchAdvance` **only adds**. It never deletes the prior head. So `branch:main`
-accumulates one `headOpHash` fact per advance — **1,128 of them in this repo
-today**, out of 3,077 `branchAdvance` ops total — and the head is resolved
+accumulates one `headOpHash` fact per advance; **1,128 of them in this repo
+today**, out of 3,077 `branchAdvance` ops total; and the head is resolved
 positionally:
 
 ```ts
-// src/vcs/branch.ts:42 — "latest wins"
+// src/vcs/branch.ts:42; "latest wins"
 return facts[facts.length - 1]?.v;
 ```
 
@@ -51,7 +51,7 @@ order, which for concurrent advances is *arrival* order.
 
 ```mermaid
 flowchart LR
-    subgraph ops["Identical op set — both peers have both ops"]
+    subgraph ops["Identical op set; both peers have both ops"]
         A["advance main → op:aaa<br/>(peer A, 10:00)"]
         B["advance main → op:bbb<br/>(peer B, 10:00)"]
     end
@@ -86,7 +86,7 @@ for (const prior of ['pending', 'passed', 'failed'])
 result.addFacts.push({ e: ceid, a: 'status', v: newStatus });
 ```
 
-Delete-then-add — a proper register. It works because **the domain is bounded**:
+Delete-then-add; a proper register. It works because **the domain is bounded**:
 three possible values, so you can enumerate and delete them all.
 
 `headOpHash`'s domain is **every hash that has ever existed**. You cannot
@@ -96,15 +96,15 @@ append log resolved by position.
 ```mermaid
 flowchart TD
     Q{"Is the field's value domain<br/>bounded and enumerable?"}
-    Q -->|"Yes — e.g. status: pending/passed/failed"| BOUNDED["delete-all-priors + add<br/>✅ a real register<br/>✅ order-independent"]
-    Q -->|"No — e.g. headOpHash: any hash"| UNBOUNDED["add only<br/>⚠️ resolved by array position<br/>❌ order-dependent"]
+    Q -->|"Yes; e.g. status: pending/passed/failed"| BOUNDED["delete-all-priors + add<br/>✅ a real register<br/>✅ order-independent"]
+    Q -->|"No; e.g. headOpHash: any hash"| UNBOUNDED["add only<br/>⚠️ resolved by array position<br/>❌ order-dependent"]
 
     style BOUNDED fill:#34d399,color:#000
     style UNBOUNDED fill:#f87171,color:#000
 ```
 
 > **This generalizes beyond refs.** Any unbounded-domain "latest wins" field in
-> Trellis has this property. Worth an audit — `getLast()` in `issue.ts` uses the
+> Trellis has this property. Worth an audit; `getLast()` in `issue.ts` uses the
 > same `matches[matches.length - 1]` pattern for `description`, `command`,
 > `lastOutput`. Single-writer today, so it doesn't bite. It bites the moment
 > there are peers.
@@ -113,21 +113,21 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    subgraph opt3["Option 3 — refs as ops (today, for branches)"]
+    subgraph opt3["Option 3; refs as ops (today, for branches)"]
         direction TB
         O3A["branchAdvance op → headOpHash fact"]
         O3B["✅ converges automatically for linear history<br/>✅ auditable: every move is in the log<br/>❌ order-dependent under concurrency<br/>❌ 1,128 dead facts on branch:main<br/>❌ append-only churn for a pointer"]
         O3A --> O3B
     end
 
-    subgraph opt2["Option 2 — refs derived"]
+    subgraph opt2["Option 2; refs derived"]
         direction TB
         O2A["head = reachability from a root"]
         O2B["✅ no channel, no storage<br/>✅ order-independent<br/>❌ cannot express intentional rollback<br/>❌ 'which branch' becomes a scan"]
         O2A --> O2B
     end
 
-    subgraph opt1["Option 1 — refs as a second channel (Git)"]
+    subgraph opt1["Option 1; refs as a second channel (Git)"]
         direction TB
         O1A["name → tip hash, mutable, synced separately"]
         O1B["✅ ops stay immutable + identity-stable<br/>✅ pointer moves cost nothing in the log<br/>❓ needs a convergence rule of its own"]
@@ -139,7 +139,7 @@ flowchart TD
     style opt3 fill:#1a1b22,color:#e4e4e7
 ```
 
-### The insight I'd build on: Git doesn't converge refs — it namespaces them
+### The insight I'd build on: Git doesn't converge refs; it namespaces them
 
 Git never merges `main` for you. It gives you `main` and `origin/main` and makes
 the merge **explicit and local**. Refs are *per-peer*; convergence is a human (or
@@ -155,7 +155,7 @@ flowchart LR
         GO -.->|"explicit merge"| GM
     end
 
-    subgraph trellis["Trellis — the same shape"]
+    subgraph trellis["Trellis; the same shape"]
         L1["lane A head"]
         L2["lane B head"]
         INT["integration"]
@@ -165,12 +165,12 @@ flowchart LR
 ```
 
 A lane **is** a per-peer ref. `promote` **is** the explicit merge. The model was
-right all along — it's just stored inconsistently: **branch heads are facts,
+right all along; it's just stored inconsistently: **branch heads are facts,
 lane heads are `meta.json` files.** One of the two is wrong, and the concurrency
 argument says it's the facts.
 
 **Recommendation:** refs are per-writer and namespaced, never shared-mutable.
-Then no convergence rule is needed — because two peers never write the same ref.
+Then no convergence rule is needed; because two peers never write the same ref.
 `main` is *my* main; yours is `peer:you/main`. Promote stays the explicit merge
 it already is.
 
@@ -178,7 +178,7 @@ it already is.
 
 1. Do lane heads move into the graph, or branch heads move out to a ref store?
    (They disagree today; one has to move.)
-2. If refs are per-writer, what identifies a writer — `agentId`, device key
+2. If refs are per-writer, what identifies a writer; `agentId`, device key
    (ADR 0020), or lane?
 3. Do the 1,128 accumulated `headOpHash` facts get compacted, or is that history
    worth keeping? (It is arguably a genuine audit trail of where `main` has been.)
@@ -187,7 +187,7 @@ it already is.
 
 ---
 
-## Part 2 — §5: read authorization
+## Part 2; §5: read authorization
 
 ### The shape of the problem
 
@@ -199,7 +199,7 @@ flowchart TD
         C1 -.->|"can't ask novel questions"| X1["not local-first"]
     end
 
-    subgraph after["Materialized (§1 — decided)"]
+    subgraph after["Materialized (§1; decided)"]
         S2["Server ships ops"]
         S2 -->|"peer replays them"| C2["Peer holds every fact it received"]
         C2 -.->|"queries locally, offline, novel"| X2["local-first ✅"]
@@ -220,14 +220,14 @@ materializes, that pretense is gone: it has what you shipped, permanently.
 
 ```mermaid
 flowchart LR
-    subgraph filter["A FILTER — not a boundary"]
+    subgraph filter["A FILTER; not a boundary"]
         FA["Server decides<br/>what to send"]
         FA --> FB["Peer receives subset"]
         FB --> FC["Enforcement lives<br/>in the sender's good behaviour"]
         FC --> FD["Change one line →<br/>peer gets everything"]
     end
 
-    subgraph boundary["A BOUNDARY — real"]
+    subgraph boundary["A BOUNDARY; real"]
         BA["Ops encrypted<br/>to a room key"]
         BA --> BB["Peer without the key<br/>holds ciphertext"]
         BB --> BC["Enforcement lives<br/>in mathematics"]
@@ -240,7 +240,7 @@ flowchart LR
 
 This is the same argument that killed lane-scoped sync as a security concept:
 **once the bytes land, the filter is cosmetic.** A lane is either a real boundary
-— in which case it needs its own key and it *is* a room — or it's a naming
+:  in which case it needs its own key and it *is* a room; or it's a naming
 convenience.
 
 > Trellis has already rejected this pattern once, in `rule Read`: a UI affordance
@@ -280,7 +280,7 @@ sequenceDiagram
     Note over B: Bob STILL HAS ops 1..500.<br/>Forever. Offline. Un-unsendable.
 ```
 
-**You cannot un-ship bytes.** Revocation can only mean "no *future* ops" —
+**You cannot un-ship bytes.** Revocation can only mean "no *future* ops" : 
 rotate the key, re-encrypt going forward. Everything already replicated stays
 readable by the revoked peer, offline, permanently.
 
@@ -293,9 +293,9 @@ the whole room to, forever.*
 
 ### Questions to settle
 
-1. Is the room the boundary? (Recommended — it's the only unit with tenancy and
+1. Is the room the boundary? (Recommended; it's the only unit with tenancy and
    key material already.)
-2. What is a room, exactly — a tenant, a repo, or a new construct? Today
+2. What is a room, exactly; a tenant, a repo, or a new construct? Today
    `TenantPool` exists and rooms are a server concept; peers have no notion.
 3. Are ops encrypted at rest per-room, or is the boundary only "who do we send
    to"? **The second is a filter.** If we want a boundary, it's the first.
@@ -325,8 +325,8 @@ flowchart TD
 ```
 
 Both sections resolve to the same principle. **Refs:** don't share a mutable
-pointer between writers — give each writer its own and merge explicitly.
-**Authorization:** don't filter a shared stream — partition it and give each
+pointer between writers; give each writer its own and merge explicitly.
+**Authorization:** don't filter a shared stream; partition it and give each
 partition a key. In both cases the failure mode is *pretending two parties share
 one thing when they don't*, and in both cases the fix is to stop pretending.
 

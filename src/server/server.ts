@@ -9,7 +9,7 @@
  *   PUT    /entities/:id               Update entity attributes
  *   DELETE /entities/:id               Delete entity
  *   GET    /entities?type=&limit=&offset=  List entities
- *   GET    /ops?kind=&limit=&offset=       List causal ops (newest last in page)
+ *   GET    /ops?kind=&entity=&limit=&offset=  List causal ops (newest last in page)
  *   POST   /query                      EQL-S query
  *   POST   /upload                     File upload → blob hash
  *   GET    /files/:hash                Download blob
@@ -57,6 +57,7 @@ import {
 } from '../forms/types.js';
 import { jsonEntityFacts } from '../core/store/eav-store.js';
 import type { TrellisDbConfig } from '../client/config.js';
+import { listKernelOpsFromJournal } from '../client/kernel-ops.js';
 import type { TenantPool } from './tenancy.js';
 import type { AuthConfig } from './auth.js';
 import {
@@ -668,48 +669,14 @@ async function handleListOps(
   ctx: RouteCtx,
 ): Promise<Response> {
   const kind = url.searchParams.get('kind') ?? undefined;
+  const entity = url.searchParams.get('entity') ?? undefined;
   const limit = Math.min(parseInt(url.searchParams.get('limit') ?? '100', 10), 500);
   const offset = parseInt(url.searchParams.get('offset') ?? '0', 10);
 
   const kernel = await ctx.pool.preload(tenantId);
-  let ops = kernel.readAllOps();
-
-  if (kind) {
-    ops = ops.filter((op) => op.kind === kind);
-  }
-
-  const total = ops.length;
-  const page = ops.slice(offset, offset + limit);
-
-  return json({
-    data: page.map((op, index) => summarizeKernelOp(op, offset + index)),
-    total,
-    limit,
-    offset,
-  });
-}
-
-function summarizeKernelOp(
-  op: import('../core/persist/backend.js').KernelOp,
-  index: number,
-) {
-  const entityIds = new Set<string>();
-  for (const fact of op.facts ?? []) entityIds.add(fact.e);
-  for (const fact of op.deleteFacts ?? []) entityIds.add(fact.e);
-
-  return {
-    index,
-    hash: op.hash,
-    kind: op.kind,
-    timestamp: op.timestamp,
-    agentId: op.agentId,
-    previousHash: op.previousHash,
-    factCount: op.facts?.length ?? 0,
-    linkCount: op.links?.length ?? 0,
-    deleteFactCount: op.deleteFacts?.length ?? 0,
-    deleteLinkCount: op.deleteLinks?.length ?? 0,
-    entityCount: entityIds.size,
-  };
+  return json(
+    listKernelOpsFromJournal(kernel.readAllOps(), { kind, entity, limit, offset }),
+  );
 }
 
 // ---------------------------------------------------------------------------

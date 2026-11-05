@@ -1,4 +1,4 @@
-# Spec: TML v0.1 harden — edge cases
+# Spec: TML v0.1 harden; edge cases
 
 **Status:** Ready for impl\
 **Date:** 2026-07-16\
@@ -67,7 +67,7 @@ tml-query="find ?e where type = 'Issue' and not (status = 'in_progress' or
 status = 'paused' or status = 'closed')"
 ```
 
-This places `backlog`, `queue`, and any unknown status in Backlog — identical
+This places `backlog`, `queue`, and any unknown status in Backlog; identical
 bucket rule to `renderKanban`. In Progress / Done queries stay unchanged.
 
 ### 2.3 Parsing notes (for Executor)
@@ -107,7 +107,7 @@ Do **not** change `resolveExpr` return values for `tml-text` / `tml-attr-*`
 
 Document under `tml-v0.md` attribute table / expression notes for `tml-if`.
 
-Markup on `tml-lanes.html` may keep `tml-if="issue.laneIds"` — behavior change
+Markup on `tml-lanes.html` may keep `tml-if="issue.laneIds"`; behavior change
 is in the runtime.
 
 ---

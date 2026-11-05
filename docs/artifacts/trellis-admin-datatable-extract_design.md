@@ -1,8 +1,8 @@
 ---
 version: alpha
-name: trellis admin — extract Operate datatable module
+name: trellis admin; extract Operate datatable module
 description: >-
-  Design for TRL-206 — extract #view-table behavior/CSS into a typed module
+  Design for TRL-206; extract #view-table behavior/CSS into a typed module
   before inline cell edit. Zero visual delta vs TRL-203 density.
 source:
   tool: greenfield
@@ -56,12 +56,12 @@ components:
     color: "{colors.seam-accent}"
 ---
 
-# Design: trellis admin — extract Operate datatable module
+# Design: trellis admin; extract Operate datatable module
 
-**Status:** Design verified — ready for Architect  
+**Status:** Design verified; ready for Architect  
 **Parent:** TRL-206 · **Design issue:** TRL-207  
 **Mock:** [trellis-admin-datatable-extract_mockup.html](./trellis-admin-datatable-extract_mockup.html)  
-**Amends:** packaging only — inherits [trellis-admin-datatable_design.md](./trellis-admin-datatable_design.md) density  
+**Amends:** packaging only; inherits [trellis-admin-datatable_design.md](./trellis-admin-datatable_design.md) density  
 **Preserves:** TRL-203 browse behavior, e2e selectors, shell/toolbar/statusbar, TML tbody in HTML  
 **Follow-up (not this wedge):** Operate datatable inline cell edit
 
@@ -71,10 +71,10 @@ components:
 
 Harden `admin.html` by extracting Operate table **behavior + CSS** into a
 typed module (`admin-datatable.ts` → `/admin-datatable.js` + static CSS),
-mirroring the `tml-runtime.js` serve pattern. Visual chrome stays frozen —
+mirroring the `tml-runtime.js` serve pattern. Visual chrome stays frozen : 
 this is a **module-map / seam** design, not new UI.
 
-Emotional tone: calm architecture diagram — callouts on seams, not decoration.
+Emotional tone: calm architecture diagram; callouts on seams, not decoration.
 
 ## Colors
 
@@ -108,7 +108,7 @@ No new surfaces. Module files are organizational, not visual layers.
 
 ## Shapes
 
-Wrap radius remains `{rounded.xl}` (12px) per TRL-201 — in extracted CSS.
+Wrap radius remains `{rounded.xl}` (12px) per TRL-201; in extracted CSS.
 
 ## Components
 
@@ -123,7 +123,7 @@ Wrap radius remains `{rounded.xl}` (12px) per TRL-201 — in extracted CSS.
 
 ### Recommended boundary (normative)
 
-**Option B — TS module served by UI server** (like `tml-runtime.ts`):
+**Option B; TS module served by UI server** (like `tml-runtime.ts`):
 
 | Asset | Path | Serve |
 | ----- | ---- | ----- |
@@ -143,7 +143,7 @@ mountAdminDatatable(root: HTMLElement, opts?: {
 };
 ```
 
-### Interaction matrix (parity — no new flows)
+### Interaction matrix (parity; no new flows)
 
 Full browse matrix SSOT: [trellis-admin-datatable_design.md](./trellis-admin-datatable_design.md)
 § Interaction matrix. This table = **extract seams only**.
@@ -156,7 +156,7 @@ Full browse matrix SSOT: [trellis-admin-datatable_design.md](./trellis-admin-dat
 | Sort button click | Cycle none→asc→desc; reorder live tbody; `aria-sort` on `th`; optional `trellis:table-sort` |
 | TML mutates tbody | Observer → `refresh()` (re-sort + re-apply **cached** query) |
 | Zero / all-hidden rows | `#table-empty` visible; prefer **one** empty channel (`trellis:table-empty` **or** `onEmptyChange`, not both required) |
-| Row click / Enter / Space | **Shell** `#tml-root` → `#dlg` (Seam C — not module) |
+| Row click / Enter / Space | **Shell** `#tml-root` → `#dlg` (Seam C; not module) |
 | Module destroy | Disconnect observer; remove listeners |
 
 ### Edit-ready hooks (reserve only)
@@ -182,7 +182,7 @@ Unchanged from TRL-201/203:
 
 ## Open for Architect
 
-1. Add `GET /admin-datatable.js` esbuild route in `lanes-dashboard.ts` (mirror `/tml-runtime.js`; DOM-only — no `../core/**` imports).
+1. Add `GET /admin-datatable.js` esbuild route in `lanes-dashboard.ts` (mirror `/tml-runtime.js`; DOM-only; no `../core/**` imports).
 2. Add `GET /admin-datatable.css` via `findUiAsset` static (same resolve pattern as other UI assets; build-copy if dist needs it). Prefer this over inventing a third CSS namespace unless shared helper lands.
 3. Move table well/sort/empty CSS out of `admin.html`; keep `.hidden-by-search` **in shell** CSS (shared utility).
 4. Wire `admin.html`: link CSS; `import { mountAdminDatatable } from '/admin-datatable.js'` after TML mount; shell search keeps multi-view filter + calls `table.applySearchQuery` for table branch only.
@@ -193,7 +193,7 @@ Unchanged from TRL-201/203:
 
 ### Cohesion (synthesist pre-architect)
 
-- Search ownership stays on toolbar/shell — do **not** move full `applySearchFilter` into the module.
+- Search ownership stays on toolbar/shell; do **not** move full `applySearchFilter` into the module.
 - `.hidden-by-search` stays shell CSS.
 - Serve pattern mirrors `tml-runtime`; thin DOM bundle; TML tbody stays in HTML.
 

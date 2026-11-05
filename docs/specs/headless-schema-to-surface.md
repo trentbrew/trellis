@@ -4,7 +4,7 @@
 **Date:** 2026-08-02\
 **Builds on:** ADR 0034 (headless UI convention), ADR 0033 (`trellis/forms`), `src/forms/derive.ts`\
 **Blocks:** `code-core`, schema-derived table columns, EQL query-builder parity\
-**Amends:** nothing yet — first spec for the shared generator
+**Amends:** nothing yet; first spec for the shared generator
 
 ---
 
@@ -27,9 +27,9 @@ Without a shared derivation layer, each wedge will invent its own property→aff
 
 ## 2. Non-goals
 
-- Graph override resolution (`trellis:Form` entities) — stays in `forms/resolve.ts`; table/code get their own override paths later
+- Graph override resolution (`trellis:Form` entities); stays in `forms/resolve.ts`; table/code get their own override paths later
 - Visual rendering, registry anatomy, or framework adapters
-- Live entity data (rows, completion values) — descriptors describe *shape*, not instances
+- Live entity data (rows, completion values); descriptors describe *shape*, not instances
 - Full EQL-S parser or query execution
 
 ---
@@ -48,7 +48,7 @@ src/surface/
   humanize.ts        # humanize() (lift from forms/derive.ts)
 ```
 
-**Migration:** `src/forms/derive.ts` becomes a thin re-export / delegate to `project-form.ts`. Existing `deriveFormDescriptor` signature and behavior unchanged — 31+ form tests stay green.
+**Migration:** `src/forms/derive.ts` becomes a thin re-export / delegate to `project-form.ts`. Existing `deriveFormDescriptor` signature and behavior unchanged; 31+ form tests stay green.
 
 **Package exports:**
 
@@ -74,12 +74,12 @@ export interface SurfaceField {
   order: number;
   section: string;
 
-  /** Interaction posture — shared semantics across surfaces. */
+  /** Interaction posture; shared semantics across surfaces. */
   readonly: boolean;
   required: boolean;
   modes: FormMode[]; // reuse existing type; table/code ignore or filter
 
-  /** Primary affordance — surfaces specialize further. */
+  /** Primary affordance; surfaces specialize further. */
   affordance:
     | 'text'
     | 'textarea'
@@ -110,7 +110,7 @@ Lifted from `forms/derive.ts` `controlFor` + extensions for table/code:
 | `valueType` | `affordance` | Notes |
 | ----------- | ------------ | ----- |
 | `title` | `text` | title-first ordering |
-| `rich_text` | `richtext` | **change from forms `textarea`** — forms may keep `textarea` until editor form control lands; table/code use `richtext` immediately |
+| `rich_text` | `richtext` | **change from forms `textarea`**; forms may keep `textarea` until editor form control lands; table/code use `richtext` immediately |
 | `number` | `number` | |
 | `checkbox` | `boolean` | |
 | `select`, `status` | `select` | |
@@ -189,7 +189,7 @@ export function tableColumnsToCoreConfig(
 | `relation` | `text`* | `combobox` |
 | `richtext` | `text`* | `richtext` |
 | `json`, `code` | `text`* | `code` |
-| `readonly` | — | column `editable: false` |
+| `readonly` |; | column `editable: false` |
 
 \*Cell *value* may be rich JSON; `type` is the commit/coercion hint for simple paths. Rich editors commit through their core's serialized shape.
 
@@ -197,7 +197,7 @@ export function tableColumnsToCoreConfig(
 
 - [ ] `deriveTableColumns(taskSchema)` matches hand-authored columns in wedge-smoke table demo
 - [ ] Gallery table entry uses `deriveTableColumns` for at least one entity type
-- [ ] `pnpm test test/surface/table-projection.test.ts` — pure Node, zero DOM
+- [ ] `pnpm test test/surface/table-projection.test.ts`; pure Node, zero DOM
 
 ---
 
@@ -209,7 +209,7 @@ Code-core consumes **completion sources**, not a full document schema. Sources a
 export interface CompletionItemDescriptor {
   label: string;
   detail?: string;
-  /** Insert text (may differ from label — e.g. qualified name). */
+  /** Insert text (may differ from label; e.g. qualified name). */
   insert: string;
   kind: 'type' | 'property' | 'keyword' | 'literal' | 'snippet';
   /** Boost sort when filtering (higher = preferred). */
@@ -243,11 +243,11 @@ export function deriveCompletionSources(
 
 For each `SchemaDefinition` in scope:
 
-1. **Type names** — `entityType` → `{ label: 'Task', insert: 'Task', kind: 'type' }`
-2. **Properties** — each `SurfaceField` → `{ label: humanize(name), insert: name, kind: 'property', detail: valueType }`
-3. **EQL keywords** — static list: `find`, `where`, `and`, `or`, `not`, `order`, `limit`, `return`, …
-4. **Select options** — when property has `selectOptions`, literal completions scoped to that property name in formula mode
-5. **Relation targets** — when `affordance === 'relation'`, type-name completions for `targetSchema`
+1. **Type names**; `entityType` → `{ label: 'Task', insert: 'Task', kind: 'type' }`
+2. **Properties**; each `SurfaceField` → `{ label: humanize(name), insert: name, kind: 'property', detail: valueType }`
+3. **EQL keywords**; static list: `find`, `where`, `and`, `or`, `not`, `order`, `limit`, `return`, …
+4. **Select options**; when property has `selectOptions`, literal completions scoped to that property name in formula mode
+5. **Relation targets**; when `affordance === 'relation'`, type-name completions for `targetSchema`
 
 Formula mode (`valueType === 'formula'`) restricts to expression-safe properties (exclude `files`, `people`, `rich_text` bodies) and exposes numeric/select fields prominently.
 
@@ -320,10 +320,10 @@ Proves schema→surface before code-core lands.
 
 ## 10. Implementation order
 
-1. **`src/surface/` scaffold** — types, `deriveSurfaceFields`, lift `humanize` + ordering
-2. **Migrate forms** — delegate `deriveFormDescriptor`; all form tests green
+1. **`src/surface/` scaffold**; types, `deriveSurfaceFields`, lift `humanize` + ordering
+2. **Migrate forms**; delegate `deriveFormDescriptor`; all form tests green
 3. **`project-table.ts`** + table gallery wiring + tests
-4. **`project-code.ts`** + fixture snapshots (no CodeMirror yet — descriptor-only tests)
+4. **`project-code.ts`** + fixture snapshots (no CodeMirror yet; descriptor-only tests)
 5. **Export `trellis/surface`** in package.json + browser bundle
 
 **Gate before `code-core` impl:** steps 1–4 complete; step 5 may land with code-core.
@@ -333,5 +333,5 @@ Proves schema→surface before code-core lands.
 ## 11. Open questions
 
 - **`rich_text` in forms:** switch control to `richtext` + editor-core binding in forms wedge, or keep `textarea` alias until form `<Field>` renderer work lands? **Recommend:** alias in form projection only; surface field uses `richtext`.
-- **Shared override entity vs per-surface overrides:** one `trellis:View` entity with sections, or separate Form/Table/Code override types? **Defer** — forms override path is sufficient until a second surface needs overrides in product.
-- **Location:** `src/surface/` vs `src/schema/surface/`. **Recommend:** `src/surface/` — not JSON-schema; it's UI surface derivation.
+- **Shared override entity vs per-surface overrides:** one `trellis:View` entity with sections, or separate Form/Table/Code override types? **Defer**; forms override path is sufficient until a second surface needs overrides in product.
+- **Location:** `src/surface/` vs `src/schema/surface/`. **Recommend:** `src/surface/`; not JSON-schema; it's UI surface derivation.

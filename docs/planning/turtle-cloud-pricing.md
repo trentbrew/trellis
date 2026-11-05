@@ -1,5 +1,5 @@
 ---
-title: TurtleDB Cloud — pricing model
+title: TurtleDB Cloud; pricing model
 description: Usage-based meters (graph I/O, storage, egress) for managed Trellis relay and backup.
 created: 2026-06-10
 updated: 2026-06-10
@@ -11,7 +11,7 @@ related:
   - ../../cloud/docs/turtledb.md
 ---
 
-# TurtleDB Cloud — pricing model
+# TurtleDB Cloud; pricing model
 
 **Status:** draft (public meters not finalized)  
 **Issue:** TRL-37 (C0 deploy + C1 metering)  
@@ -24,7 +24,7 @@ Trellis invariant: **local graph is primary; cloud accelerates.**
 | Vendor framing | What you pay for |
 | -------------- | ---------------- |
 | Jazz / Convex | Hosted database authority + reactive fanout |
-| **TurtleDB Cloud** | Relay, browser bridge, durable mirror, backup — not ownership of primary state |
+| **TurtleDB Cloud** | Relay, browser bridge, durable mirror, backup; not ownership of primary state |
 
 Local-only ops (desktop kernel, offline browser with hydrated cache) should bill **$0** on cloud meters. That is the differentiation vs MAU- or seat-based BaaS.
 
@@ -33,7 +33,7 @@ Local-only ops (desktop kernel, offline browser with hydrated cache) should bill
 | Product | Repo | Billing today |
 | ------- | ---- | ------------- |
 | **Studio Cloud** | `cloud/` | Flat tier + metered LLM tokens (`billing.ts`) |
-| **TurtleDB Cloud** | `trellis-node` + `cloud/` broker | Not shipped — this document |
+| **TurtleDB Cloud** | `trellis-node` + `cloud/` broker | Not shipped; this document |
 
 Studio sandboxes may **host** a Trellis sidecar (`demo/realtime-app`); managed TurtleDB is a separate SKU and meter set.
 
@@ -43,7 +43,7 @@ Studio sandboxes may **host** a Trellis sidecar (`demo/realtime-app`); managed T
 
 Following the Jazz v2 rationale: bill irreducible infrastructure, not MAU/seats/connections.
 
-### 1. Graph I/O — `$0.12 / 1M operations` (draft)
+### 1. Graph I/O; `$0.12 / 1M operations` (draft)
 
 Counts **server-side** work at the kernel / room-node boundary:
 
@@ -56,7 +56,7 @@ Counts **server-side** work at the kernel / room-node boundary:
 
 **Does not count:** client-local kernel ops with no cloud contact; WebSocket ping/pong; auth handshake.
 
-### 2. Storage — `$0.40 / GB-month` (draft)
+### 2. Storage; `$0.40 / GB-month` (draft)
 
 Per-tenant durable footprint on the room node:
 
@@ -66,9 +66,9 @@ Per-tenant durable footprint on the room node:
 | Content-addressed blob store | yes |
 | Snapshot / backup replicas in object storage | yes (when C3 ships) |
 
-Measured as **logical GB-month** (daily sample, monthly average). Op-log growth is not hidden — it is part of storage.
+Measured as **logical GB-month** (daily sample, monthly average). Op-log growth is not hidden; it is part of storage.
 
-### 3. Egress — `$0.09 / GB` (draft)
+### 3. Egress; `$0.09 / GB` (draft)
 
 Passthrough at cost (no markup target):
 
@@ -89,7 +89,7 @@ Passthrough at cost (no markup target):
 | **Pro** | $19 | 10 projects, hobby caps × 10 | Pay-as-you-go on meters |
 | **Team** | Custom | SSO, backup SLA, dedicated room | Contract |
 
-Studio AI billing remains on **token meters** — never conflate with graph meters.
+Studio AI billing remains on **token meters**; never conflate with graph meters.
 
 ---
 
@@ -143,7 +143,7 @@ Same inputs as Jazz public calculator (June 2026):
 | Collaborative / live | 100% | Graph I/O | $40+ |
 | Media-heavy (500 MB / user) | any | Storage + egress | $200+ |
 
-At browser-only saturation, Trellis converges toward Jazz-parity (~$32/mo for this scenario) — still cheaper when local-first is real.
+At browser-only saturation, Trellis converges toward Jazz-parity (~$32/mo for this scenario); still cheaper when local-first is real.
 
 ---
 
@@ -164,7 +164,7 @@ At browser-only saturation, Trellis converges toward Jazz-parity (~$32/mo for th
 Counters live at **kernel / server boundary** so self-hosted and cloud share definitions:
 
 ```typescript
-// Illustrative — implement in TenantPool / startServer middleware
+// Illustrative; implement in TenantPool / startServer middleware
 meter.record('graph_io', { tenantId, kind: 'assert' | 'query' | 'sync_read' });
 meter.record('storage_bytes', { tenantId, component: 'sqlite' | 'blob' });
 meter.record('egress_bytes', { tenantId, kind: 'ws' | 'blob' | 'export' });
@@ -188,18 +188,18 @@ Daily rollups → Stripe meters (same cron pattern as `cloud/scripts/stripe-mete
 
 ## Open questions
 
-1. **Blob CDN** — passthrough egress vs bundled CDN margin?
-2. **Cross-region (C4)** — storage multiplier for geo replicas?
-3. **P2P assist (C5)** — charge for Iroh relay bytes or treat as egress?
-4. **Studio bundle** — single invoice (Studio + TurtleDB) vs separate products?
-5. **Self-host parity** — publish meter definitions so self-hosters can estimate cloud migration cost.
+1. **Blob CDN**; passthrough egress vs bundled CDN margin?
+2. **Cross-region (C4)**; storage multiplier for geo replicas?
+3. **P2P assist (C5)**; charge for Iroh relay bytes or treat as egress?
+4. **Studio bundle**; single invoice (Studio + TurtleDB) vs separate products?
+5. **Self-host parity**; publish meter definitions so self-hosters can estimate cloud migration cost.
 
 ---
 
 ## References
 
-- Jazz pricing rationale: [What is Jazz?](https://jazz.tools/blog/what-is-jazz) — “three physical bottlenecks”
+- Jazz pricing rationale: [What is Jazz?](https://jazz.tools/blog/what-is-jazz); “three physical bottlenecks”
 - Trellis invariants: [ARCHITECTURE.md](../ARCHITECTURE.md), [VISION.md](../VISION.md)
 - Existing server surface: `src/server/` (`TenantPool`, `realtime.ts`, `deploy.ts`)
-- Studio broker: `cloud/src/billing.ts` (token model — do not merge)
+- Studio broker: `cloud/src/billing.ts` (token model; do not merge)
 - C0 implementation spec: [turtle-cloud-c0-spec.md](./turtle-cloud-c0-spec.md)

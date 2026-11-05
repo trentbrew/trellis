@@ -10,7 +10,7 @@ hooks (`trellis-agent-pipeline`), `docs/planning/lane-agent-experience.md`
 ## Intent
 
 Grow `trellis admin` from a live **situation room** into a thin **Hokage
-surface** — human writes that match what the board already shows — then later
+surface**; human writes that match what the board already shows; then later
 agent roster + configurable pipeline. Do **not** turn admin into a second Studio
 or a workflow IDE before pipeline topology is Trellis-owned data.
 
@@ -19,12 +19,12 @@ or a workflow IDE before pipeline topology is Trellis-owned data.
 Admin v1 already has live kanban/grid/table, op-log, and **promote** via
 `POST /api/tml-mutations`. Staring at issues/lanes while bouncing to CLI for
 “start / pause / triage” feels like a museum plaque. Writes that close that gap
-are high leverage; a full xyflow pipeline editor is not — pipeline today lives
+are high leverage; a full xyflow pipeline editor is not; pipeline today lives
 in Cursor hooks + profiles, not as a first-class graph artifact.
 
 ## Phasing
 
-### Phase A — Surgical board writes (first wedge when pulled)
+### Phase A; Surgical board writes (first wedge when pulled)
 
 Extend `/api/tml-mutations` (and admin UI) so the board can drive the same paths
 as CLI for **board-visible** ops:
@@ -43,21 +43,21 @@ as CLI for **board-visible** ops:
 - Mutations refuse or warn when they would violate lane ownership (ADR 0015)
 - E2E covers at least: create issue, start from backlog, promote still green
 
-### Phase B — Agents roster (read-mostly)
+### Phase B; Agents roster (read-mostly)
 
 Admin **Agents** (or status-bar expansion): who is bound, which lane, which
 issue, last op, optional budget/chakra stub. Manage = inspect + soft controls
-(pause lane, request handoff) — not a full agent runtime UI.
+(pause lane, request handoff); not a full agent runtime UI.
 
 Depends on Phase A mutation hygiene (identity + lane).
 
-### Phase C — Pipeline as data (CLI / MCP first)
+### Phase C; Pipeline as data (CLI / MCP first)
 
 Roles, handoff edges, and gates (review, design-critic, etc.) become versioned
-Trellis-owned config or graph entities — editable via CLI/MCP **before** any
+Trellis-owned config or graph entities; editable via CLI/MCP **before** any
 canvas. Cursor hooks become a consumer of that config, not the source of truth.
 
-### Phase D — Workflow canvas (later)
+### Phase D; Workflow canvas (later)
 
 xyflow-esque editor that **reads** Phase C data: hop → hop layout, edit edges
 that mean HANDOFF targets / required labels. Park until Phase C exists; a canvas
@@ -72,7 +72,7 @@ without durable topology is cosplay.
 ## Metaphor (optional AX framing)
 
 Lanes ≈ shadow clones; promote ≈ dispel; admin writes ≈ Hokage seals; foundation
-models ≈ beasts; harness ≈ jinchūriki. Useful for AX copy — not a UI skin
+models ≈ beasts; harness ≈ jinchūriki. Useful for AX copy; not a UI skin
 requirement.
 
 ## Next step when scheduled

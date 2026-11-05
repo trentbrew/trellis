@@ -1,11 +1,11 @@
 ---
-title: Docs spine — frontmatter, index, devlog
+title: Docs spine; frontmatter, index, devlog
 date: 2026-08-02
 arc: docs-infra
 landed: TRL-369 proposal, TRL-370 spec queued
 next: executor impl, then wire into ship-check
 ---
-# Docs spine — frontmatter, index, devlog
+# Docs spine; frontmatter, index, devlog
 
 The repo could not answer "what landed this week": 29/147 docs had frontmatter,
 `docs/adr/README.md` was stale (ADR-0018 of 34), and no devlog existed.

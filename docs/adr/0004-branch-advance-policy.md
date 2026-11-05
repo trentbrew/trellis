@@ -10,7 +10,7 @@
 
 `vcs:branchAdvance` exists in types and decompose but is **never emitted** from `engine.applyOp`. Branch `headOpHash` facts go stale; branch-scoped reads (DESIGN §3.5) cannot work.
 
-Agent Workspaces fork from `headOpHash` — fixing branch advance is a prerequisite for correct workspace creation.
+Agent Workspaces fork from `headOpHash`; fixing branch advance is a prerequisite for correct workspace creation.
 
 ## Decision
 
@@ -20,7 +20,7 @@ After every op appended to the **integration journal** (no active workspace), em
 
 - `vcs:branchAdvance` (avoid recursion)
 - `vcs:branchCreate`, `vcs:branchDelete`
-- `vcs:checkpointCreate` (optional — checkpoint already references op hash)
+- `vcs:checkpointCreate` (optional; checkpoint already references op hash)
 - Ops appended during **replay** or **promote transaction** (use `skipBranchAdvance` flag)
 
 ### Workspace journal writes

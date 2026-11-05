@@ -1,8 +1,8 @@
 ---
 version: alpha
-name: trellis admin shell — Operate sidebar + index /
+name: trellis admin shell; Operate sidebar + index /
 description: >-
-  Design for TRL-189 — kernel Operate console chrome: labeled sidebar (OPERATE_NAV),
+  Design for TRL-189; kernel Operate console chrome: labeled sidebar (OPERATE_NAV),
   admin on GET /, VCS live surface; other peers stubs; theme SSOT.
 source:
   tool: greenfield
@@ -74,9 +74,9 @@ components:
     width: 280px
 ---
 
-# Design: trellis admin shell — Operate sidebar + index /
+# Design: trellis admin shell; Operate sidebar + index /
 
-**Status:** Design verified — ready for Architect  
+**Status:** Design verified; ready for Architect  
 **Parent:** TRL-189 · **Design issue:** TRL-190  
 **Mock:** [trellis-admin-shell_mockup.html](./trellis-admin-shell_mockup.html)  
 **Amends:** [trellis-admin_design.md](./trellis-admin_design.md) (chrome: rail → labeled sidebar; route `/`)  
@@ -87,14 +87,14 @@ components:
 ## Overview
 
 `trellis admin` becomes the kernel **Operate console**: birds-eye over the graph,
-same IA family as fractal-playground, authored in static HTML + TML — not a React
+same IA family as fractal-playground, authored in static HTML + TML; not a React
 AppShell port.
 
 This wedge is **shell only**: labeled primary sidebar + home route. **VCS** is
 the only live surface (existing board + op-log). Other `OPERATE_NAV` peers are
 visible stubs (“Coming soon”). Rich datatable / collections / graph land later.
 
-Emotional tone: dense L3 operator — dark sidebar, mono zone label, lucide-ish
+Emotional tone: dense L3 operator; dark sidebar, mono zone label, lucide-ish
 stroke icons, glass header.
 
 ## Colors
@@ -105,7 +105,7 @@ playground OKLCH `--shell-rail`.
 
 ## Typography
 
-Zone eyebrow: mono uppercase (`Operate`) at **10px / 600 / 0.08em** — shell-specific;
+Zone eyebrow: mono uppercase (`Operate`) at **10px / 600 / 0.08em**; shell-specific;
 do not equate with projection label tokens (visual-parity ~11px / 500 / 0.04em).
 Nav labels: 13px sans medium. Header brand: 14px bold. Icons: 16px stroke,
 currentColor.
@@ -134,7 +134,7 @@ currentColor.
 | `GET /admin` | Redirect or alias to `/` (same document) |
 | `trellis admin` | Opens `/` |
 
-Legacy `lanes.html` on `/` moves aside (Architect: redirect `/lanes` or drop — open question below).
+Legacy `lanes.html` on `/` moves aside (Architect: redirect `/lanes` or drop; open question below).
 
 ### Sidebar vs playground
 
@@ -165,7 +165,7 @@ Nav items `8px` radius, `36px` row height, `8px` icon–label gap.
 | Nav item (live) | SVG + label; `aria-current="page"` | VCS only this wedge | `data-nav-id="vcs"` |
 | Nav item (stub) | SVG + label; `aria-disabled`; name “… (coming soon)” | Collections…API | no click handler / preventDefault |
 | Header | brand · live · meta · stats · **view toggle · search** (that order) | density from admin v1 | existing `.header` + `#search-input` |
-| Nav focus | `:focus-visible` accent outline on `.nav-item` (incl. stubs) | keyboard | a11y — stubs stay focusable |
+| Nav focus | `:focus-visible` accent outline on `.nav-item` (incl. stubs) | keyboard | a11y; stubs stay focusable |
 | VCS surface | kanban/grid/table + independent col scroll | visual-parity widths **300–340** | `#view-*` |
 | Op-log | 280px | unchanged | `#oplog` |
 
@@ -173,14 +173,14 @@ Nav items `8px` radius, `36px` row height, `8px` icon–label gap.
 
 Mirror `fractal-playground/lib/shell/modes.ts` `OPERATE_NAV`:
 
-1. Collections — stub  
-2. Storage — stub  
-3. Pages — stub  
-4. History — stub  
-5. Cron — stub  
-6. Auth — stub  
-7. API — stub  
-8. **VCS — live** (`aria-current="page"`)
+1. Collections; stub  
+2. Storage; stub  
+3. Pages; stub  
+4. History; stub  
+5. Cron; stub  
+6. Auth; stub  
+7. API; stub  
+8. **VCS; live** (`aria-current="page"`)
 
 **DEMOS_NAV** out of scope.
 
@@ -194,7 +194,7 @@ Mirror `fractal-playground/lib/shell/modes.ts` `OPERATE_NAV`:
 | Idle VCS | Activate stub nav (e.g. Collections) | **No navigation**; item stays disabled visually; accessible name includes “coming soon” |
 | Idle | Activate VCS | Ensure VCS surface visible |
 | Embed `?embed=1` | Load | Sidebar hidden; focus starts at header → main → op-log |
-| Search / dialog / promote | Existing | Unchanged from visual-parity (**search inherited — present in production header; mock may show inert field**) |
+| Search / dialog / promote | Existing | Unchanged from visual-parity (**search inherited; present in production header; mock may show inert field**) |
 
 ### Accessibility
 
@@ -202,7 +202,7 @@ Mirror `fractal-playground/lib/shell/modes.ts` `OPERATE_NAV`:
 - Live item: `aria-current="page"`. Stubs: **`aria-disabled="true"` without native `disabled`** so they stay focusable; accessible name = “{Label} (coming soon)” (visible sr-only or `aria-label`).
 - Focus order (standalone): sidebar → header (incl. search) → main → op-log.
 - Focus order (embed): header → main → op-log.
-- Icon + visible text label — no tooltip dependency for stubs.
+- Icon + visible text label; no tooltip dependency for stubs.
 - `prefers-reduced-motion`: no nav hover animation beyond color.
 
 ## Do's and Don'ts
@@ -224,9 +224,9 @@ Mirror `fractal-playground/lib/shell/modes.ts` `OPERATE_NAV`:
 
 1. AC: `GET /` serves admin; `GET /admin` → `/` (301/302 or rewrite); CLI opens `/`.
 2. AC: sidebar 200px; 8 `OPERATE_NAV` items; VCS `aria-current`; stubs `aria-disabled` (no native `disabled`), accessible name “… (coming soon)”.
-3. AC: e2e — `/` has Operate nav + VCS current; embed hides sidebar; existing admin e2e migrate paths.
+3. AC: e2e; `/` has Operate nav + VCS current; embed hides sidebar; existing admin e2e migrate paths.
 4. Decide fate of legacy `lanes.html` on `/` (recommend `/lanes` fallback or keep behind flag).
-5. Stub click: **locked** — no navigation; `title` / `aria-label` only (simplest).
+5. Stub click: **locked**; no navigation; `title` / `aria-label` only (simplest).
 6. Out of scope AC: datatable, collections materialization, kill-gate.
 
 ### Cohesion (pre-architect · synthesist)
@@ -246,5 +246,5 @@ Mirror `fractal-playground/lib/shell/modes.ts` `OPERATE_NAV`:
 - kanban widths: mock 300–340 (visual-parity)
 - header order: view toggle then search (matches production / design.md)
 - design.md lint: N/A (optional; not run this pass)
-- design critique: 2 rounds — prior majors cleared; round-2 PASS (0 blockers, 0 majors)
+- design critique: 2 rounds; prior majors cleared; round-2 PASS (0 blockers, 0 majors)
 - cohesion: synthesist pre-architect audit folded into Open for Architect

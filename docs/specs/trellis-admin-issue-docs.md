@@ -1,10 +1,10 @@
-# Spec: turtle-admin — issue dialog long-form docs (read projection)
+# Spec: turtle-admin; issue dialog long-form docs (read projection)
 
 **Status:** Ready for impl (pending graph issues TRL-463/464)  
 **Date:** 2026-10-02  
 **Proposal:** TRL-466  
 **Spec issue:** TRL-467  
-**ADR:** [0057-issue-dialog-docs-read-projection](../adr/0057-issue-dialog-docs-read-projection.md) (Proposed — implement after Accepted)  
+**ADR:** [0057-issue-dialog-docs-read-projection](../adr/0057-issue-dialog-docs-read-projection.md) (Proposed; implement after Accepted)  
 **Amends contract:** [0053-admin-operator-api](../adr/0053-admin-operator-api.md) §2, §6  
 **Labels:** `spec`, `admin`, `needs-e2e`, `cohesion`  
 **Repos:** trellis-node (`kernel/`), turtlenote `app-svelte` + `app-sdk`, `os/admin`
@@ -21,7 +21,7 @@ rows in the UI-state db (ADR 0053 §6).
 ## 2. Non-goals (v1)
 
 - Editable dialog body or HTTP append to `journal.md`
-- Asset proxy for `diagram.png` / wiki-links (degraded rendering — ADR 0057 §3)
+- Asset proxy for `diagram.png` / wiki-links (degraded rendering; ADR 0057 §3)
 - `trellis issue doc --journal` scaffold
 - Live filesystem watch (staleness until dialog reopen if edit is not op-logged)
 
@@ -47,7 +47,7 @@ sequenceDiagram
 | `app-svelte` | `ThingContext.recordBodyMode`; skip `RecordBody` subscription; markdown init |
 | `os/admin` | `AdminApi.getIssueDocs`, dialog loader, version-skew fallback, Playwright e2e |
 
-## 4. Engine — `issue-doc.ts`
+## 4. Engine; `issue-doc.ts`
 
 ### 4.1 `assertIssueDocId(id: string): string`
 
@@ -59,7 +59,7 @@ sequenceDiagram
 HTTP handler: run **after** `decodeURIComponent` on URL segment. Invalid → **400**
 `{ "error": "invalid issue id" }`.
 
-### 4.2 Confinement (normative — ADR 0057 §7)
+### 4.2 Confinement (normative; ADR 0057 §7)
 
 - `canonicalRoot = realpath(join(rootPath, 'docs', 'issues'))` (+ platform `sep` for prefix checks).
 - Files: `join(canonicalRoot, safeSegment, 'journal.md' | 'summary.md')`.
@@ -78,7 +78,7 @@ HTTP handler: run **after** `decodeURIComponent` on URL segment. Invalid → **4
 
 Response shape: ADR 0057 §6 (`rendered` is authoritative for clients).
 
-## 5. HTTP — `lanes-dashboard.ts`
+## 5. HTTP; `lanes-dashboard.ts`
 
 Insert route **after** existing `GET /api/issues/:id` match:
 
@@ -135,13 +135,13 @@ On 404 from `/docs`: fall back to `GET /api/issues/:id` for `description` + empt
 
 - On dialog open.
 - On SSE `snapshot` while dialog open (`AdminApi.watch` pattern).
-- Document staleness in UI (optional footnote) — no fs watch.
+- Document staleness in UI (optional footnote); no fs watch.
 
 ### 7.4 Catalog
 
 When body uses `description`, unhide `description` in `issueCatalog` (dynamic or always visible when non-empty).
 
-### 7.5 E2E (P3 — owner: admin)
+### 7.5 E2E (P3; owner: admin)
 
 - Add `@playwright/test`, `playwright.config.ts`, `bun run test:e2e`.
 - Fixture repo(s) under `admin/e2e/fixtures/` with Trellis init + issue + `docs/issues/<id>/journal.md`.

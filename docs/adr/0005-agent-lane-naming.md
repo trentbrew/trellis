@@ -45,7 +45,7 @@ Rename the VCS isolation primitive to **Agent Lane** (noun: **lane**).
 | `kernel/src/vcs/workspace.ts` | **`kernel/src/vcs/lane.ts`** |
 | `TRELLIS_WORKSPACE_ID` env | **`TRELLIS_LANE_ID`** |
 
-**Workspace** remains reserved for repo-level / tenant-level / desk-level scope — not per-agent op isolation.
+**Workspace** remains reserved for repo-level / tenant-level / desk-level scope; not per-agent op isolation.
 
 ### Rationale for "Lane"
 
@@ -60,7 +60,7 @@ Alternatives considered: **Room** (CLI `rm` collision), **Island** (weaker paral
 **Positive**
 
 - Unambiguous docs, issues, and agent instructions.
-- W1 implementation uses final names — no rename pass after engine wiring.
+- W1 implementation uses final names; no rename pass after engine wiring.
 
 **Negative**
 
@@ -73,7 +73,7 @@ Alternatives considered: **Room** (CLI `rm` collision), **Island** (weaker paral
 1. Rename kernel module `workspace.ts` → `lane.ts`; `WorkspaceOpLog` → `LaneOpLog`.
 2. Plan doc: `agent-workspaces.md` → `agent-lanes.md` (stub redirect at old path).
 3. Trail marker + ecosystem graph work id updated.
-4. No on-disk `.trellis/lanes/` exists in production yet — no data migration.
+4. No on-disk `.trellis/lanes/` exists in production yet; no data migration.
 
 ## References
 

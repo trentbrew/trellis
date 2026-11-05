@@ -1,6 +1,6 @@
 # TRL-479 journal
 
-## 2026-10-12 — executor · impl (slice 3 graduation)
+## 2026-10-12; executor · impl (slice 3 graduation)
 
 - Relocated `experiments/formula-core-v1` → `src/formula` (core, adapters, SPEC) and corpus → `test/formula` (runner + matrix) via `git mv`; experiments dir removed.
 - Added `./formula` export (mirrors `./cms` shape) + `src/formula/index.ts` build entry; `build:formula` chained into `build`.

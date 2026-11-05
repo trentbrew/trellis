@@ -1,4 +1,4 @@
-# Spec: TML Phase 3 — shell registry (one template, multiple views)
+# Spec: TML Phase 3; shell registry (one template, multiple views)
 
 **Status:** Ready for impl\
 **Date:** 2026-07-21\
@@ -12,7 +12,7 @@
 Admin kanban projects the same **Issue card** shell three times (backlog /
 in-progress / done). Each column duplicates ~25 lines of identical TML bindings
 (`issue.id`, `issue.title`, `issue.priority`, …). Editing one binding requires
-editing three — drift risk and violates the Thing/Shell model in
+editing three; drift risk and violates the Thing/Shell model in
 `docs/planning/tml-thing-shell-primitive.md`.
 
 Phase 3 introduces a **shell registry**: named HTML templates cloned into
@@ -20,7 +20,7 @@ projection hosts before `mount()`. One edit to the issue card shell reflects in
 every kanban column that references it.
 
 **Non-goal this phase:** full vantage → shell resolution from `--vantage` CSS
-(stub only). Lane grid vs table row unification is stretch — issue card is the AC
+(stub only). Lane grid vs table row unification is stretch; issue card is the AC
 gate.
 
 ---
@@ -35,14 +35,14 @@ gate.
 
 Count today: **3×** `tml-text="issue.title"` in `admin.html`.
 
-Grid/table lane shells differ structurally (`article.lane-card` vs `tr`) — defer
+Grid/table lane shells differ structurally (`article.lane-card` vs `tr`); defer
 to Phase 3b; registry API must allow multiple shell ids.
 
 ---
 
 ## 3. Contract
 
-### 3.1 Module — `src/ui/tml-shell-registry.ts`
+### 3.1 Module; `src/ui/tml-shell-registry.ts`
 
 ```typescript
 export type ShellId = 'issue.card' | 'lane.card' | 'lane.row'; // lane.* registered, not required AC
@@ -53,15 +53,15 @@ export function registerShell(id: ShellId, source: HTMLTemplateElement | Element
 /** Clone registered shell into every [data-shell-slot="<id>"] under root. Idempotent. */
 export function hydrateShellSlots(root: Element): void;
 
-/** Test helper — clear registry between tests. */
+/** Test helper; clear registry between tests. */
 export function clearShellRegistry(): void;
 ```
 
 - Registry is in-memory `Map<ShellId, Element>`.
 - `hydrateShellSlots` replaces each slot's **innerHTML** with `template.content.cloneNode(true)` (or clone of registered element).
-- Unknown shell id → `console.error` + skip slot (do not throw — mount should degrade).
+- Unknown shell id → `console.error` + skip slot (do not throw; mount should degrade).
 
-### 3.2 Markup — `admin.html`
+### 3.2 Markup; `admin.html`
 
 **Canonical template** (single source):
 
@@ -86,16 +86,16 @@ export function clearShellRegistry(): void;
 ```
 
 After `hydrateShellSlots`, each column's slot contains the cloned `button.issue-card`
-— `setupContainer` row template behaviour unchanged.
+:  `setupContainer` row template behaviour unchanged.
 
 Optional (non-blocking): register `#shell-lane-card` for grid; table row stays
 inline this phase.
 
-### 3.3 Connect hook — `admin-shell.ts`
+### 3.3 Connect hook; `admin-shell.ts`
 
 Call `hydrateShellSlots(opts.mountRoot)` **immediately before** `mount()` in both
 web and peer `connect()` paths. Shell templates live inside `mountRoot` subtree
-(or document — registry reads `#shell-issue-card` at connect time).
+(or document; registry reads `#shell-issue-card` at connect time).
 
 ```typescript
 import { hydrateShellSlots } from './tml-shell-registry.js';
@@ -124,18 +124,18 @@ No runtime vantage selection in Phase 3.
 
 | File | Action |
 | ---- | ------ |
-| `src/ui/tml-shell-registry.ts` | **new** — register + hydrate |
+| `src/ui/tml-shell-registry.ts` | **new**; register + hydrate |
 | `src/ui/admin-shell.ts` | call `hydrateShellSlots` before `mount` |
 | `src/ui/admin.html` | `<template id="shell-issue-card">`; kanban slots |
 | `src/ui/lanes-dashboard.ts` | serve registry module if bundled separately |
 | `src/ui/ui-dev.ts` | add registry to dev entries if needed |
-| `test/ui/tml-shell-registry.test.ts` | **new** — register, hydrate, clone count |
+| `test/ui/tml-shell-registry.test.ts` | **new**; register, hydrate, clone count |
 
 ---
 
 ## 5. Tests
 
-### 5.1 Unit — `test/ui/tml-shell-registry.test.ts`
+### 5.1 Unit; `test/ui/tml-shell-registry.test.ts`
 
 | Case | Assert |
 | ---- | ------ |

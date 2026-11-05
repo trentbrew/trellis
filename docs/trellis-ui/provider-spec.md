@@ -1,4 +1,4 @@
-# Provider & Context — @trellis.computer/ui Phase 2
+# Provider & Context; @trellis.computer/ui Phase 2
 
 **Status:** spec
 **Date:** 2026-07-24
@@ -20,12 +20,12 @@ components depend on.
 packages/core/src/
 ├── provider.ts        # trellis-provider Web Component (NEW)
 ├── context.ts         # getTrellisClient helper (NEW)
-└── signal-utils.ts    # Already exists — no changes needed
+└── signal-utils.ts    # Already exists; no changes needed
 ```
 
 ---
 
-## 1. `<trellis-provider>` — Context Provider Web Component
+## 1. `<trellis-provider>`; Context Provider Web Component
 
 ### API
 
@@ -36,19 +36,19 @@ packages/core/src/
 ```
 
 **Attributes:**
-- `url` (string, required) — Trellis server URL. Reflects to attribute. When
+- `url` (string, required); Trellis server URL. Reflects to attribute. When
   changed, disconnects old client, creates new client, reconnects.
-- `api-key` (string, optional) — Authentication key. Reflects to attribute.
-- `tenant-id` (string, optional) — Multi-tenant identifier. Reflects to
+- `api-key` (string, optional); Authentication key. Reflects to attribute.
+- `tenant-id` (string, optional); Multi-tenant identifier. Reflects to
   attribute.
 
 **Properties:**
-- `client: TrellisDb | null` — Public read-only access to the created client
+- `client: TrellisDb | null`; Public read-only access to the created client
   instance.
 
 **Events:**
-- `trellis-connected` — Fired when client connects successfully
-- `trellis-disconnected` — Fired when client disconnects or url/api-key changes
+- `trellis-connected`; Fired when client connects successfully
+- `trellis-disconnected`; Fired when client disconnects or url/api-key changes
 
 ### Context Traversal
 
@@ -58,7 +58,7 @@ Child components locate the nearest ancestor provider via DOM traversal:
 const provider = (el as HTMLElement).closest('trellis-provider')
 ```
 
-Not Lit context protocol — `Element.closest()` is simpler, zero-dependency, and
+Not Lit context protocol; `Element.closest()` is simpler, zero-dependency, and
 works across shadow DOM boundaries when `composed: true`.
 
 ### Implementation
@@ -91,7 +91,7 @@ customElements.define('trellis-provider', TrellisProvider)
 
 ---
 
-## 2. `getTrellisClient()` — Context Helper
+## 2. `getTrellisClient()`; Context Helper
 
 Programmatic access to the nearest provider's client from any framework:
 
@@ -121,11 +121,11 @@ export function getTrellisClient(el: HTMLElement): TrellisDb | null {
 
 The existing `packages/core/src/signal-utils.ts` (written in Phase 1) provides:
 
-- `bindText(signal, element)` — Bind to textContent
-- `bindClass(signal, element, map)` — Bind to class list
-- `bindAttr(signal, element, name)` — Bind to boolean attribute
-- `bindVisible(signal, element)` — Bind to display toggle
-- `bindList(signal, container, renderItem)` — Bind array to DOM
+- `bindText(signal, element)`; Bind to textContent
+- `bindClass(signal, element, map)`; Bind to class list
+- `bindAttr(signal, element, name)`; Bind to boolean attribute
+- `bindVisible(signal, element)`; Bind to display toggle
+- `bindList(signal, container, renderItem)`; Bind array to DOM
 
 **Validation needed:**
 - Ensure all functions work correctly within Lit's lifecycle (connectedCallback,
@@ -134,7 +134,7 @@ The existing `packages/core/src/signal-utils.ts` (written in Phase 1) provides:
   called
 - Type compatibility with `Signal<T>` from `trellis/browser`
 
-No code changes expected — the existing implementation should be compatible.
+No code changes expected; the existing implementation should be compatible.
 Add tests if gaps found.
 
 ---
@@ -153,8 +153,8 @@ The `packages/core/vite.config.js` already builds in library mode. Verify:
 
 ## Dependencies
 
-- `lit` (devDependency in packages/core) — already in package.json
-- `trellis/browser` — peer dependency (TrellisDb client)
+- `lit` (devDependency in packages/core); already in package.json
+- `trellis/browser`; peer dependency (TrellisDb client)
 - No new npm packages required
 
 ## Acceptance Criteria

@@ -13,19 +13,19 @@ Run before every npm publish. Downstream sync uses
 
 ## Downstream (manifest consumers)
 
-- [ ] `node scripts/sync-downstream.mjs` — copy skills, verify pins
-- [ ] **create-trellis** — publish `0.2.0` after kernel npm tag
-- [ ] **trellis-docs** — deploy www (changelog + agent-coordination guide)
-- [ ] **turtlecode** — `bun script/sync-trellis-core.ts --pack` + smoke tests
+- [ ] `node scripts/sync-downstream.mjs`; copy skills, verify pins
+- [ ] **create-trellis**; publish `0.2.0` after kernel npm tag
+- [ ] **trellis-docs**; deploy www (changelog + agent-coordination guide)
+- [ ] **turtlecode**; `bun script/sync-trellis-core.ts --pack` + smoke tests
 
 ## Publish
 
-- [ ] **`just publish`** — the single kernel ceremony: `ship-check` + `test:ship` +
+- [ ] **`just publish`**; the single kernel ceremony: `ship-check` + `test:ship` +
       `build` + structural validate, then tag & push → CI (`publish-npm.yml`) publishes
       with provenance. `--local` to publish from this machine (npm); `--dry-run` for
       gates only.
 - [ ] **Ecosystem train** (kernel + downstream consumers): `just ship --verify` →
-      `just ship-release` — also syncs studio/turtlecode/cloud pins.
+      `just ship-release`; also syncs studio/turtlecode/cloud pins.
 - [ ] Verify `npx trellis@latest --version` shows the new version
 
 ### Ship report
@@ -43,4 +43,4 @@ through: `just ship --verify --full-test`).
 - [ ] **Refresh desk `release.json`** (`~/TURTLE/OS/release.json`): set `trellis` +
       `turtlecode` to the just-published npm versions (**pins = published latest**),
       then commit the desk. This is the only place cross-repo version drift is
-      visible — leaving it stale hides the drift it exists to surface.
+      visible; leaving it stale hides the drift it exists to surface.

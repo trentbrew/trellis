@@ -1,5 +1,5 @@
 ---
-title: TurtleDB Cloud C0 — managed room node
+title: TurtleDB Cloud C0; managed room node
 description: Spec for first managed Trellis server deploy path and metering hooks foundation.
 created: 2026-06-10
 updated: 2026-06-10
@@ -11,7 +11,7 @@ related:
   - ../../cloud/docs/turtledb.md
 ---
 
-# TurtleDB Cloud C0 — managed room node
+# TurtleDB Cloud C0; managed room node
 
 **Status:** spec  
 **Issue:** TRL-37  
@@ -75,7 +75,7 @@ App / demo sidecar ──HTTP/WS──────────►└─ Blob sto
 
 ---
 
-## C1 — metering hooks (same issue, phase 2)
+## C1; metering hooks (same issue, phase 2)
 
 Implement counters defined in [turtle-cloud-pricing.md](./turtle-cloud-pricing.md):
 
@@ -96,7 +96,7 @@ Daily cron on room node:
 
 ### Egress
 
-- Wrap WebSocket `send` in `SubscriptionManager` — count JSON bytes
+- Wrap WebSocket `send` in `SubscriptionManager`; count JSON bytes
 - Wrap `GET /files/:hash` response bodies
 
 ### Rollup
@@ -109,7 +109,7 @@ Daily cron on room node:
 
 ## Acceptance criteria
 
-### C0 — deploy path
+### C0; deploy path
 
 - [x] `trellis deploy --name <slug> --stub` writes `.trellis-db.json` with `mode: remote` (local dry-run)
 - [ ] `trellis deploy --name <slug>` completes against Sprites and writes `.trellis-db.json` with `mode: remote`
@@ -121,7 +121,7 @@ Daily cron on room node:
 - [ ] Broker live provision (`TURTLEDB_PROVISION_LIVE=1`) completes against Sprites
 - [ ] Docs: link from `docs/planning/turtle-cloud-pricing.md` and `cloud/docs/turtledb.md`
 
-### C1 — metering
+### C1; metering
 
 - [x] `TenantPool` / server records `graph_io` increment on write + query (testable via unit test with mock meter)
 - [x] Daily storage sampler returns byte totals per tenant (integration test with temp db + blob dir)
@@ -156,7 +156,7 @@ Errors: `409 name_taken`, `403 plan_limit`, `503 provider_unavailable`
 
 ### `GET /turtledb/projects`
 
-Lists current user's provisioned projects (no apiKey in response — rotate via separate route later).
+Lists current user's provisioned projects (no apiKey in response; rotate via separate route later).
 
 ---
 
@@ -171,9 +171,9 @@ Lists current user's provisioned projects (no apiKey in response — rotate via 
 
 ## Rollout
 
-1. **Internal dogfood** — deploy `demo/realtime-app` sidecar to Sprite via CLI
-2. **Broker alpha** — Studio superadmin can provision from dashboard tile
-3. **Public hobby tier** — rate limit + 1 project cap before Stripe
+1. **Internal dogfood**; deploy `demo/realtime-app` sidecar to Sprite via CLI
+2. **Broker alpha**; Studio superadmin can provision from dashboard tile
+3. **Public hobby tier**; rate limit + 1 project cap before Stripe
 
 ---
 

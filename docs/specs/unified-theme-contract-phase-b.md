@@ -1,12 +1,12 @@
-# Spec: Unified theme contract — Phase B
+# Spec: Unified theme contract; Phase B
 
 **Status:** Ready for impl  
 **Date:** 2026-07-21  
 **Proposal:** TRL-159  
-**Design:** TRL-160 —
+**Design:** TRL-160 : 
 [`unified-theme-contract-phase-b_design.md`](../artifacts/unified-theme-contract-phase-b_design.md) ·
 [`unified-theme-contract-phase-b_mockup.html`](../artifacts/unified-theme-contract-phase-b_mockup.html)  
-**Prior:** Phase A —
+**Prior:** Phase A : 
 [`unified-theme-contract.md`](./unified-theme-contract.md) (shipped)
 
 ---
@@ -110,7 +110,7 @@ accent glow at 12%).
 
 Do not overload `--surface-info-strong` for both issues and milestones.
 
-### 3.6 Fonts (system stacks — locked)
+### 3.6 Fonts (system stacks; locked)
 
 ```css
 --font-family-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
@@ -176,7 +176,7 @@ if (path === '/theme/runtime-theme.css') {
 }
 ```
 
-`client.html` is served only by this server — without this route the visualizer
+`client.html` is served only by this server; without this route the visualizer
 migration is dead on arrival.
 
 ### 4.3 Build copy
@@ -203,7 +203,7 @@ Ensure `package.json` build already copies `runtime-theme.css` into `dist/ui/`
    may cache once after theme load.
 8. Timeline `KIND_COLORS` (and similar): entity-typed entries must use
    `--entity-*`; non-entity kind tints may use status tokens
-   (`--surface-info-strong`, etc.) or page-local non-purple constants — document
+   (`--surface-info-strong`, etc.) or page-local non-purple constants; document
    in a one-line comment if page-local.
 9. Prefer CSS `var(--font)` / `var(--mono)` over hardcoded `'Inter'` in D3 text
    attrs where cheap.
@@ -229,7 +229,7 @@ Ensure `package.json` build already copies `runtime-theme.css` into `dist/ui/`
 
 ## 7. Tests
 
-### 7.1 Unit — extend `test/ui/runtime-theme.test.ts`
+### 7.1 Unit; extend `test/ui/runtime-theme.test.ts`
 
 Assert presence of:
 
@@ -250,7 +250,7 @@ the path). Prefer a real handler/resolver test if cheap.
 
 Run: `pnpm test test/ui/runtime-theme.test.ts`
 
-### 7.2 E2E — `e2e/tml-lanes.spec.cjs`
+### 7.2 E2E; `e2e/tml-lanes.spec.cjs`
 
 Keep green after Studio value shift:
 
@@ -269,7 +269,7 @@ Run: `pnpm check`
 - [ ] `client.html` has no `:root` token block; links theme; `data-trellis-band="L3"`
 - [ ] `rg '#6d5bfa|109,\s*91,\s*250' src/ui/client.html` empty
 - [ ] No `fonts.googleapis.com` in `client.html` / `lanes.html`
-- [ ] `ENTITY_COLORS` (or successor) reads CSS vars — no hardcoded entity hex map
+- [ ] `ENTITY_COLORS` (or successor) reads CSS vars; no hardcoded entity hex map
 - [ ] `server.ts` serves theme CSS; `trellis ui --legacy` loads without missing stylesheet
 - [ ] Cmd focus + reduced-motion drawer/live-dot per §5
 - [ ] No fractal / `--ui-vantage` runtime wiring

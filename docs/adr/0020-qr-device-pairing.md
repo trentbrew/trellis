@@ -32,7 +32,7 @@ latch on key access, not a replacement for crypto identity.
 | Root           | Ed25519 `did:key` identity                                    | Who ops are attributed to                   |
 | Cross-device   | Payload / short-code **device pairing** (QR encode = Phase 1) | Which device keys may sign as that identity |
 | Hosted account | Magic email (cloud only)                                      | Studio login, billing, invites              |
-| Unlock (later) | Passkey / platform authenticator                              | Local unlock of key material — separate ADR |
+| Unlock (later) | Passkey / platform authenticator                              | Local unlock of key material; separate ADR |
 
 
 
@@ -66,7 +66,7 @@ Under `<repo>/.trellis/`:
 
 | Path                    | Contents                                                                                                               |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `identity.json`         | **Unchanged** — root identity keypair only. Never overwritten by pairing.                                              |
+| `identity.json`         | **Unchanged**; root identity keypair only. Never overwritten by pairing.                                              |
 | `devices/registry.json` | Authorized devices for this install’s view: `{ identityEntityId, devices: DeviceRecord[] }`                            |
 | `devices/local.json`    | This machine’s device keypair + `deviceId` + linked `identityEntityId` (created on join; absent on root-only installs) |
 | `devices/challenges/`   | Ephemeral challenge files (or in-memory + single file); deleted on consume/expiry                                      |
@@ -77,7 +77,7 @@ Under `<repo>/.trellis/`:
 
 ### DeviceAuthorization schema (portable artifact)
 
-Signed JSON (or CBOR later) returned **to Device B** after A approves — this is
+Signed JSON (or CBOR later) returned **to Device B** after A approves; this is
 how B learns approval on pure OOB:
 
 ```ts
@@ -86,7 +86,7 @@ type DeviceAuthorization = {
   deviceId: string; // opaque id (ulid/uuid)
   identityEntityId: string; // identity:<did:key:…>
   did: string; // did:key of identity
-  devicePublicKey: string; // base64 SPKI (or raw — document one)
+  devicePublicKey: string; // base64 SPKI (or raw; document one)
   deviceLabel?: string;
   issuedAt: string; // ISO
   expiresAt?: string; // optional soft expiry; omit = no expiry
@@ -178,7 +178,7 @@ without a device registry remains valid (`signedWith: "root"` or omit
 ### Explicitly deferred
 
 - Passkey / Touch ID unlock of local keys (follow-on ADR).
-- Full multi-device recovery if all devices lost (recovery codes / seed —
+- Full multi-device recovery if all devices lost (recovery codes / seed : 
 follow-on).
 - Graph-replicated device registry / cross-device revoke (Phase 3).
 - Magic-email linking of hosted accounts to `did:key` (cloud surface).

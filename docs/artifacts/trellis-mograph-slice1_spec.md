@@ -1,4 +1,4 @@
-# Spec: Trellis mograph explainer — slice 1
+# Spec: Trellis mograph explainer; slice 1
 
 **Status:** Spec ready for implementation  
 **Parent:** TRL-429  
@@ -11,7 +11,7 @@
 
 ## Intent
 
-Ship two Trellis education demos in the existing mograph React app: **Genealogy Traversal** (Matthew begats BFS) and **EAV Facts** (composer task assert). Static JSON fixtures only — no runtime `trellis-node` dependency.
+Ship two Trellis education demos in the existing mograph React app: **Genealogy Traversal** (Matthew begats BFS) and **EAV Facts** (composer task assert). Static JSON fixtures only; no runtime `trellis-node` dependency.
 
 ---
 
@@ -19,18 +19,18 @@ Ship two Trellis education demos in the existing mograph React app: **Genealogy 
 
 | Path | Action |
 | ---- | ------ |
-| `src/mograph/fixtures/matthew-genealogy.json` | **create** — topology for TreeVisualizer |
-| `src/mograph/fixtures/composer-task-1.json` | **create** — 6 EAV facts for task-1 |
-| `src/mograph/fixtures/genealogyTopology.js` | **create** — helper: load fixture + map person names |
-| `src/mograph/playbooks/eav-assert.js` | **create** — `generateEAVAssertPlaybook(facts, codeLines?)` |
-| `src/mograph/playbooks/eav-assert.test.js` | **create** — unit tests |
-| `src/mograph/components/FactTriplePanel.jsx` | **create** — triple row visualizer |
-| `src/mograph/components/FactTriplePanel.test.jsx` | **create** — render + row count |
-| `src/mograph/components/TreeVisualizer.jsx` | **modify** — optional `title` on nodes, label truncate helper |
-| `src/components/examples/GenealogyExample.jsx` | **create** — scene wrapper |
-| `src/components/examples/EAVExample.jsx` | **create** — scene wrapper |
-| `src/App.jsx` | **modify** — Trellis nav group + tab routes |
-| `e2e/mograph-trellis.spec.js` | **create** — seek snapshot tests |
+| `src/mograph/fixtures/matthew-genealogy.json` | **create**; topology for TreeVisualizer |
+| `src/mograph/fixtures/composer-task-1.json` | **create**; 6 EAV facts for task-1 |
+| `src/mograph/fixtures/genealogyTopology.js` | **create**; helper: load fixture + map person names |
+| `src/mograph/playbooks/eav-assert.js` | **create**; `generateEAVAssertPlaybook(facts, codeLines?)` |
+| `src/mograph/playbooks/eav-assert.test.js` | **create**; unit tests |
+| `src/mograph/components/FactTriplePanel.jsx` | **create**; triple row visualizer |
+| `src/mograph/components/FactTriplePanel.test.jsx` | **create**; render + row count |
+| `src/mograph/components/TreeVisualizer.jsx` | **modify**; optional `title` on nodes, label truncate helper |
+| `src/components/examples/GenealogyExample.jsx` | **create**; scene wrapper |
+| `src/components/examples/EAVExample.jsx` | **create**; scene wrapper |
+| `src/App.jsx` | **modify**; Trellis nav group + tab routes |
+| `e2e/mograph-trellis.spec.js` | **create**; seek snapshot tests |
 
 **Do not modify:** `schema.js`, `catalog.js`, `generateScene.js` (deferred slice 2).
 
@@ -40,7 +40,7 @@ Ship two Trellis education demos in the existing mograph React app: **Genealogy 
 
 ### `matthew-genealogy.json`
 
-Export from `trellis-node/src/bible-claims/genealogies.ts` — **connected component only** reachable from `bible:person/abraham` (7 nodes: Abraham → … → Rehoboam). Omit Joseph/Jesus branch (disconnected in abbreviated seed).
+Export from `trellis-node/src/bible-claims/genealogies.ts`; **connected component only** reachable from `bible:person/abraham` (7 nodes: Abraham → … → Rehoboam). Omit Joseph/Jesus branch (disconnected in abbreviated seed).
 
 Shape (matches `TreeVisualizer` + `generateBFSPlaybook`):
 
@@ -81,13 +81,13 @@ From `demo/graph-composer/composer.ts` `SEED[0]`:
 
 ## Playbook contracts
 
-### Genealogy — reuse `generateBFSPlaybook(topology)`
+### Genealogy; reuse `generateBFSPlaybook(topology)`
 
 No new generator. Import topology from fixture; call existing `generateBFSPlaybook`.
 
 Event types consumed: `visit`, `edge-highlight`, `line`, `pointer` (existing).
 
-### EAV — `generateEAVAssertPlaybook(facts, options?)`
+### EAV; `generateEAVAssertPlaybook(facts, options?)`
 
 **Input:** `facts: Array<{ e, a, v }>`
 
@@ -170,7 +170,7 @@ Add to node render:
 title={node.title ?? undefined}
 ```
 
-Optional prop `truncateLabels={6}` — when set, truncate `String(node.value)` for display only (keep `title` as full name).
+Optional prop `truncateLabels={6}`; when set, truncate `String(node.value)` for display only (keep `title` as full name).
 
 GenealogyExample passes `nodeRadius={24}`, `truncateLabels={6}`.
 
@@ -230,19 +230,19 @@ test.beforeEach(async ({ page }) => {
 });
 ```
 
-**Test 1 — Genealogy tab mounts API:**
+**Test 1; Genealogy tab mounts API:**
 
 - Click nav "Genealogy Traversal" (or set tab via button text)
 - Wait for `__MOGRAPH_API__`
 - `getDuration()` > 0
 
-**Test 2 — EAV tab seek shows fact rows:**
+**Test 2; EAV tab seek shows fact rows:**
 
 - Click "EAV Facts"
 - Seek to 50% duration
 - Assert ≥1 fact row visible with text `task-1`
 
-**Test 3 — Genealogy seek visits node:**
+**Test 3; Genealogy seek visits node:**
 
 - Genealogy tab, seek to mid-duration
 - Scene `[data-scene-name="Trellis: Matthew Genealogy"]` contains node text `Abraham`
@@ -313,4 +313,4 @@ test:npm run test:e2e e2e/mograph-trellis.spec.js
 - [x] Machine-testable AC listed
 - [x] File map with create/modify paths
 - [x] Playbook event contract defined
-- [ ] `trellis issue check TRL-SPEC` (CLI blocked — Executor validates locally)
+- [ ] `trellis issue check TRL-SPEC` (CLI blocked; Executor validates locally)

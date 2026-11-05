@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdirSync, rmSync, existsSync } from 'fs';
+import { mkdirSync, mkdtempSync, rmSync, existsSync } from 'fs';
+import { tmpdir } from 'os';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { TrellisClient } from '../../src/client/vcs-client.js';
@@ -28,13 +29,22 @@ async function waitFor(
   }
 }
 
+const originalHome = process.env.HOME;
+let home: string;
+
 beforeEach(() => {
+  // Hermetic HOME: peers must not sign with the developer's person/device keys.
+  home = mkdtempSync(join(tmpdir(), 'vcs-client-home-'));
+  process.env.HOME = home;
   if (existsSync(TMP)) rmSync(TMP, { recursive: true });
   mkdirSync(REPO_PATH, { recursive: true });
 });
 
 afterEach(() => {
   if (existsSync(TMP)) rmSync(TMP, { recursive: true });
+  rmSync(home, { recursive: true, force: true });
+  if (originalHome === undefined) delete process.env.HOME;
+  else process.env.HOME = originalHome;
 });
 
 describe('TrellisClient (local mode)', () => {

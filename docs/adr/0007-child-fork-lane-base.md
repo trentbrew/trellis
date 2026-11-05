@@ -11,13 +11,13 @@
 
 ## Context
 
-[ADR 0006](./0006-session-fork-lane-mapping.md) maps session fork to a **sibling lane**: same integration `baseOpHash` as the parent, isolated journal for the new session. Product UX also needs **child fork** — continue from the parent lane’s **current head** (integration replay + parent journal applied), not from the original integration snapshot alone.
+[ADR 0006](./0006-session-fork-lane-mapping.md) maps session fork to a **sibling lane**: same integration `baseOpHash` as the parent, isolated journal for the new session. Product UX also needs **child fork**; continue from the parent lane’s **current head** (integration replay + parent journal applied), not from the original integration snapshot alone.
 
 A child lane with only `baseOpHash = parent.baseOpHash` omits parent journal ops from its materialized base → promote could overwrite parent work silently.
 
 ## Decision
 
-**Option A — virtual integration base** with `virtualBaseOpHash` on `LaneMeta` and materialization / promote updates in `lane-materialize.ts` and `lane-promote.ts`.
+**Option A; virtual integration base** with `virtualBaseOpHash` on `LaneMeta` and materialization / promote updates in `lane-materialize.ts` and `lane-promote.ts`.
 
 ### Child fork semantics
 
@@ -58,9 +58,9 @@ CLI: `trellis lane fork <parent> --child [--session <id>]`
 
 ## Open questions (deferred)
 
-1. Can child fork from a parent that already has a sibling-fork child? **Yes** — no kernel restriction in v1.
-2. Should parent lane status change on child fork? **No** — remains `active`; Studio leaves parent session before child enter.
-3. TurtleDB draft session: hosted-only first? **TBD** — kernel support is repo-local.
+1. Can child fork from a parent that already has a sibling-fork child? **Yes**; no kernel restriction in v1.
+2. Should parent lane status change on child fork? **No**; remains `active`; Studio leaves parent session before child enter.
+3. TurtleDB draft session: hosted-only first? **TBD**; kernel support is repo-local.
 
 ## Consequences
 
@@ -73,7 +73,7 @@ CLI: `trellis lane fork <parent> --child [--session <id>]`
 **Negative**
 
 - Child promote without parent promote may leave parent journal unpromoted on integration.
-- Child enter replays integration through `baseOpHash` (not full integration cache) — acceptable W5 cost.
+- Child enter replays integration through `baseOpHash` (not full integration cache); acceptable W5 cost.
 
 ## References
 

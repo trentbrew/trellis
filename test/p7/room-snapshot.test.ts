@@ -1,5 +1,6 @@
-import { describe, test, expect, beforeEach } from 'vitest';
-import { mkdirSync, rmSync } from 'fs';
+import { describe, test, expect, beforeEach, afterEach } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
 import { join } from 'path';
 import { TrellisVcsEngine } from '../../src/engine.js';
 import { SyncRoomCore } from '../../src/sync/room-core.js';
@@ -21,8 +22,20 @@ async function initPeer(name: string): Promise<TrellisVcsEngine> {
 }
 
 describe('SyncRoomCore snapshot catch-up', () => {
+  const originalHome = process.env.HOME;
+  let home: string;
+
   beforeEach(() => {
+    // Hermetic HOME: peers must not sign with the developer's person/device keys.
+    home = mkdtempSync(join(tmpdir(), 'room-snapshot-home-'));
+    process.env.HOME = home;
     rmSync(TEST_ROOT, { recursive: true, force: true });
+  });
+
+  afterEach(() => {
+    rmSync(home, { recursive: true, force: true });
+    if (originalHome === undefined) delete process.env.HOME;
+    else process.env.HOME = originalHome;
   });
 
   test('buildSnapshot truncates large logs', async () => {

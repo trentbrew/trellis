@@ -1,7 +1,7 @@
-# Lane GC Regression — Recovery Findings & Plan
+# Lane GC Regression; Recovery Findings & Plan
 
 > **Date:** 2026-08-02
-> **Status:** Investigation complete — recovery **not yet executed**
+> **Status:** Investigation complete; recovery **not yet executed**
 > **Reporter:** OpenCode session `ses_03bad3940ffeTR5fmNiEN7nH1I` (misc profile, lane `lane-5bb3f9d7`)
 > **Related:** TRL-407/408/409 (lane gc + session-end disposition), TRL-422 (wedge gallery), ADR 0014
 
@@ -22,7 +22,7 @@ lane-gc reshuffle:
 
 **Recovery status:** all dropped files are intact in `9801056` (reachable
 from 7 lane branches) and on disk in lane worktrees. The `justfile` was
-never lost (false alarm — matches HEAD, 32 recipes). This was a
+never lost (false alarm; matches HEAD, 32 recipes). This was a
 main-branch **regression**, not data loss.
 
 ## 2. Topology (verified read-only, 2026-08-02)
@@ -52,7 +52,7 @@ main-branch **regression**, not data loss.
 | `src/engine.ts` | **3-way merge** (base `d7a4204`) | Genuine two-way divergence: HEAD has lane-gc + 54fdc04 tsc fixes + ADR 0031/32 identity/project work (`resolveRepoIdentity`, `createProjectAttestation`); 9801056 has kernel work (`loadIdentity`, `startWatcherAt`, `integrateOps`, blob-resolver wiring). 194 HEAD-only lines |
 | `src/cli/lane.ts` | **3-way merge** (base `d7a4204`) | Same shape: HEAD has lane-gc + tsc fixes; 9801056 has `--dev` dashboard mode, `--force-lock`, richer status output. 159 HEAD-only lines |
 
-### The inspector fork (not a merge — a fork)
+### The inspector fork (not a merge; a fork)
 
 `HEAD` and `9801056` contain **two different inspector architectures**:
 
@@ -66,7 +66,7 @@ main-branch **regression**, not data loss.
 (in-flight, uncommitted) imports `../../src/inspector/index.js`
 (`inspectorRegistry.listComponents()`), `../../src/inspector/entries/index.js`
 (side-effect registration of 11 cores), and `RegisteredComponent.create/`
-`defaultConfig` — all 9801056-only API.
+`defaultConfig`; all 9801056-only API.
 
 **Critical trap:** `54fdc04` gutted `src/headless/core.ts` to
 `HeadlessCore<T> = any` + `HeadlessComponentType = string` to silence the
@@ -106,7 +106,7 @@ it must be **explicitly** restored. The wedge's `inspect.ts` imports
 ## 4. Systemic hazards found (all still live)
 
 1. **`git add -A` in `syncIntegrationToGit`** (`src/git/git-sync.ts`) sweeps
-   ALL dirty/untracked files into promote/close commits — a direct
+   ALL dirty/untracked files into promote/close commits; a direct
    violation of ADR 0014 ("Never `git add -A` on the shared tree").
    `syncIntegrationToGit` also does `git checkout ${branch}` +
    `materializeToDisk(rootPath, …)` on the **shared root**, so the per-lane
@@ -118,7 +118,7 @@ it must be **explicitly** restored. The wedge's `inspect.ts` imports
    `--apply`; only an op-count dirty-guard exists (0-op lanes drop
    silently). `promote` disposition auto-promotes on GC.
 4. **Git mutation guard is shell-level only** (Cursor/Claude/OpenCode
-   hooks) — a forced/direct git command bypasses it. There is no git-native
+   hooks); a forced/direct git command bypasses it. There is no git-native
    hook layer and no reconcile check.
 5. **Sprawl**: 300 lane journals (241 active), 245 `worktreePath` metas,
    180 git worktrees, 211+ `lane/*` branches. The git layer is a 1:1

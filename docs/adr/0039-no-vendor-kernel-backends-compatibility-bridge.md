@@ -1,4 +1,4 @@
-# ADR 0039: No vendor kernel backends — compatibility bridge instead
+# ADR 0039: No vendor kernel backends; compatibility bridge instead
 
 **Status:** Accepted
 **Date:** 2026-08-12
@@ -11,8 +11,8 @@
 
 ## Context
 
-Trellis competes with hosted sync stacks — Jazz, InstantDB, Convex, Firebase,
-ElectricSQL, etc. — on developer experience: typed rows, live lists, optimistic
+Trellis competes with hosted sync stacks; Jazz, InstantDB, Convex, Firebase,
+ElectricSQL, etc.; on developer experience: typed rows, live lists, optimistic
 UI, multiplayer. Those products also offer a fast path: sign up, npm install,
 data is live in minutes.
 
@@ -21,8 +21,8 @@ of record.** Servers may relay, accelerate, or back up; they must not own state.
 That principle is explicit in the README and in vision principle #7 (local-first,
 cloud-optional).
 
-A recurring question — especially during the gap between "thesis-complete kernel"
-and "market-complete onboarding" — is whether Trellis should ship **vendor
+A recurring question; especially during the gap between "thesis-complete kernel"
+and "market-complete onboarding"; is whether Trellis should ship **vendor
 kernel backends**: `KernelBackend` implementations backed by Convex, Firebase,
 Postgres/Neon, InstantDB, or similar, so teams can adopt Trellis semantics while
 keeping an existing hosted database as source of truth.
@@ -39,7 +39,7 @@ that replaces backend adapters.
 | **Realtime relay** | WS relay, DO relay, BroadcastChannel | Ephemeral presence/chat; optional blob relay |
 | **Hosted Trellis** | Sprites (`*.sprites.app`), Studio sandboxes | Run the **same** kernel remotely |
 | **Git bridge** | import / export / mirror sync | Coexist with existing file workflows |
-| **Cloud control plane** | InstantDB (Trellis Cloud dashboard only) | Workspace provisioning, auth tokens, metering — **not** the graph kernel |
+| **Cloud control plane** | InstantDB (Trellis Cloud dashboard only) | Workspace provisioning, auth tokens, metering; **not** the graph kernel |
 
 Third-party names appear in docs as **DX positioning** ("Jazz-style typed rows on
 our EAV graph"), not as integration targets.
@@ -48,13 +48,13 @@ our EAV graph"), not as integration targets.
 
 Several gaps are real and unrelated to missing Convex adapters:
 
-1. **Onboarding** — Trellis still expects you to run or provision a kernel (local
+1. **Onboarding**; Trellis still expects you to run or provision a kernel (local
    or Sprites), not a one-click BaaS dashboard.
-2. **Local live reads** — typed `liveEntities` / framework hooks are remote-mode
+2. **Local live reads**; typed `liveEntities` / framework hooks are remote-mode
    today; embedded-kernel live reads are planned.
-3. **First sync** — empty-remote bootstrap (ADR 0028) is still proposed; cold
+3. **First sync**; empty-remote bootstrap (ADR 0028) is still proposed; cold
    start between environments is harder than vendor BaaS defaults.
-4. **Mental model** — EAV graph + TQL + op-log vs document rows + vendor console.
+4. **Mental model**; EAV graph + TQL + op-log vs document rows + vendor console.
 
 Backend adapters would paper over (1)–(3) by making a vendor the write path,
 which trades the awkward middle for architectural contradiction.
@@ -85,23 +85,23 @@ Meet teams in today's reality without making vendors load-bearing:
 
 | Bridge | What it is | Load-bearing? |
 | ------ | ---------- | ------------- |
-| **Hosted Trellis** | Sprites, Studio sandboxes, `TrellisDb({ url })` | No — same kernel, you can export `.trellis` and leave |
-| **Relay-only cloud** | PartyKit, DO, WebSocket as dumb pipes for ops/presence | No — relay does not author ops |
-| **Git coexistence** | ADR 0038: git owns bytes, op-log owns semantics | No — git is optional mirror |
-| **Export / analytics** | Read replicas, JSON/Parquet snapshots, warehouse ETL | No — one-way, async, never write path |
-| **Typed SDK** | Jazz-competitive DX on persisted graph | N/A — competes on surface, not storage |
+| **Hosted Trellis** | Sprites, Studio sandboxes, `TrellisDb({ url })` | No; same kernel, you can export `.trellis` and leave |
+| **Relay-only cloud** | PartyKit, DO, WebSocket as dumb pipes for ops/presence | No; relay does not author ops |
+| **Git coexistence** | ADR 0038: git owns bytes, op-log owns semantics | No; git is optional mirror |
+| **Export / analytics** | Read replicas, JSON/Parquet snapshots, warehouse ETL | No; one-way, async, never write path |
+| **Typed SDK** | Jazz-competitive DX on persisted graph | N/A; competes on surface, not storage |
 
 Order of preference for "I need to ship multiplayer this week":
 
 1. **Remote Trellis server** (Sprites or self-hosted) + typed SDK
 2. **Local kernel** + git bridge if the team is file-centric
 3. **Relay-only** for ephemeral UI; sync for durable graph
-4. **Export bridge** only for reporting/BI — never for app writes
+4. **Export bridge** only for reporting/BI; never for app writes
 
 ### 3. InstantDB and similar in Trellis Cloud
 
-Using InstantDB (or any vendor) for **Trellis product metadata** — workspace
-status, billing, auth session tables — is in scope. Using the same vendor as the
+Using InstantDB (or any vendor) for **Trellis product metadata**; workspace
+status, billing, auth session tables; is in scope. Using the same vendor as the
 **customer graph kernel** is out of scope per §1.
 
 ### 4. Documentation obligation
@@ -116,10 +116,10 @@ The practitioner path for the awkward middle must be explicit:
 
 ### Positive
 
-- **Thesis stays honest** — no silent sovereignty regression.
-- **Clear integration surface** — transports and relays, not N× vendor backends.
+- **Thesis stays honest**; no silent sovereignty regression.
+- **Clear integration surface**; transports and relays, not N× vendor backends.
 - **Hosted Trellis is the answer** to "I don't want to run infra," not "plug into Neon."
-- **Stops recurring design debates** — documented non-goal.
+- **Stops recurring design debates**; documented non-goal.
 
 ### Negative
 
@@ -147,7 +147,7 @@ The practitioner path for the awkward middle must be explicit:
 
 No code required for acceptance. Follow-up work (separate issues):
 
-1. Practitioner guide (linked above) — **done with this ADR**
-2. Local embedded-kernel live reads — closes typed SDK remote-only gap
-3. ADR 0028 bootstrap — closes empty-remote cold start
+1. Practitioner guide (linked above); **done with this ADR**
+2. Local embedded-kernel live reads; closes typed SDK remote-only gap
+3. ADR 0028 bootstrap; closes empty-remote cold start
 4. Optional: `trellis export --format jsonl` polish for analytics bridge

@@ -1,4 +1,4 @@
-# ADR 0062: Authoring clients and generated projections — the lexicon is the contract
+# ADR 0062: Authoring clients and generated projections; the lexicon is the contract
 
 **Status:** Proposed
 **Date:** 2026-10-27
@@ -6,7 +6,7 @@
 **Depends on:** [0061](./0061-lexicons.md) (lexicons; a lexicon exports as a graph-ontology extension, §5)
 **Related:** [0048](./0048-types-relations-objects.md), [0045](./0045-user-defined-collections.md), [`graph-ontology/registry.json`](../../../graph-ontology/registry.json); Shablon ADRs [0001](../../../../lab/oss/shablon/docs/adr/0001-shablon-ui-kit-ui-thing-parity.md), [0003](../../../../lab/oss/shablon/docs/adr/0003-trellis-cms-pb-adapter.md), [0004](../../../../lab/oss/shablon/docs/adr/0004-system-collections-and-ontology-mapping.md), [0007](../../../../lab/oss/shablon/docs/adr/0007-graph-ontology-core-interchange.md), [0008](../../../../lab/oss/shablon/docs/adr/0008-shablon-generated-project-cms.md); turtlenote ADRs [0001](../../../../lab/apps/note/turtlenote/docs/adr/0001-workspace-ontology-navigation.md), [0004](../../../../lab/apps/note/turtlenote/docs/adr/0004-dual-plane-shell-sdk-distribution.md), [0005](../../../../lab/apps/note/turtlenote/docs/adr/0005-universal-entity-dialog.md)
 **Supersedes:** nothing
-**Superseded by:** —
+**Superseded by:** : 
 
 ## Context
 
@@ -73,10 +73,10 @@ experimental.
 
 | Option | Pros | Cons | Why not |
 | ------ | ---- | ---- | ------- |
-| A — two roles, lexicon contract (chosen) | One place to author; projections stay small and generated | The exporter (TRL-498) becomes load-bearing | — |
-| B — Shablon as a second authoring client | Reuses PocketBase's mature admin UI | Two schema editors over one graph; PocketBase's model can't express lexicons or shared relations | Drift |
-| C — one renderer for both | One codebase | Projections need a tiny, no-build, pinned runtime (Shablon 0008 §3); authoring needs a rich live client | Fits neither |
-| D — leave as is | No work | The duplicates in the table keep drifting | — |
+| A; two roles, lexicon contract (chosen) | One place to author; projections stay small and generated | The exporter (TRL-498) becomes load-bearing |; |
+| B; Shablon as a second authoring client | Reuses PocketBase's mature admin UI | Two schema editors over one graph; PocketBase's model can't express lexicons or shared relations | Drift |
+| C; one renderer for both | One codebase | Projections need a tiny, no-build, pinned runtime (Shablon 0008 §3); authoring needs a rich live client | Fits neither |
+| D; leave as is | No work | The duplicates in the table keep drifting |; |
 
 ## Consequences
 

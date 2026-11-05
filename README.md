@@ -1,7 +1,7 @@
 <div align="center">
   <img src="./logo.svg" alt="Trellis" width="88" height="88" />
   <h1>Trellis</h1>
-  <p><strong>The Agentic Framework</strong> — a local-first, event-sourced graph engine for code, agents, and decisions.</p>
+  <p><strong>The Agentic Framework</strong>: a local-first, event-sourced graph engine for code, agents, and decisions.</p>
   <p>
     <a href="https://trellis.computer">Docs</a> ·
     <a href="https://studio.trellis.computer">Studio</a> ·
@@ -16,15 +16,15 @@ Most agent frameworks pour everything into the reasoning engine and treat state
 as an afterthought. Trellis inverts that. It is the **system of record for
 decisions**: a persistent, queryable, auditable memory where every thought, tool
 call, and file change is an immutable operation in a causal graph. It runs fully
-offline — servers may relay, accelerate, or back up, but never own your state.
+offline. Servers may relay, accelerate, or back up, but never own your state.
 
-- **Durable memory** — every op is content-addressed and never rewritten or
+- **Durable memory**: every op is content-addressed and never rewritten or
   deleted.
-- **Explainable by default** — decision traces record not just _what_ happened,
+- **Explainable by default**: decision traces record not just _what_ happened,
   but _why_.
-- **Safe to explore** — branch state to try multiple paths, then merge or
+- **Safe to explore**: branch state to try multiple paths, then merge or
   discard.
-- **Realtime** — one write updates current state, durable history, and every
+- **Realtime**: one write updates current state, durable history, and every
   live subscriber.
 
 ## Install
@@ -102,7 +102,7 @@ trellis report              # derived worklog + epic→telos rollup
 
 ## Build a realtime app
 
-Scaffold a typed, live-graph app — React, Vue, or Svelte — backed by Trellis:
+Scaffold a typed, live-graph app (React, Vue, or Svelte) backed by Trellis:
 
 ```bash
 npm create trellis@latest
@@ -127,7 +127,7 @@ export const Task = defineType('Task', {
 ```
 
 A single mutation produces current state, durable history, and a realtime push
-to every subscriber — the same write path.
+to every subscriber; the same write path.
 
 ## API surface
 
@@ -138,7 +138,7 @@ The `trellis` package exposes focused subpaths.
 | Import                             | Purpose                                            |
 | ---------------------------------- | -------------------------------------------------- |
 | `trellis`                          | Top-level engine, kernel, scaffold helpers         |
-| `trellis/core`                     | `TrellisKernel` — graph CRUD, no VCS dependency    |
+| `trellis/core`                     | `TrellisKernel`; graph CRUD, no VCS dependency    |
 | `trellis/vcs`                      | Ops, branches, milestones, semantic diff           |
 | `trellis/sync`                     | Peer sync + bounded op-log readers                 |
 | `trellis/client`                   | Local + remote client SDK                          |
@@ -157,7 +157,7 @@ The `trellis` package exposes focused subpaths.
 | `trellis/format`                   | Shared terminal formatters for CLI + shells        |
 | `trellis/formula`                  | Frozen formula core + dialect adapters             |
 
-**UI primitives** — each ships `/core`, `/react`, `/vue`, `/svelte`, and `/vanilla` entries:
+**UI primitives**: each ships `/core`, `/react`, `/vue`, `/svelte`, and `/vanilla` entries:
 
 | Import             | Purpose                         |
 | ------------------ | ------------------------------- |
@@ -190,10 +190,10 @@ ecosystem is positioned.
 
 ## Documentation
 
-- **[trellis.computer](https://trellis.computer)** — full documentation ([The Story](https://trellis.computer/architecture/story) · [About](https://trellis.computer/architecture/about-this-work))
-- **[What's Open, What's Sold](./docs/OPEN-SOURCE-STRATEGY.md)** — the open-/closed-source line
-- **[The Story](./docs/THE-STORY.md)** — why Trellis exists
-- **[About this work](./docs/ABOUT.md)** — scope, motivation, how to push back
+- **[trellis.computer](https://trellis.computer)**: full documentation ([The Story](https://trellis.computer/architecture/story) · [About](https://trellis.computer/architecture/about-this-work))
+- **[What's Open, What's Sold](./docs/OPEN-SOURCE-STRATEGY.md)**: the open-/closed-source line
+- **[The Story](./docs/THE-STORY.md)**: why Trellis exists
+- **[About this work](./docs/ABOUT.md)**: scope, motivation, how to push back
 - **[Architecture](./docs/ARCHITECTURE.md)** ·
   **[Design spec](./docs/DESIGN.md)** · **[Roadmap](./docs/ROADMAP.md)**
 
@@ -211,7 +211,7 @@ may lag (format skew: array-era CLI + JSONL journal can wipe `ops.json` via
 shell guard; escape hatch: `TRELLIS_ALLOW_GLOBAL_CLI=1`.
 
 ```bash
-just trellis status              # source CLI (bun src/cli) — default
+just trellis status              # source CLI (bun src/cli); default
 just trellis-dev status          # dist CLI after just build
 just alias-cli install           # adds `trellis-dev` alias; keeps global intact
 just link-cli                    # make global `trellis` → this checkout

@@ -1,5 +1,5 @@
 ---
-title: L3 operator inset — native Bits UI inspector
+title: L3 operator inset; native Bits UI inspector
 description: Migrate explorer operator chrome from Vue CE drop-in to canonical Svelte + Bits UI shell slot.
 created: 2026-06-10
 updated: 2026-06-10
@@ -10,9 +10,9 @@ related:
   - ../sdk-typed-realtime.md
 ---
 
-# L3 operator inset — native Bits UI inspector
+# L3 operator inset; native Bits UI inspector
 
-**Status:** impl (TRL-38 — native Dialog-as-sheet inset in realtime-app)  
+**Status:** impl (TRL-38; native Dialog-as-sheet inset in realtime-app)  
 **Issue:** TRL-38  
 **Depends on:** TRL-25 (fractal shell), ADR 0011 L3 band, ADR 0012 anchored inset binding  
 **Does not block:** TRL-37 (TurtleDB Cloud C0)
@@ -66,6 +66,6 @@ Mount inside `AppShell` L3 slot (not global body injection).
 
 ## References
 
-- ADR 0011 — L3 operator band, bottom-right control
-- `src/server/inspector/` — Vue CE source
-- `demo/realtime-app/src/lib/ui/AppShell.svelte` — mount point
+- ADR 0011; L3 operator band, bottom-right control
+- `src/server/inspector/`; Vue CE source
+- `demo/realtime-app/src/lib/ui/AppShell.svelte`; mount point

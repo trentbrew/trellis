@@ -3,7 +3,7 @@
 **Status:** Accepted  
 **Date:** 2026-05-30  
 **Context:** turtlecode/ide Database panel, Trellis CMS / knowledge graph  
-**Fix:** `kernel/src/vcs/decompose.ts` — `vcs:storeAssert`, `vcs:storeRetract`, `vcs:storeLink`, `vcs:storeUnlink`
+**Fix:** `kernel/src/vcs/decompose.ts`; `vcs:storeAssert`, `vcs:storeRetract`, `vcs:storeLink`, `vcs:storeUnlink`
 
 ## Context
 
@@ -20,13 +20,13 @@ Entity ids use typed prefixes (`person:sam-altman`, `organization:openai`, …),
 
 On workspace open, `TrellisVcsEngine.open()` rebuilds the in-memory EAV store through **`materializeIntegrationOps`** (`src/vcs/lane-materialize.ts`), which replays every integration op via **`decompose()`** (`src/vcs/decompose.ts`).
 
-Until this ADR, `decompose()` handled file, issue, branch, lane, and decision ops — but **not** the four store op kinds. Replay therefore produced a store containing only **VCS-derived** entities (`Decision`, `FileNode`, `DirectoryNode`, `Issue`, …) while all CMS facts remained only on disk in `.trellis/ops.json`.
+Until this ADR, `decompose()` handled file, issue, branch, lane, and decision ops; but **not** the four store op kinds. Replay therefore produced a store containing only **VCS-derived** entities (`Decision`, `FileNode`, `DirectoryNode`, `Issue`, …) while all CMS facts remained only on disk in `.trellis/ops.json`.
 
 ### Symptoms (looked like data loss)
 
 - turtlecode/ide **Database** panel shows few entity types (mostly `Decision`, `FileNode`, …) or appears empty for custom types.
 - `/trellis/store/entities?type=person` returns `[]` even though `ops.json` contains `vcs:storeAssert` ops for `person:*`.
-- Agents querying `get_graph_summary` and filtering `entity:` ids report “missing” org/person counts — a **different** prefix filter, same underlying gap.
+- Agents querying `get_graph_summary` and filtering `entity:` ids report “missing” org/person counts; a **different** prefix filter, same underlying gap.
 - **Data is not deleted.** Ops are append-only; manual replay of `ops.json` still materializes the full graph.
 
 ### Secondary replay in opencode
@@ -66,14 +66,14 @@ Tests: `kernel/test/vcs/decompose.test.ts` (store assert/retract/link cases).
 
 When the Database panel looks empty but agents recently created CMS entities:
 
-1. **Confirm ops on disk** — search `.trellis/ops.json` for `vcs:storeAssert` and entity ids (e.g. `person:sam-altman`).
-2. **Confirm materialized store** — `GET /trellis/store/stats?directory=<home>` then paginate `/store/entities`; expect `person`, `organization`, etc. if decompose is correct.
-3. **Do not treat VCS-only counts as deletion** — high `Decision` count + zero `person` with store ops present ⇒ materialization bug, not op loss.
+1. **Confirm ops on disk**; search `.trellis/ops.json` for `vcs:storeAssert` and entity ids (e.g. `person:sam-altman`).
+2. **Confirm materialized store**; `GET /trellis/store/stats?directory=<home>` then paginate `/store/entities`; expect `person`, `organization`, etc. if decompose is correct.
+3. **Do not treat VCS-only counts as deletion**; high `Decision` count + zero `person` with store ops present ⇒ materialization bug, not op loss.
 4. **Restart backend** after updating `decompose.ts` in the bundled `trellis` package.
 
 ## Related
 
-- [ADR 0001](./0001-workspace-journal-model.md) — integration journal at `.trellis/ops.json`
-- [ADR 0007](./0007-child-fork-lane-base.md) — `materializeIntegrationOps` / lane overlay
-- turtlecode/ide `packages/app/AGENTS.md` — Database panel troubleshooting
-- turtlecode/ide `justfile` `run` / `backend` — `bun run --hot --conditions=browser … serve --port 4096`
+- [ADR 0001](./0001-workspace-journal-model.md); integration journal at `.trellis/ops.json`
+- [ADR 0007](./0007-child-fork-lane-base.md); `materializeIntegrationOps` / lane overlay
+- turtlecode/ide `packages/app/AGENTS.md`; Database panel troubleshooting
+- turtlecode/ide `justfile` `run` / `backend`; `bun run --hot --conditions=browser … serve --port 4096`

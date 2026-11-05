@@ -79,6 +79,9 @@ export function registerOpsCommands(program: Command): void {
           console.error(chalk.red(`  \u2717 ${r.op.hash?.slice(0, 16) || '??'}... ${r.reason}: ${r.message}`));
         }
       }
+      if (result.unattributed.length > 0) {
+        console.log(chalk.yellow(`  ${result.unattributed.length} unsigned op(s) applied without attribution`));
+      }
       console.log(chalk.dim(`  Total:      ${engine.getOpCount()} ops`));
       console.log(chalk.dim(`  Tracked:    ${engine.trackedFiles().length} files`));
     });

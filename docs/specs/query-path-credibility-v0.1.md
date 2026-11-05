@@ -1,11 +1,11 @@
-# Spec: Query path credibility — agent hints + labels probe (v0.1)
+# Spec: Query path credibility; agent hints + labels probe (v0.1)
 
 **Status:** Spec · **Date:** 2026-07-24\
 **Proposal:** TRL-282 · **Builds on:** TRL-283/284 (query-path-stress v0)
 
 > v0 shipped the regression battery. v0.1 makes harness output **agent-legible**:
 > explicit link-direction guidance, labels storage reality, and a CLI cookbook
-> footer — without changing EAV schema or admin WebDriver routing.
+> footer; without changing EAV schema or admin WebDriver routing.
 
 ---
 
@@ -23,13 +23,13 @@ v0 checks encode some of this in per-check `detail` strings; agents still miss t
 
 ## 2. Goals
 
-1. **`issue.labels_scalar` check** in `runQueryStress` — sample Issue with labels; detail documents scalar/comma storage and query implication.
-2. **CLI hints footer** — after human report (non-`--json`), print 3-line agent cookbook:
+1. **`issue.labels_scalar` check** in `runQueryStress`; sample Issue with labels; detail documents scalar/comma storage and query implication.
+2. **CLI hints footer**; after human report (non-`--json`), print 3-line agent cookbook:
    - Hierarchy: `childOf` not `parentOf`
    - Decisions: materialize via `recordDecision` / MCP
    - Regression: `just check` / `trellis query-stress`
-3. **Vitest** — fixture asserts new check present; CLI footer covered by unit test on exported hint helper (if extracted) or snapshot of `formatQueryStressHints()`.
-4. **Spec cross-ref** — update `docs/specs/query-path-stress-v0.md` §4 checks table with v0.1 row.
+3. **Vitest**; fixture asserts new check present; CLI footer covered by unit test on exported hint helper (if extracted) or snapshot of `formatQueryStressHints()`.
+4. **Spec cross-ref**; update `docs/specs/query-path-stress-v0.md` §4 checks table with v0.1 row.
 
 ## 3. Non-goals
 

@@ -1,4 +1,4 @@
-## 2026-10-02 — architect · spec
+## 2026-10-02; architect · spec
 
 **Hop:** ADR 0057 (reviewer consult incorporated) → spec + issue scaffold.
 
@@ -8,7 +8,7 @@
 Removed via Node `unlinkSync` (lock age ~3d; `isLockStale` should have reclaimed but
 5s waiter timed out). Graph issues created: **TRL-466** (proposal), **TRL-467** (spec).
 
-## 2026-10-02 — human · unblock
+## 2026-10-02; human · unblock
 
 Removed stale ops lock; `trellis issue create` succeeded. `trellis issue check TRL-467`
 green on static AC (spec file + grep contract).

@@ -2,7 +2,7 @@
 
 > **Terminology:** **Operator API** = the HTTP surface `trellis admin` serves
 > (`src/ui/lanes-dashboard.ts`): projections of the repo's VCS state plus a small
-> set of writes. **Client** = any UI or agent that talks to it — the bundled
+> set of writes. **Client** = any UI or agent that talks to it; the bundled
 > `admin.html`, the turtleOS admin app (`os/admin`), or a script. **Issue truth**
 > = the repo's op-log; **UI state** = saved views, record pages, tags.
 
@@ -63,7 +63,7 @@ Enforced in `src/ui/local-access.ts`, shared by `trellis admin` and `trellis lan
 ### 2. Reads are projections, never a store
 
 Clients read derived projections: the snapshot, `/api/issues`, `/api/issues/:id`,
-`GET /api/issues/:id/docs` (issue long-form markdown on disk — [0057](./0057-issue-dialog-docs-read-projection.md)),
+`GET /api/issues/:id/docs` (issue long-form markdown on disk; [0057](./0057-issue-dialog-docs-read-projection.md)),
 `/api/causal-graph`, and paged ops (d5). The SSE stream emits `snapshot` only when
 new ops land (idle means silence), and clients refetch on it. No client mirrors
 issues into its own store (d6).
@@ -185,10 +185,10 @@ from inside a trellis-node checkout:
 
 ## Addenda
 
-### 2026-10-02 — Issue dialog docs read projection
+### 2026-10-02; Issue dialog docs read projection
 
 [ADR 0057](./0057-issue-dialog-docs-read-projection.md) extends §2 reads with
 `GET /api/issues/:id/docs` and clarifies §6: repo markdown for issues is served as
 an operator projection; turtle-admin must not persist issue bodies to the UI db.
 Issue ids are validated before path join (`assertIssueDocId`); reads are confined
-under `docs/issues/` with `realpath` (see 0057 §7 — not `issueDocRelDir`-alone checks).
+under `docs/issues/` with `realpath` (see 0057 §7; not `issueDocRelDir`-alone checks).

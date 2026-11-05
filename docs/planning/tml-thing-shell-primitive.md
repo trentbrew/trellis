@@ -17,7 +17,7 @@ From now on, **Trellis-built UI surfaces are TML-first**:
 - Existing framework SDKs may remain for **external** integrators
 - Fractal-playground / AppShell sketches are **prototypes**; kernel **admin** (and successors) are the durable Operate surface
 
-TML is the companion markup language to TQL — declarative bind/project/mutate over the graph — not “another component framework.”
+TML is the companion markup language to TQL; declarative bind/project/mutate over the graph; not “another component framework.”
 
 ---
 
@@ -31,7 +31,7 @@ TML is the companion markup language to TQL — declarative bind/project/mutate 
 
 ### Thing
 
-Ontology root. A Thing has **no canonical representation** — only identity and facts. Fractal thesis: representation is a function of **vantage** (focal depth), not of a hard-coded component type.
+Ontology root. A Thing has **no canonical representation**; only identity and facts. Fractal thesis: representation is a function of **vantage** (focal depth), not of a hard-coded component type.
 
 ### Shell
 
@@ -103,7 +103,7 @@ Playground React Operate chrome informs density and IA; it is not the long-term 
 
 ## 5. Compatibility with 3D (museum / game engine)
 
-Reference: [`Projects/Sandbox/museum`](file:///Users/trentbrew/TURTLE/Projects/Sandbox/museum) — data-first JSON-LD worlds, component bags, per-tick behaviors, Threlte/Svelte chrome today.
+Reference: [`Projects/Sandbox/museum`](file:///Users/trentbrew/TURTLE/Projects/Sandbox/museum); data-first JSON-LD worlds, component bags, per-tick behaviors, Threlte/Svelte chrome today.
 
 ### What already matches
 
@@ -112,7 +112,7 @@ Reference: [`Projects/Sandbox/museum`](file:///Users/trentbrew/TURTLE/Projects/S
 | Entity in `.jsonld` | Thing |
 | Component fields | Facts / attributes |
 | World graph | Same EAV/op-log story Trellis already wants |
-| “No canonical mesh — data drives render” | Same as “no canonical shell — vantage drives representation” |
+| “No canonical mesh; data drives render” | Same as “no canonical shell; vantage drives representation” |
 | New *behavior* = engine primitive | New *interaction engine* = UI primitive |
 
 Museum’s thesis is already fractal-adjacent: **author data, extend behavior primitives sparingly.** TML does not replace JSON-LD world files; it replaces **framework chrome** around the viewport and, over time, binds HUD / inspector / collections to the same graph.
@@ -133,20 +133,20 @@ World (graph of Things)
 
 ### Compatibility verdict
 
-**High**, if we treat the 3D viewport as a **primitive** and museum UI chrome as **TML shells** — not if we try to express meshes, materials, or per-frame juice as `tml-*` attributes.
+**High**, if we treat the 3D viewport as a **primitive** and museum UI chrome as **TML shells**; not if we try to express meshes, materials, or per-frame juice as `tml-*` attributes.
 
 | Concern | Fit |
 | ------- | --- |
 | Entity identity + facts | Native |
 | Multi-shell presence (HUD + scene + inspector) | Native (fractal) |
 | Authoring worlds as data | Stays JSON-LD (or graph-native successor); TML consumes |
-| WebGL / physics / animation | Primitive / engine — not TML vocabulary |
+| WebGL / physics / animation | Primitive / engine; not TML vocabulary |
 | Replacing Svelte AppShell with TML pages | Aligned with internal policy |
 | One `<Thing>` custom element hosting both CSS shell and 3D attach point | Feasible; light DOM + canvas/slot for the viewport host |
 
 ### What not to do
 
-- Do not invent `tml-mesh` / `tml-rigidbody` — that forks the engine ontology into markup.
+- Do not invent `tml-mesh` / `tml-rigidbody`; that forks the engine ontology into markup.
 - Do not wrap every museum Svelte leaf as a WC “Trellis shadcn 3D kit.”
 - Do not require Shadow DOM around the canvas host if it blocks theme or picking.
 
@@ -161,4 +161,4 @@ World (graph of Things)
 ## 6. One-line summary
 
 **TML binds Things; vantage selects shells; shells may mount a small set of primitives.**  
-Internal product UI is TML-only; 3D worlds stay data + engine behaviors, with the viewport as a primitive under the same Thing/shell model — not a second framework, and not a shadcn catalog.
+Internal product UI is TML-only; 3D worlds stay data + engine behaviors, with the viewport as a primitive under the same Thing/shell model; not a second framework, and not a shadcn catalog.

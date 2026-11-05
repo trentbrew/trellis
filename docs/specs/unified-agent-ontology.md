@@ -20,7 +20,7 @@ All schemas use the `SchemaDefinition` / `f()` helper pattern. Fields use
 
 ### 1. Workflow Ontology
 
-#### `core:Workflow` — automation / process definition
+#### `core:Workflow`; automation / process definition
 
 ```typescript
 const workflow: SchemaDefinition = {
@@ -44,7 +44,7 @@ const workflow: SchemaDefinition = {
 relation to `WorkflowStep`. Workflow→Step/Edge/Gate relations are proposed but
 not implemented (see Open Questions).
 
-#### `core:WorkflowStep` — individual step within a workflow
+#### `core:WorkflowStep`; individual step within a workflow
 
 ```typescript
 const workflowStep: SchemaDefinition = {
@@ -67,7 +67,7 @@ const workflowStep: SchemaDefinition = {
 };
 ```
 
-#### `core:WorkflowEdge` — routing rule between steps
+#### `core:WorkflowEdge`; routing rule between steps
 
 ```typescript
 const workflowEdge: SchemaDefinition = {
@@ -98,7 +98,7 @@ const workflowEdge: SchemaDefinition = {
 **Note:** Edge→Step relations exist (`from`/`to`), but there is no
 Workflow→edges or WorkflowStep→edges relation. Edges are standalone entities.
 
-#### `core:WorkflowGate` — quality gate between steps
+#### `core:WorkflowGate`; quality gate between steps
 
 ```typescript
 const workflowGate: SchemaDefinition = {
@@ -137,7 +137,7 @@ const workflowGate: SchemaDefinition = {
 
 #### DAG Runtime schemas
 
-##### `trellis:DAGRun` — DAG workflow run tracking step-level execution state
+##### `trellis:DAGRun`; DAG workflow run tracking step-level execution state
 
 ```typescript
 const dagRun: SchemaDefinition = {
@@ -163,7 +163,7 @@ const dagRun: SchemaDefinition = {
 };
 ```
 
-##### `trellis:WorkerPoolTask` — queued or active task in a WorkerPool
+##### `trellis:WorkerPoolTask`; queued or active task in a WorkerPool
 
 ```typescript
 const workerPoolTask: SchemaDefinition = {
@@ -266,7 +266,7 @@ trellis:Pipeline
 
 ### 3. Agent Ontology
 
-#### `core:Agent` — agent role definition
+#### `core:Agent`; agent role definition
 
 ```typescript
 const agent: SchemaDefinition = {
@@ -306,7 +306,7 @@ fields not in the schema: `provider`, `systemPrompt`, `tools: string[]`,
 `temperature`, `maxTokens`. The schema also lacks a `tools` relation to
 `core:Tool`. These should be added to align the ontology with the runtime type.
 
-#### `core:Tool` — tool definition for agents
+#### `core:Tool`; tool definition for agents
 
 ```typescript
 const tool: SchemaDefinition = {
@@ -326,7 +326,7 @@ const tool: SchemaDefinition = {
 };
 ```
 
-**Current state:** `core:Tool` is a standalone entity — no relations to Agent or
+**Current state:** `core:Tool` is a standalone entity; no relations to Agent or
 any other schema. The `AgentDef.tools: string[]` is a list of tool IDs, not a
 graph relation. This means tools cannot be queried via TQL traversal from an
 agent.
@@ -350,7 +350,7 @@ agent.
    (what the tool is, what schema it expects, where it lives). MCP tool
    invocation records live in `trellis:DecisionTrace`.
 
-#### `core:Handoff` — structured agent handoff between roles
+#### `core:Handoff`; structured agent handoff between roles
 
 ```typescript
 const handoff: SchemaDefinition = {
@@ -385,7 +385,7 @@ const handoff: SchemaDefinition = {
 
 ### 4. Execution Trace Schemas
 
-#### `trellis:AgentRun` — single execution run of an agent
+#### `trellis:AgentRun`; single execution run of an agent
 
 ```typescript
 const agentRun: SchemaDefinition = {
@@ -430,7 +430,7 @@ const agentRun: SchemaDefinition = {
 };
 ```
 
-#### `trellis:DecisionTrace` — decision recorded during an agent run
+#### `trellis:DecisionTrace`; decision recorded during an agent run
 
 ```typescript
 const decisionTrace: SchemaDefinition = {
@@ -467,7 +467,7 @@ const decisionTrace: SchemaDefinition = {
 core:Workflow ── steps: multi_select (strings, NOT a relation)
     ↑ workflow (Agent→Workflow)
     │
-core:Agent ── tools: string[] (IDs, NOT a relation — proposed: relation to core:Tool)
+core:Agent ── tools: string[] (IDs, NOT a relation; proposed: relation to core:Tool)
     │
     ├── executedBy (AgentRun→Agent)
     ├── madeBy (DecisionTrace→Agent)
@@ -530,17 +530,17 @@ packages, the manifest should carry optional fields: `model`, `provider`,
 
 #### Gaps
 
-1. **`handleAdd` never creates entities** — only registers schemas via
+1. **`handleAdd` never creates entities**; only registers schemas via
    `kernel.createOntology()`. For `agent` type, it should create a `core:Agent`
    entity with the package's agent config. For `workflow` type, a `core:Workflow`
    entity. Etc.
 
-2. **No `trellis publish init <type> <name>`** — `scaffoldPackage` creates a
+2. **No `trellis publish init <type> <name>`**; `scaffoldPackage` creates a
    bare package body with a placeholder schema. No type-specific scaffolding
    (e.g., `publish init agent` should populate `model`, `provider`,
    `systemPrompt`, `tools`, `capabilities`).
 
-3. **No `trellis publish` command** — `publishPackage` exists but has no CLI
+3. **No `trellis publish` command**; `publishPackage` exists but has no CLI
    binding.
 
 #### Proposed agent package manifest
@@ -583,7 +583,7 @@ On `trellis add agent strategist`:
    traversal.
 
 2. **Agent→tools relation:** Should `core:Agent` get a `tools` relation to
-   `core:Tool`? **Decision: yes** — this is the most impactful single change.
+   `core:Tool`? **Decision: yes**; this is the most impactful single change.
    It enables `TQL.agent(id).tools` and makes the graph the source of truth for
    agent capabilities. The current `AgentDef.tools: string[]` can be derived
    from the relation.
@@ -591,8 +591,8 @@ On `trellis add agent strategist`:
 3. **PipelinePhase.agentRole as relation:** Currently an enum string. Should it
    become a relation to `core:Agent`? This would enable reusing the same agent
    definition across phases. On the other hand, a phase defines *what role to
-   run*, not *which specific agent instance* — the agent is resolved at
-   runtime. **Deferred** — revisit when pipeline execution needs dynamic agent
+   run*, not *which specific agent instance*; the agent is resolved at
+   runtime. **Deferred**; revisit when pipeline execution needs dynamic agent
    resolution.
 
 4. **Schema tier:** `core:Agent` and `core:Handoff` are `system` tier
@@ -600,6 +600,6 @@ On `trellis add agent strategist`:
    them to evolve without kernel changes.
 
 5. **Registry entity creation:** Should `trellis add agent` auto-create graph
-   entities, or should that be a separate step? **Decision: auto-create** —
+   entities, or should that be a separate step? **Decision: auto-create** : 
    the install should produce a usable agent, not just a schema registration.
    The entity creation is idempotent (upsert by `@id`).

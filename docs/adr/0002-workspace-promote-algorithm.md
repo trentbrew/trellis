@@ -41,16 +41,16 @@ trellis ws promote <id> [--to main] [--dry-run] [--explain]
 
 ### Idempotency
 
-- Promote is **not** idempotent — caller must not retry after partial failure without `promote abort` recovery
+- Promote is **not** idempotent; caller must not retry after partial failure without `promote abort` recovery
 - W3 adds `vcs:workspacePromoteStart` / `Abort` ops for audit trail
 
 ### Alternatives considered
 
 | Option | Verdict |
 | ------ | ------- |
-| **Squash to single batch op** | Deferred to v2 — loses per-op attribution; harder to debug |
-| **Merge workspace branch entity** | Reuse `vcs:merge` file three-way only — insufficient for graph/issue ops |
-| **Auto-promote on agent stop** | Rejected — too risky with 8 agents; explicit promote only |
+| **Squash to single batch op** | Deferred to v2; loses per-op attribution; harder to debug |
+| **Merge workspace branch entity** | Reuse `vcs:merge` file three-way only; insufficient for graph/issue ops |
+| **Auto-promote on agent stop** | Rejected; too risky with 8 agents; explicit promote only |
 
 ## Consequences
 
@@ -63,7 +63,7 @@ trellis ws promote <id> [--to main] [--dry-run] [--explain]
 **Negative**
 
 - Long workspaces → many integration ops (squash v2 mitigates)
-- Integration head may move during promote — must snapshot target head at step 2 and re-validate before commit
+- Integration head may move during promote; must snapshot target head at step 2 and re-validate before commit
 
 ## TurtleDB mapping (W6)
 

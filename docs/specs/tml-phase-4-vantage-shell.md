@@ -1,4 +1,4 @@
-# Spec: TML Phase 4 — vantage shell resolution
+# Spec: TML Phase 4; vantage shell resolution
 
 **Status:** Ready for impl  
 **Date:** 2026-07-24  
@@ -23,9 +23,9 @@ one global `issue.title` grep across all views. Kanban → issues; grid/table �
 
 | Location today | Issue |
 | -------------- | ----- |
-| `#view-kanban` | Phase 3 slots — ✓ single `#shell-issue-card` |
-| `#view-grid` | Inline `article.lane-card` — duplicate lane bindings |
-| `#view-table` | Inline `<tr>` — duplicate lane bindings |
+| `#view-kanban` | Phase 3 slots; ✓ single `#shell-issue-card` |
+| `#view-grid` | Inline `article.lane-card`; duplicate lane bindings |
+| `#view-table` | Inline `<tr>`; duplicate lane bindings |
 | `shellForVantage()` | Stub returns `null` |
 | Lane queries | Separate `tml-ref` on grid vs table |
 
@@ -35,7 +35,7 @@ View toggle switches CSS `.proj.active` but does not participate in shell resolu
 
 ## 3. Contract
 
-### 3.1 Module — extend `src/ui/tml-shell-registry.ts`
+### 3.1 Module; extend `src/ui/tml-shell-registry.ts`
 
 ```typescript
 export type EntityKind = 'issue' | 'lane';
@@ -69,20 +69,20 @@ At vantage detents 2/5/8, disclosure within shell follows Phase C CSS on
 **Non-goals:** `issue.row` (Phase 4b), vantage scrubber UI, `<trellis-thing>` CE,
 PeerDriver-only paths, user renderer packs.
 
-### 3.2 Markup — `admin.html`
+### 3.2 Markup; `admin.html`
 
 **New templates** (extract from inline grid/table):
 
 ```html
 <template id="shell-lane-card" data-trellis-shell="lane.card">
   <article class="lane-card" data-kind="lane" …>
-    <!-- existing lane-card bindings — single source -->
+    <!-- existing lane-card bindings; single source -->
   </article>
 </template>
 
 <template id="shell-lane-row" data-trellis-shell="lane.row">
   <tr data-kind="lane" …>
-    <!-- existing tr bindings — single source -->
+    <!-- existing tr bindings; single source -->
   </tr>
 </template>
 ```
@@ -106,18 +106,18 @@ PeerDriver-only paths, user renderer packs.
 
 **Unified query:** grid and table share **`tml-ref="lanes-board"`** (same query string).
 
-**Inactive hosts:** add `hidden` + `inert` when not `.active` (a11y — design TRL-277).
+**Inactive hosts:** add `hidden` + `inert` when not `.active` (a11y; design TRL-277).
 
 **Resolver strip (optional):** `#shell-resolver` hidden by default; show when
 `?debug=shell` or `localStorage.trellis-debug-shell=1`.
 
-### 3.3 Connect hook — `admin-shell.ts`
+### 3.3 Connect hook; `admin-shell.ts`
 
 Before `mount()` (unchanged order):
 
 1. `readUiVantage(mountRoot)` → set `data-ui-vantage` on `#tml-root`
 2. Resolve slot ids from active view + `shellForVantage`
-3. `hydrateShellSlots(mountRoot)` — must re-run when view changes
+3. `hydrateShellSlots(mountRoot)`; must re-run when view changes
 
 **View change (`setView` in admin.html):** after toggling `.proj.active`:
 
@@ -150,7 +150,7 @@ structure requires hook adjustment.
 
 ## 5. Tests
 
-### 5.1 Unit — `test/ui/tml-shell-registry.test.ts`
+### 5.1 Unit; `test/ui/tml-shell-registry.test.ts`
 
 | Case | Assert |
 | ---- | ------ |
@@ -176,14 +176,14 @@ test:CI=1 pnpm exec playwright test e2e/admin.spec.cjs -g "datatable|view-toggle
 
 ## 6. Acceptance criteria
 
-### Static (spec issue — run at architect handoff)
+### Static (spec issue; run at architect handoff)
 
 - `pnpm check` passes
 - Spec file exists at `docs/specs/tml-phase-4-vantage-shell.md`
 - Design artifacts exist (`docs/artifacts/tml-phase-4-vantage-shell_*`)
 - Spec documents `shellForVantage` resolution map
 
-### Behavioral (impl issue — automated)
+### Behavioral (impl issue; automated)
 
 | # | Criterion | Test command |
 | - | --------- | ------------ |
@@ -196,11 +196,11 @@ test:CI=1 pnpm exec playwright test e2e/admin.spec.cjs -g "datatable|view-toggle
 
 ---
 
-## 7. Open questions (defer — design resolved)
+## 7. Open questions (defer; design resolved)
 
 | Question | Resolution |
 | -------- | ---------- |
-| Table at high vantage uses kanban card? | **No** — `lane.row` always |
+| Table at high vantage uses kanban card? | **No**; `lane.row` always |
 | Vantage propagation without reload? | `readUiVantage` + rehydrate on view change; scrubber stretch |
 | Resolver strip in prod? | Hidden default; `?debug=shell` |
 
@@ -209,6 +209,6 @@ test:CI=1 pnpm exec playwright test e2e/admin.spec.cjs -g "datatable|view-toggle
 ## 8. Dependencies
 
 - Phase 3 closed (TRL-251/258/259/260)
-- Remote VCS gate closed (TRL-222) — impl lane unblocked
+- Remote VCS gate closed (TRL-222); impl lane unblocked
 - `mountAdminDatatable` unchanged contract
-- Renderer pack distribution ([tml-renderer-pack-registry-proposal.md](./tml-renderer-pack-registry-proposal.md)) — **Phase 6+**; Phase 4 templates should extract cleanly to `@trellis/*` shell packs later
+- Renderer pack distribution ([tml-renderer-pack-registry-proposal.md](./tml-renderer-pack-registry-proposal.md)); **Phase 6+**; Phase 4 templates should extract cleanly to `@trellis/*` shell packs later

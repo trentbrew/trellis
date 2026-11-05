@@ -29,7 +29,7 @@ GET  /blob/:sha256  → blob bytes (404 if not found)
 PUT  /blob          → upload bytes, return sha256
 ```
 
-**Principle:** Trellis owns semantics, the relay moves bytes. Content addressing means the server holds no authority — it just hands back whatever hashes to X.
+**Principle:** Trellis owns semantics, the relay moves bytes. Content addressing means the server holds no authority; it just hands back whatever hashes to X.
 
 ## Architecture
 
@@ -64,7 +64,7 @@ fetch('/blob', { method: 'PUT',
 
 ## Why this is unblocked (vs TRL-20)
 
-TRL-20 (full durable client) is blocked on the hard part: graph sync, live subscriptions, auth-filtered queries. Blobs are **dumb bytes keyed by a hash** — no semantics, no subscriptions, no permission filtering. This is the easy 10%, not the stuck 90%.
+TRL-20 (full durable client) is blocked on the hard part: graph sync, live subscriptions, auth-filtered queries. Blobs are **dumb bytes keyed by a hash**; no semantics, no subscriptions, no permission filtering. This is the easy 10%, not the stuck 90%.
 
 Content addressing means the bytes are their own identity. The server holds no authority, it just hands back whatever hashes to X. This aligns with the principle: "Trellis owns semantics, the relay moves bytes."
 
@@ -135,7 +135,7 @@ Access-Control-Allow-Origin: *
 
 **Response (idempotent):**
 
-If the blob already exists (same hash), still return 200 with the hash — BlobStore.put is idempotent.
+If the blob already exists (same hash), still return 200 with the hash; BlobStore.put is idempotent.
 
 **Response (invalid request):**
 

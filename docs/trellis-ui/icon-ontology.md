@@ -1,9 +1,9 @@
-# Icon Registry & Ontology — @trellis.computer/icons
+# Icon Registry & Ontology; @trellis.computer/icons
 
 **Status:** spec
 **Date:** 2026-07-24 (rev 2026-08-02)
 **Issue:** TRL-315
-**References:** ui-thing Icon (detection model), iconic (registry pattern), Iconify (icon sets + JSON collections), TRL-314 (theme contract — `--icon-pack` token), SemType (URL-identified types)
+**References:** ui-thing Icon (detection model), iconic (registry pattern), Iconify (icon sets + JSON collections), TRL-314 (theme contract; `--icon-pack` token), SemType (URL-identified types)
 **Target:** `packages/icons/` in trellis-ui monorepo
 
 ## TL;DR
@@ -15,7 +15,7 @@ Iconify set resolves it. The component also auto-detects **emojis** and
 **image URLs**, and resolves **semantic aliases** (`entity-issue`,
 `status-done`) from Trellis's own ontology.
 
-Pack choice is a **theme concern** — the same markup renders Lucide under one
+Pack choice is a **theme concern**; the same markup renders Lucide under one
 theme and Tabler under another, with zero component changes.
 
 Local-first: a curated set of Iconify JSON collections ships in the package, so
@@ -68,7 +68,7 @@ function detectKind(name: string): IconKind {
 
 **Bare-name resolution:** the icon name is looked up **within the active pack
 first**; if the pack lacks that name, resolution falls back through the alias
-table, then to the registered fallback glyph — never a broken box.
+table, then to the registered fallback glyph; never a broken box.
 
 ## Semantic Alias Table
 
@@ -109,10 +109,10 @@ const ALIASES: Record<string, AliasEntry> = {
 ```
 
 Resolution order for an alias: `packs[activePack]` → `default` → fallback glyph.
-Alias values may also be emoji or image URLs — resolution recurses through the
+Alias values may also be emoji or image URLs; resolution recurses through the
 same detector.
 
-## `<trellis-icon>` — Web Component
+## `<trellis-icon>`; Web Component
 
 ```html
 <trellis-icon name="home"></trellis-icon>            <!-- bare → --icon-pack -->
@@ -122,10 +122,10 @@ same detector.
 ```
 
 **Attributes:**
-- `name` (required) — bare icon name, `set:icon`, emoji, image URL, or alias
-- `size` (optional) — number (px) or token string; default `md`
+- `name` (required); bare icon name, `set:icon`, emoji, image URL, or alias
+- `size` (optional); number (px) or token string; default `md`
   - tokens: `xs` 12, `sm` 16, `md` 20, `lg` 24, `xl` 32
-- `color` (optional) — CSS color; default `currentColor`
+- `color` (optional); CSS color; default `currentColor`
 
 **Styling:** inherits `currentColor` from context. Tailwind-style utility classes
 on the host work (`class="text-red-500"`). Entity/status aliases default to
@@ -145,7 +145,7 @@ registry.hasAlias('entity-issue')        // boolean
 registry.resolve('entity-issue', 'lucide') // 'lucide:git-issue' (pack-aware)
 registry.resolve('home', 'lucide')       // 'lucide:home' (bare + pack)
 registry.detect('🚀')                    // 'emoji'
-registry.findByKind('entity')            // Icon[] — all entity aliases
+registry.findByKind('entity')            // Icon[]; all entity aliases
 registry.register(aliases)               // extend the alias table
 registry.activePack(el?)                 // resolved --icon-pack (computed style)
 registry.iconify('lucide:home')          // SVG markup (from cache/local set)
@@ -170,11 +170,11 @@ registered fallback glyph.
 ## Naming Convention
 
 ```
-<name>                  — bare      (home → --icon-pack:home)
-<set>:<icon>            — iconify   (mdi:github — escape hatch)
-<emoji>                 — emoji     (🚀)
-<scheme>://…            — image     (https://…)
-<semantic-name>         — alias     (entity-issue, status-done)
+<name>                 ; bare      (home → --icon-pack:home)
+<set>:<icon>           ; iconify   (mdi:github; escape hatch)
+<emoji>                ; emoji     (🚀)
+<scheme>://…           ; image     (https://…)
+<semantic-name>        ; alias     (entity-issue, status-done)
 ```
 
 Semantic names follow `<category>-<descriptive-name>` for the built-in ontology:
@@ -194,7 +194,7 @@ registry.register({ 'entity-widget': { default: 'lucide:box' } })
 ## Build Process
 
 - `@iconify-json/*` collections are bundled into the dist (tree-shaken by prefix).
-- Alias table is a plain data module — no build step needed.
+- Alias table is a plain data module; no build step needed.
 - Bundle: `dist/index.mjs` + `dist/index.d.ts`; web component self-registers.
 
 ## Distribution

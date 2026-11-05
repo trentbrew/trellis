@@ -167,7 +167,7 @@ src/
 
 Every `trellis` command resolves its repo root from the current directory (or
 `-p/--path`) by walking **up** the tree to the nearest `.trellis/config.json`.
-Running from a subdirectory of a repo just works — you do not have to `cd` to
+Running from a subdirectory of a repo just works; you do not have to `cd` to
 the root first.
 
 - **`-p/--path <path>`** is the per-command override. There is no global pin or
@@ -175,7 +175,7 @@ the root first.
 - A **`$HOME`-rooted repo is intentionally skipped** when invoked from a subdir,
   to avoid a 30–90s op-replay on every command. Stand inside `$HOME` to opt in.
 - If no `.trellis` is found up to the filesystem root, the command fails with
-  `Not a TrellisVCS repository.` — run from the repo root, pass `-p`, or run
+  `Not a TrellisVCS repository.`; run from the repo root, pass `-p`, or run
   `trellis init`.
 
 ### Starting Work
@@ -213,7 +213,7 @@ Each agent gets an isolated op journal (`lane-{uuid}`). `issue start` creates
 and enters a lane by default (`--no-lane` to opt out).
 
 **Lane ≈ domain, not session.** When the topic jumps (docs rename → CLI → TML),
-open a new lane — do not keep writing into a catch-all lane.
+open a new lane; do not keep writing into a catch-all lane.
 
 **Promote boundary == issue boundary.** One issue = one promotable unit:
 
@@ -225,7 +225,7 @@ open a new lane — do not keep writing into a catch-all lane.
 (narrative auto-drafted from lane name / issue / ops, or set with `-m`).
 
 **Cross-agent file ownership.** A file touched by another agent's live active
-lane is owned by that lane — writes from a different `agentId` are rejected with
+lane is owned by that lane; writes from a different `agentId` are rejected with
 a `trellis protocol send` handoff prompt (ADR 0015).
 
 **Coherence signal.** `lane status` reports domain/repo spread; when spread > 1
@@ -243,7 +243,7 @@ export TRELLIS_LANE_ID=lane-…        # Subprocess agents auto-enter
 
 **Worktree bind (3.2.3+):** `"lanes": { "worktreeBind": true }` in
 `.trellis/config.json` provisions `.trellis/worktrees/<shortId>/` per lane. Edit
-there — not the shared repo root. See ADR 0014.
+there; not the shared repo root. See ADR 0014.
 
 Graph MCP `agent:<id>` lanes attribute graph writes only; desk trail markers are
 coordination metadata, not VCS.

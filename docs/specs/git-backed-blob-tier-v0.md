@@ -26,13 +26,13 @@ directories. Primary drivers:
 | Media uploads | trellis-client voice/files | Large blobs via `/blob` PUT; same store as VCS file snapshots |
 | Lane worktree sprawl | `trellis-node` (107 worktrees) | Full checkouts + per-lane graphs (separate issue; related disk leak) |
 
-The blob store design (`src/vcs/blob-store.ts`) is sound — SHA-256,
+The blob store design (`src/vcs/blob-store.ts`) is sound; SHA-256,
 content-addressed, idempotent `put`. The **policy and lifecycle** are not.
 
 ### 1.2 Restore gap (semantics + bytes)
 
 [TRL-222 / sprite v0](vcs-oplog-remote-sprite-v0.md) adds **peer #2 for the op
-log** — push/pull/install of `ops.json` JSONL. v0 **non-goals** explicitly
+log**; push/pull/install of `ops.json` JSONL. v0 **non-goals** explicitly
 exclude blob sync.
 
 After `trellis remote install`, materialize still calls `blobStore.get(hash)`
@@ -45,11 +45,11 @@ into the read path and documents the combined restore sequence.
 
 ### 1.3 Naming clarity (git remote ≠ git byte tier)
 
-Planning for TRL-222 states *“Git remote — wrong object model (text commits, not
+Planning for TRL-222 states *“Git remote; wrong object model (text commits, not
 op chain)”* for the **Trellis GitHub analog** (named remotes for op journals).
 That does **not** forbid reading **local** `.git/objects` when resolving
 `contentHash` for materialize/diff/merge. This spec is **local byte tier only**
-— no `git push` as Trellis remote.
+:  no `git push` as Trellis remote.
 
 ---
 
@@ -57,7 +57,7 @@ That does **not** forbid reading **local** `.git/objects` when resolving
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│ L4  Witness peer #2     sprite — ops.json only (TRL-222)    │
+│ L4  Witness peer #2     sprite; ops.json only (TRL-222)    │
 ├─────────────────────────────────────────────────────────────┤
 │ L3  Semantic truth        .trellis/ops.json (+ lane logs)   │
 ├─────────────────────────────────────────────────────────────┤
@@ -89,16 +89,16 @@ retain **L2A** (uploads, never-git files).
 ### 3.1 Git-backed byte resolver
 
 1. **`BlobResolver`** (or extend `BlobStore`) with ordered lookup:
-   1. `.trellis/blobs/{sha256}` — always wins (explicit upload / override)
-   2. **Git object** — when repo has `.git` and path + hash match
-   3. `null` — miss
+   1. `.trellis/blobs/{sha256}`; always wins (explicit upload / override)
+   2. **Git object**; when repo has `.git` and path + hash match
+   3. `null`; miss
 2. **Wire resolver** into all read paths that today call `blobStore.get`:
    - `materializeToDisk` (`src/vcs/lane-disk-materialize.ts`)
    - `diff` / `merge` / `git-sync` materialize
    - Realtime blob **GET** (unchanged source of truth for uploads)
 3. **Lazy blobbing on write:** do **not** `put` to `.trellis/blobs/` when git
    can attest the same SHA-256 at `filePath` (see §4.2).
-4. **Keep SHA-256 in ops** — no op-log migration; git uses different object
+4. **Keep SHA-256 in ops**; no op-log migration; git uses different object
    names internally; resolution is at read/write boundary only.
 5. **`trellis storage`** reports bytes by tier: local blobs / git-resolved /
    unreferenced / missing-referenced.
@@ -136,7 +136,7 @@ v1 (non-goal here): `--prune-historical` with `--keep-days` or snapshot refs.
 ### 4.1 Hash identity
 
 - Ops continue to store **SHA-256 hex** of raw file bytes (`contentHash`).
-- Git blob objects use SHA-1 object ids internally — **do not** store git oids
+- Git blob objects use SHA-1 object ids internally; **do not** store git oids
   in ops for v0.
 - Resolution: given `(contentHash, filePath?)`, read worktree file at path,
   hash with SHA-256, compare; or `git hash-object` / cat-file pipeline when
@@ -155,7 +155,7 @@ on file change (watcher / indexExistingFiles):
   record op
 ```
 
-**Init (`indexWorkspace`):** when enabled, same rule — record ops, skip put
+**Init (`indexWorkspace`):** when enabled, same rule; record ops, skip put
 when git attests hash. Never blob entire trees by default.
 
 ### 4.3 Read path (materialize)
@@ -193,7 +193,7 @@ Default `gitBackedBlobs: true` when `.git` exists at repo root; false otherwise.
 
 ```bash
 trellis storage [-p .]              # tier breakdown (extend existing)
-trellis storage --prune [-p .]      # unchanged — orphan only
+trellis storage --prune [-p .]      # unchanged; orphan only
 trellis init [--index-workspace]    # opt-in indexing; gate on size
 ```
 
@@ -203,8 +203,8 @@ trellis init [--index-workspace]    # opt-in indexing; gate on size
 
 - Sprite / remote **blob** sync (TRL-222 L1+ separate issue)
 - Cross-repo shared blob pool (Campus-level dedup)
-- SQLite blob table migration (noted in `blob-store.ts` comment — defer)
-- Media tier quotas / external object storage (trellis-client — separate)
+- SQLite blob table migration (noted in `blob-store.ts` comment; defer)
+- Media tier quotas / external object storage (trellis-client; separate)
 - Lane worktree TTL / prune (separate issue)
 - Rewriting historical ops or blob re-import from git history
 - Using **git remote** as Trellis remote (op chain witness)
@@ -217,12 +217,12 @@ trellis init [--index-workspace]    # opt-in indexing; gate on size
 | ------- | -------------- |
 | Spec | `docs/specs/git-backed-blob-tier-v0.md` (this file) |
 | Resolver | `src/vcs/blob-resolver.ts` (new) or methods on `BlobStore` |
-| Git helper | `src/git/blob-resolve.ts` (new) — worktree read, optional cat-file |
-| Materialize | `src/vcs/lane-disk-materialize.ts` — pass path into get |
-| Engine | `src/engine.ts` — lazy put in watcher + `indexExistingFiles` |
-| Config | `src/vcs/types.ts` — `DEFAULT_CONFIG`, persisted `storage` |
-| Init CLI | `src/cli/index.ts` — gate + `--index-workspace` |
-| Storage CLI | `src/cli/storage.ts` — tier stats |
+| Git helper | `src/git/blob-resolve.ts` (new); worktree read, optional cat-file |
+| Materialize | `src/vcs/lane-disk-materialize.ts`; pass path into get |
+| Engine | `src/engine.ts`; lazy put in watcher + `indexExistingFiles` |
+| Config | `src/vcs/types.ts`; `DEFAULT_CONFIG`, persisted `storage` |
+| Init CLI | `src/cli/index.ts`; gate + `--index-workspace` |
+| Storage CLI | `src/cli/storage.ts`; tier stats |
 | Tests | `test/vcs/blob-resolver.test.ts`, extend `test/p2/blob-store.test.ts` |
 | Cross-link | `docs/specs/vcs-oplog-remote-sprite-v0.md` § restore dependency |
 
@@ -230,7 +230,7 @@ trellis init [--index-workspace]    # opt-in indexing; gate on size
 
 ## 7. Acceptance criteria
 
-### Static (spec issue — run now)
+### Static (spec issue; run now)
 
 - `pnpm check` passes
 - Spec file exists at `docs/specs/git-backed-blob-tier-v0.md`
@@ -254,8 +254,8 @@ trellis init [--index-workspace]    # opt-in indexing; gate on size
 | File | Change |
 | ---- | ------ |
 | `src/vcs/blob-store.ts` | Optional: delegate get to resolver; keep put/delete |
-| `src/vcs/blob-resolver.ts` | **New** — ordered lookup |
-| `src/git/blob-resolve.ts` | **New** — git worktree / cat-file helpers |
+| `src/vcs/blob-resolver.ts` | **New**; ordered lookup |
+| `src/git/blob-resolve.ts` | **New**; git worktree / cat-file helpers |
 | `src/vcs/lane-disk-materialize.ts` | Pass `relPath` to resolver |
 | `src/engine.ts` | Lazy put; init gate delegation |
 | `src/vcs/types.ts` | `indexWorkspace: false`; storage config; ignore patterns |
@@ -268,9 +268,9 @@ trellis init [--index-workspace]    # opt-in indexing; gate on size
 
 | Track | Priority | Rationale |
 | ----- | -------- | --------- |
-| **Init guardrails** | P0 — ship first slice | Stops recurrence immediately; no resolver dependency |
+| **Init guardrails** | P0; ship first slice | Stops recurrence immediately; no resolver dependency |
 | **Git-backed resolver** | P1 | Disk savings + completes sprite restore story for git repos |
-| **TRL-222 sprite** | P1 parallel | Op durability — orthogonal layer |
+| **TRL-222 sprite** | P1 parallel | Op durability; orthogonal layer |
 
 ---
 
@@ -280,7 +280,7 @@ trellis init [--index-workspace]    # opt-in indexing; gate on size
   op time, or also `git ls-files`? → **v0: worktree read + hash match**
 - **Submodules / worktrees:** resolve from lane worktree root, not integration
   root only → **v0: use materialize `rootPath`**
-- **Init gate thresholds:** 500 files / 50 MB — tune from audit? → **defaults
+- **Init gate thresholds:** 500 files / 50 MB; tune from audit? → **defaults
   above; `--index-workspace` override**
 - **Binary hash via git:** use `git hash-object --stdin` or read worktree?
   → **prefer worktree read; cat-file for missing worktree file**

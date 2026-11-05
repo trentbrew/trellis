@@ -1,4 +1,4 @@
-# Architecture Decision Records — Agent Lanes
+# Architecture Decision Records; Agent Lanes
 
 Decisions for the **Agent Lane** program (`trellis lane`). Status: **accepted**
 (W0, 2026-05-29).
@@ -25,14 +25,14 @@ Decisions for the **Agent Lane** program (`trellis lane`). Status: **accepted**
 | [0046](./0046-agent-forum.md) | Agent forum | Repo-scoped passive broadcast (`trellis forum`); testimony-based evidence, no scoring in v1 (proposed; amends 0024 L2) |
 | [0047](./0047-datalog-logic-layer.md) | Datalog as the logic layer | Correct recursion (semi-naive, stratified; implemented), `Rule` entities, provenance, one IR for every surface incl. future Cypher; not Prolog (proposed) |
 | [0050](./0050-notes-and-derived-operator-surface.md) | Notes and the derived operator surface | Operator-scoped `Note` entity (capture → promote/archive); `wip`/`cadence`/`report` derived from ops+rules; mirrors generated (accepted) |
-| [0051](./0051-session-metrics.md) | Session metrics — usage, cost, latency, errors per lane | Per-turn usage facts on `vcs:chatMessage`; derived `report --usage` rollup; joins `EvalRun` → outcome × cost × process (proposed) |
+| [0051](./0051-session-metrics.md) | Session metrics; usage, cost, latency, errors per lane | Per-turn usage facts on `vcs:chatMessage`; derived `report --usage` rollup; joins `EvalRun` → outcome × cost × process (proposed) |
 | [0052](./0052-agent-liveness-census.md) | Agent liveness census | One derived "who is working right now" read over presence (0024) + harness-native adapters; liveness = recency; host and turtleOS share one generator; local-only (proposed) |
 | [0053](./0053-admin-operator-api.md) | `trellis admin` as a local operator API | HTTP contract for admin clients (turtleOS `os/admin`); loopback bind + origin allowlist; planning-subset writes only, lifecycle verbs CLI-only; paged ops; `stats` incl. serving build; agents via 0052 census (proposed) |
 | [0057](./0057-issue-dialog-docs-read-projection.md) | Issue dialog long-form docs (read projection) | `GET /api/issues/:id/docs`; journal → summary → description ladder; read-only dialog body (no UI-db `RecordBody`); amends 0053 (proposed) |
 | [0054](./0054-lane-scoped-file-ownership.md) | Lane-scoped cross-agent file ownership | Ownership keyed on lane, not agentId (host sessions share one identity); `trellis guard --exclude-lane`; one policy on `trellis/vcs`, thin hooks (accepted) |
 | [0055](./0055-lane-hygiene-scheduler-placement.md) | Lane hygiene scheduled at the host | Tenant cron is kernel/tenant-scoped; lanes are VCS-engine-scoped → host launchd sweep (`cadence --lanes --dispatch`); `builtin:clock` seeds the rule future (accepted) |
-| [0056](./0056-trellis-shift-close-of-day-ceremony.md) | `trellis shift` — derived, gated close-of-day | Close = mirror of the morning: derived read + `whereami` checkpoints + hygiene gate; `buildShift` on `trellis/operator`; one command to leave, one to re-enter (proposed) |
-| [0058](./0058-command-id-in-provenance.md) | `commandId` in op provenance — durable per-command undo targeting | Add `commandId` to `OpProvenance`, null-normalized (ADR-0021 slot pattern); not a separate column; enables ADR-0016 §7 `undo <commandId>` (accepted) |
+| [0056](./0056-trellis-shift-close-of-day-ceremony.md) | `trellis shift`; derived, gated close-of-day | Close = mirror of the morning: derived read + `whereami` checkpoints + hygiene gate; `buildShift` on `trellis/operator`; one command to leave, one to re-enter (proposed) |
+| [0058](./0058-command-id-in-provenance.md) | `commandId` in op provenance; durable per-command undo targeting | Add `commandId` to `OpProvenance`, null-normalized (ADR-0021 slot pattern); not a separate column; enables ADR-0016 §7 `undo <commandId>` (accepted) |
 
 Desk issue: **TRL-35** (W0), **TRL-36** (W1). Plan:
 `TRELLIS/tooling/planning/agent-lanes.md`.
@@ -57,12 +57,13 @@ Desk issue: **TRL-35** (W0), **TRL-36** (W1). Plan:
 | [0061](./0061-lexicons.md) | Lexicons | `trellis:Lexicon` groups types and relations as graph data; membership is a field, ids are opaque; code relation ids drop the app (amends TRL-494) (proposed) |
 | [0062](./0062-authoring-clients-and-projections.md) | Authoring clients and generated projections | Authoring clients own schema; projections (Shablon) render compiled lexicons; the lexicon export is the contract; share shapes, not components (proposed) |
 | [0063](./0063-location-graph-native.md) | Location is graph-native, not a property type | No `location` property type; `Place` entities + role relations + numeric coordinates; text stays a label; geocoding is an adapter/cache (accepted) |
+| [0064](./0064-saved-views-as-kernel-data.md) | Saved views as kernel data | `View` becomes a system type with `targetType`/`targetScope`; `ViewConfig` + EQL-S compiler move to `trellis/view/query`; room MCP `list_views` / `run_view` / `describe_database`; no room plugin hook (proposed) |
 
 ### Product / explorer shell
 
 | ADR                                            | Title                        | Decision                                                                                                                                                      |
 | ---------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [0011](./0011-app-shell-three-bands.md)        | App shell three bands        | L1 published / L2 editor / L3 operator inset — one graph, one shell (**accepted**, TRL-33)                                                                    |
+| [0011](./0011-app-shell-three-bands.md)        | App shell three bands        | L1 published / L2 editor / L3 operator inset; one graph, one shell (**accepted**, TRL-33)                                                                    |
 | [0012](./0012-graph-overlay-config-surface.md) | Graph overlay config surface | One projection canvas; anchored/ambient L3 inset; vantage detents; homo/hetero binding (**accepted**, TRL-25/38)                                              |
 | [0013](./0013-rich-text-document-model.md)     | Rich text document model     | Graph-native documents; `trellis/document` semantic layer; editor substrate via Tiptap/Plate; collab tiers; `presenceRelay` dev parity (**accepted**, TRL-10) |
 | [0039](./0039-no-vendor-kernel-backends-compatibility-bridge.md) | No vendor kernel backends | Compatibility bridge over vendor `KernelBackend` adapters (**accepted**); guide: [Shipping today](https://trellis.computer/guides/shipping-today) |

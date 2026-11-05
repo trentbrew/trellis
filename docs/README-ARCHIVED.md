@@ -13,14 +13,14 @@ updated: 2026-05-30
 
 # Trellis
 
-> **The Agentic Framework** — A structured runtime for building agents that understand code, remember everything, and explain themselves. Trellis provides the durable, queryable, and versioned state layer that modern agentic systems require.
+> **The Agentic Framework**; A structured runtime for building agents that understand code, remember everything, and explain themselves. Trellis provides the durable, queryable, and versioned state layer that modern agentic systems require.
 
 | Use Case                       | How                                                                                                           |
 | :----------------------------- | :------------------------------------------------------------------------------------------------------------ |
-| **Agentic State Engine**       | Tool registry + decision traces + branching — agents operate on state they can fork, audit, and roll back     |
-| **Building Agents End-to-End** | Unified LLM abstraction + context management + RAG + orchestration — everything you need in one kernel        |
-| **Autonomous Code Editing**    | Semantic patching + AST-aware tools + causal history — agents modify code structure, not just text            |
-| **Auditable Reasoning**        | Immutable op log + decision traces + precedent search — every agent action is signed, causal, and explainable |
+| **Agentic State Engine**       | Tool registry + decision traces + branching; agents operate on state they can fork, audit, and roll back     |
+| **Building Agents End-to-End** | Unified LLM abstraction + context management + RAG + orchestration; everything you need in one kernel        |
+| **Autonomous Code Editing**    | Semantic patching + AST-aware tools + causal history; agents modify code structure, not just text            |
+| **Auditable Reasoning**        | Immutable op log + decision traces + precedent search; every agent action is signed, causal, and explainable |
 
 ---
 
@@ -31,8 +31,8 @@ updated: 2026-05-30
 Most agent frameworks focus on the _reasoning engine_ (the LLM) but treat _state_ as an afterthought. Trellis reverses this. It is the **System of Record for Decisions**, providing agents with a persistent, queryable, and auditable memory that compounds over time.
 
 - **Durable Memory**: Every thought, tool call, and file change is an immutable operation in a causal graph.
-- **Explainability by Default**: Decision traces don't just store _what_ happened, but _why_—linking actions back to context, policy, and precedent.
-- **Safe Exploration**: Agents can "fork" the state of a repository, explore multiple implementation paths, and merge the successful ones back—just like human developers.
+- **Explainability by Default**: Decision traces don't just store _what_ happened, but _why_: linking actions back to context, policy, and precedent.
+- **Safe Exploration**: Agents can "fork" the state of a repository, explore multiple implementation paths, and merge the successful ones back: just like human developers.
 
 ---
 
@@ -99,44 +99,44 @@ npx trellis import --from /path/to/git-repo
 
 ## Platform Overview
 
-Trellis is an event-sourced causal graph engine that unifies version control, knowledge management, semantic analysis, and intelligent automation. Every action — code changes, agent decisions, wiki-links, embeddings — is an immutable operation in a causal stream, giving you time-travel, branching, and full auditability out of the box.
+Trellis is an event-sourced causal graph engine that unifies version control, knowledge management, semantic analysis, and intelligent automation. Every action; code changes, agent decisions, wiki-links, embeddings; is an immutable operation in a causal stream, giving you time-travel, branching, and full auditability out of the box.
 
 The platform consists of multiple integrated surfaces:
 
-- **`trellis` npm package** — the published package exposing all platform APIs through modular subpaths
-- **`trellis` CLI** — command-line interface for repository management, semantic tooling, knowledge operations, and automation
-- **VS Code extension** — visual interface for timeline exploration, issue management, knowledge navigation, and collaborative features
-- **Core platform modules** — reusable building blocks for graph storage, semantic analysis, sync, knowledge graphs, embeddings, and decision traces
+- **`trellis` npm package**; the published package exposing all platform APIs through modular subpaths
+- **`trellis` CLI**; command-line interface for repository management, semantic tooling, knowledge operations, and automation
+- **VS Code extension**; visual interface for timeline exploration, issue management, knowledge navigation, and collaborative features
+- **Core platform modules**; reusable building blocks for graph storage, semantic analysis, sync, knowledge graphs, embeddings, and decision traces
 
 ### Core Capabilities
 
 #### 1. **Agentic State Kernel**
 
-- **EAV Store** — Entity-Attribute-Value graph database for structured agent memory
-- **Causal Stream** — Immutable, content-addressed operations with full auditability
-- **Branching & Forking** — Allow agents to simulate and explore multiple paths safely
-- **Ontology System** — Schema validation and built-in guardrails for agent actions
+- **EAV Store**; Entity-Attribute-Value graph database for structured agent memory
+- **Causal Stream**; Immutable, content-addressed operations with full auditability
+- **Branching & Forking**; Allow agents to simulate and explore multiple paths safely
+- **Ontology System**; Schema validation and built-in guardrails for agent actions
 
 #### 2. **Context & Reasoning**
 
-- **Decision Traces** — Automated capture and querying of agent tool calls and rationale
-- **Embeddings** — Native vector search for semantic indexing and RAG-based context injection
-- **Wiki-Links** — Bidirectional knowledge graph connecting files, issues, and decisions
-- **Idea Garden** — Detect and revive abandoned reasoning paths or code clusters
+- **Decision Traces**; Automated capture and querying of agent tool calls and rationale
+- **Embeddings**; Native vector search for semantic indexing and RAG-based context injection
+- **Wiki-Links**; Bidirectional knowledge graph connecting files, issues, and decisions
+- **Idea Garden**; Detect and revive abandoned reasoning paths or code clusters
 
 #### 3. **Autonomous Code Operations**
 
-- **Semantic Patching** — AST-aware changes enabling agents to modify code structure accurately
-- **Tool Registry** — Robust environment for defining and executing agent-available tools
-- **Multi-Repo Federation** — Cross-repository reasoning and relationship mapping
-- **Governance** — PGP-signed ops and policy enforcement for authorized agent actions
+- **Semantic Patching**; AST-aware changes enabling agents to modify code structure accurately
+- **Tool Registry**; Robust environment for defining and executing agent-available tools
+- **Multi-Repo Federation**; Cross-repository reasoning and relationship mapping
+- **Governance**; PGP-signed ops and policy enforcement for authorized agent actions
 
 #### 4. **Framework Infrastructure**
 
-- **LLM Layer** — Unified abstraction for OpenAI, Anthropic, Ollama, and more
-- **Peer Sync** — CRDT-based reconciliation for multi-agent or collaborative environments
-- **Client/Server/React** — Complete SDK for building agentic UIs and distributed backends
-- **VS Code Extension** — Visual timeline and decision inspector for human-in-the-loop oversight
+- **LLM Layer**; Unified abstraction for OpenAI, Anthropic, Ollama, and more
+- **Peer Sync**; CRDT-based reconciliation for multi-agent or collaborative environments
+- **Client/Server/React**; Complete SDK for building agentic UIs and distributed backends
+- **VS Code Extension**; Visual timeline and decision inspector for human-in-the-loop oversight
 
 ## Project Surfaces
 
@@ -177,7 +177,7 @@ trellis/
 │   ├── watcher/           # File watching + ingestion pipeline
 │   ├── mcp/               # Model Context Protocol server integration
 │   ├── cli/               # CLI entrypoint
-│   ├── db/                # ⚠️ Deprecated shim — re-exports from server + client
+│   ├── db/                # ⚠️ Deprecated shim; re-exports from server + client
 │   ├── engine.ts          # Composition root
 │   └── index.ts           # Main package entrypoint
 ├── vscode-extension/      # VS Code extension surface
@@ -192,7 +192,7 @@ Every action in Trellis is an immutable `VcsOp`:
 
 ```typescript
 interface VcsOp {
-  hash: string; // trellis:op:<sha256> — content-addressed
+  hash: string; // trellis:op:<sha256>; content-addressed
   kind: VcsOpKind; // e.g. 'vcs:fileModify'
   timestamp: string; // ISO 8601
   agentId: string; // Author identity (DID)
@@ -369,14 +369,14 @@ The VS Code extension provides a rich visual interface for the entire Trellis pl
 
 ### Core Features
 
-- **Status Dashboard** — Real-time view of repository health, activity metrics, and system state
-- **Causal Timeline** — Interactive exploration of the complete operation history with filtering and search
-- **Knowledge Navigator** — Browse and traverse the wiki-link graph with visual connections
-- **Issue Management** — Full lifecycle issue management with drag-and-drop workflow automation
-- **Semantic Explorer** — Navigate code structure and relationships through AST-aware visualizations
-- **Decision Inspector** — Review decision traces and understand the reasoning behind changes
-- **Collaboration Hub** — Multi-repo federation view and cross-project relationship mapping
-- **Intelligence Panel** — Semantic search, RAG context, and AI-powered insights
+- **Status Dashboard**; Real-time view of repository health, activity metrics, and system state
+- **Causal Timeline**; Interactive exploration of the complete operation history with filtering and search
+- **Knowledge Navigator**; Browse and traverse the wiki-link graph with visual connections
+- **Issue Management**; Full lifecycle issue management with drag-and-drop workflow automation
+- **Semantic Explorer**; Navigate code structure and relationships through AST-aware visualizations
+- **Decision Inspector**; Review decision traces and understand the reasoning behind changes
+- **Collaboration Hub**; Multi-repo federation view and cross-project relationship mapping
+- **Intelligence Panel**; Semantic search, RAG context, and AI-powered insights
 
 The extension lives in [`vscode-extension/`](./vscode-extension) and publishes separately from the npm package.
 
@@ -393,20 +393,20 @@ npm install trellis
 ```
 
 ```typescript
-// Main entry — full platform engine
+// Main entry; full platform engine
 import { TrellisVcsEngine } from 'trellis';
 
 // Core graph foundation (independent of VCS)
 import { EAVStore, TrellisKernel } from 'trellis/core';
 import type { Fact, Link, EntityRecord } from 'trellis/core';
 
-// Server — HTTP+WS host, auth, permissions, multi-tenancy
+// Server; HTTP+WS host, auth, permissions, multi-tenancy
 import { startServer, TenantPool } from 'trellis/server';
 
-// Client — isomorphic SDK (local or remote)
+// Client; isomorphic SDK (local or remote)
 import { TrellisClient } from 'trellis/client';
 
-// React — reactive hooks for graph subscriptions
+// React; reactive hooks for graph subscriptions
 import { TrellisProvider, useEntity, useQuery } from 'trellis/react';
 
 // Version control primitives
@@ -418,7 +418,7 @@ import { parseFileRefs, resolveRef, RefIndex } from 'trellis/links';
 import { recordDecision, queryDecisions } from 'trellis/decisions';
 ```
 
-### `trellis` — Platform Engine (`TrellisVcsEngine`)
+### `trellis`; Platform Engine (`TrellisVcsEngine`)
 
 The main entry point that orchestrates the entire platform: kernel, file watcher, version control, knowledge graphs, semantic analysis, and collaboration features.
 
@@ -455,7 +455,7 @@ const embeddings = engine.embeddings();
 await embeddings.search('authentication flow');
 ```
 
-### `trellis/core` — Graph Foundation
+### `trellis/core`; Graph Foundation
 
 The core graph layer exposes EAV primitives, ontology schemas, query engine, agent harness, and plugin system. This module is independent of version control and can be used for any graph-based application.
 
@@ -491,13 +491,13 @@ const plugins = new PluginRegistry();
 plugins.register({ id: 'my:plugin', name: 'My Plugin', version: '1.0.0' });
 ```
 
-### `trellis/vcs` — Version Control Model
+### `trellis/vcs`; Version Control Model
 
 The VCS subpath exposes operation types and domain-level building blocks for version control: branches, milestones, checkpoints, issues, diffing, merging, and blob storage.
 
 Use this subpath when you want Trellis version control capabilities without the full platform surface.
 
-### `trellis/links` — Knowledge Graph & Wiki-Links
+### `trellis/links`; Knowledge Graph & Wiki-Links
 
 Parse `[[wiki-links]]` from markdown, doc-comments, and source files. Resolve references to issues, files, symbols, milestones, and decisions. Build a bidirectional knowledge graph that connects all entities in your workspace.
 
@@ -514,7 +514,7 @@ index.getIncoming('issue:TRL-5');
 index.addCrossRepoLink('frontend', 'proj:app', 'backend', 'api:users');
 ```
 
-### `trellis/ai` — Semantic Intelligence
+### `trellis/ai`; Semantic Intelligence
 
 Advanced semantic capabilities: embed issues, milestones, files, code entities, and decisions into a vector store for intelligent search, discovery, and RAG (Retrieval-Augmented Generation).
 
@@ -529,7 +529,7 @@ const results = await manager.search('auth flow');
 const context = await manager.getRAGContext('authentication implementation');
 ```
 
-### `trellis/decisions` — Decision Intelligence
+### `trellis/decisions`; Decision Intelligence
 
 Automatically capture tool invocations and agent decisions as auditable traces. Enrich them with rationale via hooks and query them later by tool, entity, or decision chain. Perfect for understanding how and why decisions were made.
 
@@ -548,7 +548,7 @@ const decs = queryDecisions(ctx, { tool: 'trellis_issue_*' });
 const chain = queryDecisions(ctx, { entity: 'TRL-5' }); // Full decision chain
 ```
 
-### `trellis/server` — HTTP + WebSocket Server
+### `trellis/server`; HTTP + WebSocket Server
 
 Production-grade server host for the Trellis engine: multi-tenancy, auth (JWT + OAuth), permission middleware, realtime subscriptions, file uploads, and deployment tooling.
 
@@ -564,9 +564,9 @@ await startServer({
 });
 ```
 
-### `trellis/client` — Isomorphic SDK
+### `trellis/client`; Isomorphic SDK
 
-TypeScript client that works in two modes — **local** (embeds TrellisKernel, zero network) or **remote** (calls the Trellis Server HTTP API). Includes CRUD, EQL-S queries, file uploads, auth, and WebSocket subscriptions.
+TypeScript client that works in two modes; **local** (embeds TrellisKernel, zero network) or **remote** (calls the Trellis Server HTTP API). Includes CRUD, EQL-S queries, file uploads, auth, and WebSocket subscriptions.
 
 ```typescript
 import { TrellisClient } from 'trellis/client';
@@ -590,7 +590,7 @@ const sub = db.subscribe("find Note where pinned = 'true'", (results) => {
 });
 ```
 
-### `trellis/react` — React Hooks
+### `trellis/react`; React Hooks
 
 Reactive hooks that turn the Trellis client into a live data layer for React applications. Auto-subscribes via WebSocket and cleans up on unmount.
 
@@ -626,13 +626,13 @@ function NoteDetail({ id }: { id: string }) {
 }
 ```
 
-### `trellis/db` — Deprecated Alias
+### `trellis/db`; Deprecated Alias
 
 > **⚠️ Deprecated.** Use `trellis/server` and `trellis/client` instead.
 
 This subpath re-exports everything from `trellis/server` and `trellis/client` for backward compatibility. It will be removed in a future major version.
 
-### `src/garden/` — Idea Garden
+### `src/garden/`; Idea Garden
 
 Detects abandoned work using three heuristics, then exposes a query API.
 
@@ -672,23 +672,23 @@ import { typescriptParser, semanticMerge } from './src/semantic/index.js';
 
 // Parse code into structural entities
 const result = typescriptParser.parse(source, 'file.ts');
-result.declarations; // ASTEntity[] — functions, classes, interfaces, enums, …
+result.declarations; // ASTEntity[]; functions, classes, interfaces, enums, …
 result.imports; // ImportRelation[]
 result.exports; // ExportRelation[]
 
 // Compute semantic differences
 const patches = typescriptParser.diff(oldResult, newResult);
-// SemanticPatch[] — symbolAdd | symbolRemove | symbolModify |
+// SemanticPatch[]; symbolAdd | symbolRemove | symbolModify |
 //                   symbolRename | importAdd | importRemove | …
 
 // Intelligent merging with conflict resolution
 const merged = semanticMerge(ourPatches, theirPatches, 'file.ts');
 merged.clean; // true if no conflicts
 merged.patches; // Merged patch list
-merged.conflicts; // SemanticMergeConflict[] — entity-level, with suggestions
+merged.conflicts; // SemanticMergeConflict[]; entity-level, with suggestions
 ```
 
-### `src/sync/` — Peer Sync
+### `src/sync/`; Peer Sync
 
 Implements the have→want→ops→ack protocol with linear and CRDT branch modes.
 
@@ -747,7 +747,7 @@ httpTransport.addPeer('peer-b', 'http://192.168.1.10:4200');
 const wsTransport = new WebSocketSyncTransport('peer-a');
 await wsTransport.connect('peer-b', 'ws://192.168.1.10:4201');
 
-// Multi-repo federation — connect knowledge across repositories
+// Multi-repo federation; connect knowledge across repositories
 const repoManager = new MultiRepoManager(kernel);
 await repoManager.linkRepo(
   'backend',
@@ -834,18 +834,18 @@ Engine A sends 'have' { heads: { main: 'h42' }, opCount: 42 }
 
 See [`DESIGN.md`](./DESIGN.md) for the complete platform architecture specification, including:
 
-- §3 — Causal stream and branch concurrency model
-- §4 — Semantic patching: parser adapter interface, patch types, commutativity
-- §5 — Milestone narrative model
-- §6 — Identity, signing, and governance
-- §7 — Idea Garden cluster detection heuristics
-- §8 — Knowledge graph and wiki-link system
-- §9 — Embeddings and semantic search architecture
-- §10 — Decision trace capture and querying
-- §11 — Sync protocols and multi-repo federation
-- §12 — Core graph kernel and ontology system
-- §13 — Agent harness and plugin architecture
-- §14 — Open questions and architectural trade-offs
+- §3; Causal stream and branch concurrency model
+- §4; Semantic patching: parser adapter interface, patch types, commutativity
+- §5; Milestone narrative model
+- §6; Identity, signing, and governance
+- §7; Idea Garden cluster detection heuristics
+- §8; Knowledge graph and wiki-link system
+- §9; Embeddings and semantic search architecture
+- §10; Decision trace capture and querying
+- §11; Sync protocols and multi-repo federation
+- §12; Core graph kernel and ontology system
+- §13; Agent harness and plugin architecture
+- §14; Open questions and architectural trade-offs
 
 ---
 
@@ -900,7 +900,7 @@ just publish-dry-run
 just publish
 ```
 
-> **Requires [Bun](https://bun.sh) ≥ 1.0** — Trellis uses `bun:sqlite` for the vector store and Bun's native TypeScript support for optimal performance.
+> **Requires [Bun](https://bun.sh) ≥ 1.0**; Trellis uses `bun:sqlite` for the vector store and Bun's native TypeScript support for optimal performance.
 
 ---
 
@@ -915,4 +915,4 @@ just publish
 | P2.5  | Blob store, engine modularization, git exporter | ✅     | `5c43a31` |
 | P3    | File-level diff + text-based merge              | ✅     | `c953654` |
 | P4    | Identity + op signing + governance              | ✅     | `3acddda` |
-| P5    | Idea Garden — cluster detection + query         | ✅     | `105a207` |
+| P5    | Idea Garden; cluster detection + query         | ✅     | `105a207` |

@@ -1,4 +1,4 @@
-# TRL-472 — Spec: Frozen formula core v1 (corpus-first spike)
+# TRL-472; Spec: Frozen formula core v1 (corpus-first spike)
 
 **Parent:** TRL-470 · **Impl:** TRL-473 · **ADR:** [0059](../../adr/0059-frozen-formula-core-dialect-adapters.md) · **Out of scope:** TRL-471 (pb-node), full surface adapter migration (slice 2)
 
@@ -6,18 +6,18 @@
 
 ADR 0059 decides a single zero-dep **formula core** (tokenize / parse / evaluate / serialize) with **dialect adapters** at the edges. Shablon phase 4a (`lab/oss/shablon` @ `619a730`) classifies PB vs CMS-numeric expressions but does not evaluate through one engine.
 
-This spec covers **slice 1 only**: incubate the core under `experiments/`, pin semantics in `SPEC.md`, and prove behavior via a **corpus runner** — before wiring `ExprEvaluator`, `trellis/cms`, or shablon proxy tests.
+This spec covers **slice 1 only**: incubate the core under `experiments/`, pin semantics in `SPEC.md`, and prove behavior via a **corpus runner**; before wiring `ExprEvaluator`, `trellis/cms`, or shablon proxy tests.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  subgraph adapters [Adapters — slice 2+]
+  subgraph adapters [Adapters; slice 2+]
     CMS["CMS {field}"]
     Kern["Kernel $fn"]
     PB["PB / @request"]
   end
-  subgraph slice1 [Slice 1 — this spec]
+  subgraph slice1 [Slice 1; this spec]
     Core["formula-core-v1\nparse · eval · serialize"]
     Corp["corpus matrix\nJSON + runner"]
     Spec["SPEC.md\npinned v1 semantics"]

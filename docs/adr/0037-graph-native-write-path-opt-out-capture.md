@@ -1,4 +1,4 @@
-# ADR 0037: Graph-native write path — opt-out capture by default
+# ADR 0037: Graph-native write path; opt-out capture by default
 
 **Status:** Superseded by [0038](./0038-git-authoritative-file-tier.md) (git-authoritative file tier)
 **Date:** 2026-08-03
@@ -12,28 +12,28 @@
 
 ## Context
 
-The op-log is the carrier of record — ADR 0014 established git as a
+The op-log is the carrier of record; ADR 0014 established git as a
 rebuildable blob-tree mirror, not an authoritative SSoT. Practice drifted:
 agents edit files directly on disk, the op-log lags, and `syncGitIntegration`
-assumes op-log-first — producing the **9801056-class silent revert**
+assumes op-log-first; producing the **9801056-class silent revert**
 (documented in `docs/planning/git-ssot-fault-line-checkpoint-2026-08-03.md`).
 
 The safety floor (`journalWorkingTreeToOps` + refuse-before-clobber, shipped
 in `b941575`) catches the clobber before it materializes. But the underlying
 gap remains: the write path is implicitly **opt-in**. Nothing gets journaled
-until something explicitly triggers reconciliation — the `PostToolUse` hook in
+until something explicitly triggers reconciliation; the `PostToolUse` hook in
 the OpenCode plugin (2026-08-03), the pre-sync catch-up in `git sync`, or a
 manual CLI invocation. Any new write path (a different agent harness, a human
 hand-edit, a script) defaults to **silently missing** from the op-log.
 
-The 9801056 class was not a bug in one code path — it was the default itself.
+The 9801056 class was not a bug in one code path; it was the default itself.
 
 ## Decision
 
 **The op-log is the mandatory write path. Capture is opt-out by default.**
 
 Every file change that lands on disk is journaled into the op-log unless
-explicitly excluded. The exclusion list becomes the design surface — not a
+explicitly excluded. The exclusion list becomes the design surface; not a
 guard gate on what gets in, but a declaration of what stays out.
 
 This inverts the failure mode:
@@ -51,8 +51,8 @@ The A/B framing from the checkpoint doc conflated two axes:
 
 | Axis | Answer |
 |------|--------|
-| Local ownership — what's canonical on one machine | **Graph-first (B).** Decided by ADR 0014 + the shape of refuse-before-clobber. Decidable today, no new infra. |
-| Distributed sync — TrellisHub/Iroh, multi-peer | **Deferred.** A separable scaling concern. Does not gate local correctness. |
+| Local ownership; what's canonical on one machine | **Graph-first (B).** Decided by ADR 0014 + the shape of refuse-before-clobber. Decidable today, no new infra. |
+| Distributed sync; TrellisHub/Iroh, multi-peer | **Deferred.** A separable scaling concern. Does not gate local correctness. |
 
 Git is a one-way export. TrellisHub is a later distribution problem. Neither
 changes who owns the truth locally.
@@ -64,7 +64,7 @@ changes who owns the truth locally.
 The `FileWatcher` in `src/watcher/fs-watcher.ts` already provides
 per-file change events with content hashing and debounce. Instead of only
 firing during a pre-sync reconciliation, the watcher runs as a standing
-daemon — every file change is journaled incrementally at the moment it lands
+daemon; every file change is journaled incrementally at the moment it lands
 on disk, agnostic to whether the write came from Claude Code, opencode,
 Cursor, or a human in vim.
 
@@ -81,7 +81,7 @@ Disk write        FileWatcher          Ingestion          Op-log
     │            worktree → lane resolve
 ```
 
-This sits **beneath** all agent harnesses — unlike the `PostToolUse` hook,
+This sits **beneath** all agent harnesses; unlike the `PostToolUse` hook,
 which is harness-specific and needs separate wiring for each IDE/agent.
 
 ### Self-observation: excluding the op-log's own storage, not the worktrees
@@ -90,7 +90,7 @@ The op-log (`.trellis/ops.json`), blob store (`.trellis/blobs/`), and
 per-lane journals (`.trellis/lanes/`) are the engine's own storage. If the
 watcher observed any of these, every op-log append would be itself a disk
 write, which the watcher would see, which would produce another op, which
-would write again — unbounded recursion for `ops.json`, and a cascade for
+would write again; unbounded recursion for `ops.json`, and a cascade for
 blob storage.
 
 The current `FileWatcher` code in `src/engine.ts:417` uses the bare pattern
@@ -100,7 +100,7 @@ The current `FileWatcher` code in `src/engine.ts:417` uses the bare pattern
 ignorePatterns: [...this.config.ignorePatterns, '.trellis']
 ```
 
-For a batch catch-up scan this is correct — no self-observation, and
+For a batch catch-up scan this is correct; no self-observation, and
 worktree content isn't relevant during a one-shot reconciliation. For a
 continuous daemon it is **too broad**: it excludes `.trellis/worktrees/`,
 which is where all lane-scoped writes land. Silently dropping lane edits is
@@ -111,11 +111,11 @@ recursion:
 
 | Path | Excluded? | Reason |
 |------|-----------|--------|
-| `.trellis/ops.json` | **Yes** | Integration op-log — self-observation loop |
+| `.trellis/ops.json` | **Yes** | Integration op-log; self-observation loop |
 | `.trellis/blobs/` | **Yes** | Blob store write → watcher sees blob → journals blob → stores blob → cascade |
-| `.trellis/lanes/` | **Yes** | Per-lane op-log journals — same cascade as `ops.json` |
-| `.trellis/*.json` | **Yes** | Config, locks, registries — non-file-content metadata |
-| `.trellis/worktrees/` | **No** | Lane worktree contents — **must remain in scope** |
+| `.trellis/lanes/` | **Yes** | Per-lane op-log journals; same cascade as `ops.json` |
+| `.trellis/*.json` | **Yes** | Config, locks, registries; non-file-content metadata |
+| `.trellis/worktrees/` | **No** | Lane worktree contents; **must remain in scope** |
 | `.trellis/reentry-checkpoint.json` | **Yes** | Session metadata, not content |
 | `.trellis/agent-ops/` | **Yes** | Agent telemetry, not content |
 
@@ -150,7 +150,7 @@ One daemon instance watches the repo root (including worktrees as subpaths).
 Each `FileWatcher` event carries an absolute path. The daemon resolves:
 
 1. If the path is inside `.trellis/{ops.json,blobs/,lanes/,*.json,agent-ops/}`
-   → **excluded** (self-observation gate — per the exclusion table above).
+   → **excluded** (self-observation gate; per the exclusion table above).
 2. If the path is inside `.trellis/worktrees/<shortId>/` → resolve to lane
    `lane-<fullId>` via the worktree registry. Journal as a lane-scoped op.
 3. Otherwise → journal as an integration-scoped op on the integration branch.
@@ -169,12 +169,12 @@ reads of that lane's file state.
 edits directly at the repo root (not inside `.trellis/worktrees/`), the
 daemon attributes those writes to the integration branch. This matches
 `journalWorkingTreeToOps`'s existing default (`branch` parameter defaults to
-`this.currentBranch`). Lane-isolated writes require a worktree — the lane
+`this.currentBranch`). Lane-isolated writes require a worktree; the lane
 system already enforces this.
 
 **Branch-advance rides the FileWatcher's existing debounce.** `FileWatcher`
 groups rapid writes to the same file via `debounceMs`. A refactor touching
-50 files produces 50 discrete events across 50 debounce windows — one
+50 files produces 50 discrete events across 50 debounce windows; one
 advance per file, not one batched advance. Branch-advance ops are small
 metadata ops (no blob content); 50 advances in rapid succession is
 negligible overhead. If profiling shows it matters, advance coalescing
@@ -188,12 +188,12 @@ separately from `.gitignore` because the overlap is large but not exact:
 
 | Path | .gitignore | .trellisignore | Reason |
 |------|-----------|----------------|--------|
-| `dist/` | ignored | **ignored** | Build artifact — never graph-relevant |
-| `node_modules/` | ignored | **ignored** | External dependency — never graph-relevant |
-| `.git/` | ignored | **ignored** | Git metadata — never graph-relevant |
-| `*.swp`, `*~` | may be ignored | **ignored** | Editor swap files — noise |
+| `dist/` | ignored | **ignored** | Build artifact; never graph-relevant |
+| `node_modules/` | ignored | **ignored** | External dependency; never graph-relevant |
+| `.git/` | ignored | **ignored** | Git metadata; never graph-relevant |
+| `*.swp`, `*~` | may be ignored | **ignored** | Editor swap files; noise |
 | `.env.local` | ignored | **may differ** | Could be graph-relevant in some repos |
-| `.trellis/{ops.json,blobs/,lanes/,*.json,agent-ops/}` | N/A | **hard-excluded** | Op-log + blob storage — excluded by watcher to prevent self-observation loop; `worktrees/` deliberately in scope |
+| `.trellis/{ops.json,blobs/,lanes/,*.json,agent-ops/}` | N/A | **hard-excluded** | Op-log + blob storage; excluded by watcher to prevent self-observation loop; `worktrees/` deliberately in scope |
 | Studio/fork | N/A | **explicitly excluded** | Off-limits during cleanup (~1600 files staged) |
 
 ### Bridge: PostToolUse hook (shipped 2026-08-03)
@@ -201,8 +201,8 @@ separately from `.gitignore` because the overlap is large but not exact:
 `journalWorkingTreeToOps` is exposed as a standalone CLI command
 (`trellis git journal catch-up`), and the OpenCode plugin's
 `tool.execute.after` hook spawns it after every `Write | Edit | Bash` tool
-invocation. This is the correct **first step** — it closes the gap for the
-primary agent harness today — but it is harness-specific and not the final
+invocation. This is the correct **first step**; it closes the gap for the
+primary agent harness today; but it is harness-specific and not the final
 answer. When the daemon lands, the hook becomes a belt-and-suspenders
 backstop rather than the sole write path.
 
@@ -215,7 +215,7 @@ backstop rather than the sole write path.
 2. **Git is a real mirror, by construction.** `syncGitIntegration` never
    encounters un-journaled drift because the daemon journaled it at source.
 3. **Lane accretion is killed for free.** Once a worktree is a disposable
-   render of an op-log branch, there's nothing to GC — regenerate it when
+   render of an op-log branch, there's nothing to GC; regenerate it when
    needed, throw it away when not, like a build artifact. (The
    231-branch/191-worktree cleanup of 2026-08-03 demonstrated the cost of the
    old model.)
@@ -231,7 +231,7 @@ backstop rather than the sole write path.
     opt-in, few ops get in, so validation is trivial. Under opt-out, every
     file change hits validation. _Invalid ops must not contaminate the
     graph_ (hard product constraint from the checkpoint doc). The daemon step
-    (step 2 below) includes a **validation floor** — the step is not shipped
+    (step 2 below) includes a **validation floor**; the step is not shipped
     without it. See [migration path](#migration-path) for the split between
     floor validation and advanced validation.
 3. **Race-condition surface.** A continuous daemon contends with live writes
@@ -290,7 +290,7 @@ The daemon carries them forward at each journal event.
 3. **Later:** Advanced validation (file size caps, binary detection, content
    type allow/deny lists). Compaction and deduplication of noise ops (editor
    swap files, write→save→write flurries).
-4. **Eventually:** TrellisHub — the daemon becomes the local ingestion edge
+4. **Eventually:** TrellisHub; the daemon becomes the local ingestion edge
    of a distributed op-log; git export is one-way; peer sync is Iroh-native.
 
 ---

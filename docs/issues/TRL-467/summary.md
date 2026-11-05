@@ -1,4 +1,4 @@
-# TRL-467: Spec — turtle-admin issue dialog long-form docs (read projection)
+# TRL-467: Spec; turtle-admin issue dialog long-form docs (read projection)
 
 **ADR:** [0057-issue-dialog-docs-read-projection](../../adr/0057-issue-dialog-docs-read-projection.md)  
 **Spec:** [trellis-admin-issue-docs.md](../../specs/trellis-admin-issue-docs.md)  
@@ -7,7 +7,7 @@
 
 ## Contract summary
 
-- **Read:** `GET /api/issues/:id/docs` — journal → summary → description → `none` (`rendered` authoritative).
+- **Read:** `GET /api/issues/:id/docs`; journal → summary → description → `none` (`rendered` authoritative).
 - **Write:** None v1. No `RecordBody` subscription when `recordBodyMode === 'operator-docs'`.
 - **Security:** `assertIssueDocId`, confinement under `realpath(docs/issues)`, fd cap 512 KiB.
 - **E2E owner:** `os/admin` Playwright (`bun run test:e2e`).

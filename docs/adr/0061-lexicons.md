@@ -1,4 +1,4 @@
-# ADR 0061: Lexicons — named groups of types, with membership as data
+# ADR 0061: Lexicons; named groups of types, with membership as data
 
 **Status:** Proposed
 **Date:** 2026-10-27
@@ -6,7 +6,7 @@
 **Depends on:** [0048](./0048-types-relations-objects.md) (Types, Relations and Objects), [0045](./0045-user-defined-collections.md) (user-defined collections)
 **Related:** turtlenote [ADR 0001](../../../../lab/apps/note/turtlenote/docs/adr/0001-workspace-ontology-navigation.md) (ontology nav sections), [`graph-ontology/registry.json`](../../../graph-ontology/registry.json) (extension grammar `[owner/]name@major`)
 **Supersedes:** nothing
-**Superseded by:** —
+**Superseded by:** : 
 
 ## Context
 
@@ -115,12 +115,12 @@ objects, as 0048 §2.4 already says.
 
 | Option | Pros | Cons | Why not |
 | ------ | ---- | ---- | ------- |
-| A — `trellis:Lexicon`, membership as a field (chosen) | Users can create groups; every client reads the same grouping; ids stay stable | One more system type and derived projection | — |
-| B — Keep "app" as the group | No work | Users can't create groups; grouping stays in client manifests | Problems 2 and 4 |
-| C — Use `OntologySchema` as is | Already exists | In memory only, not synced, code-only | Users can't create one; other peers never see it |
-| D — Put the group in ids (`rel:<app>…`, `<appId>.<databaseId>`) | Readable ids | Moving a type or renaming a group changes identity; ids depend on the caller | Problem 3 |
-| E — Call it "Ontology" | Already in specs | Already means a single type (`createOntology`); jargon in the UI | Ambiguous |
-| F — "Namespace" / "Domain" / "Schema" | Familiar | "Namespace" implies the group is in the id, which §3 forbids; "domain" collides with web domains; "schema" already means one type's definition | Each misleads |
+| A; `trellis:Lexicon`, membership as a field (chosen) | Users can create groups; every client reads the same grouping; ids stay stable | One more system type and derived projection |; |
+| B; Keep "app" as the group | No work | Users can't create groups; grouping stays in client manifests | Problems 2 and 4 |
+| C; Use `OntologySchema` as is | Already exists | In memory only, not synced, code-only | Users can't create one; other peers never see it |
+| D; Put the group in ids (`rel:<app>…`, `<appId>.<databaseId>`) | Readable ids | Moving a type or renaming a group changes identity; ids depend on the caller | Problem 3 |
+| E; Call it "Ontology" | Already in specs | Already means a single type (`createOntology`); jargon in the UI | Ambiguous |
+| F; "Namespace" / "Domain" / "Schema" | Familiar | "Namespace" implies the group is in the id, which §3 forbids; "domain" collides with web domains; "schema" already means one type's definition | Each misleads |
 
 ## Consequences
 

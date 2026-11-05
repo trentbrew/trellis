@@ -13,12 +13,12 @@
 `src/vcs/branch.ts` + `src/vcs/decompose.ts`. **Phase 3 write boundary is in**
 (`enforceIngestAuthorization`, called from `integrateOps`); **Phase 3.2 resolver
 wiring is in** (engine defaults signing material + resolver from the local
-identity). **The read boundary — deny-by-default on the EQL-S query path — is
+identity). **The read boundary; deny-by-default on the EQL-S query path; is
 NOT started.**
 
 > **Phase 3.2: the gate only became a gate once the resolver was wired.**
 > `signingMaterial` and `identityResolver` were both opt-in, and nothing in
-> `src/` passed either — so every real repo ran the resolver-less path, which
+> `src/` passed either; so every real repo ran the resolver-less path, which
 > required only that *some* signature field exist and then trusted `signedBy` as
 > a claimed identity. A forger set two strings and was authorized as the zone
 > owner. The mirror failure was equally bad: local auth ops minted unsigned, so a
@@ -27,7 +27,7 @@ NOT started.**
 > is unchanged. Covered by `test/p4/ingest-authorization.test.ts`.
 >
 > **The gate must run at apply time, not validation time.** It was in
-> `integrateOps`' validation loop, which runs before any op is applied — so a
+> `integrateOps`' validation loop, which runs before any op is applied; so a
 > batch of `[zoneDefine, grantSet]` (the ordinary shape) rejected the zone's own
 > owner as "not Owner", because the grant's authority was resolved against a
 > store where its zone had not yet landed. Authority is resolved against the
@@ -37,15 +37,15 @@ NOT started.**
 > which then fail as `missing-dependency` rather than on their own merits.
 
 > **Grants are ops, not store writes.** The first implementation wrote grants
-> straight to `EAVStore`. That store is *derived* — rebuilt by op replay on boot
-> — so those grants vanished on restart, never replicated, were not hash-covered
+> straight to `EAVStore`. That store is *derived*; rebuilt by op replay on boot
+>; so those grants vanished on restart, never replicated, were not hash-covered
 > and carried no provenance. Because Phase 3 is deny-by-default enforcement,
 > building it on that would have meant the first reboot dropped every grant,
 > `resolveCapability` returned `None` for everyone, and the repo locked itself
 > out. Writes now mint `vcs:zoneDefine` / `zoneRename` / `grantSet` /
 > `grantRetract` through `EngineContext`; reads still run against the
 > materialized store. Regression covered by `test/p4/capability-persistence.test.ts`
-> against a real engine and a real reboot — the original tests were
+> against a real engine and a real reboot; the original tests were
 > store-isolated and could not have caught it.
 >
 > Authorization ops get their own kinds rather than riding a generic
@@ -67,12 +67,12 @@ deletes the prior head** (`src/vcs/decompose.ts:233`). The head is resolved
 positionally (`src/vcs/branch.ts:50`):
 
 ```ts
-return facts[facts.length - 1]?.v;   // branch.ts:50 — "latest wins"
+return facts[facts.length - 1]?.v;   // branch.ts:50; "latest wins"
 ```
 
 `branch:main` accumulates one `headOpHash` per advance and resolves by store
 *insertion order*, which for concurrent advances is *arrival order*. Two peers
-with an identical op set — every hash verifying, set union complete — resolve
+with an identical op set; every hash verifying, set union complete; resolve
 `main` to **different** values. This is the session's recurring bug: correctness
 depends on something the hash does not cover (ADR 0021: payload; TRL-102: lane;
 here: **order**).
@@ -87,7 +87,7 @@ same `matches[matches.length - 1]` pattern and are the same latent bug under a
 second writer.
 
 **Generalization (the audit criterion):** a "latest wins" field is safe **iff**
-(domain is bounded) **AND** (writes are totally ordered — single writer being
+(domain is bounded) **AND** (writes are totally ordered; single writer being
 the special case). `headOpHash` fails *twice* (unbounded + multi-writer);
 `status` passes *twice* (bounded + single-writer-today). A grep for
 `[last]`/`[length - 1]` must therefore also check **who writes the field**, not
@@ -96,14 +96,14 @@ just its read shape.
 ### 3. "Room = boundary" is unnamed in the kernel
 
 §5 of the sync spec concludes "the room is the boundary" but leaves *what a room
-is* open. telos §VII already defines the spatial ontology — Lab / Workshop /
-Lobby / Showroom / Classroom / Giftshop — each a zone mapped to a capability
+is* open. telos §VII already defines the spatial ontology; Lab / Workshop /
+Lobby / Showroom / Classroom / Giftshop; each a zone mapped to a capability
 grant. The spec is rediscovering the telos zone model at the kernel layer. The
 seven names are **presets**, not kernel vocabulary.
 
 SemType (semtype.org/spec) confirms the hygiene: a stable versioned `$id` with a
 separate mutable `title`; lane-scoped draft versions (`{major}-draft.{lane}.{revision}`)
-resolved by explicit precedence — i.e. per-writer refs with a convergence rule;
+resolved by explicit precedence; i.e. per-writer refs with a convergence rule;
 and an ontology/knowledge split where inherited constraints resolve via closure
 (`allOf`). Our zone registry is ontology; our grant facts are knowledge.
 
@@ -133,23 +133,23 @@ enum CapabilityLevel {
 - **`Owner` is administrative authority**, not "the serializer." It MAY be held by
   multiple principals (co-owners). The single-writer property of a shared ref comes
   from exactly one principal holding `Owner` on that zone **plus** a causally-ordered
-  journal — not from the level itself.
+  journal; not from the level itself.
 
 ### 2. Zones are graph entities, referenced by immutable id
 
 ```ts
 interface Zone {
-  zoneId: string;          // turtle://<ownerDid>/zone/<uuid> — immutable
+  zoneId: string;          // turtle://<ownerDid>/zone/<uuid>; immutable
   alias: string;           // mutable human name ("Workshop", "Lab", …)
   defaultVisibility: CapabilityLevel; // level granted to anon
   parentZone?: string;     // opaque zoneId for nesting → grant inheritance
 }
-// grant fact: (principal, zoneId, level)  — explicit, deny-by-default
+// grant fact: (principal, zoneId, level) ; explicit, deny-by-default
 ```
 
 - The kernel references **only `zoneId` + the enum.** Zone *names* are a mutable
   `alias` fact. Renaming "Workshop" → "Workspace" edits the alias; the id and every
-  grant stay put. This is the rename-proof guarantee — the kernel never contains the
+  grant stay put. This is the rename-proof guarantee; the kernel never contains the
   string "Workshop".
 - **`zoneId` is authority-bearing**: `turtle://<ownerDid>/zone/<uuid>` carries the
   owner's identity (the Ed25519 principal from ADR 0020) in the identifier, so
@@ -157,7 +157,7 @@ interface Zone {
 - **Nesting via `parentZone`** yields a capability closure (SemType `allOf`-style):
   a principal's effective level in a zone is the `max` over its direct grants plus
   grants inherited up the `parentZone` chain. Inheritance is positive-only (union/
-  max) — there is no explicit-deny override, which keeps resolution precedence-free.
+  max); there is no explicit-deny override, which keeps resolution precedence-free.
 
 ### 3. The seven telos zones are presets, not kernel vocabulary
 
@@ -170,7 +170,7 @@ interface Zone {
 | Giftshop / Market | `Reader` (public)   | transaction-gated               |
 
 These pre-populate `defaultVisibility` + grants. The kernel understands four levels
-and "who holds what on which opaque id" — nothing more.
+and "who holds what on which opaque id"; nothing more.
 
 ### 4. Refs resolve under the zone model (§2a)
 
@@ -179,7 +179,7 @@ and "who holds what on which opaque id" — nothing more.
   needing a convergence rule. Two writers never write the same ref.
 - **`integration` head = a zone owned by exactly one principal** (the room owner).
   This is the recursion bottoming out at a single writer. `vcs:branchAdvance` is
-  **retained there as the audit op** (Option 3 — a genuine history of where
+  **retained there as the audit op** (Option 3; a genuine history of where
   `integration` has been), while personal branches leave the graph (Option 1).
   The 1,128 accumulated `headOpHash` facts stop being dead once scoped to the one
   ref where position-order is meaningful because there is one writer producing it.
@@ -190,7 +190,7 @@ and "who holds what on which opaque id" — nothing more.
 
 Room membership (who currently holds the key) is unavoidably shared, mutable state.
 It passes the §2 audit: the domain is `in`/`out` (bounded), so delete-then-add is
-exhaustive, and it is owner-written — the same shape as `criterionUpdate`. The one
+exhaustive, and it is owner-written; the same shape as `criterionUpdate`. The one
 piece of shared-mutable state that cannot be namespaced away is already safe by the
 test that everything else failed.
 
@@ -205,7 +205,7 @@ stays readable. Ship no zone to a peer you would not show the whole zone to, for
 
 - Renaming a zone never touches the kernel or breaks grants (alias is a fact; id is
   immutable and authority-bearing).
-- Branch heads converge across peers — the `branch.ts:50` divergence bug is closed.
+- Branch heads converge across peers; the `branch.ts:50` divergence bug is closed.
 - Deny-by-default becomes real in the kernel, not a server projection (telos Boulder 1).
 - The same model unblocks Iroh sync (per-writer refs) and the UI DSL `tx-agent`
   capability boundary (room = file).
@@ -219,13 +219,13 @@ stays readable. Ship no zone to a peer you would not show the whole zone to, for
   prior alias on the op in order to delete it. Exact for sequential renames;
   two co-owners renaming concurrently can leave two `alias` facts, which
   `getZone`'s `find()` then resolves by insertion order. Grants avoid this
-  because their domain *is* bounded — `decompose` enumerates and deletes every
+  because their domain *is* bounded; `decompose` enumerates and deletes every
   prior level. Same shape as `headOpHash`, one field over.
 - **Signature verification changed preimage, and one caller was missed.**
   `signOp` now signs the op body with the signature fields stripped (a signature
   cannot cover itself) and re-hashes to include the signature. But
-  `governance.ts` still verified against `op.hash` — a preimage that was never
-  signed — so **every signed op failed its policy check and any policy with
+  `governance.ts` still verified against `op.hash`; a preimage that was never
+  signed; so **every signed op failed its policy check and any policy with
   `requiredSigners` denied legitimate work.** Fixed to verify `opBodyHash(op)`;
   `evaluatePolicy` is now async. This is ADR 0021's rule again: verify the
   preimage that was actually signed.
@@ -237,7 +237,7 @@ stays readable. Ship no zone to a peer you would not show the whole zone to, for
   enforced at ingest.
 - `vcs:branchAdvance` semantics change for personal branches (leave the graph); only
   `integration` keeps it as an audit op.
-- Encryption-at-rest per zone key (AES-256-GCM / argon2id) is a follow-on ADR — this
+- Encryption-at-rest per zone key (AES-256-GCM / argon2id) is a follow-on ADR; this
   ADR defines the *boundary* the key will lock, not the crypto.
 - `Owner` being multi-principal means a shared `integration` owner set must still
   serialize writes via the causally-ordered journal; the single-writer guarantee is
@@ -251,7 +251,7 @@ stays readable. Ship no zone to a peer you would not show the whole zone to, for
 
 ## Acceptance criteria
 
-1. `CapabilityLevel` enum with ordinal; `None` is never persisted — revocation
+1. `CapabilityLevel` enum with ordinal; `None` is never persisted; revocation
    retracts the grant fact (test).
 2. A zone is referenced by immutable `zoneId`; renaming `alias` leaves the id and all
    grants intact (test).
@@ -259,7 +259,7 @@ stays readable. Ship no zone to a peer you would not show the whole zone to, for
    `None` (deny-by-default), verified by test.
 4. Only an `Owner` may add/remove grants on a zone (invariant enforced + tested).
 5. Two peers with an identical op set resolve the same branch head (the
-   `branch.ts:50` bug closed — test).
+   `branch.ts:50` bug closed; test).
 6. `integration` head is owned by a single principal; `vcs:branchAdvance` is retained
    there as an audit trail.
 
@@ -270,7 +270,7 @@ stays readable. Ship no zone to a peer you would not show the whole zone to, for
 - `docs/planning/trellis-ui-dsl.md` (§5 "room = file", `tx-agent`)
 - `turtleos/telos.md` §VII (the ontology), Boulder 1 (kernel hardening)
 - ADR 0020 (Ed25519 identity / device signing)
-- ADR 0021 (canonical op hashing — "the hash doesn't cover X")
+- ADR 0021 (canonical op hashing; "the hash doesn't cover X")
 - semtype.org/spec (stable `$id` + mutable `title`; lane-scoped drafts; `allOf` closure)
 - `src/vcs/branch.ts:50`, `src/vcs/decompose.ts:233,488`, `src/vcs/issue.ts:246`,
   `src/identity/governance.ts`

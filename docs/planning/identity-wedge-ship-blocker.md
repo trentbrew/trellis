@@ -1,4 +1,4 @@
-# Ship blocker — identity wedge (2026-08-02)
+# Ship blocker; identity wedge (2026-08-02)
 
 **Status:** WORK NEEDED IN A SEPARATE SESSION. Do not resolve in the working
 session without explicit user approval.
@@ -19,12 +19,12 @@ The repo's guard (`~/.config/opencode/plugins/trellis-lanes.ts` →
 That flow does **not** capture this work:
 
 - Session lane `lane-2e102bcd-efbb-4474-8fbd-46a02dba0886` has **0 ops in its
-  journal** — the file edits were never recorded as Trellis ops (no watcher
+  journal**; the file edits were never recorded as Trellis ops (no watcher
   captured them; `.trellis/ops.json` has zero ops referencing the new files).
 - `trellis lane promote` replays the lane journal → nothing to replay (it is
   also guard-`ask`, needing UI approval anyway).
 - `trellis git sync` mirrors the **Trellis-recorded integration state** to git
-  — the working-tree diff is not part of that state, so it would commit
+ ; the working-tree diff is not part of that state, so it would commit
   nothing (or stale state), not the 25 files.
 
 The work exists **only as a git working-tree diff** of 25 files.
@@ -44,7 +44,7 @@ Choose one:
 ## Prepared commit
 
 ```bash
-git commit -m "feat(identity): device identity wedge — onboarding-first identity, person-scoped registry, sprite devices
+git commit -m "feat(identity): device identity wedge; onboarding-first identity, person-scoped registry, sprite devices
 
 Slices A-D of docs/planning/device-registry-and-sprite-pairing.md.
 A: onboarding-first identity + person-first pairing + device-signed ops
@@ -63,7 +63,7 @@ Tests: 27 new; p4/p7/sync/engine suites green (300)."
   combobox, dag-scheduler, workflow/pipeline CLIs).
 - Full `pnpm test`: 7 pre-existing failures in OTHER lanes' files
   (test/issue.test.ts ×4, test/cli/skills.test.ts ×2,
-  test/core/provenance-coverage.test.ts ×1 — registry-cli mint sites,
+  test/core/provenance-coverage.test.ts ×1; registry-cli mint sites,
   test/core/workflow-pipeline-primitives.test.ts ×4).
 
 ## Staged file list (all wedge-owned)
@@ -81,5 +81,5 @@ test/p4/pairing.test.ts, test/p4/ingest-authorization.test.ts,
 test/p7/vcs-op-sync-prototype.test.ts
 
 Note: `src/sync/types.ts` carries one foreign hunk (SyncTransport
-connect/disconnect signature — another lane's WIP) that rides along in the
+connect/disconnect signature; another lane's WIP) that rides along in the
 commit; flag in the PR/commit review.

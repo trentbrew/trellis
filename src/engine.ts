@@ -28,7 +28,7 @@ import { createVcsOp, isVcsOpKind, verifyVcsOpHash } from './vcs/ops.js';
 import { enforceIngestAuthorization } from './identity/capability.js';
 import { getSigningMaterial } from './identity/pairing.js';
 import { peerKeyResolver } from './identity/peer-key-resolver.js';
-import { signOp } from './identity/signing-middleware.js';
+import { signOp, verifyOpBatch } from './identity/signing-middleware.js';
 import type { IdentityResolver } from './identity/signing-middleware.js';
 import { PROVENANCE } from './core/persist/canonical-op.js';
 import type { OpProvenance } from './core/persist/canonical-op.js';
@@ -248,6 +248,8 @@ const ISSUE_INTEGRATION_KINDS = new Set<string>([
 export type IntegrateOpRejectReason =
   | 'invalid-kind'
   | 'hash-mismatch'
+  | 'unknown-signer'
+  | 'invalid-signature'
   | 'unauthorized'
   | 'missing-dependency'
   | 'apply-failed';
@@ -262,6 +264,12 @@ export interface IntegrateOpsResult {
   applied: number;
   skipped: number;
   rejected: IntegrateOpRejection[];
+  /**
+   * Hashes of applied ops that carried no signature. Their `agentId` is a
+   * self-asserted claim: legal (pre-signing history, identity-less repos), but
+   * not attributable to a key.
+   */
+  unattributed: string[];
 }
 
 /** A VCS payload without its signature envelope (`signature`, `signedBy`, `signedWith`). */
@@ -933,6 +941,7 @@ for (const event of scanEvents) {
     const known = new Set(this.opLog.readAll().map((op) => op.hash));
     const pendingByHash = new Map<string, VcsOp>();
     const rejected: IntegrateOpRejection[] = [];
+    const unattributed: string[] = [];
     let applied = 0;
     let skipped = 0;
 
@@ -963,6 +972,24 @@ for (const event of scanEvents) {
       if (pendingByHash.has(op.hash)) {
         skipped++;
         continue;
+      }
+
+      // ADR 0022 §4: a signed op is attributed by its key, so the signature
+      // must verify against a key we know — for every kind, not only auth ops.
+      // Unsigned ops still apply and are reported as `unattributed`.
+      if (op.vcs?.signature) {
+        const [check] = op.vcs.signedBy
+          ? await verifyOpBatch([op], this.identityResolver!)
+          : [];
+        if (!check?.valid) {
+          rejected.push({
+            op,
+            reason: check?.failure ?? 'invalid-signature',
+            message:
+              check?.reason ?? `Signed op '${op.hash}' is missing signedBy.`,
+          });
+          continue;
+        }
       }
 
       pendingByHash.set(op.hash, op);
@@ -1012,6 +1039,7 @@ for (const event of scanEvents) {
           });
           known.add(op.hash);
           applied++;
+          if (!op.vcs?.signature) unattributed.push(op.hash);
           progressed = true;
         } catch (err) {
           rejected.push({
@@ -1039,7 +1067,7 @@ for (const event of scanEvents) {
       pending = nextPending;
     }
 
-    return { applied, skipped, rejected };
+    return { applied, skipped, rejected, unattributed };
   }
 
   /**

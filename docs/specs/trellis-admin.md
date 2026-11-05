@@ -1,8 +1,8 @@
-# Spec: trellis admin — kernel AffordanceShell + TML (v1)
+# Spec: trellis admin; kernel AffordanceShell + TML (v1)
 
 **Status:** Shipped on desk (v1 intent satisfied via child specs)  
 **Date:** 2026-07-21  
-**Amended:** 2026-07-24 — routing/index superseded by [`trellis-admin-shell.md`](./trellis-admin-shell.md); chrome by [`trellis-admin-chrome-polish.md`](./trellis-admin-chrome-polish.md); VCS IA by [`trellis-admin-vcs-layout-ide.md`](./trellis-admin-vcs-layout-ide.md); datatable by TRL-202/209. This doc remains **v1 kernel + TML intent** SSOT.  
+**Amended:** 2026-07-24; routing/index superseded by [`trellis-admin-shell.md`](./trellis-admin-shell.md); chrome by [`trellis-admin-chrome-polish.md`](./trellis-admin-chrome-polish.md); VCS IA by [`trellis-admin-vcs-layout-ide.md`](./trellis-admin-vcs-layout-ide.md); datatable by TRL-202/209. This doc remains **v1 kernel + TML intent** SSOT.  
 **Design:** TRL-174 · `docs/artifacts/trellis-admin_design.md` + `trellis-admin_mockup.html`  
 **Proposal:** TRL-173  
 **Labels:** `spec`, `tml`, `admin`, `needs-e2e`
@@ -18,7 +18,7 @@ Ship **`trellis admin`** as the operator console that can **replace**
 
 **v1 host (locked):** kernel-served HTML on the lanes dashboard server (same
 process family as `lane watch`). fractal-playground AffordanceShell host is
-**v1.1** (out of this wedge) — design target stays valid; do not block v1 on
+**v1.1** (out of this wedge); design target stays valid; do not block v1 on
 Next/sidecar.
 
 **Never** rename or collide with `trellis watch` (file watcher).
@@ -32,10 +32,10 @@ Next/sidecar.
 | Host v1 | Kernel `src/ui/admin.html` via `lanes-dashboard.ts` routes |
 | Host v1.1 | fractal-playground Operate/VCS page + theme/SSE proxy (follow-up) |
 | IA | One page; `?view=grid\|kanban\|table` (default **kanban**) |
-| Theme | `<link href="/theme/runtime-theme.css">` — no forked `:root` |
+| Theme | `<link href="/theme/runtime-theme.css">`; no forked `:root` |
 | TML boards | `WebDriver` + snapshot-friendly binding (extend `tml-lanes` patterns) |
 | Op-log | Full SSE op stream (`wantOps=true`); not `events=snapshot` |
-| SSE | **Dual:** (A) TML live/snapshot for projections (B) full `/api/lanes/stream` for op-log + toasts + lock — same origin |
+| SSE | **Dual:** (A) TML live/snapshot for projections (B) full `/api/lanes/stream` for op-log + toasts + lock; same origin |
 | Orphans | **Cut** (stub in `lanes.html`) |
 | Kill `lane watch` | Only after parity checklist green; then alias `lane watch` → `admin` |
 
@@ -156,8 +156,8 @@ CI=1 pnpm test:e2e e2e/admin.spec.cjs
 
 Minimum cases:
 
-1. `goto('/admin')` — rail VCS, `#vantage` N/A, view toggle + search visible, kanban default
-2. Switch Grid / Table — projection region changes; URL `?view=`
+1. `goto('/admin')`; rail VCS, `#vantage` N/A, view toggle + search visible, kanban default
+2. Switch Grid / Table; projection region changes; URL `?view=`
 3. Theme link `/theme/runtime-theme.css` 200
 4. Op-log region present
 5. Regression: `e2e/tml-lanes.spec.cjs` + `e2e/client-vantage.spec.cjs` stay green

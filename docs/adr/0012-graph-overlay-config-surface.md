@@ -1,4 +1,4 @@
-# ADR 0012: Graph overlay — config surface vs user-facing surface
+# ADR 0012: Graph overlay; config surface vs user-facing surface
 
 **Status:** accepted  
 **Date:** 2026-06-10  
@@ -9,13 +9,13 @@
 
 ## Context
 
-ADR 0011 locks **band** (who may see which chrome). This ADR locks how **config** and **user-facing** surfaces relate on that shell — the graph overlay problem.
+ADR 0011 locks **band** (who may see which chrome). This ADR locks how **config** and **user-facing** surfaces relate on that shell; the graph overlay problem.
 
 Two-panel builders (config beside render) fail because:
 
-1. **Attention is phasic**, not a stable ratio — styling is 90/10 config; review is 10/90 render. A split correct on average is wrong in every moment.
-2. **Coupling direction varies** — DevTools is render→config; Webflow is config→render; published apps are render-only (kitchen).
-3. **Authorization and layout are the same question** — band is not a preview toggle; it is which directions of the coupling arrow a principal may render.
+1. **Attention is phasic**, not a stable ratio; styling is 90/10 config; review is 10/90 render. A split correct on average is wrong in every moment.
+2. **Coupling direction varies**; DevTools is render→config; Webflow is config→render; published apps are render-only (kitchen).
+3. **Authorization and layout are the same question**; band is not a preview toggle; it is which directions of the coupling arrow a principal may render.
 
 The configure/render tension resolves into **orthogonal axes on one surface**, not two panels whose widths we negotiate.
 
@@ -25,12 +25,12 @@ Adopt **one projection canvas** with three overlay layers and **contextual inset
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│  L3  Operator inset — heteromorphic tools (when permitted)  │
+│  L3  Operator inset; heteromorphic tools (when permitted)  │
 │      anchored │ ambient mount                               │
 ├─────────────────────────────────────────────────────────────┤
-│  L2  In-place depth — vantage scrub, homomorphic edit       │
+│  L2  In-place depth; vantage scrub, homomorphic edit       │
 ├─────────────────────────────────────────────────────────────┤
-│  L1  Projection — route + query + shell at current vantage  │
+│  L1  Projection; route + query + shell at current vantage  │
 └─────────────────────────────────────────────────────────────┘
          same graph · same URL · band × vantage × lane
 ```
@@ -63,7 +63,7 @@ Classification is a property of **tool binding**, not tool type.
 | Lane | Lane list | Promote/diff **this** draft |
 | Inspector entities | All types | Attributes of **this** entity |
 
-**Rule:** L3 inset **docks onto selection context** when `selection !== null`; **floats ambient** when no selection. Same inset component, two mount semantics — not two products.
+**Rule:** L3 inset **docks onto selection context** when `selection !== null`; **floats ambient** when no selection. Same inset component, two mount semantics; not two products.
 
 | Mount | Header | Tab scope | Dismiss behavior |
 | ----- | ------ | --------- | ---------------- |
@@ -97,7 +97,7 @@ Continuous `--vantage` is the substrate. **Territories** are named detents for l
 
 **Success criterion (fractal wedge):** a non-builder can answer “what am I looking at?” in one glance without knowing what “vantage” means.
 
-Territory map (initial, from fractal wedge — may extend):
+Territory map (initial, from fractal wedge; may extend):
 
 | Territory | Vantage range | Shell | Label (example) |
 | --------- | ------------- | ----- | --------------- |
@@ -109,8 +109,8 @@ Territory map (initial, from fractal wedge — may extend):
 
 | Track | Repo / wedge | Primary question |
 | ----- | ------------ | ---------------- |
-| **Fractal responsiveness** | `demo/realtime-app` — `Thing.svelte`, `shells.ts`, `--vantage` | How is **one identity** drawn at many focal depths? |
-| **Fractal projection** | `Sandbox/.../fractals-playground` — projection contract, anime.js FLIP | How do **many entities** reconcile into animated layout modes? |
+| **Fractal responsiveness** | `demo/realtime-app`; `Thing.svelte`, `shells.ts`, `--vantage` | How is **one identity** drawn at many focal depths? |
+| **Fractal projection** | `Sandbox/.../fractals-playground`; projection contract, anime.js FLIP | How do **many entities** reconcile into animated layout modes? |
 
 Studio needs both. Vantage crossfade and projection FLIP are composable but not interchangeable.
 
@@ -126,7 +126,7 @@ Allocate screen width by average visit frequency.
 
 ### Permanent side-by-side config panel
 
-Squarespace / Webflow default — config always visible beside render.
+Squarespace / Webflow default; config always visible beside render.
 
 **Rejected for L1–L2:** burns loop-tightness for styling tasks and duplicates band-gated chrome. Acceptable only as **anchored L3 inset**, not as default shell.
 
@@ -147,7 +147,7 @@ All config via scrubbing and in-place inspection.
 
 ### Negative / cost
 
-- Shell must propagate `selection` + `band` + `vantage` to inset root — not per-page props.
+- Shell must propagate `selection` + `band` + `vantage` to inset root; not per-page props.
 - Projection track (FLIP reconcile) must wrap graph-driven DOM changes in `layout.update` consistently; partial Svelte `{#each}` reconcile will pop without motion.
 - Two fractal vocabularies require namespace discipline in docs and packages.
 
@@ -190,17 +190,17 @@ All config via scrubbing and in-place inspection.
 
 ## Open questions
 
-1. **Selection model** — click-to-select on projection only, or keyboard/roving focus counts?
-2. **Anchored inset layout** — sheet (right) vs bottom dock when spatial coupling is high?
-3. **Capability names** — inherit from ADR 0011 open questions (`can:edit`, `can:admin`, resource scope).
+1. **Selection model**; click-to-select on projection only, or keyboard/roving focus counts?
+2. **Anchored inset layout**; sheet (right) vs bottom dock when spatial coupling is high?
+3. **Capability names**; inherit from ADR 0011 open questions (`can:edit`, `can:admin`, resource scope).
 
 Resolve in TRL-25 spec; do not block inset binding model on these.
 
-## See also — collection vs entity registry (2026-06)
+## See also; collection vs entity registry (2026-06)
 
 ADR 0012 axes (band × vantage × lane) govern **one entity in focus** on the projection canvas.
 **Collection-scale** layout (table / kanban / calendar for *many* entities) is a separate registry
-axis — do not merge it with vantage.
+axis; do not merge it with vantage.
 
 | Axis | Answers | Primary source |
 | ---- | ------- | -------------- |

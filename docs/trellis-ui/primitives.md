@@ -1,4 +1,4 @@
-# Primitive Micro-Cores — @trellis.computer/ui
+# Primitive Micro-Cores; @trellis.computer/ui
 
 **Status:** spec
 **Date:** 2026-08-02
@@ -10,13 +10,13 @@
 
 Between the theme tokens and the domain cores there is a missing layer:
 **primitive micro-cores**. Small, framework-free behavior cores for universal
-affordances — disclosure, tabs, selectable, dismiss, tooltip, scroll, split —
+affordances; disclosure, tabs, selectable, dismiss, tooltip, scroll, split : 
 that domain cores (sidebar, accordion, file explorer, editor, app shell)
 **compose instead of re-implement**.
 
 The guarantee this buys: the expand/collapse toggle in a file explorer IS the
 toggle in an accordion IS the toggle in the editor's outline. One behavior core,
-one icon, one motion token — everywhere.
+one icon, one motion token; everywhere.
 
 ## Layering
 
@@ -34,7 +34,7 @@ thin adapters (react / vue / svelte / vanilla)
   (duration/easing), rhythm (`--prose-*`). Components never hardcode.
 - **Primitives own behavior**: state + commands + a11y contract, no DOM, no
   pixels. Node-testable (vitest, zero DOM) like every other core.
-- **Domain cores compose primitives** — a sidebar's collapsible group contains
+- **Domain cores compose primitives**; a sidebar's collapsible group contains
   a disclosure core; the editor outline section is a disclosure core; the file
   tree node is a disclosure core. The state machine is one thing, reused.
 
@@ -49,10 +49,10 @@ thin adapters (react / vue / svelte / vanilla)
 | `tooltip` | `open` (hover/focus/keyboard), `placement`, delay, `aria-describedby` | sidebar rails, icon buttons, truncation |
 | `scroll` | scroll container: `autoScroll`, `anchor`, `preserveScrollOnPrepend`, `data-scrollable` | message streams, file lists, kanban, sidebar |
 | `split` | panel geometry: sizes (px/ratio), `min`/`max`, `collapsible`+`collapsedSize`, `orientation`, `setPanelSize()`, order | app-shell root (ADR 0011 three bands), two-tier layouts, explorer+editor, datatable rails |
-| `badge` | count state only (pure data) — no behavior | notification counts, status chips |
-| `avatar` | identity → initials/color resolution (pure data) — no behavior | profile slots, person entities |
+| `badge` | count state only (pure data); no behavior | notification counts, status chips |
+| `avatar` | identity → initials/color resolution (pure data); no behavior | profile slots, person entities |
 
-`badge` and `avatar` are **data-only primitives** — no state machine, just
+`badge` and `avatar` are **data-only primitives**; no state machine, just
 deterministic projection (count → display, identity → initials + color). They
 exist to keep the *visual vocabulary* shared, not to own behavior.
 
@@ -62,7 +62,7 @@ exist to keep the *visual vocabulary* shared, not to own behavior.
 needs expand/collapse, it composes `disclosure`; if a table needs row
 selection, it composes `selectable`. Violations are flagged in review.
 
-Implementation shape — a domain core holds primitive instances:
+Implementation shape; a domain core holds primitive instances:
 
 ```ts
 // sidebar core (sketch)
@@ -92,7 +92,7 @@ The file-explorer example, made concrete:
 ## Streaming Contract (prose + chat)
 
 Content surfaces (editor output, chat, docs) render with the `prose` renderer
-composition. Its styling contract is **append-stable** — adding a block never
+composition. Its styling contract is **append-stable**; adding a block never
 restyles earlier blocks:
 
 - No forward-looking selectors: `:last-child`, `:has()`, `:empty` are excluded
@@ -105,11 +105,11 @@ restyles earlier blocks:
 This is a core-level contract: `editor-core` and the message stream must not
 emit DOM shapes that require such selectors to look correct.
 
-## Split — the app-shell root primitive
+## Split; the app-shell root primitive
 
 `split` is the structural primitive every app layout wraps itself in at the
-root. It models **panel geometry only** — sizes, min/max constraints, collapse,
-order, orientation — never panel contents, and never free-form placement
+root. It models **panel geometry only**; sizes, min/max constraints, collapse,
+order, orientation; never panel contents, and never free-form placement
 (that is `layout-core`'s desk grid). The model follows the reka-ui/radix
 splitter contract (PanelGroup → Panel → ResizeHandle), extracted to Tier-2:
 
@@ -121,7 +121,7 @@ splitter contract (PanelGroup → Panel → ResizeHandle), extracted to Tier-2:
   adapter glue over core state.
 
 **Composition with the app shell (ADR 0011):** the three bands are a splitter
-tree — `split(sidebar | split(main | operator-inset))` — and every layout
+tree; `split(sidebar | split(main | operator-inset))`; and every layout
 beneath it (two-tier, explorer+editor, datatable rails) is a nested split.
 Shells, not pages, wrap themselves in it.
 
@@ -139,20 +139,20 @@ split (shell root)
 The single bridge value is the panel's measured width (`clientWidth` via
 ResizeObserver) fed to the grid's `width` prop. When a splitter drag shrinks a
 panel past a grid breakpoint, `layout-core`'s breakpoint-reflow math handles
-it — which is why that reflow lives in the core, not the adapter.
+it; which is why that reflow lives in the core, not the adapter.
 `react-grid-layout` (the `Responsive` component) is `layout-core`'s react DOM
-glue per ADR 0034 §4.11 — controlled `layout` + `onLayoutChange` →
+glue per ADR 0034 §4.11; controlled `layout` + `onLayoutChange` →
 `syncFromCore`, the same pattern as every adapter.
 
 ## Do's and Don'ts
 
 - **Do** compose primitives inside domain cores.
 - **Do** keep primitives DOM-free and Node-testable.
-- **Do** let renderers map `open → rotation`, `active → styling` — pixels are
+- **Do** let renderers map `open → rotation`, `active → styling`; pixels are
   adapter + theme work.
 - **Don't** put `--prose-*`, `--motion-*`, or `--icon-pack` values in core
-  code — cores know state, not pixels.
-- **Don't** add behavior to `badge`/`avatar` — they are data-only.
+  code; cores know state, not pixels.
+- **Don't** add behavior to `badge`/`avatar`; they are data-only.
 
 ## Acceptance Criteria
 

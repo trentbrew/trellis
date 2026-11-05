@@ -5,7 +5,7 @@
 stubs, `src/mcp/graph-summary.ts`, strategist intake
 
 > **Query, don't paste.** Session boot and mid-task orientation must be a
-> token-budgeted projection of graph state — handles first, bodies on demand.
+> token-budgeted projection of graph state; handles first, bodies on demand.
 
 ---
 
@@ -23,13 +23,13 @@ not machine-first JSON, and not wired as the default boot packet.
 
 ## 2. Goals
 
-1. Ship **`trellis context pack`** — budgeted, vantage-scoped projection.
+1. Ship **`trellis context pack`**; budgeted, vantage-scoped projection.
 2. Mirror it as MCP **`trellis_context_pack`** (same JSON shape).
 3. Ref-first: IDs + short summaries; no skill/rule prose in the pack.
 4. Provide a **hook-consumable** text/JSON path so desk session-context can
    replace dump-style orientation (kernel ships the CLI; desk hook is a thin
    caller).
-5. Grow `src/context/` into a real assembler — do not invent a parallel module
+5. Grow `src/context/` into a real assembler; do not invent a parallel module
    tree.
 
 ## 3. Non-goals (v0)
@@ -39,13 +39,13 @@ not machine-first JSON, and not wired as the default boot packet.
 - Replacing `trellis ask --rag` (pack is graph/VCS-first, not vector-first)
 - Lane engine rewrite (TRL-117 stays separate)
 - Rewriting global Cursor `hooks_context` coordination manifesto (Manager /
-  `~/.cursor` follow-up — note only in this wedge)
+  `~/.cursor` follow-up; note only in this wedge)
 
 ## 4. Surfaces
 
 | Surface | Contract                                                                                                                        |
 | ------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Library | `src/context/pack.ts` — `assembleContextPack(engine, opts) → ContextPack`                                                       |
+| Library | `src/context/pack.ts`; `assembleContextPack(engine, opts) → ContextPack`                                                       |
 | Types   | Extend `src/context/types.ts` with `ContextPack`, `ContextPackOptions`, `ContextVantage`                                        |
 | CLI     | `trellis context pack [options]` under new `context` command group in `src/cli/` (register like `protocol.ts`)                  |
 | MCP     | `trellis_context_pack` on VCS MCP (`src/mcp/server.ts`)                                                                         |
@@ -126,7 +126,7 @@ Must stay under budget by the same clamp rules.
 
 Tool name: `trellis_context_pack`
 
-Inputs: `path`, `budget`, `vantage`, `issue` (optional) — same semantics as CLI.
+Inputs: `path`, `budget`, `vantage`, `issue` (optional); same semantics as CLI.
 Returns: JSON text of `ContextPack` (pretty or compact; estimator uses returned
 payload).
 
@@ -140,7 +140,7 @@ payload).
 
 ## 6. Budget clamp algorithm
 
-Estimator: `ceil(utf8Length(serialized) / 4)` — match existing
+Estimator: `ceil(utf8Length(serialized) / 4)`; match existing
 `BaseContextManager` / `ask --rag` convention.
 
 **Priority (keep higher first; drop from bottom when over budget):**
@@ -170,8 +170,8 @@ hooks).
 | focus issue  | `engine.getIssue` / listIssues; AC from issue criteria API                               |
 | waitingOnYou | `findWaitingOnYou` (`protocol/whereami.ts`)                                              |
 | milestone    | latest milestone from engine milestone list (or issue-linked if available)               |
-| decisions    | `getDecisionChain(issueId)` / decision list — `src/decisions`                            |
-| links        | Issue description wiki-links if cheap; else empty — **do not** full-repo file walk in v0 |
+| decisions    | `getDecisionChain(issueId)` / decision list; `src/decisions`                            |
+| links        | Issue description wiki-links if cheap; else empty; **do not** full-repo file walk in v0 |
 | policyRefs   | Always `[]` in v0 unless an existing entity type is trivial to query                     |
 
 ## 8. Hook consumer (desk)
@@ -198,16 +198,16 @@ kernel test gate.
 | `test/context/pack.test.ts`               | Assembles pack; clamp forces `truncated` and `estimatedTokens <= budget`; vantage `edit` without issue fails; boot with no issue succeeds |
 | CLI smoke (optional in same file via API) | `context pack --format json` parses as `version: 1`                                                                                       |
 
-No `needs-e2e` — CLI/library wedge.
+No `needs-e2e`; CLI/library wedge.
 
 ## 10. Executor notes
 
 - Prefer new files: `src/context/pack.ts`, `src/cli/context.ts`,
   `test/context/pack.test.ts`; thin MCP registration in `server.ts`.
 - Reuse whereami helpers; do not change `formatWhereami` output.
-- Do not migrate heat-map LLM history into pack v0 — pack is **orientation**,
+- Do not migrate heat-map LLM history into pack v0; pack is **orientation**,
   not chat memory.
-- Global npm `trellis` may lag local `bun ./src/cli` — tests use local CLI/API.
+- Global npm `trellis` may lag local `bun ./src/cli`; tests use local CLI/API.
 
 ## 11. Out of scope reminders
 

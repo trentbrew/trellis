@@ -54,15 +54,19 @@ export type SyncMessageHandler = (message: SyncMessage) => void | Promise<void>;
 /**
  * Categorical reasons a receiver may reject ops sent over the wire.
  *
- * Engine-level reasons (`invalid-kind`, `hash-mismatch`, `missing-dependency`,
- * `apply-failed`) mirror `IntegrateOpRejectReason` so engine rejections flow
- * back to the sender unchanged. Wire-level reasons (`protocol-version`)
- * describe failures detected by the sync layer itself. The union is kept
- * separate so the wire protocol does not drift with engine internals.
+ * Engine-level reasons (`invalid-kind`, `hash-mismatch`, `unknown-signer`,
+ * `invalid-signature`, `unauthorized`, `missing-dependency`, `apply-failed`)
+ * mirror `IntegrateOpRejectReason` so engine rejections flow back to the
+ * sender unchanged. Wire-level reasons (`protocol-version`) describe failures
+ * detected by the sync layer itself. The union is kept separate so the wire
+ * protocol does not drift with engine internals.
  */
 export type NackReason =
   | 'invalid-kind'
   | 'hash-mismatch'
+  | 'unknown-signer'
+  | 'invalid-signature'
+  | 'unauthorized'
   | 'missing-dependency'
   | 'apply-failed'
   | 'protocol-version'

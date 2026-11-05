@@ -1,4 +1,4 @@
-# ADR 0056: `trellis shift` — a derived, gated close-of-day ceremony
+# ADR 0056: `trellis shift`; a derived, gated close-of-day ceremony
 
 **Status:** Proposed
 **Date:** 2026-09-30
@@ -14,12 +14,12 @@ desk `justfile`, agent-ops session-end hooks
 
 Multi-agent desks lose context at end of day. The morning briefing rotted
 precisely because it was a **hand-cached derived artifact with no refresh** (ADR
-0050 d3 anti-pattern) — so the "re-entry" read was stale. Closing up today is
+0050 d3 anti-pattern); so the "re-entry" read was stale. Closing up today is
 ad-hoc: some sessions commit, some leave dirty trees, some leave unpushed commits,
 and per-session intent ("what I was about to do next") is lost with the process.
 
 A close-of-day ceremony must therefore be the **mirror of the morning briefing**:
-a *derived, gated* read plus durable checkpoints — never a hand-written note we
+a *derived, gated* read plus durable checkpoints; never a hand-written note we
 remember to produce.
 
 ## Decision
@@ -37,7 +37,7 @@ remember to produce.
 ### 2. Close is gated
 
 Refuse a clean close when hygiene fails: unpushed commits, unresolved dirty lanes,
-or a stale briefing source. The gate is the point — derived-without-a-gate is
+or a stale briefing source. The gate is the point; derived-without-a-gate is
 theater (ADR 0050 d4).
 
 ### 3. Open is the inverse read
@@ -60,10 +60,10 @@ The read is `buildShift(engine, { … })` on `trellis/operator`, so host and OS
 
 ## Consequences
 
-**Good** — context survives; the ceremony cannot rot because it is derived and
+**Good**; context survives; the ceremony cannot rot because it is derived and
 gated; re-entry is one command.
 
-**Costs** — a generator is more work than a note once; the gate can annoy (must
+**Costs**; a generator is more work than a note once; the gate can annoy (must
 gate something real, e.g. unpushed commits).
 
 ## Implementation phases
