@@ -57,6 +57,10 @@ interface TenantToolArgs {
   room?: string;
 }
 
+/** `query_graph` row caps (KRN-513). */
+const QUERY_DEFAULT_LIMIT = 100;
+const QUERY_MAX_LIMIT = 1000;
+
 const laneSchema = z
   .string()
   .optional()
@@ -207,26 +211,35 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
   server.registerTool(
     'query_graph',
     {
-      description: 'Run an EQL-S query against the room graph.',
+      description: `Run an EQL-S query against the room graph. Returns at most \`limit\` rows (default ${QUERY_DEFAULT_LIMIT}); \`total\` and \`truncated\` say whether more matched.`,
       inputSchema: {
         query: z.string().describe('EQL-S query string'),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(QUERY_MAX_LIMIT)
+          .optional()
+          .describe(`Most rows to return (default ${QUERY_DEFAULT_LIMIT}, max ${QUERY_MAX_LIMIT})`),
         tenantId: tenantIdSchema,
         room: roomSchema,
       },
     },
-    async ({ query, tenantId, room }) => {
+    async ({ query, limit, tenantId, room }) => {
       try {
         const effectiveTenant = resolveToolTenant(ctx, { tenantId, room });
         return await withMcpIo(ctx, effectiveTenant, async () => {
           const parsed = parseSimple(query);
           const kernel = await ctx.pool.preload(effectiveTenant);
           const result = await kernel.query(parsed);
-          const bindings = hydrateBindings(
-            kernel,
-            result.bindings as Record<string, unknown>[],
-          );
+          // Cap before hydrating, so a broad query can't flood the agent's context.
+          const all = result.bindings as Record<string, unknown>[];
+          const cap = limit ?? QUERY_DEFAULT_LIMIT;
+          const bindings = hydrateBindings(kernel, all.slice(0, cap));
           return jsonText({
             bindings,
+            total: all.length,
+            truncated: all.length > cap,
             executionTime: result.executionTime,
           });
         });

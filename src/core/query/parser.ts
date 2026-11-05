@@ -442,11 +442,21 @@ export function parseSimple(input: string): Query {
     return parseQuery(trimmed);
   }
 
-  // Simple format: find ?vars where attr op value [and attr op value]*
+  // Simple format: find ?vars where attr op value [and attr op value]* [limit N] [offset N]
   const findMatch = trimmed.match(/^find\s+(.+?)\s+where\s+(.+)$/i);
   if (findMatch) {
     const vars = findMatch[1].trim().split(/\s+/);
-    const conditions = findMatch[2].trim();
+    let conditions = findMatch[2].trim();
+
+    // Trailing paging, in either order. Without this the last condition's value
+    // swallowed it ("Transaction" limit 3) and the query failed to parse (KRN-513).
+    const paging: string[] = [];
+    for (;;) {
+      const tail = conditions.match(/^(.*\S)\s+(limit|offset)\s+(\d+)$/i);
+      if (!tail) break;
+      conditions = tail[1];
+      paging.unshift(`${tail[2].toUpperCase()} ${tail[3]}`);
+    }
 
     const selectVars = vars.map((v) => v.startsWith('?') ? v : `?${v}`);
     const entity = selectVars[0];
@@ -457,7 +467,9 @@ export function parseSimple(input: string): Query {
     const filters: string[] = [];
 
     for (const part of parts) {
-      const eqMatch = part.match(/^(\S+)\s*(=|!=|<|<=|>|>=|contains|startsWith|endsWith|matches)\s*(.+)$/);
+      // Two-character operators first: with `<` ahead of `<=`, "priority >= 2"
+      // parsed as `>` with the value "= 2" and failed (KRN-513).
+      const eqMatch = part.match(/^(\S+)\s*(!=|<=|>=|=|<|>|contains|startsWith|endsWith|matches)\s*(.+)$/);
       if (eqMatch) {
         const [, attr, op, val] = eqMatch;
         const valTrimmed = val.trim();
@@ -470,10 +482,15 @@ export function parseSimple(input: string): Query {
           patterns.push(`[${entity} "${attr}" ${tmpVar}]`);
           filters.push(`FILTER ${tmpVar} ${op} ${valTrimmed}`);
         }
+      } else {
+        // Dropping it would silently widen the result to every entity.
+        throw new Error(
+          `Cannot parse condition "${part}" in "${trimmed}". Expected attr op value, with op one of = != < <= > >= contains startsWith endsWith matches.`,
+        );
       }
     }
 
-    const fullQuery = `SELECT ${selectVars.join(' ')}\nWHERE {\n  ${patterns.join('\n  ')}\n}\n${filters.join('\n')}`;
+    const fullQuery = `SELECT ${selectVars.join(' ')}\nWHERE {\n  ${patterns.join('\n  ')}\n}\n${[...filters, ...paging].join('\n')}`;
     return parseQuery(fullQuery);
   }
 

@@ -72,3 +72,38 @@ describe('entitiesQuery', () => {
     expect(parseSimple(eql).filters).toHaveLength(1);
   });
 });
+
+describe('parseSimple short form (KRN-513)', () => {
+  test('reads trailing limit and offset, in either order', () => {
+    const q = parseSimple('find ?e where type = "Transaction" limit 3');
+    expect(q.limit).toBe(3);
+    expect(q.where).toHaveLength(1);
+
+    const paged = parseSimple('find ?e where type = "Task" and done = false offset 10 limit 5');
+    expect(paged.limit).toBe(5);
+    expect(paged.offset).toBe(10);
+    expect(paged.where).toHaveLength(2);
+  });
+
+  test('keeps a value that merely contains the word limit', () => {
+    const q = parseSimple('find ?e where title = "speed limit"');
+    expect(q.limit).toBeFalsy();
+  });
+
+  test('rejects a condition it cannot read instead of dropping it', () => {
+    expect(() => parseSimple('find ?e where type = "Task" and status ~ open')).toThrow(
+      /Cannot parse condition "status ~ open"/,
+    );
+  });
+
+  test('reads two-character comparisons as one operator', () => {
+    expect(parseSimple('find ?e where type = "Task" and priority >= 2').filters[0]).toMatchObject({ op: '>=' });
+    expect(parseSimple('find ?e where type = "Task" and priority <= 2').filters[0]).toMatchObject({ op: '<=' });
+  });
+
+  test('still accepts every operator entitiesQuery emits', () => {
+    for (const op of ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'contains', 'startsWith', 'endsWith'] as const) {
+      expect(() => parseSimple(entitiesQuery('Task', { title: { [op]: 'x' } }))).not.toThrow();
+    }
+  });
+});
