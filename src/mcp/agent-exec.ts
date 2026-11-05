@@ -15,6 +15,7 @@ import {
   isLlmConfigured,
 } from '../core/agents/bootstrap.js';
 import type { TenantPool } from '../server/tenancy.js';
+import { toolErrorFrom, toolErrorResult } from './room-helpers.js';
 
 // ---------------------------------------------------------------------------
 // Per-tenant singletons
@@ -125,7 +126,7 @@ export function registerAgentExecTools(server: McpServer, tenantPool: TenantPool
         const wp = await initPool(tid, tenantPool);
         return jsonText(wp.getStatus());
       } catch (err) {
-        return text(err instanceof Error ? err.message : String(err));
+        return toolErrorFrom(err);
       }
     },
   );
@@ -147,7 +148,7 @@ export function registerAgentExecTools(server: McpServer, tenantPool: TenantPool
         const runId = await wp.enqueue(agentId, input);
         return text(runId);
       } catch (err) {
-        return text(err instanceof Error ? err.message : String(err));
+        return toolErrorFrom(err);
       }
     },
   );
@@ -168,7 +169,7 @@ export function registerAgentExecTools(server: McpServer, tenantPool: TenantPool
         await wp.cancel(runId);
         return text(`Cancelled: ${runId}`);
       } catch (err) {
-        return text(err instanceof Error ? err.message : String(err));
+        return toolErrorFrom(err);
       }
     },
   );
@@ -189,7 +190,7 @@ export function registerAgentExecTools(server: McpServer, tenantPool: TenantPool
         await wp.pause(runId);
         return text(`Paused: ${runId}`);
       } catch (err) {
-        return text(err instanceof Error ? err.message : String(err));
+        return toolErrorFrom(err);
       }
     },
   );
@@ -210,7 +211,7 @@ export function registerAgentExecTools(server: McpServer, tenantPool: TenantPool
         await wp.resume(runId);
         return text(`Resumed: ${runId}`);
       } catch (err) {
-        return text(err instanceof Error ? err.message : String(err));
+        return toolErrorFrom(err);
       }
     },
   );
@@ -230,7 +231,7 @@ export function registerAgentExecTools(server: McpServer, tenantPool: TenantPool
           active: wp.getActiveJobs(),
         });
       } catch (err) {
-        return text(err instanceof Error ? err.message : String(err));
+        return toolErrorFrom(err);
       }
     },
   );
@@ -255,7 +256,7 @@ export function registerAgentExecTools(server: McpServer, tenantPool: TenantPool
         const runId = await sc.run(workflow);
         return text(runId);
       } catch (err) {
-        return text(err instanceof Error ? err.message : String(err));
+        return toolErrorFrom(err);
       }
     },
   );
@@ -273,12 +274,12 @@ export function registerAgentExecTools(server: McpServer, tenantPool: TenantPool
       try {
         const tid = tenantId ?? 'default';
         const sc = schedulers.get(tid);
-        if (!sc) return text(`No scheduler for tenant "${tid}"`);
+        if (!sc) return toolErrorResult(`No scheduler for tenant "${tid}"`);
         const run = sc.getRun(runId);
-        if (!run) return text(`Workflow run not found: ${runId}`);
+        if (!run) return toolErrorResult(`Workflow run not found: ${runId}`);
         return jsonText(run);
       } catch (err) {
-        return text(err instanceof Error ? err.message : String(err));
+        return toolErrorFrom(err);
       }
     },
   );
@@ -296,7 +297,7 @@ export function registerAgentExecTools(server: McpServer, tenantPool: TenantPool
         if (!sc) return jsonText([]);
         return jsonText(sc.listRuns());
       } catch (err) {
-        return text(err instanceof Error ? err.message : String(err));
+        return toolErrorFrom(err);
       }
     },
   );

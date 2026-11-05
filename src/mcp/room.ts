@@ -16,24 +16,17 @@ import {
 } from '../schema/entity-projection.js';
 import type { AuthContext } from '../server/auth.js';
 import type { PermissionRegistry } from '../server/permissions.js';
-import { PermissionError } from '../server/permissions.js';
 import type { SubscriptionManager } from '../server/realtime.js';
 import type { TenantPool } from '../server/tenancy.js';
-import {
-  McpRateLimitError,
-  resolveUsageTenantId,
-  type UsageMeter,
-} from '../server/usage-meter.js';
-import {
-  assertMcpWriteAuthorized,
-  McpAuthError,
-  type McpWriteAuthGate,
-} from './mcp-auth.js';
+import { resolveUsageTenantId, type UsageMeter } from '../server/usage-meter.js';
+import { assertMcpWriteAuthorized, type McpWriteAuthGate } from './mcp-auth.js';
 import {
   assertMcpBudget,
   collectionSlugFromMetaId,
   resolveCollectionId,
   resolveMcpTenantId,
+  toolErrorFrom,
+  toolErrorResult,
   writeContext,
 } from './room-helpers.js';
 import { scheduleRoomMcpAudit } from './room-audit.js';
@@ -105,17 +98,6 @@ function jsonText(data: unknown) {
   return text(JSON.stringify(data, null, 2));
 }
 
-function toolError(err: unknown) {
-  if (
-    err instanceof PermissionError ||
-    err instanceof McpRateLimitError ||
-    err instanceof McpAuthError
-  ) {
-    return text(err.message);
-  }
-  return text(err instanceof Error ? err.message : String(err));
-}
-
 async function withMcpIo<T>(
   ctx: RoomMcpContext,
   tenantId: string | null,
@@ -183,7 +165,7 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
           );
         });
       } catch (err) {
-        return toolError(err);
+        return toolErrorFrom(err);
       }
     },
   );
@@ -217,7 +199,7 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
           });
         });
       } catch (err) {
-        return toolError(err);
+        return toolErrorFrom(err);
       }
     },
   );
@@ -249,7 +231,7 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
           });
         });
       } catch (err) {
-        return toolError(err);
+        return toolErrorFrom(err);
       }
     },
   );
@@ -270,12 +252,12 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
         return await withMcpIo(ctx, effectiveTenant, async () => {
           const kernel = await ctx.pool.preload(effectiveTenant);
           const entity = kernel.getEntity(id);
-          if (!entity) return text(`Not found: ${id}`);
+          if (!entity) return toolErrorResult(`Not found: ${id}`);
           ctx.permissions?.assert(ctx.auth, entity.type, 'read', entity);
           return jsonText(entityRecordToPlain(entity));
         });
       } catch (err) {
-        return toolError(err);
+        return toolErrorFrom(err);
       }
     },
   );
@@ -349,7 +331,7 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
           return jsonText(payload);
         });
       } catch (err) {
-        return toolError(err);
+        return toolErrorFrom(err);
       }
     },
   );
@@ -376,7 +358,7 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
         return await withMcpIo(ctx, effectiveTenant, async () => {
           const kernel = await ctx.pool.preload(effectiveTenant);
           const entity = kernel.getEntity(id);
-          if (!entity) return text(`Not found: ${id}`);
+          if (!entity) return toolErrorResult(`Not found: ${id}`);
           ctx.permissions?.assert(ctx.auth, entity.type, 'update', entity);
           await kernel.updateEntity(id, attributes as any, wctx);
           await ctx.subs.notify(effectiveTenant);
@@ -397,7 +379,7 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
           return jsonText(payload);
         });
       } catch (err) {
-        return toolError(err);
+        return toolErrorFrom(err);
       }
     },
   );
@@ -421,7 +403,7 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
         return await withMcpIo(ctx, effectiveTenant, async () => {
           const kernel = await ctx.pool.preload(effectiveTenant);
           const entity = kernel.getEntity(id);
-          if (!entity) return text(`Not found: ${id}`);
+          if (!entity) return toolErrorResult(`Not found: ${id}`);
           ctx.permissions?.assert(ctx.auth, entity.type, 'delete', entity);
           await kernel.deleteEntity(id, wctx);
           await ctx.subs.notify(effectiveTenant);
@@ -442,7 +424,7 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
           return jsonText(payload);
         });
       } catch (err) {
-        return toolError(err);
+        return toolErrorFrom(err);
       }
     },
   );
@@ -595,7 +577,7 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
           return jsonText(payload);
         });
       } catch (err) {
-        return toolError(err);
+        return toolErrorFrom(err);
       }
     },
   );
@@ -623,8 +605,8 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
           const kernel = await ctx.pool.preload(effectiveTenant);
           const source = kernel.getEntity(e1);
           const target = kernel.getEntity(e2);
-          if (!source) return text(`Not found: ${e1}`);
-          if (!target) return text(`Not found: ${e2}`);
+          if (!source) return toolErrorResult(`Not found: ${e1}`);
+          if (!target) return toolErrorResult(`Not found: ${e2}`);
           ctx.permissions?.assert(ctx.auth, source.type, 'update', source);
           const result = await kernel.addLink(e1, relation, e2, wctx);
           await ctx.subs.notify(effectiveTenant);
@@ -647,7 +629,7 @@ export function createRoomMcpServer(ctx: RoomMcpContext): McpServer {
           return jsonText(payload);
         });
       } catch (err) {
-        return toolError(err);
+        return toolErrorFrom(err);
       }
     },
   );

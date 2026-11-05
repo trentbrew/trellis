@@ -133,6 +133,7 @@ describe('room MCP write auth gate', () => {
       });
       const text = (result.content as { text: string }[])[0].text;
       expect(text).toContain('Authentication required');
+      expect(result.isError).toBe(true);
     });
   });
 

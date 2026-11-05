@@ -16,6 +16,7 @@ import {
   resolveFormDescriptor,
 } from '../forms/resolve.js';
 import type { RoomMcpContext } from './room.js';
+import { toolErrorFrom, toolErrorResult } from './room-helpers.js';
 
 // ---------------------------------------------------------------------------
 // Response helpers
@@ -63,13 +64,13 @@ export function registerFormsTools(
           },
         );
         if (!form) {
-          return text(
+          return toolErrorResult(
             `No schema registered for entity type "${type}". Register a schema first (client.registerType or POST /ontologies).`,
           );
         }
         return jsonText(form);
       } catch (err) {
-        return text(err instanceof Error ? err.message : String(err));
+        return toolErrorFrom(err);
       }
     },
   );
@@ -88,7 +89,7 @@ export function registerFormsTools(
         const kernel = await ctx.pool.preload(tenantId ?? null);
         return jsonText(listFormableTypes(kernel.listOntologies()));
       } catch (err) {
-        return text(err instanceof Error ? err.message : String(err));
+        return toolErrorFrom(err);
       }
     },
   );

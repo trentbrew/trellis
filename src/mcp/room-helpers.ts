@@ -14,6 +14,19 @@ import {
   type UsageMeter,
 } from '../server/usage-meter.js';
 
+/**
+ * A failed tool call, flagged so clients can tell it from data (KRN-512). MCP
+ * reports tool-level failures in the result with `isError: true`, not as a
+ * protocol error, so agents still read the message.
+ */
+export function toolErrorResult(message: string) {
+  return { content: [{ type: 'text' as const, text: message }], isError: true };
+}
+
+export function toolErrorFrom(err: unknown) {
+  return toolErrorResult(err instanceof Error ? err.message : String(err));
+}
+
 /** Normalize lane / agent attribution for draft writes. */
 export function resolveWriteAgentId(
   lane: string | undefined,
