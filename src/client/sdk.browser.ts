@@ -9,6 +9,8 @@
 
 import type { SchemaDefinition } from '../core/ontology/types.js';
 import type { ResolveSpec } from '../schema/resolve.js';
+import type { AttributeShape } from '../core/store/eav-store.js';
+import type { KernelOpsPage, ListKernelOpsOptions } from './kernel-ops.js';
 import type {
   AuthResult,
   CreateEntityOptions,
@@ -226,6 +228,29 @@ export class TrellisDb {
     return (await this._fetch('POST', '/query', {
       query: eql,
     })) as QueryResult;
+  }
+
+  /**
+   * Recent causal ops from the remote TurtleDB kernel (`GET /ops`).
+   * Not the VCS repo journal (`trellis log`).
+   */
+  async listKernelOps(opts: ListKernelOpsOptions = {}): Promise<KernelOpsPage> {
+    const params = new URLSearchParams({
+      limit: String(Math.min(opts.limit ?? 100, 500)),
+      offset: String(opts.offset ?? 0),
+    });
+    if (opts.kind) params.set('kind', opts.kind);
+    if (opts.entity) params.set('entity', opts.entity);
+    return (await this._fetch('GET', `/ops?${params}`)) as KernelOpsPage;
+  }
+
+  /**
+   * Current attribute shapes for entities of `type` (`GET /attributes`); see the
+   * Node SDK's `describeAttributes` for what `scalar` promises (KRN-516).
+   */
+  async describeAttributes(type?: string): Promise<AttributeShape[]> {
+    const query = type === undefined ? '' : `?type=${encodeURIComponent(type)}`;
+    return (await this._fetch('GET', `/attributes${query}`)) as AttributeShape[];
   }
 
   // -------------------------------------------------------------------------

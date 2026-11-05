@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { defaultLocalConfig } from '../../src/client/config.js';
 import { TrellisDb } from '../../src/client/sdk.js';
+import { TrellisDb as BrowserTrellisDb } from '../../src/client/sdk.browser.js';
 import { startServer } from '../../src/server/server.js';
 import { TenantPool } from '../../src/server/tenancy.js';
 import type { TrellisHttpServer } from '../../src/server/server-shared.js';
@@ -84,6 +85,13 @@ describe('attribute shapes HTTP surface', () => {
     const shapes = await db.describeAttributes('Task');
     expect(find(shapes, 'tags')?.scalar).toBe(false);
     expect(find(shapes, 'title')?.scalar).toBe(true);
+  });
+
+  it('the browser TrellisDb has it too (svelte/browser export condition)', async () => {
+    const db = new BrowserTrellisDb({ url: base });
+    const shapes = await db.describeAttributes('Task');
+    expect(find(shapes, 'tags')?.scalar).toBe(false);
+    expect((await db.listKernelOps({ limit: 2 })).data.length).toBeGreaterThan(0);
   });
 
   it('TrellisDb.describeAttributes reads the store in local mode', async () => {
