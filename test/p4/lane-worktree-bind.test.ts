@@ -46,7 +46,8 @@ describe('Lane worktree bind (W5-MVP)', () => {
 
     expect(meta.worktreePath).toBeTruthy();
     expect(existsSync(meta.worktreePath!)).toBe(true);
-    expect(git(TEST_ROOT, 'worktree list')).toContain(meta.worktreePath!);
+    // Independent reflink clone, not a git-registered worktree of TEST_ROOT.
+    expect(existsSync(join(meta.worktreePath!, '.git'))).toBe(true);
   });
 
   test('enterLane keeps lane worktree bytes as the source of truth (ADR 0038)', async () => {

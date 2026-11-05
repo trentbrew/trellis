@@ -1,10 +1,18 @@
 /**
- * Per-lane git worktree provisioning (ADR 0014 Phase 2 / W5).
+ * Per-lane worktree provisioning (ADR 0014 Phase 2 / W5).
+ *
+ * Materialization: a Btrfs reflink clone of the full repo (falls back to a
+ * plain `cp -r` off-btrfs) instead of `git worktree add`. Each lane gets an
+ * independent `.git`, not a worktree sharing refs with rootPath — so merging
+ * a lane branch back requires an explicit `fetch` from the clone first (see
+ * mergeLaneWorktree). Spiked and verified end-to-end before this swap;
+ * `commitWorktree` needed no changes — it already just runs `git add -A &&
+ * git commit` against whatever path it's handed.
  */
 
 import { execSync } from 'child_process';
-import { existsSync, mkdirSync } from 'fs';
-import { dirname, join } from 'path';
+import { existsSync, mkdirSync, readdirSync, rmSync } from 'fs';
+import { join } from 'path';
 
 export function laneShortId(laneId: string): string {
   return laneId.replace(/^lane-/, '').slice(0, 8);
@@ -37,12 +45,32 @@ export function resolveBaseRef(rootPath: string, baseBranch: string): string {
   }
 }
 
-function isRegisteredWorktree(rootPath: string, worktreePath: string): boolean {
-  try {
-    const list = git(rootPath, 'worktree list --porcelain');
-    return list.split('\n').some((line) => line === `worktree ${worktreePath}`);
-  } catch {
-    return false;
+/**
+ * Btrfs reflink clone of rootPath; falls back to a plain copy off-btrfs.
+ *
+ * `worktreePath` lives under `rootPath/.trellis/worktrees/<id>` by default
+ * (see defaultWorktreePath), so a whole-tree `cp rootPath worktreePath`
+ * would copy rootPath into its own descendant — `cp` refuses outright
+ * ("cannot copy a directory into itself"). Copying entries individually and
+ * skipping `.trellis` sidesteps that; it's also the right behavior anyway —
+ * nothing in the clone (provisionWorktree/commitWorktree/mergeLaneWorktree)
+ * ever reads `.trellis`, only `.git`.
+ */
+function cloneReflink(rootPath: string, worktreePath: string): void {
+  mkdirSync(worktreePath, { recursive: true });
+  for (const entry of readdirSync(rootPath)) {
+    if (entry === '.trellis') continue;
+    const src = join(rootPath, entry);
+    const dst = join(worktreePath, entry);
+    try {
+      execSync(`cp --reflink=always -r "${src}" "${dst}"`, {
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+    } catch {
+      execSync(`cp -r "${src}" "${dst}"`, {
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+    }
   }
 }
 
@@ -52,18 +80,15 @@ export function provisionWorktree(opts: {
   branch: string;
   baseRef: string;
 }): void {
-  if (
-    existsSync(opts.worktreePath) &&
-    isRegisteredWorktree(opts.rootPath, opts.worktreePath)
-  ) {
+  if (existsSync(opts.worktreePath) && isGitRepo(opts.worktreePath)) {
     return;
   }
 
-  mkdirSync(dirname(opts.worktreePath), { recursive: true });
+  cloneReflink(opts.rootPath, opts.worktreePath);
 
   const branchExists = (() => {
     try {
-      git(opts.rootPath, `rev-parse --verify ${opts.branch}`);
+      git(opts.worktreePath, `rev-parse --verify ${opts.branch}`);
       return true;
     } catch {
       return false;
@@ -71,15 +96,9 @@ export function provisionWorktree(opts: {
   })();
 
   if (branchExists) {
-    git(
-      opts.rootPath,
-      `worktree add "${opts.worktreePath}" ${opts.branch}`,
-    );
+    git(opts.worktreePath, `checkout ${opts.branch}`);
   } else {
-    git(
-      opts.rootPath,
-      `worktree add -b ${opts.branch} "${opts.worktreePath}" ${opts.baseRef}`,
-    );
+    git(opts.worktreePath, `checkout -b ${opts.branch} ${opts.baseRef}`);
   }
 }
 
@@ -91,7 +110,7 @@ export function removeWorktree(opts: {
 }): void {
   if (existsSync(opts.worktreePath)) {
     try {
-      git(opts.rootPath, `worktree remove --force "${opts.worktreePath}"`);
+      rmSync(opts.worktreePath, { recursive: true, force: true });
     } catch {
       // best-effort cleanup
     }
@@ -101,7 +120,7 @@ export function removeWorktree(opts: {
     try {
       git(opts.rootPath, `branch -D ${opts.branch}`);
     } catch {
-      // branch may already be merged or absent
+      // branch may already be merged, absent, or never fetched into rootPath
     }
   }
 }
@@ -144,13 +163,19 @@ export function commitWorktree(
  * new commit was needed; `failed` means a merge conflict — the caller should
  * abort the promote (git is the authority, so a conflicted merge cannot be
  * papered over with a synthesized file state).
+ *
+ * `worktreePath` is now an independent reflink clone, not a git worktree —
+ * its branch isn't visible in rootPath's ref namespace until fetched.
+ * Spiked and confirmed: `fetch` + `merge --no-ff` produces the same merge
+ * graph a worktree-based merge would.
  */
 export function mergeLaneWorktree(
   rootPath: string,
+  worktreePath: string,
   branch: string,
   message: string,
 ): 'merged' | 'up-to-date' | 'failed' {
-  if (!isGitRepo(rootPath)) {
+  if (!isGitRepo(rootPath) || !isGitRepo(worktreePath)) {
     return 'failed';
   }
   const subject = (message.split('\n')[0] ?? 'trellis: merge lane').replace(
@@ -159,6 +184,7 @@ export function mergeLaneWorktree(
   );
   try {
     const before = revParseHead(rootPath);
+    git(rootPath, `fetch "${worktreePath}" +${branch}:${branch}`);
     git(rootPath, `merge --no-ff -m "${subject}" ${branch}`);
     const after = revParseHead(rootPath);
     return before === after ? 'up-to-date' : 'merged';

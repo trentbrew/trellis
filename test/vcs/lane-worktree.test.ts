@@ -1,9 +1,10 @@
 import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { execSync } from 'child_process';
-import { mkdirSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import {
   defaultWorktreePath,
+  isGitRepo,
   laneGitBranch,
   laneShortId,
   provisionWorktree,
@@ -62,7 +63,10 @@ describe('lane-worktree helpers', () => {
       baseRef,
     });
 
-    expect(git(TEST_ROOT, 'worktree list')).toContain(worktreePath);
+    // Lane worktrees are independent reflink clones, not git-registered
+    // worktrees — `git worktree list` from TEST_ROOT won't see them.
+    expect(existsSync(worktreePath)).toBe(true);
+    expect(isGitRepo(worktreePath)).toBe(true);
 
     removeWorktree({
       rootPath: TEST_ROOT,
@@ -71,6 +75,6 @@ describe('lane-worktree helpers', () => {
       deleteBranch: true,
     });
 
-    expect(git(TEST_ROOT, 'worktree list')).not.toContain(worktreePath);
+    expect(existsSync(worktreePath)).toBe(false);
   });
 });
