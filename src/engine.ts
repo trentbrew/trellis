@@ -750,6 +750,15 @@ for (const event of scanEvents) {
     });
   }
 
+  /** Public entry point for callers (e.g. `trellis lane shell`) that need a lane's worktree provisioned on demand. */
+  async ensureLaneWorktree(laneId: string): Promise<LaneMeta> {
+    const meta = laneMod.loadLaneMeta(this.trellisDir(), laneId);
+    if (!meta) {
+      throw new Error(`Lane not found: ${laneId}`);
+    }
+    return this.provisionLaneWorktree(meta);
+  }
+
   private async provisionLaneWorktree(
     meta: LaneMeta,
     worktreePathOverride?: string,

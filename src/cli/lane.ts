@@ -10,6 +10,8 @@ import { TrellisVcsEngine } from '../engine.js';
 import type { LaneMeta } from '../vcs/lane.js';
 import * as lanePromoteMod from '../vcs/lane-promote.js';
 import { gcLanes } from '../vcs/lane-gc.js';
+import { commitWorktree } from '../vcs/lane-worktree.js';
+import { runLaneShell } from '../vcs/lane-sandbox.js';
 import { resolveRepoRoot } from './repo-path.js';
 import { PROVENANCE } from '../core/persist/canonical-op.js';
 import { requireDestructiveConfirm } from '../vcs/destructive-guard.js';
@@ -328,6 +330,64 @@ export function registerLaneCommands(program: Command): void {
         console.log(
           chalk.dim(`  export TRELLIS_LANE_ID=${id}  for subprocess agents`),
         );
+      } catch (err: unknown) {
+        console.error(chalk.red((err as Error).message));
+        process.exit(1);
+      }
+    });
+
+  laneCmd
+    .command('shell [id]')
+    .description(
+      'Enter a lane inside an isolated sandbox (reflink clone + bwrap; no network by default)',
+    )
+    .option('--net', 'Allow network access inside the sandbox')
+    .option('-p, --path <path>', 'Repository path', '.')
+    .action(async (id, opts, command) => {
+      const rootPath = resolveLaneRepoPath(opts, command);
+      const engine = await openEngine(rootPath);
+
+      const laneId = id ?? engine.getActiveLaneId();
+      if (!laneId) {
+        console.error(
+          chalk.red(
+            'No lane id given and no active lane — pass an id, or `trellis lane enter <id>` first',
+          ),
+        );
+        process.exit(1);
+      }
+
+      try {
+        const meta = await engine.ensureLaneWorktree(laneId);
+        if (!meta.worktreePath) {
+          console.error(
+            chalk.red(
+              'Lane has no worktree — enable lanes.worktreeBind in .trellis/config.json',
+            ),
+          );
+          process.exit(1);
+        }
+
+        console.log(
+          chalk.dim(
+            `→ ${meta.worktreePath} ${opts.net ? '(network on)' : '(no network)'}`,
+          ),
+        );
+        const code = runLaneShell({
+          worktreePath: meta.worktreePath,
+          laneId: meta.id,
+          net: opts.net,
+        });
+
+        const commit = commitWorktree(
+          meta.worktreePath,
+          `trellis: lane shell session @ ${meta.id}`,
+        );
+        if (commit.committed) {
+          console.log(chalk.dim(`  committed ${commit.commitHash?.slice(0, 12)}`));
+        }
+
+        process.exit(code);
       } catch (err: unknown) {
         console.error(chalk.red((err as Error).message));
         process.exit(1);
