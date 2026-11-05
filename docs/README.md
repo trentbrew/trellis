@@ -5,6 +5,7 @@ The canonical documentation home for Trellis. The repository root holds only fil
 ## Start Here
 
 - **[The Story](./THE-STORY.md)** — Why Trellis exists. The reasoning/state gap and how decision traces close it.
+- **[About This Work](./ABOUT.md)** — Scope, motivation, epistemic stance, and how to engage.
 - **[Vision](./VISION.md)** — Local-first agentic OS framing. The long view.
 - **[Five Pillars](./PILLARS.md)** — Core architectural principles in one page.
 

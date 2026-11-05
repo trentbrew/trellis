@@ -5,6 +5,7 @@
   <p>
     <a href="https://trellis.computer">Docs</a> ·
     <a href="https://studio.trellis.computer">Studio</a> ·
+    <a href="https://discord.gg/6Ntfh9wFV">Discord</a> ·
     <a href="https://github.com/trentbrew/trellis">GitHub</a>
   </p>
 </div>
@@ -34,16 +35,48 @@ npm install -g trellis
 
 ## Quick start
 
+### Try it in 60 seconds
+
 ```bash
-mkdir my-project && cd my-project
-trellis init      # guided or one-shot setup
-trellis ui        # live graph explorer
-trellis studio    # full Studio UI in the browser, bridged to this repo
-trellis code      # start an agent coding session
+npm install -g trellis
+mkdir trellis-demo && cd trellis-demo
+trellis init --no-interactive --identity skip
+trellis status
+trellis issue create -t "Hello graph"
+trellis query 'find ?e where type = "Issue"'
+trellis examples
+```
+
+Quote the whole query. Issues are `type = "Issue"` in TQL, not `Task`.
+
+### Explore (visual)
+
+**npm install:** the default explorer needs `demo/realtime-app`, which is not in
+the published package. Use the bundled legacy UI:
+
+```bash
+trellis ui --legacy
+```
+
+**Git clone of this repo:** full Svelte explorer (first run may run `pnpm install`
+under `demo/realtime-app`):
+
+```bash
+trellis ui
+```
+
+### Product surfaces
+
+```bash
+trellis studio    # Studio in the browser (optional turtlecode dep)
+trellis code      # OpenCode harness bridged to this repo
 trellis wire      # pairwise Iroh peer sync (ADR 0060)
 ```
 
-Track work as graph-native entities instead of text commits:
+### Graph-native workflow
+
+Track work as graph entities instead of text commits (`TRL-1` is the ID printed
+by `issue create` in a fresh repo):
 
 ```bash
 trellis issue create -t "Bootstrap viz"
@@ -52,8 +85,8 @@ trellis protocol send --parent TRL-1 --from executor --to reviewer \
   --re TRL-1 --status HANDOFF      # graph-backed handoff (3.2.3+)
 trellis whereami                   # re-entry orientation
 trellis milestone create -m "Initial release"
-trellis garden                          # discover & revive abandoned work
-trellis query 'find ?e where type = "Task"'
+trellis garden                     # discover & revive abandoned work
+trellis query 'find ?e where type = "Issue"'
 ```
 
 Run the operator surface when you need the derived picture rather than raw ops:
@@ -157,9 +190,10 @@ ecosystem is positioned.
 
 ## Documentation
 
-- **[trellis.computer](https://trellis.computer)** — full documentation
+- **[trellis.computer](https://trellis.computer)** — full documentation ([The Story](https://trellis.computer/architecture/story) · [About](https://trellis.computer/architecture/about-this-work))
 - **[What's Open, What's Sold](./docs/OPEN-SOURCE-STRATEGY.md)** — the open-/closed-source line
 - **[The Story](./docs/THE-STORY.md)** — why Trellis exists
+- **[About this work](./docs/ABOUT.md)** — scope, motivation, how to push back
 - **[Architecture](./docs/ARCHITECTURE.md)** ·
   **[Design spec](./docs/DESIGN.md)** · **[Roadmap](./docs/ROADMAP.md)**
 
@@ -183,6 +217,14 @@ just alias-cli install           # adds `trellis-dev` alias; keeps global intact
 just link-cli                    # make global `trellis` → this checkout
 just unlink-cli                  # restore published trellis@latest
 ```
+
+## About this work
+
+Trellis is an actively developed experiment, not a finished standard. I'm building it
+in public because I want to use it, learn what it takes to make it real, and hear
+when an idea or implementation is wrong (especially *why*).
+
+**[Read the full note](./docs/ABOUT.md)** · [The Story](https://trellis.computer/architecture/story) · [Discord](https://discord.gg/6Ntfh9wFV) · [GitHub Discussions](https://github.com/trentbrew/trellis/discussions)
 
 ## License
 

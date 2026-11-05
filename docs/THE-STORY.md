@@ -1,13 +1,15 @@
 ---
 title: The Story — Why Trellis Exists
-description: Trellis is a structured runtime for the agentic era — the system of record for decisions.
+description: Trellis is a structured runtime for the agentic era; the system of record for decisions.
 created: 2026-05-30
-updated: 2026-05-30
+updated: 2026-11-04
 ---
 
 # The Story: Why Trellis Exists
 
-> Trellis is not a better database. It's a structured runtime for the agentic era—the system of record for **decisions**, providing agents with the memory they need to act, learn, and explain themselves.
+Also on [trellis.computer/architecture/story](https://trellis.computer/architecture/story). Keep substantive edits in sync with that page.
+
+> Trellis is not a better database. It's a structured runtime for the agentic era: the system of record for **decisions**, providing agents with the memory they need to act, learn, and explain themselves.
 
 ---
 
@@ -120,7 +122,8 @@ Trellis is that layer.
 
 ## References
 
-- [AI's Trillion-Dollar Opportunity: Context Graphs](./CONTEXT-GRAPHS.md) — The market thesis
-- [Five Pillars](./PILLARS.md) — The architectural foundation
-- [Agent Framework Guide](./AGENTS.md) — Building your first agent on Trellis
-- [Five Pillars](./PILLARS.md) — Trellis's core architectural principles
+- [The Story on trellis.computer](https://trellis.computer/architecture/story): public docs (keep in sync)
+- [AI's Trillion-Dollar Opportunity: Context Graphs](./CONTEXT-GRAPHS.md): the market thesis
+- [Five Pillars](./PILLARS.md): the architectural foundation
+- [Agent Framework Guide](./AGENTS.md): building your first agent on Trellis
+- [Vision](./VISION.md): local-first graph thesis (overlaps partially; different emphasis)

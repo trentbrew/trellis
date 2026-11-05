@@ -54,6 +54,8 @@ Desk issue: **TRL-35** (W0), **TRL-36** (W1). Plan:
 | [0049](./0049-git-bug-compatibility-adapter.md) | git-bug compatibility adapter        | Read `refs/bugs/*` in clean-room TS; map git-bug ops → `vcs:issue*`; Trellis canonical (proposed) |
 | [0059](./0059-frozen-formula-core-dialect-adapters.md) | Frozen formula core + dialect adapters | Zero-dep parse/eval core in `trellis` package; CMS/kernel/PB/client as adapters; amends 0009 (accepted, TRL-470) |
 | [0060](./0060-iroh-peer-transport.md) | Iroh as the peer transport | Pairwise-pull-first over `SyncTransport`; stable endpoint key; rendezvous + room topologies deferred; integration policy-gated (proposed) |
+| [0061](./0061-lexicons.md) | Lexicons | `trellis:Lexicon` groups types and relations as graph data; membership is a field, ids are opaque; code relation ids drop the app (amends TRL-494) (proposed) |
+| [0062](./0062-authoring-clients-and-projections.md) | Authoring clients and generated projections | Authoring clients own schema; projections (Shablon) render compiled lexicons; the lexicon export is the contract; share shapes, not components (proposed) |
 | [0063](./0063-location-graph-native.md) | Location is graph-native, not a property type | No `location` property type; `Place` entities + role relations + numeric coordinates; text stays a label; geocoding is an adapter/cache (accepted) |
 
 ### Product / explorer shell

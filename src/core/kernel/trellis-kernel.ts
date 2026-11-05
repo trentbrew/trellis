@@ -80,6 +80,15 @@ export interface EntityRecord {
   links: Link[];
 }
 
+/** A relation id ends in its attribute key (ADR 0061 §4), so keys may not contain `.`. */
+function assertAttributeKeys(schemaId: string, fields: readonly { name: string }[] | undefined): void {
+  for (const field of fields ?? []) {
+    if (field.name.includes('.')) {
+      throw new Error(`Ontology ${schemaId}: field "${field.name}" must not contain "."`);
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Kernel
 // ---------------------------------------------------------------------------
@@ -653,6 +662,7 @@ export class TrellisKernel {
       throw new Error(`Ontology ${schema['@id']} already exists`);
     }
 
+    assertAttributeKeys(schema['@id'], schema.fields);
     this.ontologies.set(schema['@id'], schema);
 
     // Persist as facts in the graph
@@ -680,6 +690,7 @@ export class TrellisKernel {
       throw new Error('Cannot modify core ontologies');
     }
 
+    if (updates.fields) assertAttributeKeys(id, updates.fields);
     const updated = { ...existing, ...updates };
     this.ontologies.set(id, updated);
 
