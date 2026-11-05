@@ -34,6 +34,9 @@ import {
   type KernelOpsPage,
   type ListKernelOpsOptions,
 } from './kernel-ops.js';
+import type { AttributeShape } from '../core/store/eav-store.js';
+
+export type { AttributeShape };
 
 // ---------------------------------------------------------------------------
 // Result types
@@ -410,6 +413,36 @@ export class TrellisDb {
       }
       throw err;
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Attribute shapes (KRN-516)
+  // -------------------------------------------------------------------------
+
+  /**
+   * The current shape of each attribute held by entities of `type` (all
+   * entities when omitted), computed from the facts at call time.
+   *
+   * `scalar` is what an EQL-S compiler needs before pushing an equality: it is
+   * false if even one entity holds an array (stored as one atom, which no literal
+   * pattern matches) or more than one fact. An attribute absent from the result,
+   * including every attribute of a type with no entities, should be treated as
+   * not scalar. Observed, not declared: a later write can change it, so don't
+   * keep a live narrowed subscription on it without re-reading.
+   *
+   * Local mode reads the store in-process; remote mode hits `GET /attributes`.
+   */
+  async describeAttributes(type?: string): Promise<AttributeShape[]> {
+    if (isRemote(this.opts)) {
+      const query = type === undefined ? '' : `?type=${encodeURIComponent(type)}`;
+      return (await this._fetch('GET', `/attributes${query}`)) as AttributeShape[];
+    }
+
+    const pool = await this._getPool();
+    const tenantId = (this.opts as TrellisDbLocalOptions).tenantId ?? null;
+    // preload, not get: get() throws on Node until the tenant has been loaded.
+    const kernel = await pool.preload(tenantId);
+    return kernel.getStore().describeAttributes(type);
   }
 
   // -------------------------------------------------------------------------

@@ -12,6 +12,7 @@
 // Legacy DB SDK
 export { TrellisDb, FetchError } from './sdk.js';
 export type {
+  AttributeShape,
   EntityData,
   ListResult,
   QueryResult,

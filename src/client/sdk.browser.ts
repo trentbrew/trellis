@@ -24,6 +24,7 @@ import type {
 } from './sdk.js';
 
 export type {
+  AttributeShape,
   AuthResult,
   CreateEntityOptions,
   EntityData,

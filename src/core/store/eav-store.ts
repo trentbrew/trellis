@@ -58,15 +58,54 @@ export interface Link {
   e2: string; // target entity
 }
 
+/**
+ * What an attribute's values look like. `array`: the kernel stores an array value
+ * as one atom (it doesn't split it into a fact per element), and no literal pattern
+ * matches it. `mixed`: more than one kind, or a non-array object.
+ */
+export type AttributeValueType =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'date'
+  | 'array'
+  | 'mixed';
+
 export interface CatalogEntry {
   attribute: string;
-  type: 'string' | 'number' | 'boolean' | 'date' | 'mixed';
+  type: AttributeValueType;
   cardinality: 'one' | 'many';
   distinctCount: number;
   examples: Atom[];
   min?: number;
   max?: number;
 }
+
+/**
+ * An attribute's current shape, read from the facts in the store right now (not
+ * the incrementally kept `CatalogEntry`, which never forgets a deleted value).
+ */
+export interface AttributeShape {
+  attribute: string;
+  type: AttributeValueType;
+  /** `many` when some entity holds more than one fact for the attribute. */
+  cardinality: 'one' | 'many';
+  /** Entities holding the attribute, within the scope asked about. */
+  entityCount: number;
+  /**
+   * Every value is a single string, number, boolean or date atom, one per entity:
+   * a literal pattern `[?e attr value]` sees exactly what an equality test would.
+   * Observed, not declared: a later write can break it.
+   */
+  scalar: boolean;
+}
+
+const SCALAR_TYPES = new Set<AttributeValueType>([
+  'string',
+  'number',
+  'boolean',
+  'date',
+]);
 
 export interface QueryTraceEntry {
   goal: string;
@@ -354,13 +393,13 @@ export class EAVStore {
     this.catalog.set(fact.a, entry);
   }
 
-  private inferType(
-    v: Atom,
-  ): 'string' | 'number' | 'boolean' | 'date' | 'mixed' {
+  private inferType(v: Atom): AttributeValueType {
     if (typeof v === 'string') return 'string';
     if (typeof v === 'number') return 'number';
     if (typeof v === 'boolean') return 'boolean';
     if (v instanceof Date) return 'date';
+    // Atom excludes arrays, but the kernel stores array values as one atom.
+    if (Array.isArray(v as unknown)) return 'array';
     return 'mixed';
   }
 
@@ -412,6 +451,52 @@ export class EAVStore {
 
   getCatalogEntry(attribute: string): CatalogEntry | undefined {
     return this.catalog.get(attribute);
+  }
+
+  /**
+   * The shape of every attribute held by entities of `type` (all entities when
+   * omitted), computed from current facts. `type` itself is left out.
+   */
+  describeAttributes(type?: string): AttributeShape[] {
+    const entities =
+      type === undefined
+        ? [...this.eavIndex.keys()]
+        : this.getFactsByValue('type', type).map((fact) => fact.e);
+
+    const seen = new Map<
+      string,
+      { types: Set<AttributeValueType>; many: boolean; entityCount: number }
+    >();
+    for (const entity of entities) {
+      for (const [attribute, indices] of this.eavIndex.get(entity) ?? []) {
+        if (attribute === 'type') continue;
+        let live = 0;
+        let shape = seen.get(attribute);
+        for (const idx of indices) {
+          const fact = this.facts[idx];
+          if (!fact) continue;
+          if (!shape) {
+            shape = { types: new Set(), many: false, entityCount: 0 };
+            seen.set(attribute, shape);
+          }
+          shape.types.add(this.inferType(fact.v));
+          live++;
+        }
+        if (!shape || live === 0) continue;
+        shape.entityCount++;
+        if (live > 1) shape.many = true;
+      }
+    }
+
+    return [...seen.entries()]
+      .map(([attribute, { types, many, entityCount }]) => ({
+        attribute,
+        type: types.size === 1 ? [...types][0]! : 'mixed',
+        cardinality: many ? ('many' as const) : ('one' as const),
+        entityCount,
+        scalar: !many && [...types].every((t) => SCALAR_TYPES.has(t)),
+      }))
+      .sort((a, b) => a.attribute.localeCompare(b.attribute));
   }
 
   // Statistics
@@ -510,15 +595,9 @@ export class EAVStore {
     this.linkAttrIndex.clear();
     this.distinct.clear();
 
-    // Re-add data
+    // Re-add data. addFacts rebuilds the catalog from the facts themselves; the
+    // snapshot's copy may describe values that were since deleted, so it isn't used.
     this.addFacts(snapshot.facts);
     this.addLinks(snapshot.links);
-
-    // Explicitly restore catalog if provided (though addFacts rebuilds it partially)
-    if (snapshot.catalog) {
-      for (const entry of snapshot.catalog) {
-        this.catalog.set(entry.attribute, entry);
-      }
-    }
   }
 }

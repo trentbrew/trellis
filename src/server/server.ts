@@ -11,6 +11,7 @@
  *   GET    /entities?type=&limit=&offset=  List entities
  *   GET    /ops?kind=&entity=&limit=&offset=  List causal ops (newest last in page)
  *   POST   /query                      EQL-S query
+ *   GET    /attributes?type=           Attribute shapes from current facts (KRN-516)
  *   POST   /upload                     File upload → blob hash
  *   GET    /files/:hash                Download blob
  *   GET    /health                     Health check
@@ -462,6 +463,11 @@ async function route(
   if (ontologyMatch && (method === 'PATCH' || method === 'PUT')) {
     const id = decodeURIComponent(ontologyMatch[1]!);
     return handleUpdateOntology(req, id, auth, tenantId, ctx);
+  }
+
+  // ── Attribute shapes (current facts; KRN-516) ────────────────────────────
+  if (method === 'GET' && path === '/attributes') {
+    return handleDescribeAttributes(url, auth, tenantId, ctx);
   }
 
   // ── Forms (headless, schema-derived) ─────────────────────────────────────
@@ -916,6 +922,18 @@ async function handleListForms(
   ctx.permissions?.assert(auth, '*', 'read');
   const kernel = await ctx.pool.preload(tenantId);
   return json(listFormableTypes(kernel.listOntologies()));
+}
+
+async function handleDescribeAttributes(
+  url: URL,
+  auth: import('./auth.js').AuthContext,
+  tenantId: string | null,
+  ctx: RouteCtx,
+): Promise<Response> {
+  const type = url.searchParams.get('type') ?? undefined;
+  ctx.permissions?.assert(auth, type ?? '*', 'read');
+  const kernel = await ctx.pool.preload(tenantId);
+  return json(kernel.getStore().describeAttributes(type));
 }
 
 async function handleFormDescriptor(

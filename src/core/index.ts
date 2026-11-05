@@ -18,6 +18,8 @@ export type {
   Source,
   Link,
   CatalogEntry,
+  AttributeShape,
+  AttributeValueType,
   QueryTraceEntry,
   QueryResult,
 } from './store/eav-store.js';
