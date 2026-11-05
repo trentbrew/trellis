@@ -492,10 +492,14 @@ export class TrellisKernel {
       addFacts.push({ e: entityId, a: attr, v: newValue });
     }
 
-    // Add updatedAt
-    const updatedAtFacts = existingFacts.filter((f) => f.a === 'updatedAt');
-    deleteFacts.push(...updatedAtFacts);
-    addFacts.push({ e: entityId, a: 'updatedAt', v: new Date().toISOString() });
+    // Stamp updatedAt unless the caller set it (the loop above already replaced
+    // it); appending ours too would leave two updatedAt facts (KRN-517). Same
+    // rule as createdAt in createEntity.
+    if (filtered.updatedAt === undefined) {
+      const updatedAtFacts = existingFacts.filter((f) => f.a === 'updatedAt');
+      deleteFacts.push(...updatedAtFacts);
+      addFacts.push({ e: entityId, a: 'updatedAt', v: new Date().toISOString() });
+    }
 
     return this.mutate(
       'addFacts',
