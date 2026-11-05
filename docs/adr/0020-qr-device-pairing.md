@@ -66,7 +66,7 @@ Under `<repo>/.trellis/`:
 
 | Path                    | Contents                                                                                                               |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `identity.json`         | **Unchanged**; root identity keypair only. Never overwritten by pairing.                                              |
+| `identity.json`         | **Unchanged**: root identity keypair only. Never overwritten by pairing.                                              |
 | `devices/registry.json` | Authorized devices for this install’s view: `{ identityEntityId, devices: DeviceRecord[] }`                            |
 | `devices/local.json`    | This machine’s device keypair + `deviceId` + linked `identityEntityId` (created on join; absent on root-only installs) |
 | `devices/challenges/`   | Ephemeral challenge files (or in-memory + single file); deleted on consume/expiry                                      |
@@ -138,7 +138,7 @@ Phase 3. Do **not** invent graph writes in Phase 0.
 - **Phase 0:** pure OOB string payloads (start → join → approve → accept). No
 network required.
 - **Phase 1:** QR encode/decode of the same payloads; optional local HTTP
-listener on A defaulting to `127.0.0.1` **only**; LAN bind requires explicit
+listener on A defaulting to `127.0.0.1` **only**: LAN bind requires explicit
 confirm. No cloud relay.
 - Relay/cloud must not own identity state.
 
@@ -149,7 +149,7 @@ confirm. No cloud relay.
 - Challenge string: `trellis:pair:v1:<base64url(json)>` (or documented compact
 form).
 - Fields: `v`, `challengeId`, `did`, `identityEntityId`, `exp` (unix), `nonce`.
-- TTL default: **5 minutes**; single use; reject replay.
+- TTL default: **5 minutes**: single use; reject replay.
 - Human code: Crockford base32 short form of `challengeId`.
 
 

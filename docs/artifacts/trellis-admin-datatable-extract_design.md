@@ -175,7 +175,7 @@ Full browse matrix SSOT: [trellis-admin-datatable_design.md](./trellis-admin-dat
 Unchanged from TRL-201/203:
 
 - Focus order: toolbar → sort headers → rows → op-log → statusbar → dialog  
-- `aria-sort` **only on `th`**; button inside  
+- `aria-sort` **only on `th`**: button inside  
 - `#table-empty` `role="status"`  
 - `prefers-reduced-motion`: no new motion  
 - e2e selectors stable: `#view-table`, `.table-wrap`, `.sort-btn`, `#table-empty`, `.lanes-table`

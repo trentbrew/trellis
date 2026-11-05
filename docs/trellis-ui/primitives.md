@@ -34,7 +34,7 @@ thin adapters (react / vue / svelte / vanilla)
   (duration/easing), rhythm (`--prose-*`). Components never hardcode.
 - **Primitives own behavior**: state + commands + a11y contract, no DOM, no
   pixels. Node-testable (vitest, zero DOM) like every other core.
-- **Domain cores compose primitives**; a sidebar's collapsible group contains
+- **Domain cores compose primitives**: a sidebar's collapsible group contains
   a disclosure core; the editor outline section is a disclosure core; the file
   tree node is a disclosure core. The state machine is one thing, reused.
 
@@ -52,7 +52,7 @@ thin adapters (react / vue / svelte / vanilla)
 | `badge` | count state only (pure data); no behavior | notification counts, status chips |
 | `avatar` | identity → initials/color resolution (pure data); no behavior | profile slots, person entities |
 
-`badge` and `avatar` are **data-only primitives**; no state machine, just
+`badge` and `avatar` are **data-only primitives**: no state machine, just
 deterministic projection (count → display, identity → initials + color). They
 exist to keep the *visual vocabulary* shared, not to own behavior.
 
@@ -92,7 +92,7 @@ The file-explorer example, made concrete:
 ## Streaming Contract (prose + chat)
 
 Content surfaces (editor output, chat, docs) render with the `prose` renderer
-composition. Its styling contract is **append-stable**; adding a block never
+composition. Its styling contract is **append-stable**: adding a block never
 restyles earlier blocks:
 
 - No forward-looking selectors: `:last-child`, `:has()`, `:empty` are excluded
@@ -108,7 +108,7 @@ emit DOM shapes that require such selectors to look correct.
 ## Split; the app-shell root primitive
 
 `split` is the structural primitive every app layout wraps itself in at the
-root. It models **panel geometry only**; sizes, min/max constraints, collapse,
+root. It models **panel geometry only**: sizes, min/max constraints, collapse,
 order, orientation; never panel contents, and never free-form placement
 (that is `layout-core`'s desk grid). The model follows the reka-ui/radix
 splitter contract (PanelGroup → Panel → ResizeHandle), extracted to Tier-2:

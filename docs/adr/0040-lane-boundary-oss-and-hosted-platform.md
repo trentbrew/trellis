@@ -18,17 +18,17 @@ That decision stands.
 
 Follow-on questions exposed a broader product-strategy gap:
 
-1. **Lane confusion**; Trellis is compared to InstantDB, Jazz, and Convex on
+1. **Lane confusion**: Trellis is compared to InstantDB, Jazz, and Convex on
    live app data, but does not intend to compete in the developer-BaaS lane.
-2. **The awkward middle**; teams need a fast path for browser apps and
+2. **The awkward middle**: teams need a fast path for browser apps and
    multiplayer UX without adopting the full sovereignty model on day one.
-3. **Browser monetization**; the browser SDK is remote-only
+3. **Browser monetization**: the browser SDK is remote-only
    (`src/client/sdk.browser.ts`); a monetizable browser product requires a
    hosted stack, not `npm install trellis` alone.
-4. **Reference products**; hosted agent products such as Rox (browser UX,
+4. **Reference products**: hosted agent products such as Rox (browser UX,
    enterprise SaaS, external integrations) are a different category from
    developer BaaS, but Trellis had no ADR naming how we play there.
-5. **Open source**; commercial hosted offerings must not be read as "close the
+5. **Open source**: commercial hosted offerings must not be read as "close the
    repo." The namespace split (`trellis` open vs `@turtle.tech/*` commercial)
    was implicit, not recorded.
 
@@ -42,8 +42,8 @@ to BaaS vendors, and the **sibling SKU** model: open engine + Studio (builder)
 
 | Lane | Owner | Trellis role |
 | ---- | ----- | ------------ |
-| **Live app state** (rows, auth, signup-in-minutes) | Vendor BaaS | **Refer out**; InstantDB, Jazz, Convex, Firebase |
-| **Causal agent / VCS graph** (op-log, lanes, traces) | Trellis (open engine) | **Own**; `.trellis`, issues, decisions, semantic graph |
+| **Live app state** (rows, auth, signup-in-minutes) | Vendor BaaS | **Refer out**: InstantDB, Jazz, Convex, Firebase |
+| **Causal agent / VCS graph** (op-log, lanes, traces) | Trellis (open engine) | **Own**: `.trellis`, issues, decisions, semantic graph |
 | **Product metadata** (orgs, billing, workspace status) | Vendor OK inside Trellis products | InstantDB on Trellis Cloud today; precedent, not customer graph kernel |
 
 Trellis docs and examples **must not** position the open engine as an
@@ -79,7 +79,7 @@ When app builders need BaaS-speed onboarding:
 
 1. **Recommend a vendor** for app UI state (docs decision table).
 2. **Recommend Trellis** for agent audit, repo semantics, and coordination.
-3. **Document sidecar patterns**; two stores, explicit boundary; no live
+3. **Document sidecar patterns**: two stores, explicit boundary; no live
    dual-write between vendor DB and op-log.
 
 **Thin bridges (in scope):**
@@ -157,7 +157,7 @@ primary path.
 ### 6. TurtleDB naming; agent rooms, not consumer BaaS brand
 
 Internal name **TurtleDB** (deploy URLs, room MCP) means **deployed Trellis room
-for agents and tooling**; not a public developer database product competing
+for agents and tooling**: not a public developer database product competing
 with Jazz.
 
 - `*.sprites.app`; MCP + typed API over a Trellis kernel
@@ -191,15 +191,15 @@ data when that's the job."*
 
 ### Positive
 
-- **Clear lanes**; stops BaaS comparison thrash in engine design reviews.
-- **OSS trust**; commercial Platform explicitly builds on open Trellis.
-- **Actionable browser GTM**; Rox-shaped Platform is a product bet, not a
+- **Clear lanes**: stops BaaS comparison thrash in engine design reviews.
+- **OSS trust**: commercial Platform explicitly builds on open Trellis.
+- **Actionable browser GTM**: Rox-shaped Platform is a product bet, not a
   kernel feature.
-- **Honest integrator story**; sidecar + export instead of fake adapters.
+- **Honest integrator story**: sidecar + export instead of fake adapters.
 
 ### Negative
 
-- **Platform requires ops investment**; hosting, auth, billing, SLAs.
+- **Platform requires ops investment**: hosting, auth, billing, SLAs.
 - **Two-store products** need documentation discipline (sidecar pattern).
 - **Horizontal Platform** is broad; MVP wedge must be chosen separately
   (dev/agent coordination vs knowledge workflows vs vertical templates).

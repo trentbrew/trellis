@@ -1,8 +1,8 @@
-# Trellis Realtime — Demos
+# Trellis Realtime; Demos
 
 Four multiplayer primitives built on `trellis/realtime`, the ephemeral
 presence + broadcast layer. Unlike the VCS op log, realtime data is
-mesh-broadcast and **never written to the persisted causal history** — the
+mesh-broadcast and **never written to the persisted causal history**: the
 right home for high-frequency, disposable signals.
 
 | Demo | Primitive | What it shows |
@@ -10,7 +10,7 @@ right home for high-frequency, disposable signals.
 | **Active avatars** | presence | Live roster of connected peers (name + color), join/leave |
 | **Chat** | broadcast | Fire-and-forget messages on a channel + typing indicator |
 | **Live cursors** | presence | Cursor position published at pointer-move rate, rendered per peer |
-| **Text editor** | `RealtimeText` | RGA-style sequence CRDT — concurrent edits converge |
+| **Text editor** | `RealtimeText` | RGA-style sequence CRDT; concurrent edits converge |
 
 ## Docs site embed (trellis.computer)
 
@@ -25,7 +25,7 @@ Serves at `/demos/realtime/index.html?embed=1` (simulated room only; no relay on
 
 ## Run it
 
-From the repo root (recommended — **impolite about ports**: kills anything on
+From the repo root (recommended; **impolite about ports**: kills anything on
 `8231` before serving):
 
 ```bash
@@ -35,7 +35,7 @@ just realtime-stop              # evict the demo server
 just realtime-test              # unit tests
 ```
 
-Manual path (ES modules need HTTP — `file://` won't work):
+Manual path (ES modules need HTTP; `file://` won't work):
 
 ```bash
 npm run build:realtime-bundle      # → dist/realtime.bundle.js
@@ -47,7 +47,7 @@ node demo/realtime/serve.mjs 8231  # static server
 
 - **Simulated room** (default): several peers run in this one page over an
   in-process `MemoryHub`. Everything is multiplayer without a server or a
-  second tab — ideal for a quick look.
+  second tab; ideal for a quick look.
 - **Live relay** (`Switch to live relay ↗`): each tab/window is one peer.
   Messages go through `ws://localhost:<port>/rt` so **different browsers**
   (Firefox, Chrome, Safari, Edge) all sync. Display name comes from
@@ -57,7 +57,7 @@ node demo/realtime/serve.mjs 8231  # static server
   of chat, the latest collaborative text snapshot, and last-known presence.
   New connections receive a `replay` batch after their first `hello`. State
   survives refresh and late joiners until you restart `just realtime-demo`.
-  For durable history, use the Trellis VCS op log — realtime stays ephemeral
+  For durable history, use the Trellis VCS op log; realtime stays ephemeral
   by design.
 
 ## API sketch

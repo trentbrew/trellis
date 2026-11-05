@@ -64,7 +64,7 @@ export function hostFromView(view: 'kanban' | 'grid' | 'table'): ProjectionHost;
 | table | lane | `lane.row` | `row` |
 
 At vantage detents 2/5/8, disclosure within shell follows Phase C CSS on
-`data-trellis-shell="node|row|card"`. **MVP ships fixed vantage 8**; scrubber is stretch.
+`data-trellis-shell="node|row|card"`. **MVP ships fixed vantage 8**: scrubber is stretch.
 
 **Non-goals:** `issue.row` (Phase 4b), vantage scrubber UI, `<trellis-thing>` CE,
 PeerDriver-only paths, user renderer packs.
@@ -200,7 +200,7 @@ test:CI=1 pnpm exec playwright test e2e/admin.spec.cjs -g "datatable|view-toggle
 
 | Question | Resolution |
 | -------- | ---------- |
-| Table at high vantage uses kanban card? | **No**; `lane.row` always |
+| Table at high vantage uses kanban card? | **No**: `lane.row` always |
 | Vantage propagation without reload? | `readUiVantage` + rehydrate on view change; scrubber stretch |
 | Resolver strip in prod? | Hidden default; `?debug=shell` |
 
@@ -211,4 +211,4 @@ test:CI=1 pnpm exec playwright test e2e/admin.spec.cjs -g "datatable|view-toggle
 - Phase 3 closed (TRL-251/258/259/260)
 - Remote VCS gate closed (TRL-222); impl lane unblocked
 - `mountAdminDatatable` unchanged contract
-- Renderer pack distribution ([tml-renderer-pack-registry-proposal.md](./tml-renderer-pack-registry-proposal.md)); **Phase 6+**; Phase 4 templates should extract cleanly to `@trellis/*` shell packs later
+- Renderer pack distribution ([tml-renderer-pack-registry-proposal.md](./tml-renderer-pack-registry-proposal.md)); **Phase 6+**: Phase 4 templates should extract cleanly to `@trellis/*` shell packs later

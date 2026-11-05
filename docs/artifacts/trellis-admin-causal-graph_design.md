@@ -87,7 +87,7 @@ components:
 
 ## Overview
 
-Replace the **Logs → Branches** stub with a **Causal History Graph**; vertical git-client topology showing how agent lane forks diverge from integration and merge back on promote. Milestones appear as tag flags on trunk nodes; active lane heads show branch pills.
+Replace the **Logs → Branches** stub with a **Causal History Graph**: vertical git-client topology showing how agent lane forks diverge from integration and merge back on promote. Milestones appear as tag flags on trunk nodes; active lane heads show branch pills.
 
 **Not** a replacement for Logs → Ops (linear live tail). **Not** the home for Work → Milestones (narrative cards stay; graph links to them).
 
@@ -99,7 +99,7 @@ Emotional tone: same dense L3 operator shell; dark inset card, mono selection me
 
 | Route | Verdict |
 | ----- | ------- |
-| **Logs → Branches** | **Ship here**; matches TRL-225/226 stub slot and IDE Logs mental model |
+| **Logs → Branches** | **Ship here**: matches TRL-225/226 stub slot and IDE Logs mental model |
 | Work → Milestones | Reject as graph host; keep cards; optional “View in graph” link later |
 | Logs → Ops sub-panel | Reject; conflates linear tail with topology |
 

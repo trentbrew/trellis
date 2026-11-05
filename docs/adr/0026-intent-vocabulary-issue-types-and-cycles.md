@@ -94,7 +94,7 @@ date and acceptance criteria. That is all.
 
 ### 3. Milestones stay retrospective. Explicitly.
 
-Milestones are honest as bookmarks. **Do not overload them with intent**; that
+Milestones are honest as bookmarks. **Do not overload them with intent**: that
 is what cycles are for. The two are complements: a cycle says what we mean to do
 by when; a milestone says what happened, as a range of ops. Conflating them would
 put a mutable plan inside an immutable record, which is the same category error

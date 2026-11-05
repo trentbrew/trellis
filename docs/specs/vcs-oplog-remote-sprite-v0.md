@@ -35,7 +35,7 @@ the same tail hash.
 
 - Cloud owning primary write path
 - Remote running Trellis engine / `repair` on bytes
-- **Blob / file-content sync**; sprite holds op log only; byte restore depends
+- **Blob / file-content sync**: sprite holds op log only; byte restore depends
   on local `.trellis/blobs/` + git checkout. See
   [`git-backed-blob-tier-v0.md`](git-backed-blob-tier-v0.md) for the local byte
   resolver and post-`install` materialize path.

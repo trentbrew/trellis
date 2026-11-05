@@ -22,7 +22,7 @@ cell editors this wedge.
 
 | Decision | Choice |
 | -------- | ------ |
-| Boundary | **Option B**; `src/ui/admin-datatable.ts` → `GET /admin-datatable.js` (esbuild, mirror `/tml-runtime.js`) |
+| Boundary | **Option B**: `src/ui/admin-datatable.ts` → `GET /admin-datatable.js` (esbuild, mirror `/tml-runtime.js`) |
 | CSS | `src/ui/admin-datatable.css` → `GET /admin-datatable.css` via `findUiAsset` static read |
 | Bundle | DOM-only ESM; **no** imports from `../core/**` / VCS / kernel |
 | Markup | `#view-table` thead + TML tbody **stay in** `admin.html` |
@@ -30,7 +30,7 @@ cell editors this wedge.
 | Utility CSS | `.hidden-by-search` stays in **shell** `admin.html` |
 | Empty channel | Prefer `onEmptyChange` callback **or** `trellis:table-empty`; pick **one** normative (recommend callback for shell; optional event OK if unused) |
 | Edit attrs | Add `data-col`, `data-editable="false"`, `data-field` on each `td` in **TML template** |
-| Cell edit | **Out of scope**; no `contenteditable`, no `trellis:cell-*`, no edit CSS |
+| Cell edit | **Out of scope**: no `contenteditable`, no `trellis:cell-*`, no edit CSS |
 | Host | Routes only on `lanes-dashboard.ts` (admin host); do not half-wire `server.ts` |
 | Density | Preserve TRL-203 locks (42/36, sort, empty, `--surface-hover`) |
 
@@ -40,11 +40,11 @@ cell editors this wedge.
 
 | File | Change |
 | ---- | ------ |
-| `src/ui/admin-datatable.ts` | **New**; `mountAdminDatatable`, sort/empty/observer, `applySearchQuery` / `refresh` / `destroy` |
-| `src/ui/admin-datatable.css` | **New**; table well/sort/empty styles + local `--table-*` vars moved from `admin.html` |
+| `src/ui/admin-datatable.ts` | **New**: `mountAdminDatatable`, sort/empty/observer, `applySearchQuery` / `refresh` / `destroy` |
+| `src/ui/admin-datatable.css` | **New**: table well/sort/empty styles + local `--table-*` vars moved from `admin.html` |
 | `src/ui/lanes-dashboard.ts` | `GET /admin-datatable.js` (esbuild), `GET /admin-datatable.css` (static) |
 | `src/ui/admin.html` | Remove moved CSS/JS; link CSS; import+mount module after TML; search seam; edit-ready `td` attrs |
-| `test/ui/admin-datatable.test.ts` | **New**; pure sort/empty helper unit tests |
+| `test/ui/admin-datatable.test.ts` | **New**: pure sort/empty helper unit tests |
 | `e2e/admin.spec.cjs` | Existing datatable cases must stay green (no selector renames) |
 | `docs/specs/trellis-admin-datatable-extract.md` | This file |
 | `package.json` build | Ensure `admin-datatable.css` copied to `dist/ui/` if build copies other UI static assets |

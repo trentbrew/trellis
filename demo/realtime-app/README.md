@@ -2,7 +2,7 @@
 
 Graph-backed realtime app using **SvelteKit remote functions** (`query.live` + `form` + `command`) on a **Trellis** sidecar.
 
-> 📄 **[Technical report](docs/REPORT.md)** — architecture, mechanism deep-dive, competitive analysis, and benchmarks.
+> 📄 **[Technical report](docs/REPORT.md)**: architecture, mechanism deep-dive, competitive analysis, and benchmarks.
 
 ## Architecture
 
@@ -25,7 +25,7 @@ Browser (:4000)
 
 ```bash
 pnpm install
-pnpm trellis:init      # once — DB + seed + ontology on first serve
+pnpm trellis:init      # once; DB + seed + ontology on first serve
 pnpm dev:all
 ```
 
@@ -35,7 +35,7 @@ Open **http://localhost:4000**. Inspector: **http://localhost:3920**.
 
 | Module          | Purpose                                                        |
 | --------------- | -------------------------------------------------------------- |
-| `collection.ts` | `createEntityCollection()` — CRUD + diff-based subscribe       |
+| `collection.ts` | `createEntityCollection()`; CRUD + diff-based subscribe       |
 | `diff.ts`       | Apply WS `added/updated/removed` patches without full `list()` |
 | `lane.ts`       | `main` vs `agent:<id>` lane filtering                          |
 | `live-query.ts` | `runLiveQueryStream()` for `query.live`                        |
@@ -129,7 +129,7 @@ Agent lanes are **journal-only** when `.trellis/` exists:
 | `agent:*` | VCS lane journal only | Materialized overlay + journal watch |
 
 ```bash
-pnpm trellis:vcs-init   # once — .trellis/ bootstrap
+pnpm trellis:vcs-init   # once; .trellis/ bootstrap
 pnpm agent:add "draft" --lane demo   # writes journal, not graph
 pnpm lane:check -- agent:demo        # verify materialized overlay
 ```
@@ -140,7 +140,7 @@ Promote replays the lane journal into integration, then merges drafts onto `main
 
 ```bash
 pnpm wc:host          # host on :4500
-pnpm test:wc          # WC_E2E=1 — full boot (slow, ~3–5 min)
+pnpm test:wc          # WC_E2E=1; full boot (slow, ~3–5 min)
 ```
 
 Default `pnpm test` runs app e2e only; bootstrap API test remains in `wc/wc-host.e2e.ts`.

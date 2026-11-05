@@ -15,7 +15,7 @@ D2 asked for a scheduler sweep of lane hygiene (the session-end hook is only the
 fast path). The obvious home; the cron plugin (ADR 0019); does not fit:
 
 - `createCronPlugin` / `attachCronToPool` build a `CronStore` over a
-  **`TrellisKernel` / `TenantPool`**; tenant-scoped graph state.
+  **`TrellisKernel` / `TenantPool`**: tenant-scoped graph state.
 - Lanes are **VCS-engine-scoped**: `.trellis/lanes/*` journals bound to a repo
   worktree (`gcLanes(engine, …)` needs a `TrellisVcsEngine`).
 
@@ -52,9 +52,9 @@ and turtleOS consume the same function (ADR 0050, ADR 0052 d5).
 
 ## Consequences
 
-**Good**; works today; the sweep is repo-aware and shares the OS generator.
+**Good**: works today; the sweep is repo-aware and shares the OS generator.
 
-**Costs**; host-level means per-machine (not synced, ADR 0016 posture); the OS
+**Costs**: host-level means per-machine (not synced, ADR 0016 posture); the OS
 desk root sweep is minutes (~100 lanes over a 34MB op-log) so it is opt-in.
 
 ## Implementation phases

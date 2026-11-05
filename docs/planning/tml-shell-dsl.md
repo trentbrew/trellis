@@ -13,7 +13,7 @@
 
 ## 0. Three primitives to nail early
 
-Before DSL compiler polish, lock these **host primitives**; they carry most of Operate UX:
+Before DSL compiler polish, lock these **host primitives**: they carry most of Operate UX:
 
 | # | Primitive | Job |
 | - | --------- | --- |
@@ -146,7 +146,7 @@ North-star attribute split (future IR): `data-tml-shell` = registry id; `data-tr
 
 ## 4. Twin: issue.card
 
-**DSL**; also [`sandbox/tml-admin/shells/issue.card.tml`](../../sandbox/tml-admin/shells/issue.card.tml):
+**DSL**: also [`sandbox/tml-admin/shells/issue.card.tml`](../../sandbox/tml-admin/shells/issue.card.tml):
 
 ```tml
 shell issue.card (kind: issue, density: card) {
@@ -162,7 +162,7 @@ shell issue.card (kind: issue, density: card) {
 }
 ```
 
-**Resolved HTML IR**; [`sandbox/tml-admin/ir/issue.card.html`](../../sandbox/tml-admin/ir/issue.card.html):
+**Resolved HTML IR**: [`sandbox/tml-admin/ir/issue.card.html`](../../sandbox/tml-admin/ir/issue.card.html):
 
 ```html
 <template id="shell-issue-card" data-trellis-shell="issue.card">
@@ -209,7 +209,7 @@ Fixture: [`sandbox/tml-admin/resolve/`](../../sandbox/tml-admin/resolve/).
 
 ## 6. Formulas
 
-Pure derived **presentation** and **predicates**; not free JS (ADR 0025).
+Pure derived **presentation** and **predicates**: not free JS (ADR 0025).
 
 **Allowed:** field paths, literals, `+` concat, `||` `&&`, comparisons, `?` presence, context (`vantage`, `salience`, `host`, `me`).  
 **Forbidden:** arbitrary JS calls, graph writes, `fetch`, loops (use `each`).
@@ -392,7 +392,7 @@ Fixture copy: [`sandbox/tml-todo/`](../../sandbox/tml-todo/).
 
 ## 13b. Crosswalk; same app, five surfaces
 
-Teaching aid: one todo list expressed five ways. **Operate stays TML**; framework files show external SDK equivalence, not an alternate admin stack.
+Teaching aid: one todo list expressed five ways. **Operate stays TML**: framework files show external SDK equivalence, not an alternate admin stack.
 
 | Surface | File |
 | ------- | ---- |
@@ -421,7 +421,7 @@ Two surface syntaxes, **one AST**. Brace form stays valid; this flavor is for hu
 
 ### Naming: `projection` not `project`
 
-`project` reads as a verb (“project these rows”) *and* collides with “software project.” Prefer the noun **`projection`**; a named query host that fills shells.
+`project` reads as a verb (“project these rows”) *and* collides with “software project.” Prefer the noun **`projection`**: a named query host that fills shells.
 
 ```html
 <projection id="todo.list" live ref="todos"
@@ -696,7 +696,7 @@ Manifest fields (sketch): `host`, `theme`, `ops: ui[]`, `entryProject`.
 
 | Layer | Timing |
 | ----- | ------ |
-| **File assoc + TextMate / tree-sitter grammar** | **Not too early**; highlight `shell` / `project` / `@` / `#` on sandbox files now |
+| **File assoc + TextMate / tree-sitter grammar** | **Not too early**: highlight `shell` / `project` / `@` / `#` on sandbox files now |
 | **Snippets** (`shell`, `project`, `resolve`) | Fine early; ship with grammar |
 | **LSP: autocomplete ops, jump to shell id, diagnostics** | **Early** until grammar + op registry stabilize and a check CLI exists |
 | **Compile-on-save → IR preview** | After compiler spike |

@@ -2,7 +2,7 @@
 
 One realtime SDK, three framework adapters, three demo primitives.
 
-**TRL-35 parity demo** — presence, chat, and text in React, Vue, and Svelte.
+**TRL-35 parity demo**: presence, chat, and text in React, Vue, and Svelte.
 See [sdk-typed-realtime.md](../../docs/sdk-typed-realtime.md) for entrypoints,
 reconnect notes, and automated test map.
 
@@ -25,7 +25,7 @@ Svelte →  trellis/svelte          ┘
 
 ## Run
 
-From **trellis-node root** (recommended — starts relay + Vite):
+From **trellis-node root** (recommended; starts relay + Vite):
 
 ```sh
 just universal-presence
@@ -52,7 +52,7 @@ Landing page: http://localhost:4100/
 
 `dev:all` / `just universal-presence` start the relay automatically and set
 `VITE_PRESENCE_RELAY_URL=ws://localhost:8231/rt`. Open Chrome and Safari on the
-same demo URL — cursors, chat, and text sync across browsers.
+same demo URL; cursors, chat, and text sync across browsers.
 
 BroadcastChannel-only mode (cross-tab, one browser):
 
@@ -74,9 +74,9 @@ VITE_PRESENCE_RELAY_URL=ws://localhost:8231/rt npm run dev
 | Gap | Where it shows up | Notes |
 |-----|-------------------|-------|
 | `RealtimeText` uses callbacks, not `Signal` | Text demo | React/Vue wire `onChange` + local state; unlike `PersistentChannel.messages` which binds via `useSignal` / `toStore` |
-| React room is `null` briefly on mount | Chat demo | `PersistentChannel` must be created in `useEffect` after `useRoom` resolves — can't call `useSignal(chat.messages)` unconditionally |
-| No `usePersistentChannel` helper | Chat demo | Each framework wires ~15 lines manually — candidate for a thin shared hook |
-| `resolveMeta` reads presence at receive time | Chat demo | Sender name/color captured from `room.getPresence()` — stale if peer left before message arrives (meta on send is the fix, already used on `send()`) |
+| React room is `null` briefly on mount | Chat demo | `PersistentChannel` must be created in `useEffect` after `useRoom` resolves; can't call `useSignal(chat.messages)` unconditionally |
+| No `usePersistentChannel` helper | Chat demo | Each framework wires ~15 lines manually; candidate for a thin shared hook |
+| `resolveMeta` reads presence at receive time | Chat demo | Sender name/color captured from `room.getPresence()`; stale if peer left before message arrives (meta on send is the fix, already used on `send()`) |
 
 ## QA checklist
 

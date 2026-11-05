@@ -1,8 +1,8 @@
-# Trellis × SvelteKit Remote Functions — Technical Report
+# Trellis × SvelteKit Remote Functions; Technical Report
 
 > A graph-backed, realtime, version-controlled application built on SvelteKit
 > remote functions (`query.live` / `form` / `command`) over a **Trellis** triple-store
-> sidecar — with agent-isolated draft lanes, semantic merge-on-promote, and a
+> sidecar; with agent-isolated draft lanes, semantic merge-on-promote, and a
 > WebContainer-deployable runtime.
 
 **Status:** functionally complete reference implementation (Phases 7–15). Static checks,
@@ -19,14 +19,14 @@ We built a realtime CRUD application whose entire data layer is a **knowledge gr
 twist is the combination of three things that don't normally appear together:
 
 1. **Server-driven realtime via SvelteKit remote functions.** No client-side database
-   SDK, no manual WebSocket wiring in components — the UI consumes an `await`-ed async
+   SDK, no manual WebSocket wiring in components; the UI consumes an `await`-ed async
    resource and the server streams diffs to it.
 2. **Diff-based live queries over a graph.** Subscriptions deliver `added/updated/removed`
    triple-level patches, which we apply to an in-memory cache instead of re-fetching the
    full result set on every change.
 3. **Agent lanes with version-control semantics.** Mutations can be isolated into named
    draft lanes (`agent:<id>`) that write to an append-only VCS journal, then **promote**
-   (semantic merge by slug, carrying tag relations) or **discard** — without ever touching
+   (semantic merge by slug, carrying tag relations) or **discard**: without ever touching
    the canonical `main` graph until promotion.
 
 The result is a working pattern for "Git-for-application-state": multiple human or AI
@@ -53,9 +53,9 @@ hardening step before this should be treated as production-grade state managemen
 The app deliberately ships **two** entity types so the "add a new type" path is proven,
 not theoretical:
 
-- `framework` — the primary entity (title, slug, sortOrder, laneId).
-- `tag` — the reference second type (~60 lines end-to-end: schema → collection → remote).
-- `frameworkTag` — a **sidecar-visible assignment entity** that joins the two because
+- `framework`; the primary entity (title, slug, sortOrder, laneId).
+- `tag`; the reference second type (~60 lines end-to-end: schema → collection → remote).
+- `frameworkTag`; a **sidecar-visible assignment entity** that joins the two because
   live-visible relations must cross the sidecar boundary. (More on why this is an entity
   and not a graph link in §4.4.)
 
@@ -179,13 +179,13 @@ A lane is just a tag on the world: `main` or `agent:<id>` (`src/lib/trellis/lane
 `normalizeLaneId` coerces user input (`?lane=demo` → `agent:demo`). Two backends sit behind
 the same interface (`listFrameworks` / `subscribeFrameworks`):
 
-- **Graph-backed lanes** — entities carry a `laneId` attribute; reads filter by it.
-- **Journal-backed lanes** — when `.trellis/` exists, agent-lane writes go to an
+- **Graph-backed lanes**: entities carry a `laneId` attribute; reads filter by it.
+- **Journal-backed lanes**: when `.trellis/` exists, agent-lane writes go to an
   append-only **VCS op-log** instead of the graph (`usesJournalLane`). Reads
   _materialize_ the lane by replaying integration + lane ops through `TrellisVcsEngine`
   and running EQL against the resulting store.
 
-The UI is identical either way — the banner's **Promote** / **Discard** buttons call the
+The UI is identical either way; the banner's **Promote** / **Discard** buttons call the
 same `command`s.
 
 ### 4.4 Design rule: live-visible relations are entities
@@ -214,7 +214,7 @@ notify it.
 
 1. Gather drafts (from journal materialization or graph, depending on lane type).
 2. Index `main` by slug.
-3. For each draft: update the existing main entity by slug, **or** create it — then
+3. For each draft: update the existing main entity by slug, **or** create it; then
    `mergeMaterializedTagsToGraph` carries the draft's tag assignments onto the main entity.
 4. Graph-lane drafts are deleted; journal lanes are promoted then dropped via the VCS engine.
 
@@ -233,7 +233,7 @@ and emitting on change. Same `onUpdate` contract as the graph subscription.
 ### 4.7 Portable runtime (WebContainer)
 
 `wc/server.mjs` serves a COOP/COEP-isolated page that boots **trellis-node's `dist/`** and
-the app pack inside a WebContainer — Node running in the browser via WASM. This is the
+the app pack inside a WebContainer; Node running in the browser via WASM. This is the
 seed of "the database and the app ship together to the client," tested by `wc-host.e2e.ts`
 (bootstrap API) and the gated full-boot `wc-boot.e2e.ts` (`WC_E2E=1`).
 
@@ -252,7 +252,7 @@ Most realtime stacks give you **one** of these. This combines all four:
    component.
 3. **Diff-based, not snapshot-based.** Updates are triple-level patches applied to a cache.
 4. **Version control for live state.** Lanes + journals + semantic promote give you
-   branch/preview/merge over application data — the natural substrate for **multi-agent**
+   branch/preview/merge over application data; the natural substrate for **multi-agent**
    editing where several AI or human actors propose changes concurrently.
 
 The "agent lane" framing is the punchline: an LLM agent gets its own lane, mutates freely
@@ -305,7 +305,7 @@ Measured against the running Trellis sidecar on 2026-06-02 (Python `urllib`, war
 | `POST /query` (graph pattern, 2 triples) | 1.17 ms | 3.74 ms | 0.69 ms | 3.76 ms |
 | `POST /entities` (create + persist)      | 2.85 ms | 5.20 ms | 1.93 ms | 6.02 ms |
 
-Reads and graph queries are **sub-2 ms p50**; writes (which persist) are **~3 ms**. These
+Reads and graph queries are **sub-2 ms p50**: writes (which persist) are **~3 ms**. These
 are loopback numbers and exclude the SvelteKit remote-function hop and browser render; treat
 them as a floor for the data plane, not end-to-end latency.
 
@@ -326,7 +326,7 @@ N > 1 and grows linearly with list size.
 | `pnpm build` (adapter-vercel, nodejs24.x) | passing                                                     |
 | E2E (`playwright test`, serial)           | **8 passed, 1 skipped** (WC full-boot, gated) in **~3.7 s** |
 
-> Note: the E2E suite runs single-worker by design — the specs drive one shared sidecar +
+> Note: the E2E suite runs single-worker by design; the specs drive one shared sidecar +
 > dev server, so parallel workers race on shared state and trigger a thundering herd of
 > on-demand Vite client compilation that stalls hydration. Serial execution is both correct
 > and, at 3.7 s, effectively free.
@@ -355,7 +355,7 @@ not a production-hardened sync database yet.
   reviewer watches the draft update live and promotes/discards. This is the headline use case.
 - **Multi-agent orchestration.** Several agents each own a lane; promotes serialize their
   contributions into `main` with slug-merge semantics. A natural fit for swarm/critic loops.
-- **Preview environments for data.** "Open a PR against the database" — staging content,
+- **Preview environments for data.** "Open a PR against the database"; staging content,
   config, or catalog changes with a live preview before merge.
 - **Collaborative knowledge graphs.** EAV + ontology + realtime is a good substrate for
   CRMs, wikis, taxonomy/ontology editors, and internal tools where relationships matter
@@ -366,7 +366,7 @@ not a production-hardened sync database yet.
 **Strategic implications:**
 
 - It demonstrates that **SvelteKit remote functions are a viable realtime substrate** with
-  no client database SDK — a meaningfully simpler and safer client than the incumbent
+  no client database SDK; a meaningfully simpler and safer client than the incumbent
   pattern.
 - It reframes "realtime database" as "**version-controlled live graph**," which is the
   missing primitive for the agentic-software era: agents need branches, previews, and merges
@@ -388,17 +388,17 @@ not a production-hardened sync database yet.
 
 **Roadmap (from README "Next steps"):**
 
-1. **Conflict detection on promote** — compare draft base-version against current `main`
+1. **Conflict detection on promote**: compare draft base-version against current `main`
    and refuse silent clobbers. This is the cheapest correctness upgrade and the precondition
    for a conflict UI.
-2. **Conflict UI on promote** — surface soft/hard conflicts and let a human resolve.
-3. **End-to-end live latency benchmark** — measure tab A mutation to tab B visible update.
-4. **Hybrid deployment** — browser WebContainer graph + server remote functions in one topology.
-5. **Journal-only tags entity** — give tags the same lane isolation frameworks have.
+2. **Conflict UI on promote**: surface soft/hard conflicts and let a human resolve.
+3. **End-to-end live latency benchmark**: measure tab A mutation to tab B visible update.
+4. **Hybrid deployment**: browser WebContainer graph + server remote functions in one topology.
+5. **Journal-only tags entity**: give tags the same lane isolation frameworks have.
 
 ---
 
-## Appendix A — File map
+## Appendix A; File map
 
 | Concern               | File                                              |
 | --------------------- | ------------------------------------------------- |
@@ -413,7 +413,7 @@ not a production-hardened sync database yet.
 | UI                    | `src/routes/+page.svelte`                         |
 | WebContainer host     | `wc/server.mjs`                                   |
 
-## Appendix B — Reproducing the benchmarks
+## Appendix B; Reproducing the benchmarks
 
 ```bash
 pnpm dev:all          # sidecar on :3920

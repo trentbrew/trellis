@@ -2,7 +2,7 @@
 
 **Spike:** TRL-272 · **Proposal:** TRL-275  
 **Related:** TRL-156+ (unified theme contract) · [Canvas UI](https://canvasui.dev/) (reference)  
-**Status:** **Decision recorded**; adopt shadcn-style registry; defer runtime loader
+**Status:** **Decision recorded**: adopt shadcn-style registry; defer runtime loader
 
 ---
 
@@ -113,7 +113,7 @@ trellis shell add @trellis/issue-card-kanban
 | ---- | -------------- |
 | **Phase 0–1** (TRL-248/249, `tml-op`, `admin-shell.ts`) | Pack direction is distribution; write path and driver contract stay |
 | **Phase 2** (TRL-250, PeerDriver opt-in) | Materialization path is independent of how shells are copied into repo |
-| **Phase 3** (`tml-shell-registry`, `registerShell`, `hydrateShellSlots`) | **This is the runtime hook packs plug into**; Phase 3 was prerequisite, not throwaway |
+| **Phase 3** (`tml-shell-registry`, `registerShell`, `hydrateShellSlots`) | **This is the runtime hook packs plug into**: Phase 3 was prerequisite, not throwaway |
 | **Phase 4** (TRL-269, `shellForVantage`, lane shells, unified query) | Still first-party templates in `admin.html` until extracted; pack install is **Phase 6+** infra |
 | **Phase 5** (TRL-273, op parity) | All shells/primitives must use `TmlDriver.op`; pack manifest should document required ops |
 | **Unified theme TRL-156+** | Still canonical; packs declare compatibility, don't embed parallel token systems |

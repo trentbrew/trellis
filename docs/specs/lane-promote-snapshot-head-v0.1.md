@@ -42,13 +42,13 @@ are required for reliable spec-parent close.
 
 ## 2. Goals
 
-1. **Stable snapshot**; post-`lanePromoteStart` head re-check must not treat our
+1. **Stable snapshot**: post-`lanePromoteStart` head re-check must not treat our
    own promote lifecycle ops as integration movement.
-2. **Concurrent-write safety preserved**; a foreign integration op appended
+2. **Concurrent-write safety preserved**: a foreign integration op appended
    between plan and start must still abort promote.
-3. **Close path**; `trellis issue close TRL-166 --confirm` succeeds after
+3. **Close path**: `trellis issue close TRL-166 --confirm` succeeds after
    `pnpm build` (representative spec-parent; batch applies to 161/170/278).
-4. **Regression**; existing lane-promote tests remain green; no thrashing
+4. **Regression**: existing lane-promote tests remain green; no thrashing
    start/abort ops on retry.
 
 ## 3. Non-goals

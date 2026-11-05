@@ -35,8 +35,8 @@ from `trellis/browser` for reactive data fetching.
 
 | Attribute | Type | Required | Default | Description |
 | --------- | ---- | -------- | ------- | ----------- |
-| `id` | string | Yes |; | Entity ID |
-| `type` | string | Yes |; | Entity type name |
+| `id` | string | Yes |: | Entity ID |
+| `type` | string | Yes |: | Entity type name |
 | `vantage` | number | No | `8` | Continuous focal depth (0–13) |
 | `lane` | string | No | `"main"` | Lane identifier |
 | `editable` | boolean | No | `false` | Show edit affordance in card shell |

@@ -7,7 +7,7 @@ updated: 2026-05-30
 
 # Trellis Agent Skills
 
-Reusable AI agent skills and behaviors for interacting with **Trellis** — the local-first Agentic State Engine.
+Reusable AI agent skills and behaviors for interacting with **Trellis**: the local-first Agentic State Engine.
 
 These skills teach AI agents (such as **Claude Code**, **OpenCode**, and other custom agents) how to interact with the Trellis knowledge graph and the TrellisVCS version control engine.
 

@@ -35,7 +35,7 @@ the admin host (`lanes-dashboard`), not `server.ts`.
 | Search hide editing row | **Cancel** then apply `.hidden-by-search` |
 | Live refresh | **Skip `refresh()`** while any `.cell-editing` exists |
 | Issue validation | Empty → null / display `: `; non-empty `/^TRL-\d+$/i` |
-| Empty branch | **Reject**; keep editing; message “Branch required” |
+| Empty branch | **Reject**: keep editing; message “Branch required” |
 | Mutation fail | `#toast` + **restore** prior text + exit edit |
 | Events | `trellis:cell-activate` on begin; `trellis:cell-commit` on successful local validate (before/alongside host mutate) |
 | Mutation wire | Extend `POST /api/tml-mutations` with `action: "updateLaneMeta"` on `lanes-dashboard.ts` only |

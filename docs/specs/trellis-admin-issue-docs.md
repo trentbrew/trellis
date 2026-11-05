@@ -15,7 +15,7 @@
 
 Populate the turtle-admin **issue record dialog** body with repo markdown
 (`journal.md` → `summary.md` → `description` → empty state) via a new operator
-read **`GET /api/issues/:id/docs`**. The body is **read-only**; no `RecordBody`
+read **`GET /api/issues/:id/docs`**. The body is **read-only**: no `RecordBody`
 rows in the UI-state db (ADR 0053 §6).
 
 ## 2. Non-goals (v1)

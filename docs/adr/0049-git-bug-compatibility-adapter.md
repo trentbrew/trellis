@@ -25,7 +25,7 @@ GitLab, Jira, and Launchpad.
 TrellisVCS already owns issue semantics: `vcs:issueCreate`, lifecycle ops,
 acceptance criteria, lanes, protocol handoff messages, and rich graph links
 (ADR 0026). Trellis's thesis (ADR 0039) is that **the causal op-log on your
-device is the system of record**; servers and external formats may relay or
+device is the system of record**: servers and external formats may relay or
 mirror, but must not own semantics.
 
 Three integration approaches were evaluated:
@@ -262,12 +262,12 @@ Two importers of the same ref must produce identical Trellis fact sets
 
 ## Sequencing
 
-1. **After SPEC-v1.1**; signed op envelope stable.
-2. **Read-only importer**; `trellis import git-bug --repo .`
-3. **Transport adapter interface test**; git refs before Iroh (inspectable, debuggable).
-4. **Identity + comment entities**; minimal graph types if not already present.
-5. **Export**; only on demand.
-6. **Interop win**; imported Trellis issues visible to git-bug users via their
+1. **After SPEC-v1.1**: signed op envelope stable.
+2. **Read-only importer**: `trellis import git-bug --repo .`
+3. **Transport adapter interface test**: git refs before Iroh (inspectable, debuggable).
+4. **Identity + comment entities**: minimal graph types if not already present.
+5. **Export**: only on demand.
+6. **Interop win**: imported Trellis issues visible to git-bug users via their
    existing GitHub/Jira bridges (piggyback, not Trellis-owned).
 
 ## Acceptance criteria (Phase 1)
@@ -313,7 +313,7 @@ Two importers of the same ref must produce identical Trellis fact sets
 **Reconciles with turtleOS [ADR-0036](../../../os-sandbox/docs/adr/0036-repo-and-thin-project.md) §3.**
 
 1. **Bookkeeping.** The "sync bookkeeping" sketch above (`type: integration_connection, integrationId: git-bug, repoPath, lastImportedRef`) is superseded by the core **`Integration`** platform type (FIN-0051 shape), shipped in TRL-197 (`core-ontology.ts`, commit `efcd7c0`). A git-bug connection is an `Integration` row: `provider: git-bug`, `externalId: <repo identity>`, `credentialRef` (if a secret is ever needed; a local `.git` needs none), `status`, `lastSyncedAt`. Imported issues link `syncedVia → Integration`. The dedup cursor (imported `gitBugOpId`s) stays adapter-local metadata, not a new type.
-2. **Sibling path.** ADR-0036 §3 describes a **forge-direct** bridge (GitHub REST → `Issue` + `Integration`). That is a *different source* with the same target: both map into `vcs:issue*` and use `Integration`. Ordering decided: **this adapter (local git-bug refs) ships first**; no auth, no network, debuggable via `git cat-file`; then forge-direct as a later bridge. The adapter's "Interop win" note already anticipates piggybacking on git-bug's own GitHub/Jira bridges.
+2. **Sibling path.** ADR-0036 §3 describes a **forge-direct** bridge (GitHub REST → `Issue` + `Integration`). That is a *different source* with the same target: both map into `vcs:issue*` and use `Integration`. Ordering decided: **this adapter (local git-bug refs) ships first**: no auth, no network, debuggable via `git cat-file`; then forge-direct as a later bridge. The adapter's "Interop win" note already anticipates piggybacking on git-bug's own GitHub/Jira bridges.
 3. **No competing model.** There must not be a `integration_connection` type *and* `Integration`; the former is retired in favour of the latter.
 
 **Implementation note (current repo):** `src/git/git-reader.ts` shells out to `git` (no libgit2). Prefer `git cat-file`/`git for-each-ref` for `refs/bugs/*` over adding `isomorphic-git`; either is acceptable if object access stays read-only.

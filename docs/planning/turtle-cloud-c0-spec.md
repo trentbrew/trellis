@@ -171,9 +171,9 @@ Lists current user's provisioned projects (no apiKey in response; rotate via sep
 
 ## Rollout
 
-1. **Internal dogfood**; deploy `demo/realtime-app` sidecar to Sprite via CLI
-2. **Broker alpha**; Studio superadmin can provision from dashboard tile
-3. **Public hobby tier**; rate limit + 1 project cap before Stripe
+1. **Internal dogfood**: deploy `demo/realtime-app` sidecar to Sprite via CLI
+2. **Broker alpha**: Studio superadmin can provision from dashboard tile
+3. **Public hobby tier**: rate limit + 1 project cap before Stripe
 
 ---
 

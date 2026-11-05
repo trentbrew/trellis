@@ -61,7 +61,7 @@ So a read-only peer has exactly two options:
 1. **Server-derived projections** (what this spike kept); thin client, but the
    server must know every projection the client wants. Not local-first: the peer
    cannot answer a question the server did not anticipate.
-2. **Client-side materialization**; the peer applies ops to its own store and
+2. **Client-side materialization**: the peer applies ops to its own store and
    queries locally. This *is* the local-first model, and it is what Iroh peers
    must do regardless, since there is no server to ask.
 
@@ -76,7 +76,7 @@ do with them*; and the answer determines the first one, because:
 ## Finding 3; client-side materialization makes decompose consensus-critical
 
 If peers materialize locally (and Iroh peers must), then each peer runs
-`decompose()` over received ops. `decompose()` is **pure**; a deterministic
+`decompose()` over received ops. `decompose()` is **pure**: a deterministic
 function of the op alone. Two peers on different versions therefore derive
 **different state from identical, hash-verified ops**. The hash agrees.
 Verification passes. State silently diverges, and nothing in the system can
@@ -101,7 +101,7 @@ point. Everything above is evidence *toward* SPEC-v1.1, not a substitute for it.
 
 ## Open, for TRL-110
 
-- **Client-side materialization**; the real fork (Finding 2). Ship store +
+- **Client-side materialization**: the real fork (Finding 2). Ship store +
   decompose + TQL to peers, or keep projections server-side and accept that
   peers cannot ask novel questions?
 - **Lane journals are not in the stream.** Only the integration journal is.

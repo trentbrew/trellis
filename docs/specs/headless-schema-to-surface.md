@@ -110,7 +110,7 @@ Lifted from `forms/derive.ts` `controlFor` + extensions for table/code:
 | `valueType` | `affordance` | Notes |
 | ----------- | ------------ | ----- |
 | `title` | `text` | title-first ordering |
-| `rich_text` | `richtext` | **change from forms `textarea`**; forms may keep `textarea` until editor form control lands; table/code use `richtext` immediately |
+| `rich_text` | `richtext` | **change from forms `textarea`**: forms may keep `textarea` until editor form control lands; table/code use `richtext` immediately |
 | `number` | `number` | |
 | `checkbox` | `boolean` | |
 | `select`, `status` | `select` | |
@@ -243,11 +243,11 @@ export function deriveCompletionSources(
 
 For each `SchemaDefinition` in scope:
 
-1. **Type names**; `entityType` → `{ label: 'Task', insert: 'Task', kind: 'type' }`
-2. **Properties**; each `SurfaceField` → `{ label: humanize(name), insert: name, kind: 'property', detail: valueType }`
-3. **EQL keywords**; static list: `find`, `where`, `and`, `or`, `not`, `order`, `limit`, `return`, …
-4. **Select options**; when property has `selectOptions`, literal completions scoped to that property name in formula mode
-5. **Relation targets**; when `affordance === 'relation'`, type-name completions for `targetSchema`
+1. **Type names**: `entityType` → `{ label: 'Task', insert: 'Task', kind: 'type' }`
+2. **Properties**: each `SurfaceField` → `{ label: humanize(name), insert: name, kind: 'property', detail: valueType }`
+3. **EQL keywords**: static list: `find`, `where`, `and`, `or`, `not`, `order`, `limit`, `return`, …
+4. **Select options**: when property has `selectOptions`, literal completions scoped to that property name in formula mode
+5. **Relation targets**: when `affordance === 'relation'`, type-name completions for `targetSchema`
 
 Formula mode (`valueType === 'formula'`) restricts to expression-safe properties (exclude `files`, `people`, `rich_text` bodies) and exposes numeric/select fields prominently.
 
@@ -264,7 +264,7 @@ interface CodeCoreConfig {
 }
 ```
 
-The core filters/ranks items as the user types (reuse `headless/fuzzy.ts`). **Descriptors are static per schema version**; the core owns query-time filtering.
+The core filters/ranks items as the user types (reuse `headless/fuzzy.ts`). **Descriptors are static per schema version**: the core owns query-time filtering.
 
 ### 6.3 Acceptance (code)
 
@@ -320,8 +320,8 @@ Proves schema→surface before code-core lands.
 
 ## 10. Implementation order
 
-1. **`src/surface/` scaffold**; types, `deriveSurfaceFields`, lift `humanize` + ordering
-2. **Migrate forms**; delegate `deriveFormDescriptor`; all form tests green
+1. **`src/surface/` scaffold**: types, `deriveSurfaceFields`, lift `humanize` + ordering
+2. **Migrate forms**: delegate `deriveFormDescriptor`; all form tests green
 3. **`project-table.ts`** + table gallery wiring + tests
 4. **`project-code.ts`** + fixture snapshots (no CodeMirror yet; descriptor-only tests)
 5. **Export `trellis/surface`** in package.json + browser bundle
@@ -333,5 +333,5 @@ Proves schema→surface before code-core lands.
 ## 11. Open questions
 
 - **`rich_text` in forms:** switch control to `richtext` + editor-core binding in forms wedge, or keep `textarea` alias until form `<Field>` renderer work lands? **Recommend:** alias in form projection only; surface field uses `richtext`.
-- **Shared override entity vs per-surface overrides:** one `trellis:View` entity with sections, or separate Form/Table/Code override types? **Defer**; forms override path is sufficient until a second surface needs overrides in product.
+- **Shared override entity vs per-surface overrides:** one `trellis:View` entity with sections, or separate Form/Table/Code override types? **Defer**: forms override path is sufficient until a second surface needs overrides in product.
 - **Location:** `src/surface/` vs `src/schema/surface/`. **Recommend:** `src/surface/`; not JSON-schema; it's UI surface derivation.

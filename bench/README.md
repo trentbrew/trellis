@@ -3,7 +3,7 @@
 Tracking: epic **TRL-18** → **TRL-24** (bench step), plan
 `docs/planning/trl-18-kernel-perf-nixos-budget.md`.
 
-## Bench step — locked
+## Bench step; locked
 
 One **kernel cycle**, transport-tolerant:
 
@@ -11,16 +11,16 @@ One **kernel cycle**, transport-tolerant:
 boot → load op-log/mirror → apply/merge inbound ops → fixed query mix → sync round
 ```
 
-- **Arrival tiers** — Tier A (V1 op-path, JSONL + SQLite replay) is the runnable
+- **Arrival tiers**: Tier A (V1 op-path, JSONL + SQLite replay) is the runnable
   first-pass. Tier B (V2 full-state, TRL-333/334) plugs into the same bench slot
   as an arrival mode once live.
-- **Arrival modes** — every cycle covers `flood-cold` (K ops since head,
+- **Arrival modes**: every cycle covers `flood-cold` (K ops since head,
   catch-up) and `live-trickle` (N small realtime-style batches).
-- **Noise protocol** — alternate control/candidate, report medians + p95,
+- **Noise protocol**: alternate control/candidate, report medians + p95,
   `drop_caches` between cold runs (root; skipped with warning otherwise).
-- **Budget accounting** — wall p50/p95, `/proc` VmRSS + VmHWM, page-fault
+- **Budget accounting**: wall p50/p95, `/proc` VmRSS + VmHWM, page-fault
   style counters where available, io bytes where available.
-- **Decision rule** — repeatable end-to-end win => ship; repeatable loss
+- **Decision rule**: repeatable end-to-end win => ship; repeatable loss
   => revert; inconclusive => default unchanged, always recorded.
 
 ## Layout

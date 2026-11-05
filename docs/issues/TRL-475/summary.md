@@ -8,10 +8,10 @@ Slice 1 (`experiments/formula-core-v1`) proves parse/eval/serialize + corpus for
 
 ## Goal
 
-1. **Adapters**; thin `surface → IR → evaluate` entrypoints per dialect tag.
-2. **Shablon bridge**; `src/formula/dialect.js` delegates CMS-compat classification to shared rules (Node-importable path from trellis-node experiment or duplicated minimal classifier kept in sync; prefer **file import** from `trellis` workspace path documented in impl).
-3. **Corpus growth**; lift shablon 4a matrix rows into `matrix.jsonl` (classification + eval rows).
-4. **Regression**; shablon `pb-formula-compat-unit` + `pb-schema-unit` unchanged green.
+1. **Adapters**: thin `surface → IR → evaluate` entrypoints per dialect tag.
+2. **Shablon bridge**: `src/formula/dialect.js` delegates CMS-compat classification to shared rules (Node-importable path from trellis-node experiment or duplicated minimal classifier kept in sync; prefer **file import** from `trellis` workspace path documented in impl).
+3. **Corpus growth**: lift shablon 4a matrix rows into `matrix.jsonl` (classification + eval rows).
+4. **Regression**: shablon `pb-formula-compat-unit` + `pb-schema-unit` unchanged green.
 
 **Non-goals (slice 2):** kernel `ExprEvaluator` replacement, `trellis/cms` client migration, npm publish pin, TRL-471 pb-node.
 
@@ -37,7 +37,7 @@ Add ≥6 rows ported from shablon `dialect.test.js` expectations (ids prefixed `
 
 ### 4. Shablon wire (`lab/oss/shablon`)
 
-- Add dev dependency path or relative import documented in `src/formula/README.md` (slice 2): **optional**; if cross-repo import is impractical in CI, duplicate classifier logic in shablon with **shared corpus JSON** copied to both repos and a comment linking TRL-475.
+- Add dev dependency path or relative import documented in `src/formula/README.md` (slice 2): **optional**: if cross-repo import is impractical in CI, duplicate classifier logic in shablon with **shared corpus JSON** copied to both repos and a comment linking TRL-475.
 
 Minimum AC: shablon tests pass; dialect behavior unchanged for Trellis schema guard paths.
 

@@ -14,7 +14,7 @@
 `@trellis.computer/ui` is a **separate npm package** under the
 `@trellis.computer` scope that provides Web Components built on Lit. It
 consumes `trellis/browser` primitives (Signal, live queries, schema, realtime)
-and renders them as custom elements usable in **any framework**; Svelte, Vue,
+and renders them as custom elements usable in **any framework**: Svelte, Vue,
 React, Solid, or vanilla HTML.
 
 This is the **projection layer**, not the authoring DSL. The kernel stays
@@ -111,11 +111,11 @@ The `@trellis.computer` npm scope hosts the registry packages:
 | `@trellis.computer/types/*` | Ontology types (SemType) | `trellis add person` |
 
 
-**UI components**; Copy source into project. Product owns the code.
-**Ontology types**; Add reference to graph schema. Type lives at URL.
-**Icons**; Semantic icon registry (TRL-315). Components reference by name, not path.
-**Fonts**; Semantic font registry (TRL-316). Components reference by role, not family.
-**Theme**; CSS custom properties (TRL-314). All tokens use oklch, data-theme switching.
+**UI components**: Copy source into project. Product owns the code.
+**Ontology types**: Add reference to graph schema. Type lives at URL.
+**Icons**: Semantic icon registry (TRL-315). Components reference by name, not path.
+**Fonts**: Semantic font registry (TRL-316). Components reference by role, not family.
+**Theme**: CSS custom properties (TRL-314). All tokens use oklch, data-theme switching.
 
 This mirrors how SemType works: types are identified by versioned URLs, not
 copied into projects. Your graph references types, it doesn't own them.
@@ -584,16 +584,16 @@ import '@trellis.computer/ui';
 - `trellis-ui-dsl.md`; Superseded by TML-first direction; this is the projection layer, not the authoring DSL
 - `Thing.svelte`; The reference implementation for `<trellis-entity>` vantage/shell pattern
 - `shells.ts`; Pure function for vantage→shell resolution, reused directly
-- **ADR 0025**; Naming: TQL (brand) vs eql (codename)
-- **SemType**; Ontology types follow SemType spec (types identified by URLs, not copied)
-- **Shadcn**; Distribution model: source copied into projects, products own code
-- **TRL-311**; This issue: `@trellis.computer/ui` Web Component library
-- **TRL-313**; CLI command: `trellis add` with auto-detect
-- **TRL-314**; Theme contract: CSS custom properties
-- **TRL-315**; Icon ontology: semantic registry
-- **TRL-316**; Font ontology: semantic registry
-- **TRL-317**; Architecture decisions: kernel vs UI vs types
-- **ONTOLOGY.md**; Canonical ecosystem ontology now includes UI Library layer
+- **ADR 0025**: Naming: TQL (brand) vs eql (codename)
+- **SemType**: Ontology types follow SemType spec (types identified by URLs, not copied)
+- **Shadcn**: Distribution model: source copied into projects, products own code
+- **TRL-311**: This issue: `@trellis.computer/ui` Web Component library
+- **TRL-313**: CLI command: `trellis add` with auto-detect
+- **TRL-314**: Theme contract: CSS custom properties
+- **TRL-315**: Icon ontology: semantic registry
+- **TRL-316**: Font ontology: semantic registry
+- **TRL-317**: Architecture decisions: kernel vs UI vs types
+- **ONTOLOGY.md**: Canonical ecosystem ontology now includes UI Library layer
 
 ---
 
@@ -601,12 +601,12 @@ import '@trellis.computer/ui';
 
 ## What This Is NOT
 
-- **Not a cross-framework DSL**; We conceded that projections are community-driven, not owned by the kernel
-- **Not part of the kernel**; Separate package, independent versioning
-- **Not a replacement for framework adapters**; React/Vue/Svelte adapters stay in the kernel; this is the universal alternative
-- **Not the authoring DSL**; TML-first direction (Thing → shell → primitive) is separate
-- **Not an npm dependency**; Shadcn pattern: source is copied, products own their code
-- **Not a shared runtime**; Each project is independent; duplication is acceptable
-- **Not a monorepo for all UI**; `@trellis.computer/ui` is the canonical internal lib; products pick their framework for custom projections
+- **Not a cross-framework DSL**: We conceded that projections are community-driven, not owned by the kernel
+- **Not part of the kernel**: Separate package, independent versioning
+- **Not a replacement for framework adapters**: React/Vue/Svelte adapters stay in the kernel; this is the universal alternative
+- **Not the authoring DSL**: TML-first direction (Thing → shell → primitive) is separate
+- **Not an npm dependency**: Shadcn pattern: source is copied, products own their code
+- **Not a shared runtime**: Each project is independent; duplication is acceptable
+- **Not a monorepo for all UI**: `@trellis.computer/ui` is the canonical internal lib; products pick their framework for custom projections
 - **Not** `@trellis-ui`; That scope was taken 2 days before this session; `@trellis.computer/`* is the owned alternative
 

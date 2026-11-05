@@ -17,7 +17,7 @@ fault line is architectural rot, not a missing feature.
 ## What happened (the trap)
 
 ### Class name
-**9801056-class silent revert**; named after an earlier regression commit that wiped work
+**9801056-class silent revert**: named after an earlier regression commit that wiped work
 and left a "clean" tree.
 
 ### Mechanism
@@ -136,7 +136,7 @@ message to the agent; "safer" semantics the human chose).
 | `pnpm check` | clean |
 | `pnpm test` | 1752/1756; only 4 failures are pre-existing `test/core/workflow-pipeline-primitives.test.ts` (DAG 30s timeouts + orchestration; untouched) |
 | dist | rebuilt; contains `journalWorkingTreeToOps` (gitignored, local) |
-| Studio / turtlecode fork | **OFF LIMITS**; messy in-flight staged set (~1600 files), desk hooks/TUI work existed untracked/partially staged; do not resume from this checkpoint without a separate fork cleanup |
+| Studio / turtlecode fork | **OFF LIMITS**: messy in-flight staged set (~1600 files), desk hooks/TUI work existed untracked/partially staged; do not resume from this checkpoint without a separate fork cleanup |
 
 ---
 
@@ -293,8 +293,8 @@ to be solved.
 
 **B is already the de facto answer**, codified twice:
 
-1. **ADR 0014**; git as rebuildable blob-tree mirror, op-log as carrier of record
-2. **Refuse-before-clobber**; `journalWorkingTreeToOps` treats disk drift as
+1. **ADR 0014**: git as rebuildable blob-tree mirror, op-log as carrier of record
+2. **Refuse-before-clobber**: `journalWorkingTreeToOps` treats disk drift as
    something to be *absorbed into* the op-log before anything proceeds, and
    refuses if it can't be reconciled. That **is** graph-first behavior: the
    op-log must reflect all reality; git is reconciled up into it.
@@ -314,7 +314,7 @@ gap; writes bypassing the op-log; is the exact seam that produced the
 
 Wire `journalWorkingTreeToOps` to a `PostToolUse` hook on `Write | Edit | Bash`
 tool calls. The same scan-and-diff stops being a pre-sync patch and becomes the
-**actual write path**; every agent edit is journaled immediately. Git falls
+**actual write path**: every agent edit is journaled immediately. Git falls
 out as a real mirror, by construction, without touching TrellisHub.
 
 ```mermaid
@@ -358,16 +358,16 @@ need it and throw it away when you don't, like a build artifact. This is the
 | Desk chrome | "Disk ahead of log" banners become the natural UX; the graph owns truth, disk is a view |
 | TrellisHub | Remains a separable distribution problem, not gating local correctness |
 
-**TrellisHub is now correctly a later problem**; about distribution, not about
+**TrellisHub is now correctly a later problem**: about distribution, not about
 who owns the truth. The truth is the op-log, locally, now.
 
 ### Consensus we keep re-reaching (2026-08-03 reminder)
 
 Stated again in conversation, and believed to have been agreed **several times** before:
 
-1. **Endgame is a custom distributed TrellisHub**; graph-native, op-log/Iroh shaped,
+1. **Endgame is a custom distributed TrellisHub**: graph-native, op-log/Iroh shaped,
    not "GitHub with extra steps." Still open to it. Still the aim.
-2. **Git was the meantime**; leverage it while building TrellisHub out, not as the
+2. **Git was the meantime**: leverage it while building TrellisHub out, not as the
    permanent dual SSoT.
 3. **TrellisHub never got built.** The meantime became the system. That is what we are
    feeling now (9801056-class, lane accretion, guard stack).
@@ -400,7 +400,7 @@ it is explicitly on the TrellisHub path or the safety floor (refuse-before-clobb
    prototype and a bad steady state. Lifecycle (create/promote/gc including refs) has to be
    designed with the ownership answer, not before it.
 
-4. **Desk is the right product surface for the answer**; merge views, conflict UI, "disk
+4. **Desk is the right product surface for the answer**: merge views, conflict UI, "disk
    ahead of log" banners; but Studio is off-limits right now. Kernel-side honesty first;
    chrome later.
 

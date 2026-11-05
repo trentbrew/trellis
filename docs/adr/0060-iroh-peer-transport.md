@@ -21,7 +21,7 @@ The first concrete demand comes from the sandbox desk. Disposable Omarchy guests
 
 4. **Rendezvous is deferred and named.** v0 discovery is manual ticket exchange, brokered host-side in the sandbox prototype. A rendezvous (Iroh discovery/DISCO, or the identity-addressed-clone path in ADR 0032) is the explicit next step. Manual ticket-passing is a stopgap and MUST NOT harden into the architecture.
 
-5. **Integration is policy-gated.** Ops pulled from a peer pass through the existing `SyncEngine` gates (quarantine, `destructive-op`, `bulk-delete`, rate-limit) before they enter a local graph. The default posture for a cross-sandbox pull is a **read-only mirror**; integrate and verify; no automatic merge or promote.
+5. **Integration is policy-gated.** Ops pulled from a peer pass through the existing `SyncEngine` gates (quarantine, `destructive-op`, `bulk-delete`, rate-limit) before they enter a local graph. The default posture for a cross-sandbox pull is a **read-only mirror**: integrate and verify; no automatic merge or promote.
 
 6. **Verification is by content and signature.** A pulled op is validated by its hash and by the signing device key resolved under the person identity (ADR 0021 / 0022 / 0036). "Verify" is a query over already-pulled ops; not a new subsystem.
 
@@ -58,7 +58,7 @@ Status flips to **accepted** once the first two risks clear.
 - **Risk 1; green.** In the `dev` guest, `@number0/iroh` is present nested under the global trellis and loads with the full API (`Endpoint`, `EndpointTicket`, `EndpointAddr`, `presetN0`, `SecretKey`, …). Caveat: the guest ran **trellis 4.0.12**, not the `4.0.5` pinned in `recipes/agent/config.env`; reconcile the pin.
 - **Risk 2; green (cross-sandbox, public n0 relay).** Two running sandboxes (`dev` = A, `ontology` = B) each bound an Iroh endpoint with a machine-id-derived stable key. Tickets exchanged host-side; both connected over the public relay; B ran a **pairwise pull** and A served the ops in response. Result: `integrated applied 6 rejected 0`, B's op count `6 → 12`, and B's graph now contains A's `System` entity (`system:fb7ba198…`, the `dev` sandbox) alongside its own. No SSH-from-Mac in the path.
 - **Finding (not a risk).** The consumer must call `engine.open()` before `getOpCount()`/sync; the constructor does not load the op log. A successor caller that skips this syncs `0` ops silently.
-- **CLI verb `trellis wire`; built + tested (one-way).** From the `dev` desk source build (`bun src/cli/index.ts wire …`): `serve` on the sandbox graph (6 ops) + `pull --ticket <t>` into a fresh repo (1 op) → `applied 6 rejected 0`, `ops 1 -> 7`. Crucially **one-way**; the puller only connects; the server resolves the puller's address over the relay and replies, so no second connection is required.
+- **CLI verb `trellis wire`; built + tested (one-way).** From the `dev` desk source build (`bun src/cli/index.ts wire …`): `serve` on the sandbox graph (6 ops) + `pull --ticket <t>` into a fresh repo (1 op) → `applied 6 rejected 0`, `ops 1 -> 7`. Crucially **one-way**: the puller only connects; the server resolves the puller's address over the relay and replies, so no second connection is required.
 - **Risk 3; open.** Confirm the published `trellis` version ships `iroh-transport.ts` + the CLI path (the guest's 4.0.12 does).
 
 Status: with risks 1–2 cleared, this flips to **accepted** on risk 3.

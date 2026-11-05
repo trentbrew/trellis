@@ -126,14 +126,14 @@ vocabulary.
 
 - The peer **never runs `decompose`**. It applies facts. `decompose` demotes from
   consensus-critical to a local *authoring* convenience that can version freely.
-- The store becomes a **pure function of the ops received**; convergence by
+- The store becomes a **pure function of the ops received**: convergence by
   construction, not by two peers' `decompose` agreeing.
 - The hash covers the **actual state delta**, so verifying an op means the facts
   are trustworthy. Under (a)-violating designs you would have to decompose in
   order to check that shipped facts matched the op; circular.
 - **`vcs` (authoring intent) does not go on the wire.** It is local to the
   minting peer. `kind` carries what a remote reader needs.
-- ADR 0021 **already built this preimage**; the v2 canonical shape is exactly
+- ADR 0021 **already built this preimage**: the v2 canonical shape is exactly
   `{v, kind, timestamp, agentId, previousHash, facts, links, deleteFacts,
   deleteLinks, provenance}`. This spec adopts it rather than inventing one.
 
@@ -164,7 +164,7 @@ permanent v1 prefix. That is the cost of having hashed intent for a year.
 ### The original problem (retained for the record)
 
 Found while checking §2's own claims. **An earlier revision of this section said
-branch heads are side files. That was wrong**; see
+branch heads are side files. That was wrong**: see
 `docs/planning/spec-v1.1-refs-and-authz.md` for the full map.
 
 `vcs:branchAdvance` *does* decompose to a fact:
@@ -259,16 +259,16 @@ convergence. They are local annotation. Only the hashed payload determines state
 `engine.integrateOps()` already implements this for `VcsOp`s. The spec
 generalizes it rather than inventing:
 
-1. **Idempotent**; known hash ⇒ skip. (`known.has(op.hash)`)
-2. **Kind-validated**; unknown kind ⇒ reject `invalid-kind`.
-3. **Hash-verified**; `verifyOpHash(op)` fails ⇒ reject `hash-mismatch`.
+1. **Idempotent**: known hash ⇒ skip. (`known.has(op.hash)`)
+2. **Kind-validated**: unknown kind ⇒ reject `invalid-kind`.
+3. **Hash-verified**: `verifyOpHash(op)` fails ⇒ reject `hash-mismatch`.
    **Non-negotiable, and currently unmet on the kernel path**: ADR 0021 §1
    requires `verifyOpHash` at the sync boundary; it is exported and never called,
    because no kernel-op ingest boundary exists. This is that boundary.
-4. **Batch-deduped**; repeated hash within one batch ⇒ skip.
-5. **Causally ordered**; `previousHash` unknown ⇒ defer, retry to a fixed point,
+4. **Batch-deduped**: repeated hash within one batch ⇒ skip.
+5. **Causally ordered**: `previousHash` unknown ⇒ defer, retry to a fixed point,
    so out-of-order arrival converges without requiring ordered delivery.
-6. **Apply failure is a rejection, not a crash**; reject `apply-failed`.
+6. **Apply failure is a rejection, not a crash**: reject `apply-failed`.
 
 An op that fails any check is **rejected at the boundary, not stored**. Rejections
 are typed and reported; a peer is never silently partially-applied.
@@ -280,13 +280,13 @@ docs promise Iroh will use; has exactly one implementation, a stub.
 
 ## §5; Read authorization. **DECIDED by ADR 0022** (zone = boundary).
 
-> **Resolved.** ADR 0022 (Accepted) names what a "room" is: a **zone**; an
+> **Resolved.** ADR 0022 (Accepted) names what a "room" is: a **zone**: an
 > immutable, authority-bearing `zoneId` (`turtle://<ownerDid>/zone/<uuid>`) with
 > a mutable `alias`, four capability levels, deny-by-default, and a `parentZone`
 > closure. The replication unit is the authorization unit; the seven telos zone
 > names are presets, not kernel vocabulary.
 >
-> **Revocation is honestly "rotate"**; ADR 0022 states it outright, matching the
+> **Revocation is honestly "rotate"**: ADR 0022 states it outright, matching the
 > exposure named below. ADR 0023 (Proposed) specifies the crypto that turns the
 > boundary from a filter into a boundary: per-zone AES-256-GCM key, wrapped under
 > an argon2id KEK.
@@ -299,7 +299,7 @@ docs promise Iroh will use; has exactly one implementation, a stub.
 > checked at *mint*, not at *ingest*. A peer that mints a `vcs:grantSet`
 > directly is stopped by nothing. Until the kernel deny-by-default boundary
 > (ADR 0022 consequence, "Phase 3") lands, **this section is a model, not an
-> enforcement mechanism**; and §4's ingest is where it has to attach.
+> enforcement mechanism**: and §4's ingest is where it has to attach.
 >
 > The analysis below is retained because it is why the decision went that way.
 
@@ -365,8 +365,8 @@ creates; materialization makes it *visible* rather than pretend.
 **What is left is one thing, and it is the same thing twice.** §2 and §4 both
 terminate at an ingest boundary that does not exist on the kernel path:
 
-- `verifyOpHash` is exported and **never called**; there is nowhere to call it.
-- Zone capability is checked at **mint, not ingest**; so a peer that mints a
+- `verifyOpHash` is exported and **never called**: there is nowhere to call it.
+- Zone capability is checked at **mint, not ingest**: so a peer that mints a
   `vcs:grantSet` directly is unopposed.
 
 Hash verification and capability enforcement are **the same boundary**. Building

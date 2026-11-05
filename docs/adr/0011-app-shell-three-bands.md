@@ -8,7 +8,7 @@
 
 ## Context
 
-`demo/realtime-app` (`localhost:4000`) is an **integration sketchpad**; a single repo where we prove typed SDK, live sync, lanes, fractals, chat, and presence. It is not the shipping Trellis Studio surface.
+`demo/realtime-app` (`localhost:4000`) is an **integration sketchpad**: a single repo where we prove typed SDK, live sync, lanes, fractals, chat, and presence. It is not the shipping Trellis Studio surface.
 
 Before more UI work we need a product boundary between:
 
@@ -27,10 +27,10 @@ A related UX question: should **collections** appear as a persistent sidebar in 
 
 Fractal Responsiveness already defines two axes on content:
 
-- **Lane**; version / draft stream (`main` vs `agent:…`).
-- **Vantage**; representation depth (node → row → card → editable card).
+- **Lane**: version / draft stream (`main` vs `agent:…`).
+- **Vantage**: representation depth (node → row → card → editable card).
 
-This ADR adds a third axis for **shell chrome**: **band**; who may see which affordances.
+This ADR adds a third axis for **shell chrome**: **band**: who may see which affordances.
 
 ## Decision
 
@@ -163,13 +163,13 @@ Jazz-like popup with no formal L1/L2/L3 contract.
 Fractals and a Jazz-style operator overlay are **not** prerequisites for a useful
 collections editor or for competitive realtime DX.
 
-**Critical path**; ship **typed SDK parity** in ordinary React / Vue / Svelte apps:
+**Critical path**: ship **typed SDK parity** in ordinary React / Vue / Svelte apps:
 
 - `defineType` + `registerType`
 - `entitiesStore` / `mutations` (or framework equivalents)
 - live subscription, reconnect, optimistic mutations, permission-aware queries
 
-**Code-as-configuration**; app source is the config layer for v1 product:
+**Code-as-configuration**: app source is the config layer for v1 product:
 
 - Types and Zod shapes live in repo (`src/schemas/…`)
 - Routes/pages are projections (`/ideas` → query + view over `CollectionRecord`)
@@ -198,8 +198,8 @@ Collections **L2 editor** work (body field, validation, more props) proceeds in
 
 ## Open questions
 
-1. **Capability names**; `can:edit` vs `can:admin` vs scoped resource grants (align with existing governance middleware).
-2. **Publish primitive**; route-level flag, tenant mode, or lane promote to `main` only?
-3. **CollectionMeta fate**; keep as builder config entity vs fold into route projection config document.
+1. **Capability names**: `can:edit` vs `can:admin` vs scoped resource grants (align with existing governance middleware).
+2. **Publish primitive**: route-level flag, tenant mode, or lane promote to `main` only?
+3. **CollectionMeta fate**: keep as builder config entity vs fold into route projection config document.
 
 Resolve in TRL-25 spec or a child ADR; do not block band model on these.

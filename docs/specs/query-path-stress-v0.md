@@ -22,9 +22,9 @@ Desk stress test (2026-07-24) found:
 
 1. **`runQueryStress(engine)`** library in `src/query/stress.ts`
 2. **`trellis query-stress`** CLI; human/agent runnable on any repo
-3. **Vitest fixture**; seeds parent/child issue + decision, requires childOf +
+3. **Vitest fixture**: seeds parent/child issue + decision, requires childOf +
    Decision projection
-4. **Optional live test**; passes on `trellis-node` when `.trellis` present
+4. **Optional live test**: passes on `trellis-node` when `.trellis` present
 
 ## 3. Non-goals
 

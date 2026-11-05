@@ -153,14 +153,14 @@ and object counts.
 **Types as records** (FINANCE `dcfd34c`, 2026-09-28); a client-track step *between* ADR phases 2 and 3
 (see **Phase numbering** below). The Types page is now a browse surface, not a static directory:
 
-- **`typesApp`** + **`ManifestTypeSource`**; one row per installed type (`app.database` id), object counts
+- **`typesApp`** + **`ManifestTypeSource`**: one row per installed type (`app.database` id), object counts
   from each contributing runtime's source, views/search/filter/group via the generic `DatabaseBrowseShell`.
-- **Open in the dialog stack**; `Record:type` projection (`type-page.svelte`): metadata properties +
+- **Open in the dialog stack**: `Record:type` projection (`type-page.svelte`): metadata properties +
   read-only schema table (including paste-added extension fields, marked "added"). Code types are
   read-only; user types link to **Open collection** and **Edit database** on the ADR 0045 route.
-- **Type chip stacks in-dialog**; from a record dialog, the type chip pushes a type frame instead of
+- **Type chip stacks in-dialog**: from a record dialog, the type chip pushes a type frame instead of
   navigating away. Hash deep links (`/types#type-{app}.{database}`) still auto-open the type dialog.
-- **Browse layer stays app-agnostic**; type resolution lives in `resolve-type.ts`; cross-app `@` mention
+- **Browse layer stays app-agnostic**: type resolution lives in `resolve-type.ts`; cross-app `@` mention
   search is late-bound via `mention-registry.ts` (apps layer binds `mention-search` at init).
 
 **Not done** (still before kernel Relations): graph `Type` entities backing the same UI (client **3b**),
@@ -179,7 +179,7 @@ keeps them aligned:
 |---|---|---|
 | 1; Visible types | Phase 1 (`cf9fb41`) | Type chip + static Types directory |
 | 2; People | Phase 2 (`635bf8b`) | `core:Person` platform app, cross-app relation resolver |
-| *(addendum)* | Phase 3 / **3a** (`dcfd34c`) | **Types as records**; manifest-derived browse + `Record:type` dialog |
+| *(addendum)* | Phase 3 / **3a** (`dcfd34c`) | **Types as records**: manifest-derived browse + `Record:type` dialog |
 | 3; Relations | Phase **3b** + kernel work | `trellis:Relation`, field mirroring, extension migration |
 | 4; Sets / change-type | *(not started)* | Cross-type views, change an object's type |
 

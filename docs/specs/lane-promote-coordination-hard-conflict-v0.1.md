@@ -36,12 +36,12 @@ when lane journal holds redundant lifecycle facts.
 
 ## 2. Goals
 
-1. **Generalize integration-wins stale skip**; any `ISSUE_COORDINATION_ATTRS`
+1. **Generalize integration-wins stale skip**: any `ISSUE_COORDINATION_ATTRS`
    fact where integration head diverged from fork base and lane value is stale
    must not emit a hard conflict and must not replay.
-2. **Close path**; `trellis issue close TRL-281 --confirm` succeeds after
+2. **Close path**: `trellis issue close TRL-281 --confirm` succeeds after
    `pnpm build` (CLI uses `dist/`).
-3. **Regression safety**; real attribute edits (title, labels, code paths) still
+3. **Regression safety**: real attribute edits (title, labels, code paths) still
    hard-conflict when integration changed since fork.
 
 ## 3. Non-goals

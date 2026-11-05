@@ -188,7 +188,7 @@ This does not make TML type-checked. It makes TML **loud**, which is the propert
 | `src/ui/tml-runtime.ts` | `resolvePath` + `PathResult`; `TmlDiagnostic` / `MountOptions`; static tier in `setupContainer`; shape tier on first render; `mount` opts param |
 | `test/ui/tml-runtime.test.ts` | Cases per §6 |
 | `docs/specs/tml-v0.md` | Link this spec from §3.2 (expressions) and §9 (verification) |
-| `src/ui/tml-lanes.html` | **Untouched**; must emit zero diagnostics as-is |
+| `src/ui/tml-lanes.html` | **Untouched**: must emit zero diagnostics as-is |
 | `src/ui/lanes.html` | **Untouched** |
 
 ---

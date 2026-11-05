@@ -4,7 +4,7 @@
 **Date:** 2026-07-21  
 **Proposal:** TRL-169  
 **Parent chain:** TRL-167 (Phase C shipped)  
-**No design gate**; test + helper harden only
+**No design gate**: test + helper harden only
 
 ---
 
@@ -12,9 +12,9 @@
 
 Close two gaps left after Phase B/C review:
 
-1. **Scrubber e2e**; client vantage detents (2 / 5 / 8) must be exercised in
+1. **Scrubber e2e**: client vantage detents (2 / 5 / 8) must be exercised in
    Playwright, not only unit/source review.
-2. **Badge tint**; `client.html` appends `22` to CSS colors for drawer badges
+2. **Badge tint**: `client.html` appends `22` to CSS colors for drawer badges
    (`${ENTITY_COLORS[…]}22`). That breaks when `--entity-default` / text tokens
    resolve to `rgba(...)`.
 

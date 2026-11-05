@@ -16,8 +16,8 @@ call sites** and **inline driver wiring** (~40 lines) in `admin.html`.
 
 Phase 1 extracts a small **`admin-shell.ts`** module that owns:
 
-1. **Connect / seed / mount**; single `WebDriver` lifecycle for TML projections
-2. **Mutations**; all admin writes go through `shell.op(action, args)` (which
+1. **Connect / seed / mount**: single `WebDriver` lifecycle for TML projections
+2. **Mutations**: all admin writes go through `shell.op(action, args)` (which
    delegates to `TmlDriver.op`)
 
 No new TML attributes. No PeerDriver default (Phase 2). No visual changes.
@@ -176,11 +176,11 @@ stretch; not blocking).
 
 | File | Action |
 | ---- | ------ |
-| `src/ui/admin-shell.ts` | **Add**; shell factory |
-| `test/ui/admin-shell.test.ts` | **Add**; unit tests |
-| `src/ui/admin.html` | **Edit**; import shell; remove raw mutation fetch |
-| `src/ui/lanes-dashboard.ts` | **Edit**; serve `/admin-shell.js` |
-| `src/ui/ui-dev.ts` | **Edit**; dev watch entry |
+| `src/ui/admin-shell.ts` | **Add**: shell factory |
+| `test/ui/admin-shell.test.ts` | **Add**: unit tests |
+| `src/ui/admin.html` | **Edit**: import shell; remove raw mutation fetch |
+| `src/ui/lanes-dashboard.ts` | **Edit**: serve `/admin-shell.js` |
+| `src/ui/ui-dev.ts` | **Edit**: dev watch entry |
 
 ---
 

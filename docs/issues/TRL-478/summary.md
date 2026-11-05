@@ -22,11 +22,11 @@ flowchart LR
 
 ## Goals
 
-1. **Graduate source**; relocate `experiments/formula-core-v1/` → `src/formula/` (core, adapters, `SPEC.md`). Source of truth becomes the package; the experiments copy is removed.
-2. **Package export**; add `"./formula"` to `package.json` exports (mirror `./cms` shape: `types` / `bun` / `import` → `dist/formula/index.*`); add `src/formula/index.ts` to the esbuild `build` entry list.
-3. **Single-file amalgamation**; `scripts/build-formula-amalgamation.mjs` produces `dist/formula/v1.js` (esbuild bundle, ESM, `platform=node`, target node20 per `engines`, zero runtime deps). The script self-verifies: builds, dynamically imports the artifact, asserts `parse` / `evaluate` exports, exits non-zero otherwise. Wire as `build:formula` and chain into the main `build` script (main build starts with `rm -rf dist`).
-4. **Tests relocate**; corpus runner + matrix → `test/formula/{runner.test.ts,matrix.jsonl}`; add `test/formula` to the `test` script; replace `formula-core-v1-unit` with `formula-unit` (new path).
-5. **Gate cleanup**; drop the `check:experiments` chain and `tsconfig.experiments.json`; revert `check` to the plain build-config tsc (now covering `src/formula` via `src/**`); drop the `experiments/**` glob from `vitest.config.ts` includes.
+1. **Graduate source**: relocate `experiments/formula-core-v1/` → `src/formula/` (core, adapters, `SPEC.md`). Source of truth becomes the package; the experiments copy is removed.
+2. **Package export**: add `"./formula"` to `package.json` exports (mirror `./cms` shape: `types` / `bun` / `import` → `dist/formula/index.*`); add `src/formula/index.ts` to the esbuild `build` entry list.
+3. **Single-file amalgamation**: `scripts/build-formula-amalgamation.mjs` produces `dist/formula/v1.js` (esbuild bundle, ESM, `platform=node`, target node20 per `engines`, zero runtime deps). The script self-verifies: builds, dynamically imports the artifact, asserts `parse` / `evaluate` exports, exits non-zero otherwise. Wire as `build:formula` and chain into the main `build` script (main build starts with `rm -rf dist`).
+4. **Tests relocate**: corpus runner + matrix → `test/formula/{runner.test.ts,matrix.jsonl}`; add `test/formula` to the `test` script; replace `formula-core-v1-unit` with `formula-unit` (new path).
+5. **Gate cleanup**: drop the `check:experiments` chain and `tsconfig.experiments.json`; revert `check` to the plain build-config tsc (now covering `src/formula` via `src/**`); drop the `experiments/**` glob from `vitest.config.ts` includes.
 
 ## Move map
 
@@ -42,7 +42,7 @@ flowchart LR
 ## Non-goals (slice 3)
 
 - Kernel `ExprEvaluator` / `trellis/cms` client migration (slice 4+; behavior-parity corpus still required).
-- **Shablon import stays deferred/optional**; shablon has no `trellis` dependency today; adding one (file-link or npm) + delegating `classifyFormula` is a separate cross-repo wedge. This slice only makes it possible (export + amalgamation exist).
+- **Shablon import stays deferred/optional**: shablon has no `trellis` dependency today; adding one (file-link or npm) + delegating `classifyFormula` is a separate cross-repo wedge. This slice only makes it possible (export + amalgamation exist).
 - npm publish / version bumps (ambient release flow), pb-node (TRL-471, parked).
 - Changes to `sync-trellis-core` (none expected; it consumes the package, which now exports `./formula`).
 

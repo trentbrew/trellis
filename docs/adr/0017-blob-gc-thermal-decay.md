@@ -12,7 +12,7 @@ TRL-46/TRL-47 (which deferred GC)
 deferred a garbage-collection policy: `BlobStore` never evicts, so the relay's
 `{trellisDir}/blobs/` grows without bound. On a Sprites.dev host the storage
 tiers are priced ~25× apart; **hot NVMe ≈ $0.50/GB‑month vs cold object
-≈ $0.02/GB‑month**; and, more importantly, keeping a Sprite awake purely to
+≈ $0.02/GB‑month**: and, more importantly, keeping a Sprite awake purely to
 seed bytes is a _compute_ bill (a 24/7 1 vCPU + 2 GB relay ≈ $115/month),
 dwarfing storage. So an unbounded hot store is the expensive failure mode, and
 "just keep everything hot forever" is the wrong default.
@@ -48,7 +48,7 @@ latency/cost decision, never a correctness one; a design consequence of
 
 ### Heat signal
 
-Heat is **access frequency with recency decay**; the popularity signal the user
+Heat is **access frequency with recency decay**: the popularity signal the user
 proposed ("hot/cold by how often a file is fetched, including peer copies"),
 which is exactly a **W‑TinyLFU** admission/eviction policy (Caffeine's algorithm):
 a frequency sketch plus a small recency window. Per-blob heat inputs:

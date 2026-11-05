@@ -16,7 +16,7 @@ leaked files without explicit user approval.
 Two wedges cannot ship because `pnpm check` exits 1 on integration type errors
 in **other lanes' files**:
 
-- **TRL-370 (docs spine)**; verification gate refuses HANDOFF until `pnpm
+- **TRL-370 (docs spine)**: verification gate refuses HANDOFF until `pnpm
   check` exit 0. The wedge's own code (`.mjs` scripts, `.md` docs) passes in
   isolation.
 - **Identity wedge** (see `docs/planning/identity-wedge-ship-blocker.md`) : 
@@ -35,13 +35,13 @@ in **other lanes' files**:
 | `src/core/agents/worker-pool.ts:354` | same class |
 | `src/combobox/core/index.ts:51,54` | `activeIndex` / `highlight` property mismatch |
 | `src/sync/ws-transport.ts:121` | `SyncTransport` connect/disconnect signature |
-| `src/ui/admin-kanban.ts` (+ `test/ui/admin-kanban.test.ts`) | **untracked**; leaked from another lane's worktree into the shared repo root |
+| `src/ui/admin-kanban.ts` (+ `test/ui/admin-kanban.test.ts`) | **untracked**: leaked from another lane's worktree into the shared repo root |
 
 Two distinct mechanisms are at play:
 
 1. **Pre-existing integration type errors** (committed HEAD state); the
    `updateEntity`/Atom signature drift, combobox props, ws-transport signature.
-2. **Lane leak**; `admin-kanban.ts` + its test are untracked files written by a
+2. **Lane leak**: `admin-kanban.ts` + its test are untracked files written by a
    cross-domain session into the wrong lane (the exact failure class TRL-405,
    context-aware lane routing, is designed to prevent). They type-break
    `pnpm check` and are not owned by this wedge.

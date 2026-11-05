@@ -48,7 +48,7 @@ enterprise trust, operator-run infra.
 
 ## Problem
 
-Teams want AI agents that **act** and **explain themselves**; not black-box chat.
+Teams want AI agents that **act** and **explain themselves**: not black-box chat.
 They do not want to operate SQLite kernels, sync daemons, or lane infrastructure.
 They may already have app data on Jazz/Convex.
 
@@ -90,9 +90,9 @@ external SoR. App-facing live rows stay on BaaS when the customer already uses o
 
 ## Open source commitment
 
-- **`trellis` packages remain open**; kernel, VCS, SDK, Studio CLI, self-host.
+- **`trellis` packages remain open**: kernel, VCS, SDK, Studio CLI, self-host.
 - **Platform** is commercial hosted product; multi-tenant ops, SLAs, managed connectors.
-- Analogy: **git / GitHub**; not "close the repo to monetize."
+- Analogy: **git / GitHub**: not "close the repo to monetize."
 
 Namespace: `@turtle.tech/*` for commercial layers (optional); engine stays unscoped `trellis`.
 
@@ -106,7 +106,7 @@ Do not ship all three. Choose one GTM wedge:
 | **B. Knowledge / workflow agents** | Graph-native RAG, decisions, wiki-links | Embeddings, decisions, garden |
 | **C. Vertical templates** | Customer brings ontology + connectors | Schema `defineType`, MCP room |
 
-**Recommendation for first launch:** **A**; dev/agent coordination; reuses
+**Recommendation for first launch:** **A**: dev/agent coordination; reuses
 the most shipped surface and differentiates on audit vs generic agent wrappers.
 
 ## Build order (engineering)

@@ -152,7 +152,7 @@ Lives **inside main**, top of active view; replaces global `.operate-toolbar` ro
 1. **Canonical ops surface:** Logs → Ops **main panel** (IDE `OpTimeline` parity).
 2. **Pin live tail:** toggles optional right inspector (`280px`, resizable, `oplog-collapsed` semantics). Default **off**.
 3. **Badge:** Ops nav shows live dot + count when stream active and user is on another tab.
-4. **Naming:** Nav tab **Ops**; pinned inspector title **Live ops**; avoid duplicate “Op log” in header and nav.
+4. **Naming:** Nav tab **Ops**: pinned inspector title **Live ops**: avoid duplicate “Op log” in header and nav.
 
 ### Collapse / resize
 

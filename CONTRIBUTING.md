@@ -6,7 +6,7 @@ Thanks for your interest. Trellis is in active development and the public API su
 
 **Issues:** open. File bugs, feature requests, and design questions freely.
 
-**Pull requests:** paused until the v4 API freeze. We are not merging external PRs while internal architecture is still moving. If you have a fix you want landed, open an issue describing the problem and we will pull it in directly — credit preserved.
+**Pull requests:** paused until the v4 API freeze. We are not merging external PRs while internal architecture is still moving. If you have a fix you want landed, open an issue describing the problem and we will pull it in directly; credit preserved.
 
 This policy will lift after the v4 release. The current target is summer 2026.
 
@@ -14,7 +14,7 @@ This policy will lift after the v4 release. The current target is summer 2026.
 
 Before opening:
 
-1. Search existing issues — duplicates get closed.
+1. Search existing issues; duplicates get closed.
 2. Try the latest published version (`bun add trellis@latest` or `npm i trellis@latest`).
 3. For bugs, include:
    - Trellis version, OS, Bun/Node version
@@ -49,12 +49,12 @@ See [AGENTS.md](./AGENTS.md) for the conceptual framework and [DESIGN.md](./DESI
 This repository is public. A guard blocks personal material, PII, and
 credentials from ever landing here.
 
-- **Rules:** [`scripts/sensitive-patterns.json`](./scripts/sensitive-patterns.json) — denied paths, strings, and regexes (PII, keys, tokens).
+- **Rules:** [`scripts/sensitive-patterns.json`](./scripts/sensitive-patterns.json); denied paths, strings, and regexes (PII, keys, tokens).
 - **Scanner:** `scripts/scan-sensitive.mjs` (`pnpm sensitive-scan` for the full tree).
 - **Enforced on:**
-  - `pre-commit` — staged content (via [`lefthook.yml`](./lefthook.yml)).
-  - `pre-push` — the full tracked tree.
-  - CI — [`.github/workflows/sensitive-scan.yml`](./.github/workflows/sensitive-scan.yml) on every push and PR (required check).
+  - `pre-commit`; staged content (via [`lefthook.yml`](./lefthook.yml)).
+  - `pre-push`; the full tracked tree.
+  - CI; [`.github/workflows/sensitive-scan.yml`](./.github/workflows/sensitive-scan.yml) on every push and PR (required check).
 
 Run it yourself any time:
 
@@ -64,7 +64,7 @@ node scripts/scan-sensitive.mjs   # staged content only
 ```
 
 A **false positive** is fixed by adding the file to `allowPaths` in
-`sensitive-patterns.json` — not by `--no-verify`. If the scanner blocks a
+`sensitive-patterns.json`; not by `--no-verify`. If the scanner blocks a
 commit, remove the flagged content or allowlist it deliberately; CI will reject
 it otherwise.
 
@@ -79,4 +79,4 @@ Participation in this project is governed by the [Code of Conduct](./CODE_OF_CON
 
 ## Contact
 
-For anything that doesn't fit an issue — security disclosures, partnership questions, commercial licensing — email `tbrew@turtle.tech`.
+For anything that doesn't fit an issue; security disclosures, partnership questions, commercial licensing; email `tbrew@turtle.tech`.

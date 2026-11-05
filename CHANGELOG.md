@@ -4,109 +4,109 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
-## trellis [4.1.3] — 2026-10-28
+## trellis [4.1.3]; 2026-10-28
 
 **ADR 0048 kernel: global Relations and shared overlay binding.**
 
-- **`trellis:Relation`** — system-tier property definitions; `CollectionMeta.relations` with CollectionField fallback and idempotent migration.
-- **Derived code relations** — `deriveCodeRelations` / `listRelations` for schema-backed types without persisting mirrors.
-- **Shared overlays** — `DefineTypeOptions.sharedRelations` and `PropertyValueSpecification.sharedRelationId` so fields like Task.due and Project.due share one `rel:` id.
+- **`trellis:Relation`**: system-tier property definitions; `CollectionMeta.relations` with CollectionField fallback and idempotent migration.
+- **Derived code relations**: `deriveCodeRelations` / `listRelations` for schema-backed types without persisting mirrors.
+- **Shared overlays**: `DefineTypeOptions.sharedRelations` and `PropertyValueSpecification.sharedRelationId` so fields like Task.due and Project.due share one `rel:` id.
 
-## trellis [4.1.2] — 2026-10-27
+## trellis [4.1.2]; 2026-10-27
 
 **Formula parity: `$round` and `$concat` join the frozen core.**
 
-- **`$round(value, decimals = 0)`** — coerces with `Number()` and rounds half up
+- **`$round(value, decimals = 0)`**: coerces with `Number()` and rounds half up
   at `10^decimals`, matching the kernel `ExprEvaluator`.
-- **`$concat(...values)`** — stringifies each value, with `null` and missing
+- **`$concat(...values)`**: stringifies each value, with `null` and missing
   fields as `''`, matching the kernel.
-- **Conformance** — the formula matrix now covers rounding (including the
+- **Conformance**: the formula matrix now covers rounding (including the
   default precision) and concatenation (including a missing field), both with
   canonical round-trip.
 
-## trellis [4.1.1] — 2026-10-27
+## trellis [4.1.1]; 2026-10-27
 
-**Location is graph-native — an ADR, not a new property type.**
+**Location is graph-native; an ADR, not a new property type.**
 
-- **ADR 0063** — location is modeled as a `Place` entity plus role relations and
+- **ADR 0063**: location is modeled as a `Place` entity plus role relations and
   numeric `latitude`/`longitude`, never as a `PropertyType`; `core:Event.location`
   stays display text, and geocoding remains an adapter/cache.
 - **Supersedes** the unshipped 2026-07-31 graph-native geodata proposal.
 
-## trellis [4.1.0] — 2026-10-15
+## trellis [4.1.0]; 2026-10-15
 
 **Peer wire, forms, and formula core: Iroh-backed pair sync, a form ontology,
 and a hardened release pipeline.**
 
-- **Iroh peer wire (ADR 0060)** — `trellis wire` brings pairwise peer sync over
+- **Iroh peer wire (ADR 0060)**: `trellis wire` brings pairwise peer sync over
   Iroh, the on-ramp to local-first graph replication that does not depend on the
   relay.
-- **Formula core** — the frozen kernel formula core + dialect adapters (ADR 0059,
+- **Formula core**: the frozen kernel formula core + dialect adapters (ADR 0059,
   TRL-470) graduate to `src/formula` and a `trellis/formula` export (TRL-479).
-- **Forms** — the form ontology lands as `trellis/forms` (core + React, Vue,
+- **Forms**: the form ontology lands as `trellis/forms` (core + React, Vue,
   Svelte, vanilla).
-- **Device provisioning (TRL-455)** — devices mint their own keys, sprite
+- **Device provisioning (TRL-455)**: devices mint their own keys, sprite
   authorizations are signed, and private keys are written owner-only.
-- **MCP decision capture** — decision traces auto-capture again and honor
+- **MCP decision capture**: decision traces auto-capture again and honor
   `--path`.
-- **Release pipeline** — publish runs from CI only, validates the tarball before
+- **Release pipeline**: publish runs from CI only, validates the tarball before
   it ships, and the gate runs on Node 22.
-- **Repo hygiene + guard** — scratch artifacts and stale media removed; an
+- **Repo hygiene + guard**: scratch artifacts and stale media removed; an
   enforceable sensitive-content scan (PII, secrets, denied paths) now runs on
   pre-commit, pre-push, and CI (TRL-493).
 
-## trellis [4.0.12] — 2026-10-12
+## trellis [4.0.12]; 2026-10-12
 
 **Journal format frozen + agent-lane hardening: a spec'd op envelope, DAG-ready
 journals, and derived config refs.**
 
-- **Journal format v0.1 spec + conformance corpus** — `docs/spec/JOURNAL-FORMAT.md`
+- **Journal format v0.1 spec + conformance corpus**: `docs/spec/JOURNAL-FORMAT.md`
   pins the op envelope (preimage, hashing, signing, chain + signing policy), with
   an independent zero-dependency validator and reference-minted fixtures. The
   corpus is the compatibility gate for every envelope change.
-- **Envelope v2 (`parents[]` DAG)** — `VcsOp` gains `v`/`parents`; hashing,
+- **Envelope v2 (`parents[]` DAG)**: `VcsOp` gains `v`/`parents`; hashing,
   signing, and verification dispatch on the op version, so v1 ops stay
   byte-compatible while roots and merges become first-class in journals. Op
   provenance gains `commandId` (ADR-0058).
-- **Derived `rootPath` (`@self`)** — `.trellis/config.json` no longer stores a
+- **Derived `rootPath` (`@self`)**: `.trellis/config.json` no longer stores a
   literal path (ADR-0013 phase 3): init and import persist `@self`, and `open()`
   migrates legacy literals, so renames and moves can't go stale. `trellis init`
   also recognizes `**/.trellis` gitignore spellings.
-- **Platform ontology** — `Repo` + thin `Project` + `Service`; `Integration`
+- **Platform ontology**: `Repo` + thin `Project` + `Service`; `Integration`
   promoted to a core platform type; `trellis:project` retired (TRL-197, TRL-203).
-- **Git bridges** — forge-direct GitHub import, read-only to start (TRL-224);
+- **Git bridges**: forge-direct GitHub import, read-only to start (TRL-224);
   git-bug adapter imports `refs/bugs/*` (TRL-200).
-- **Agent lanes & guard** — lane-scoped ownership policy exported on
+- **Agent lanes & guard**: lane-scoped ownership policy exported on
   `trellis/vcs`; `trellis guard` cross-agent file-ownership checks; lane-scoped
   enforcement for host sessions (workstream D); softer lane-promote conflicts.
-- **Operator surface** — `trellis cadence --lanes/--dispatch` (TRL-88),
+- **Operator surface**: `trellis cadence --lanes/--dispatch` (TRL-88),
   `builtin:clock` scheduler fact (ADR-0019/0047), agent liveness census
   (ADR-0052), and `trellis/presence` + `trellis/operator` export lifts.
-- **Reliability** — crash-safe op-log/issue locks, orphaned-lockfile cleanup,
+- **Reliability**: crash-safe op-log/issue locks, orphaned-lockfile cleanup,
   worktree bind at the facility root, and a changelog gate in `just publish`.
 
-## trellis [4.0.10] — 2026-09-29
+## trellis [4.0.10]; 2026-09-29
 
 **Operator surface: notes, cycles, cadence, mirrors, and report (ADR 0050).**
 
-- **`trellis note`** — operator-scoped capture (`add` / `list` / `show` / `archive`)
+- **`trellis note`**: operator-scoped capture (`add` / `list` / `show` / `archive`)
   plus **`note promote`** (note → issue/epic/cycle). Capture is durable and
   commitment-free; promotion is the deliberate act that creates work.
-- **`trellis wip`** — derived snapshot: active / queue / shipped / next / cycles / notes.
-- **`trellis cycle`** — time-boxed containers with a target date; the deadline lives
+- **`trellis wip`**: derived snapshot: active / queue / shipped / next / cycles / notes.
+- **`trellis cycle`**: time-boxed containers with a target date; the deadline lives
   on the container and membership is a link (ADR 0026 d2).
-- **`trellis telos`** — strategic roots (`add` / `list` / `show` / `root`); epics
+- **`trellis telos`**: strategic roots (`add` / `list` / `show` / `root`); epics
   roll up via `rootedIn` (ADR 0026 d4).
-- **`trellis cadence`** — derived due-check (overdue cycles, note triage debt, stale
+- **`trellis cadence`**: derived due-check (overdue cycles, note triage debt, stale
   mirrors) that now **gates `issue close`** (`--force` to override).
-- **`trellis mirror`** — generates a deterministic graph index; `--write` records it
+- **`trellis mirror`**: generates a deterministic graph index; `--write` records it
   and `--check` fails when it drifts from the graph.
-- **`trellis report`** — derived worklog plus epic→telos rollup.
+- **`trellis report`**: derived worklog plus epic→telos rollup.
 - **Fix:** downstream `kernel-touch-manifest.json` paths repointed to the current desk
   layout (`docs/`, `studio/`).
-- ADR 0050 accepted — notes and the derived operator surface.
+- ADR 0050 accepted; notes and the derived operator surface.
 
-## trellis [4.0.7] — 2026-09-26
+## trellis [4.0.7]; 2026-09-26
 
 **Minted FileNode / DirectoryNode ids (TRL-456).**
 
@@ -114,44 +114,44 @@ journals, and derived config refs.**
   re-add at the original path. `fileAdd` now mints stable ids (`file:f_*`,
   `dir:d_*`) on the op payload; path is a mutable attribute with an EAV index.
 - **`resolveFileEntityIdForPath`** / **`ResolverContext.getFileEntityId`** for
-  wiki links, chunker, and semantic parsers — legacy `file:<path>` fallback on
+  wiki links, chunker, and semantic parsers; legacy `file:<path>` fallback on
   old graphs.
-- **Migration:** `docs/migrations/file-entity-ids.md` — replay-compatible, no
+- **Migration:** `docs/migrations/file-entity-ids.md`; replay-compatible, no
   op rewrite required.
 
-## trellis [4.0.6] — 2026-09-26
+## trellis [4.0.6]; 2026-09-26
 
 **Agent profile memory, plan artifact capture, harness CLI, and a shared
 terminal format layer for turtleOS shells.**
 
-- **`trellis profile`** — global user profile at `~/.trellis/profile.json` with
+- **`trellis profile`**: global user profile at `~/.trellis/profile.json` with
   `learn`, `forget`, `set`, `show`, `seed`, and budgeted `profile context` for
   hooks. Learnings inject into `.trellis/agents/AGENTS.md` via
   `formatLearningsMarkdown`. Arm via `TRELLIS_PROFILE_CONTEXT_ARM`
   (`off` | `session` | `pack` | `both`; default `off`).
-- **`trellis plan`** — repo-canonical plan artifacts per ADR 0044:
+- **`trellis plan`**: repo-canonical plan artifacts per ADR 0044:
   `origins`, `scaffold`, `capture`, `link` targeting `docs/plans/<issue>-plan.md`
   with IDE provenance (Cursor, Claude, OpenCode, Antigravity, Gemini, Codex).
-- **`trellis agent`** — harness run/status surface wired to typed graph tools
+- **`trellis agent`**: harness run/status surface wired to typed graph tools
   (`get_entity`, `list_entities`) and bootstrap from env.
-- **`trellis eval profile-context`** — frozen-corpus runner for profile injection
+- **`trellis eval profile-context`**: frozen-corpus runner for profile injection
   experiments (TRL-335).
-- **`trellis/format` export** — shared terminal formatters (`formatIssue`,
+- **`trellis/format` export**: shared terminal formatters (`formatIssue`,
   `formatEntity`, `ansi`, …) for CLI and embedded shells (turtleOS `tsh`).
-- **Context pack** — optional user-profile slice when
+- **Context pack**: optional user-profile slice when
   `TRELLIS_PROFILE_CONTEXT_ARM` includes `pack`.
-- **MCP** — agent-exec and server paths extended for harness-backed graph reads.
-- **`createKernelBackend`** — runtime factory covers sql.js / Bun / better-sqlite3
+- **MCP**: agent-exec and server paths extended for harness-backed graph reads.
+- **`createKernelBackend`**: runtime factory covers sql.js / Bun / better-sqlite3
   selection (WebContainer and turtleOS guests).
-- **Tests** — profile/plan CLI suites; milestone tests use isolated temp dirs;
+- **Tests**: profile/plan CLI suites; milestone tests use isolated temp dirs;
   profile CLI tests shell-quote multi-word arguments.
 
-## trellis [4.0.5] — 2026-09-17
+## trellis [4.0.5]; 2026-09-17
 
 **Re-release of 4.0.4 from the tagged tree.**
 
 The 4.0.4 tarball on npm was published from a stale working copy, so it shipped
-none of the changes below and none of 4.0.3's signing work — a regression for
+none of the changes below and none of 4.0.3's signing work; a regression for
 anyone who installed it. 4.0.5 is the `v4.0.4` tag plus the publish-workflow
 fix, and `trellis@4.0.4` is deprecated on npm. There are no source changes
 beyond the version bump.
@@ -159,7 +159,7 @@ beyond the version bump.
 - CI: the publish gate runs on Node 22, which the client SDK requires
   (`fs.globSync`, global `WebSocket`).
 
-## trellis [4.0.4] — 2026-09-17
+## trellis [4.0.4]; 2026-09-17
 
 **Provision devices that hold their own keys, finish owner-only key handling,
 and restore CI.**
@@ -192,7 +192,7 @@ and restore CI.**
 - Test: the authority cwd-fallback test no longer assumes the checkout is a
   Trellis repo.
 
-## trellis [4.0.3] — 2026-09-17
+## trellis [4.0.3]; 2026-09-17
 
 **Every locally minted op is signed by the local identity, and a global install
 drops from 1.3 GB to 85 MB.**
@@ -221,7 +221,7 @@ drops from 1.3 GB to 85 MB.**
   Studio falls back to `npx turtlecode`, and semantic search asks to install
   `@huggingface/transformers`.
 
-## trellis [4.0.2] — 2026-08-30
+## trellis [4.0.2]; 2026-08-30
 
 **Fixes `trellis sandbox pack` from an installed package, and cuts the sandbox
 payload by 70%.**
@@ -239,9 +239,9 @@ payload by 70%.**
   generated sandbox `package.json` now carries the real Trellis version, making
   sandbox bug reports attributable to a release.
 - **Sandbox bootstrap is 25.7 MB → 7.6 MB (1069 → 588 files).** Vendored
-  packages now drop unreachable build variants — sql.js shipped 19 MB of asm.js
+  packages now drop unreachable build variants; sql.js shipped 19 MB of asm.js
   fallbacks, debug builds, and Web Worker wrappers that the sandbox can never
-  resolve — and `dist` sourcemaps are excluded by default. Escape hatches:
+  resolve; and `dist` sourcemaps are excluded by default. Escape hatches:
   `trellis sandbox pack --no-prune` and `--sourcemaps`.
 - `buildSandboxBootstrap(root, options)` accepts `{ assetsDir, sourcemaps,
   prune }`; the previous positional `assetsDir` string still works.
@@ -254,42 +254,42 @@ payload by 70%.**
   packages for `editor` / `table` cores) so `npm run build` succeeds on a clean
   `npm ci` install.
 - **Fix: `npm run test` on clean `npm ci`.** `better-sqlite3` was optional peer
-  only — not installed by default, breaking 129 kernel/schema tests. Added to
+  only; not installed by default, breaking 129 kernel/schema tests. Added to
   `devDependencies` for CI and `prepublishOnly`.
 
-## trellis [4.0.1] — 2026-08-30
+## trellis [4.0.1]; 2026-08-30
 
 **WebContainer sandbox (TRL-431–440).**
 
-- **`trellis sandbox serve`** — local dev host (`:4321`) with COOP/COEP headers
+- **`trellis sandbox serve`**: local dev host (`:4321`) with COOP/COEP headers
   and bootstrap API; browser terminal runs Trellis CLI inside StackBlitz
   WebContainer after `npm run build`.
-- **`trellis sandbox pack`** — writes vendored `dist/` + runtime deps to JSON for
+- **`trellis sandbox pack`**: writes vendored `dist/` + runtime deps to JSON for
   static deploy (Vercel prebuilt path under `apps/wc-sandbox/`).
 - Host pre-packs Trellis artifacts and stubs native modules so WebContainer never
   runs in-browser `npm install` (`sql.js` instead of `better-sqlite3`).
 - Opt-in CI Playwright e2e (`WC_E2E=1`, `npm run test:wc:e2e`) for WC boot.
 - Legacy alias: `npm run test:wc`.
 
-## trellis [4.0.0] — 2026-08-04
+## trellis [4.0.0]; 2026-08-04
 
 **Git is now the sole authority over file bytes. The op-log can no longer write
 file state. (ADR 0038)**
 
-The structural bug that caused the `9801056`-class silent revert — `git sync`
-materializing stale op-log bytes over newer disk content — is fixed by removing
+The structural bug that caused the `9801056`-class silent revert; `git sync`
+materializing stale op-log bytes over newer disk content; is fixed by removing
 the second authority entirely, not by adding another guard. Two systems
 claiming authority over the same bytes is unsound; someone always forgets to
 guard one of the paths. ADR 0038 makes git the only writer of bytes and the
 op-log a pure provenance layer that is *incapable* of clobbering disk.
 
 - **`syncIntegrationToGit` commits the working tree as-is** (ADR 0038). No more
-  `buildFileStateAtOp` / `materializeToDisk` reconstruction from op-log blobs —
+  `buildFileStateAtOp` / `materializeToDisk` reconstruction from op-log blobs : 
   it checks out `-B`, `add -A`, and commits the actual bytes on disk. `git sync`
   can never overwrite a newer file with stale op-log state.
 - **Non-materializing `vcs:gitSync` annotations.** Each sync records
   `vcs:gitSync { gitCommitHash, gitBranch }` on the causal stream. The op-log
-  holds provenance (who/what/why, milestones, decisions, lane lifecycle) — never
+  holds provenance (who/what/why, milestones, decisions, lane lifecycle); never
   byte state. `journalWorkingTreeToOps` is diagnostic-only; sync no longer calls
   it.
 - **Promote delivers bytes via git, not replay.** `promoteLane` now runs a git
@@ -299,17 +299,17 @@ op-log a pure provenance layer that is *incapable* of clobbering disk.
 - **Lane worktrees are git checkouts, not op-log materials.** Entering a lane
   auto-commits the agent's working bytes (`commitWorktree`) onto the lane
   branch; re-entry sees the lane's files from git. `lanes.worktreeBind` gives
-  true per-agent isolation — one agent's `revert`/`reset` physically cannot
+  true per-agent isolation; one agent's `revert`/`reset` physically cannot
   touch another's files.
 
 ### Breaking changes
 
-- `GitSyncResult.refused` and `reason` are removed — sync never refuses and
+- `GitSyncResult.refused` and `reason` are removed; sync never refuses and
   there is no journal catch-up to race. The CLI "refused" branches in `git sync`
   and milestone auto-commit are gone.
 - `syncIntegrationToGit` no longer takes `blobResolver`, `integrationOps`, or
   `headOpHash`. `resolveIntegrationHead` was removed from the `git-sync` module.
-- `trellis git sync` does **not** journal previously-unjournaled edits — disk
+- `trellis git sync` does **not** journal previously-unjournaled edits; disk
   edits to tracked files now flow through git commits, not file-materializing
   ops.
 
@@ -323,50 +323,50 @@ op-log a pure provenance layer that is *incapable* of clobbering disk.
   `EAVStore` API (`addFacts`/`getLinksByEntity`), and the mock pool emits
   `task:completed` so DAG runs terminate.
 
-## trellis [3.4.0] — 2026-07-24
+## trellis [3.4.0]; 2026-07-24
 
 **Lane ops were unverifiable; criterion removal (TRL-1, TRL-102).**
 
-- **Every op minted inside a lane failed hash verification — fixed (TRL-102).**
+- **Every op minted inside a lane failed hash verification; fixed (TRL-102).**
   `createVcsOp` hashes `{kind, timestamp, agentId, previousHash, vcs}`, and
-  `stampLaneId` then mutated `op.vcs` — *after* the hash was computed. Measured
+  `stampLaneId` then mutated `op.vcs`; *after* the hash was computed. Measured
   on this repo: **1334 of 1334 ops across 27 lane journals failed
   `verifyVcsOpHash`; 1334 of 1334 verified once `vcs.laneId` was removed.** Both
   ingest paths reject on `hash-mismatch`, so lane ops could never have been
-  exchanged with a peer — this gated peer sync of agent lanes and any Iroh
+  exchanged with a peer; this gated peer sync of agent lanes and any Iroh
   transport work.
 - **Lane is now envelope, not identity.** `VcsOp.laneId` is a top-level field,
   outside the preimage by construction. The same semantic op in two lanes now
-  hashes identically — required for cross-peer dedup and for cherry-pick not to
+  hashes identically; required for cross-peer dedup and for cherry-pick not to
   rewrite op identity, both of which set-reconciliation depends on.
 - **`vcs.laneId` is retained where it is *subject* data.** `vcs:laneCreate`,
   `vcs:laneDrop` and `vcs:testRun` are *about* a lane, pass `laneId` at mint, and
-  keep it hashed — excluding it would collapse `laneCreate lane-A` and
+  keep it hashed; excluding it would collapse `laneCreate lane-A` and
   `laneCreate lane-B` to one identity. Promote paths carry the source lane as
   envelope provenance instead of baking it into a promoted op's hash.
 - **Existing journals migrated in place, no hash rewritten.** The stored hashes
   were already correct for lane-free payloads, so migration only relocated the
-  field: 0/1334 → **1334/1334 verifying**. Verify-guided — an op was rewritten
+  field: 0/1334 → **1334/1334 verifying**. Verify-guided; an op was rewritten
   only if it failed verification *and* stripping `laneId` made it pass.
   Integration's 47 subject-role ops were untouched.
 - **`VcsOp` envelope vs payload is now explicit.** `vcs` is payload (hashed);
   top-level fields are envelope (not hashed). `facts`/`links` were already used
-  this way — `RemoteManager` tags pulled ops with `{e:'op', a:'remote'}` so
+  this way; `RemoteManager` tags pulled ops with `{e:'op', a:'remote'}` so
   `trellis log --remote` can filter them *without* invalidating the remote's
   hash. Documented rather than discovered.
 - **Criterion removal (TRL-1):** `trellis issue ac-rm <id> <index>` and
-  `vcs:criterionRemove`. Removal is a **tombstone, not an erasure** — ids are
+  `vcs:criterionRemove`. Removal is a **tombstone, not an erasure**: ids are
   minted as `ac-${count+1}`, so deleting the entity would let a later add mint
   the id of a *surviving* criterion (remove ac-2 of 3, next add collides with
   ac-3 and merges into it). Retracted criteria keep their id and are filtered
   from projections.
-- **Promote gate now typechecks.** `promote.require` was `["smoke"]` — a single
+- **Promote gate now typechecks.** `promote.require` was `["smoke"]`; a single
   VCS test file that cannot see a type break. An agent widened an exported
   interface and the gate waved it through. Added a `check` suite (`npm run
   check`, ~3s); `promote.require` is now `["smoke", "check"]`.
 - **`.gitignore`: `.trellis/tests.json` was never actually tracked.** Git cannot
   re-include a file whose parent directory is excluded, so `.trellis/` +
-  `!.trellis/tests.json` silently ignored the manifest — the file defining the
+  `!.trellis/tests.json` silently ignored the manifest; the file defining the
   promote gate was unversioned. Now `/.trellis/*` + negation, plus
   `*/**/.trellis/` for stray repos created by running the CLI in a subdirectory
   (which root-anchoring would otherwise have un-ignored).
@@ -378,7 +378,7 @@ op-log a pure provenance layer that is *incapable* of clobbering disk.
 - New op kind `vcs:criterionRemove`; older readers will not project it.
 
 **Migration:** lane journals in existing repos still carry `vcs.laneId` and will
-fail verification until relocated. No hashes change — the stored hash is already
+fail verification until relocated. No hashes change; the stored hash is already
 the lane-free one.
 
 **Also in 3.4.0 (kernel / VCS / TML)**
@@ -405,17 +405,17 @@ the lane-free one.
 
 **In development (not in this release's npm story)**
 
-- **`trellis admin` operator console** — substantial work on `main` (TML
+- **`trellis admin` operator console**: substantial work on `main` (TML
   projections, lane datatable, chrome polish). UI modules are **not yet
-  prebundled for global `npm install`**; use a repo checkout for admin. Not
-  headline in 3.4.0 — kernel/VCS/TML CLI improvements are the ship focus.
+  prebundled for global `npm install`**: use a repo checkout for admin. Not
+  headline in 3.4.0; kernel/VCS/TML CLI improvements are the ship focus.
 
-## trellis [3.3.0] — 2026-07-14
+## trellis [3.3.0]; 2026-07-14
 
 **Canonical op hashing + op provenance (ADR 0021).** Op hashes are now
 verifiable content addresses, and every op records who asserted it.
 
-- **Op hashes were not recomputable — fixed.** The kernel hashed the *caller's*
+- **Op hashes were not recomputable; fixed.** The kernel hashed the *caller's*
   payload object while each backend independently reconstructed a
   differently-shaped one to store (`links: []` injected, key order drifting). No
   op in any existing log could be re-derived from storage. `hash` was a
@@ -424,26 +424,26 @@ verifiable content addresses, and every op records who asserted it.
 - **One serializer:** `core/persist/canonical-op.ts`. Mint (`hashKernelOp`) and
   persist (every backend's `append()`) now go through the same canonicalization;
   the bytes in the `payload` column *are* the hashed bytes.
-- **`verifyOpHash(op)`** — new, and did not exist before. Returns
+- **`verifyOpHash(op)`**: new, and did not exist before. Returns
   `{ valid, legacy }`.
 - **Preimage is JSON, not `|`-joined.** Closes an injection where
   `agentId="a|b", previousHash="c"` and `agentId="a", previousHash="b|c"`
   produced identical preimages.
 - **Op provenance (`actorType` + `origin`, SemType-aligned)** on every op,
-  inside the hash — provenance that can be altered without invalidating the hash
+  inside the hash; provenance that can be altered without invalidating the hash
   is decoration, not provenance. Resolved per-call
   (`payload ?? ctx ?? kernel default`), because one `TenantPool` kernel serves
   both HTTP and MCP. Wired at every mint site: HTTP, MCP, cron, sync, import,
   agent harness, and the agent plugins.
 - **Value-level provenance:** `Fact.meta` (`confidence`, `dataTypeId`,
   `sources`). Rides inside `facts[]`, so it is hash-covered for free.
-- **CLI graph writes are `VcsOp`s, not `KernelOp`s** — so kernel provenance
+- **CLI graph writes are `VcsOp`s, not `KernelOp`s**: so kernel provenance
   never covered them. Provenance now rides `VcsPayload` instead, hash-covered
   via `hashVcsOp` with **no preimage change and no migration**. Set per engine
   construction (CLI/MCP/UI/sync/migration/SDK). Covers `vcs:store*` ops; branch,
   file and milestone ops are not yet covered.
 - **`VcsMiddleware` deleted.** Never constructed, and written against a contract
-  that never existed — `handleOp` is documented as *"can throw to block the
+  that never existed; `handleOp` is documented as *"can throw to block the
   operation"*, an observe-or-throw chain, so its decomposed ops were silently
   discarded. `engine.ts` already does the same decomposition inline, which is
   the path that actually runs. `DESIGN.md`'s
@@ -456,7 +456,7 @@ verifiable content addresses, and every op records who asserted it.
   `payload.provenance` added.
 - `VcsMiddleware` no longer exported from `trellis/vcs`.
 - Newly minted kernel ops use preimage v2 and hash differently from v1. **v1 ops
-  are grandfathered** — reported `{ valid: true, legacy: true }`, never
+  are grandfathered**: reported `{ valid: true, legacy: true }`, never
   reverified, because their preimages are unrecoverable by construction. Every
   log keeps a permanent unverifiable v1 prefix; this is the bug, not the fix.
 - `KernelOp` gains `v` and `provenance`; `Fact` gains optional `meta`.
@@ -464,11 +464,11 @@ verifiable content addresses, and every op records who asserted it.
 **Migration:** none required. Existing kernel logs boot and replay unchanged;
 existing `ops.json` journals verify unchanged.
 
-## trellis [3.2.6] — 2026-07-11
+## trellis [3.2.6]; 2026-07-11
 
 - **QR pairing (ADR 0020 Phase 1 start):** `trellis pair start|join|approve`
   renders a compact Unicode QR in the terminal (TTY default; `--no-qr` /
-  `--qr`). Same OOB payloads as Phase 0 — `renderPairingQr` / `encodePairingQr`
+  `--qr`). Same OOB payloads as Phase 0; `renderPairingQr` / `encodePairingQr`
   via `uqr`.
 - **Sprite relay blobs (ADR 0016):** `startServer({ presenceRelay })` accepts
   full `RealtimeRelayOptions` (including `blobStore`). Sprite deploy entrypoints
@@ -483,7 +483,7 @@ existing `ops.json` journals verify unchanged.
   `VITE_RELAY_URL=wss://<sprite>.sprites.app/rt` (HTTP `/blob` shares that
   origin).
 
-## trellis [3.2.5] — 2026-07-11
+## trellis [3.2.5]; 2026-07-11
 
 - **Agent coordination (Phase 2):** session-scoped lanes via
   `trellis lane ensure --session <id>`; issue claim lock (`vcs:issueClaim`);
@@ -497,7 +497,7 @@ existing `ops.json` journals verify unchanged.
 - **Init defaults:** every `trellis init` writes `lanes.worktreeBind: true` and
   `git.syncOnPromote: true` in `.trellis/config.json` (no longer gated on `.git`
   existing).
-- **Lane watch dashboard:** `trellis lane watch` — SSE live view at `:3939`
+- **Lane watch dashboard:** `trellis lane watch`; SSE live view at `:3939`
   (lanes, claims, promote lock, in-progress issues).
 - **Test manifest:** `.trellis/tests.json` seeded on init; `trellis test`,
   `lane promote --require-test`, suite-aware `issue check`.
@@ -506,12 +506,12 @@ existing `ops.json` journals verify unchanged.
 - **Touch manifest:** `docs/kernel-touch-manifest.json` +
   `scripts/sync-downstream.mjs` for create-trellis / docs / turtlecode sync.
 
-## trellis [3.2.4] — 2026-07-08
+## trellis [3.2.4]; 2026-07-08
 
-- Workspace-only coordination wedge (session lanes, git sync, claims) — ship as
+- Workspace-only coordination wedge (session lanes, git sync, claims); ship as
   **3.2.5** on npm if 3.2.4 was not published.
 
-## trellis [3.2.3] — 2026-06-29
+## trellis [3.2.3]; 2026-06-29
 
 - **Agent handoff protocol (TRL-41 / ADR 0015):** `trellis protocol send`
   records trellis-handoffs YAML envelopes as child issues (`label: message` |
@@ -519,7 +519,7 @@ existing `ops.json` journals verify unchanged.
   MOVED re-entry.
 - **`src/protocol/`:** envelope parse/validate, `isWaitingOnHuman`, lane-aware
   active context.
-- **Desk harness:** `templates/trellis-harness/trellis-cli.sh` —
+- **Desk harness:** `templates/trellis-harness/trellis-cli.sh` : 
   `trellis_harness_lane_worktree` / `trellis_harness_edit_root` for session
   hooks when `lanes.worktreeBind` is on.
 - **Agent lane worktree bind (W5 / TRL-40):** optional `lanes.worktreeBind` in
@@ -532,10 +532,10 @@ existing `ops.json` journals verify unchanged.
 - **ADR 0014:** git materialization + lane worktrees spec
   (`docs/adr/0014-git-materialization-and-lane-worktrees.md`).
 
-## trellis [3.2.2] — 2026-06-10
+## trellis [3.2.2]; 2026-06-10
 
 - **`trellis db serve` on Node:** preloads the default tenant with sql.js /
-  better-sqlite3 before accepting traffic — fixes `create-trellis` scaffolds and
+  better-sqlite3 before accepting traffic; fixes `create-trellis` scaffolds and
   any `npx trellis db serve` flow that hit
   `SqliteKernelBackend requires the Bun runtime`.
 - **`TenantPool.get()` on Node:** fails fast with a preload hint instead of
@@ -545,26 +545,26 @@ existing `ops.json` journals verify unchanged.
 - **Gitignore:** `.trellis-db/`, `.trellis-db.json`, `.trellis-deploy/` at repo
   root.
 
-## trellis [3.2.0] — 2026-06-08
+## trellis [3.2.0]; 2026-06-08
 
-- **Typed realtime SDK:** `trellis/schema` — `defineType`, `entityQuery`,
+- **Typed realtime SDK:** `trellis/schema`; `defineType`, `entityQuery`,
   `WhereFilter` operators, nested `InferResolvedType`, server
   `hydrateAndResolve` on subscription push.
 - **Live client:** `liveEntities` / `liveEntity` in `trellis/client` with
   id-scoped subscriptions (`entityQuery`) instead of full-type scans.
 - **Framework hooks:** `trellis/svelte/typed`, `trellis/vue/typed`,
-  `trellis/react/typed` — typed `useEntities` / `useEntity` adapters.
+  `trellis/react/typed`; typed `useEntities` / `useEntity` adapters.
 - **Studio plugin exports:** `trellis/plugins/plan-approval`,
   `proactive-watcher`, `idea-garden`, `agent-memory` ship in `dist/` for npm
   consumers (Trellis Studio / opencode).
-- **Ontology:** idempotent `registerType` — duplicate schema registration
+- **Ontology:** idempotent `registerType`; duplicate schema registration
   returns quietly (409 swallowed client-side).
 - **Realtime:** explorer graph-nav + collections demos; collab presence session
   lifecycle hardening.
 
-## trellis [3.1.32] — 2026-05-29
+## trellis [3.1.32]; 2026-05-29
 
-- **Agent Lanes (W1–W4):** `trellis lane` — isolated per-agent op journals under
+- **Agent Lanes (W1–W4):** `trellis lane`; isolated per-agent op journals under
   `.trellis/lanes/`, `create` / `enter` / `leave` / `status` / `diff` /
   `promote` / `drop`.
 - **`trellis lane promote`:** replay lane ops onto integration with `--dry-run`,
@@ -579,7 +579,7 @@ existing `ops.json` journals verify unchanged.
   during promote).
 - **Op log lock:** configurable timeout via `TRELLIS_OPLOG_LOCK_MS`.
 
-## trellis [3.1.14] — 2026-05-22
+## trellis [3.1.14]; 2026-05-22
 
 - CLI `trellis --version` now reports the real package version from
   `package.json` (was hardcoded `0.1.0`).
@@ -590,7 +590,7 @@ existing `ops.json` journals verify unchanged.
 - `bin/trellis.mjs` launcher finds Homebrew Bun when Node's `PATH` is minimal
   (`npx trellis` / agent shells).
 
-## trellis [3.1.2] — 2026-05-12
+## trellis [3.1.2]; 2026-05-12
 
 - Fixed `trellis/cms` collection reads for inferred collections whose normalized
   key differs from the stored entity type casing, such as `blogpost` reading
@@ -608,12 +608,12 @@ existing `ops.json` journals verify unchanged.
 - Added `directory` support to CMS consumer scaffolds for multi-instance
   opencode routing.
 
-## trellis [3.1.1] — 2026-05-12
+## trellis [3.1.1]; 2026-05-12
 
 - Published the first `trellis/cms` SDK package update after adding scaffold
   helpers.
 
-## trellis [3.1.0] — 2026-05-12
+## trellis [3.1.0]; 2026-05-12
 
 - Added the `trellis/cms` subpath with `createCmsClient`, collection reads,
   entry reads, polling subscriptions, reference expansion, collection discovery,

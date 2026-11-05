@@ -86,7 +86,7 @@ These disagree in three independent ways; two live, one latent:
 
 | #   | Divergence                                                                                                                                                                                   | Status                                                                                                                                                                                  | Effect                                                       |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| 1   | `meta` is **hashed but never stored**. The kernel splats `payload.meta` onto the op as loose top-level props (`extOp[k] = v`, line 223–229); `append()` recovers only `vcs` and `signature`. | **Latent**; no caller passes `meta` (all 8 `mutate()` sites pass only facts/links/deleteFacts/deleteLinks), and nothing sets `vcs`/`signature` on a `KernelOp`. See "dead code" below. | Would be irrecoverable if exercised.                         |
+| 1   | `meta` is **hashed but never stored**. The kernel splats `payload.meta` onto the op as loose top-level props (`extOp[k] = v`, line 223–229); `append()` recovers only `vcs` and `signature`. | **Latent**: no caller passes `meta` (all 8 `mutate()` sites pass only facts/links/deleteFacts/deleteLinks), and nothing sets `vcs`/`signature` on a `KernelOp`. See "dead code" below. | Would be irrecoverable if exercised.                         |
 | 2   | `facts`/`links` are coerced to `[]` when absent (line 213–214) but the preimage hashed the caller's object, where they may be **absent entirely**.                                           | **Live, universal**                                                                                                                                                                     | `{"facts":[…]}` hashed vs `{"facts":[…],"links":[]}` stored. |
 | 3   | Key order is the caller's at mint, fixed at persist.                                                                                                                                         | **Live**                                                                                                                                                                                | Different byte string, different digest.                     |
 
@@ -350,7 +350,7 @@ milestones to gain attribution that a far smaller change provides.
 
 **Adopted:** `VcsPayload.provenance`**.** `hashVcsOp` hashes the `vcs` payload
 wholesale, so a field placed *inside* `vcs` is covered by the op hash with **no
-preimage change and no migration**; `JSON.stringify` omits the absent key, so
+preimage change and no migration**: `JSON.stringify` omits the absent key, so
 ops minted before the field existed hash exactly as they did before and keep
 verifying. This is the opposite of the kernel's Phase A situation, and the
 reason is instructive: `verifyVcsOpHash` is genuinely called

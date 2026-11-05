@@ -38,7 +38,7 @@ Observed on the os-sandbox desk (2026-09-28/29), and general:
 4. **Drift is tier confusion.** A hand-maintained mirror (issue tree, ADR index,
    briefing) is treated as durable, so it lags. A status asserted without
    reading it ("landed"-but-open) is the same error.
-5. **ADR 0046 (forum) covers agent-scoped, decaying notes**; a *different
+5. **ADR 0046 (forum) covers agent-scoped, decaying notes**: a *different
    audience* (agents, stigmergic) from the operator's own capture.
 
 ## Decision
@@ -83,7 +83,7 @@ One generator over ops + rules, several projections:
 
 Cadence is a Datalog rule (ADR 0047) over durable facts, optionally scheduled by
 a `CronJob` (ADR 0019): `cadenceDue(session)`, `stale(mirror)`. **Its only
-purpose is to gate**; refuse `issue close` on unreconciled drift, surface
+purpose is to gate**: refuse `issue close` on unreconciled drift, surface
 due-soon in `wip`. Derived-without-a-gate is theater and is disallowed.
 
 ### 5. Notes are first-class for refs and search
@@ -129,6 +129,6 @@ and the `wip` "notes awaiting triage" line.
 d3 says the operator surface is derived, never stored; it did not say *where the
 derived read lives*. Rule adopted (see [0052](./0052-agent-liveness-census.md)):
 a derived read is exported as a package subpath **iff a non-CLI surface needs it
-as data**; otherwise it stays in the CLI. Applied so far: `presence` / `census`
+as data**: otherwise it stays in the CLI. Applied so far: `presence` / `census`
 → `trellis/presence`; `wip` → `trellis/operator` (`buildWip`). `report` /
 `cadence` are the next candidates once a consumer exists.

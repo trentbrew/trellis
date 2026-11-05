@@ -91,8 +91,8 @@ components:
 
 Add a **Trellis** nav group to the existing Anime.js React mograph dashboard. Slice 1 ships two scrubbable explainer scenes on the established 1920×1080 virtual canvas:
 
-1. **Genealogy Traversal**; Matthew begats as BFS over a link graph (reuse `TreeVisualizer` + `CodeTracer`)
-2. **EAV Facts**; Composer task seed flattened to `(entity, attribute, value)` triples (new `FactTriplePanel` + `CodeTracer`)
+1. **Genealogy Traversal**: Matthew begats as BFS over a link graph (reuse `TreeVisualizer` + `CodeTracer`)
+2. **EAV Facts**: Composer task seed flattened to `(entity, attribute, value)` triples (new `FactTriplePanel` + `CodeTracer`)
 
 Emotional tone: same craft as E-Ink; dark inset surfaces, purposeful motion, pedagogical clarity. Not admin shell; not a marketing page. Export-safe for MP4 pipeline.
 

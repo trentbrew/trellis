@@ -20,7 +20,7 @@ and legacy aliases. **Phase A changes source and names only, not pixels** (TML
 v0.1 Kanban parity).
 
 Per TRL-156 proposal: **inset surfaces** (`--surface-1/2/3` derived from
-card+background) and **`trellis/theme` apply** land in **Phase B**; **fractal
+card+background) and **`trellis/theme` apply** land in **Phase B**: **fractal
 `data-ui-vantage`** lands in **Phase C** (TRL-25). Phase A documents hook
 comments only.
 
@@ -46,11 +46,11 @@ substrate with fractal vantage.
 
 Single file under `src/ui/theme/runtime-theme.css`. Structure:
 
-1. **Semantic tokens**; Studio-aligned names (`--background-base`,
+1. **Semantic tokens**: Studio-aligned names (`--background-base`,
    `--surface-raised-base`, `--text-interactive-base`, status colors, radii,
    spacing, font families). Phase A values match current `tml-lanes.html` inline
    `:root` (purple accent `#6d5bfa`).
-2. **Legacy aliases**; backward-compat shorthands used by existing page CSS:
+2. **Legacy aliases**: backward-compat shorthands used by existing page CSS:
 
 ```css
 --bg: var(--background-base);
@@ -69,7 +69,7 @@ Single file under `src/ui/theme/runtime-theme.css`. Structure:
 --mono: var(--font-family-mono);
 ```
 
-3. **Component tokens**; `--tml-badge-*`, `--tml-accent-glow`,
+3. **Component tokens**: `--tml-badge-*`, `--tml-accent-glow`,
    `--tml-kanban-body-inset` (extract from current `tml-lanes.html` badge
    `rgba()` tints).
 

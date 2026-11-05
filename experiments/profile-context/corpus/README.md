@@ -3,7 +3,7 @@
 Frozen preference-sensitive tasks for `trellis eval profile-context`.
 
 - **Freeze date:** 2026-09-23
-- **Do not edit** `tasks.jsonl` mid-comparison — bump version in a new file instead.
+- **Do not edit** `tasks.jsonl` mid-comparison; bump version in a new file instead.
 - **Arms:** `off` (control) vs `session` | `pack` | `both`
 
 Run:

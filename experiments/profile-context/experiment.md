@@ -1,4 +1,4 @@
-# Profile-context injection — empirical eval (TRL-335)
+# Profile-context injection; empirical eval (TRL-335)
 
 **Status:** running (L1 gate passed · L2 baseline pending)
 **Hypothesis:** Budgeted `~/.trellis/profile.json` injection at session boot improves preference adherence without unacceptable context bloat.
@@ -12,7 +12,7 @@
 | `pack` | `=pack` | `trellis context pack` user slice |
 | `both` | `=both` | session + pack (redundancy test) |
 
-## L1 — frozen corpus (automated)
+## L1; frozen corpus (automated)
 
 ```bash
 # From trellis-node root
@@ -34,7 +34,7 @@ Corpus: [`corpus/tasks.jsonl`](corpus/tasks.jsonl) (frozen 2026-09-23, 15 tasks)
 
 Committed manifest: [`runs/manifest.jsonl`](runs/manifest.jsonl).
 
-## L2 — live multi-IDE (manual cohort)
+## L2; live multi-IDE (manual cohort)
 
 Run matched wedges with env arm pinned per session. Record outcomes in `~/.trellis/profile-context-eval/events.jsonl`.
 
@@ -52,7 +52,7 @@ export TRELLIS_PROFILE_CONTEXT_ARM=session
 
 ### OpenCode / Pi
 
-Same env var — plugins call shared `buildSessionStartContext()` from `~/.cursor/hooks/trellis-session-context.mjs`.
+Same env var; plugins call shared `buildSessionStartContext()` from `~/.cursor/hooks/trellis-session-context.mjs`.
 
 ```bash
 export TRELLIS_PROFILE_CONTEXT_ARM=session
@@ -69,9 +69,9 @@ node ~/.cursor/scripts/profile-context-report.mjs --days 14
 
 | arm | IDE | slices | REJECT rate | re-ask | notes |
 | --- | --- | ------ | ----------- | ------ | ----- |
-| off | Cursor | — | — | — | baseline week |
-| session | Cursor | — | — | — | |
-| session | OpenCode | — | — | — | |
+| off | Cursor |; |; |; | baseline week |
+| session | Cursor |; |; |; | |
+| session | OpenCode |; |; |; | |
 
 ## Promotion decision
 

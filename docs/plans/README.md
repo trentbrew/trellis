@@ -11,9 +11,9 @@ Repo-durable, **ADR-shaped** planning docs normalized from IDE plan mode output.
 
 ## Lifecycle
 
-1. **Proposed**; captured from IDE plan mode (`status: proposed` in frontmatter)
-2. **Accepted**; human approves; promote to `docs/adr/` or flip status after impl
-3. **Superseded / rejected**; kept for Idea Garden / audit
+1. **Proposed**: captured from IDE plan mode (`status: proposed` in frontmatter)
+2. **Accepted**: human approves; promote to `docs/adr/` or flip status after impl
+3. **Superseded / rejected**: kept for Idea Garden / audit
 
 ## Capture by origin
 
@@ -66,7 +66,7 @@ Body sections mirror ADRs: **Context · Decision · Consequences · Verification
 
 ## Recommended IDE config
 
-**Gemini CLI**; repo-local plans (bucket A):
+**Gemini CLI**: repo-local plans (bucket A):
 
 ```json
 // .gemini/settings.json
@@ -79,6 +79,6 @@ Body sections mirror ADRs: **Context · Decision · Consequences · Verification
 }
 ```
 
-**OpenCode**; already repo-local at `.opencode/plans/`.
+**OpenCode**: already repo-local at `.opencode/plans/`.
 
 Cursor, Claude, Antigravity, and Codex require explicit `trellis plan capture` (global or session-only storage).

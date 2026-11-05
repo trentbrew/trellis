@@ -8,7 +8,7 @@
 **Public references:**
 - [Plate](https://github.com/udecode/plate); Notion-like kits, slash, shadcn registry (React)
 - [Slate richtext example](https://www.slatejs.org/examples/richtext); headless engine Plate sits on; good for low-level tinkering
-**Test bed:** **trellis-node admin**; same as stacked dialog; first editor spike mounts here  
+**Test bed:** **trellis-node admin**: same as stacked dialog; first editor spike mounts here  
 **Existing adapters elsewhere:** TipTap in trellis-client / turtlecode (leave alone in v0)
 
 ## Problem
@@ -19,10 +19,10 @@ Mentions and references should work on (almost) all human text. Without a shared
 
 One **richtext primitive** contract:
 
-1. **Durable doc**; structured body with entity-ref marks (and a small block set)  
-2. **Mentions**; in-flow mention-density shells; **activate → stacked dialog** (#1)  
-3. **Slash**; Notion-like command menu → insert blocks and/or allowlisted ops  
-4. **Adapters**; Slate/Plate / TipTap / TUI map to the same IR; kernel does not depend on them  
+1. **Durable doc**: structured body with entity-ref marks (and a small block set)  
+2. **Mentions**: in-flow mention-density shells; **activate → stacked dialog** (#1)  
+3. **Slash**: Notion-like command menu → insert blocks and/or allowlisted ops  
+4. **Adapters**: Slate/Plate / TipTap / TUI map to the same IR; kernel does not depend on them  
 
 **Default:** any text field that should support meaning-via-links uses this primitive. Plain text remains for ids, enums, status.
 
@@ -67,7 +67,7 @@ type Inline =
   | { type: 'mention'; entityId: string; kind?: string }
 ```
 
-- Mentions = **refs**; labels live-bound from graph  
+- Mentions = **refs**: labels live-bound from graph  
 - Insert mention → ensure graph link  
 - Persist as JSON fact (lean) or blob later; decide at impl, prefer JSON fact for admin spike  
 

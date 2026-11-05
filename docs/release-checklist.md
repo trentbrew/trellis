@@ -14,13 +14,13 @@ Run before every npm publish. Downstream sync uses
 ## Downstream (manifest consumers)
 
 - [ ] `node scripts/sync-downstream.mjs`; copy skills, verify pins
-- [ ] **create-trellis**; publish `0.2.0` after kernel npm tag
-- [ ] **trellis-docs**; deploy www (changelog + agent-coordination guide)
-- [ ] **turtlecode**; `bun script/sync-trellis-core.ts --pack` + smoke tests
+- [ ] **create-trellis**: publish `0.2.0` after kernel npm tag
+- [ ] **trellis-docs**: deploy www (changelog + agent-coordination guide)
+- [ ] **turtlecode**: `bun script/sync-trellis-core.ts --pack` + smoke tests
 
 ## Publish
 
-- [ ] **`just publish`**; the single kernel ceremony: `ship-check` + `test:ship` +
+- [ ] **`just publish`**: the single kernel ceremony: `ship-check` + `test:ship` +
       `build` + structural validate, then tag & push → CI (`publish-npm.yml`) publishes
       with provenance. `--local` to publish from this machine (npm); `--dry-run` for
       gates only.

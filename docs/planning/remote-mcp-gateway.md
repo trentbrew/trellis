@@ -25,7 +25,7 @@ Playground proves remote **UI → graph**. Remote MCP proves remote **agents →
 
 ## Decision
 
-**MCP is a capability surface on the room server**; same kernel as `/entities`, `/query`, `/realtime`. Not a second API or a new data model.
+**MCP is a capability surface on the room server**: same kernel as `/entities`, `/query`, `/realtime`. Not a second API or a new data model.
 
 ```
 https://<room>/mcp          Streamable HTTP (primary)
@@ -111,7 +111,7 @@ With API key:
 - `get_graph_summary`; compact introspection (health, types, ontologies, attrs, links, recent ops)
 - `link_nodes`; semantic relations between entities
 - Lane param + `X-Trellis-Lane` header on writes (`agent:<client-id>` op attribution)
-- **Playground tenant targeting**; optional `tenantId` / `room` on all graph tools; `X-Trellis-Tenant` header; bridge `--playground-room` / `--tenant` (`embed-{slug}` matches `?room=` on playground.trellis.computer)
+- **Playground tenant targeting**: optional `tenantId` / `room` on all graph tools; `X-Trellis-Tenant` header; bridge `--playground-room` / `--tenant` (`embed-{slug}` matches `?room=` on playground.trellis.computer)
 - Rate limiting via `UsageMeter.assertGraphIoBudget` (`TRELLIS_MCP_GRAPH_IO_LIMIT`)
 - trellis-graph skill: `TRELLIS_ROOM_URL` + remote tool parity documented
 - `test/mcp/graph-summary.test.ts` + extended gateway tests
@@ -165,7 +165,7 @@ vercel --prod
 
 Cursor: `{ "url": "https://mcp.trellis.computer/gateway/mcp" }`
 
-**B. Direct CNAME to Sprites**; DNS resolves, but HTTPS on the vanity host fails until Sprites adds custom domains. Use the Sprite origin URL in clients until then.
+**B. Direct CNAME to Sprites**: DNS resolves, but HTTPS on the vanity host fails until Sprites adds custom domains. Use the Sprite origin URL in clients until then.
 
 **Local dev:**
 
@@ -226,10 +226,10 @@ they just query one remote room instead of a separate local Nuxt graph process.
 
 ## Architecture constraints
 
-1. **Room does not own state**; relay/accelerator; local op-log remains canonical.
-2. **One graph, many surfaces**; Playground, MCP, REST, WS share one kernel (ADR 0012).
-3. **Auth on every tool call**; same `AuthContext` path as REST.
-4. **Lane-aware agent writes**; default draft lane; promote is explicit.
+1. **Room does not own state**: relay/accelerator; local op-log remains canonical.
+2. **One graph, many surfaces**: Playground, MCP, REST, WS share one kernel (ADR 0012).
+3. **Auth on every tool call**: same `AuthContext` path as REST.
+4. **Lane-aware agent writes**: default draft lane; promote is explicit.
 
 ## Acceptance criteria (Phase 0)
 

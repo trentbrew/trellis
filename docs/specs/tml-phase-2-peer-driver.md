@@ -10,7 +10,7 @@
 ## 1. Intent
 
 Phase 1 unified writes and connect behind `createAdminShell`. The driver is still
-**always `WebDriver`**; snapshot renderer with regex TQL over `Lane` / `Issue`.
+**always `WebDriver`**: snapshot renderer with regex TQL over `Lane` / `Issue`.
 
 Phase 2 adds **opt-in `PeerDriver`** on admin: materialize the op stream locally,
 query via real `QueryEngine`. Prove one question the thin client cannot answer.

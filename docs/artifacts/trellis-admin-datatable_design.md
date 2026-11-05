@@ -81,7 +81,7 @@ components:
 ## Overview
 
 Raise the Operate **table projection** from a bare `.lanes-table` to
-**SpreadsheetTable browse density**; still semantic `<table>` + TML, not a React
+**SpreadsheetTable browse density**: still semantic `<table>` + TML, not a React
 port. Signature: **42px data rows**, **36px sticky sort headers** with cycle
 none→asc→desc, column hairlines, and honest empty / no-match states. Toolbar
 owns search; table is an embedded well.

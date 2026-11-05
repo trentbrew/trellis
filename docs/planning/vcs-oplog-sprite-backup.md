@@ -23,7 +23,7 @@ provisioned at init (or first `trellis remote add`). It does not own state; it
 sprite still has the chain, truth survives.
 
 This is the **seed of the GitHub analog**: not “hosting git repos,” but
-**named remotes for op-log ledgers**; push, pull, compare tails, restore,
+**named remotes for op-log ledgers**: push, pull, compare tails, restore,
 eventually fork/clone and social discovery. GitHub = social layer on git remotes;
 Trellis remote = social layer on **causal op journals** (issues, lanes, graph).
 
@@ -69,7 +69,7 @@ JSONL at the remote.
 
 ## Shape: default remote sprite
 
-One Fly Sprite (or per-repo sprite) provisioned as **`remote: default`**; second
+One Fly Sprite (or per-repo sprite) provisioned as **`remote: default`**: second
 peer for named repos.
 
 ```text
@@ -96,7 +96,7 @@ trellis init --remote <url>  # new repo with second peer from day one
 | `trellis remote push` | Manual |
 | Post-`lane promote` / `issue close` | Hook / CLI |
 | Periodic (`trellis remote watch`) | e.g. 15m if dirty |
-| Pre-`repair` | **Hard gate**; no repair unless remote ack within N minutes or `--i-know` |
+| Pre-`repair` | **Hard gate**: no repair unless remote ack within N minutes or `--i-know` |
 
 ### Protocol (v0; dumb and safe)
 
@@ -128,10 +128,10 @@ Sprite = default remote; object storage = archive; Iroh = optional extra peers l
 
 ## Hardening (ships with peer #2)
 
-1. **Multi-slot local bak**; ring of `ops.json.bak.<ts>`; never one slot.
-2. **CLI skew guard**; no array-era client against JSONL journal.
-3. **Pre-repair remote push**; or abort.
-4. **Init provisions default remote**; sprite URL + repo id in config; unset = “single-peer mode” (dev only, warned).
+1. **Multi-slot local bak**: ring of `ops.json.bak.<ts>`; never one slot.
+2. **CLI skew guard**: no array-era client against JSONL journal.
+3. **Pre-repair remote push**: or abort.
+4. **Init provisions default remote**: sprite URL + repo id in config; unset = “single-peer mode” (dev only, warned).
 
 ## Roadmap (GitHub analog layers)
 

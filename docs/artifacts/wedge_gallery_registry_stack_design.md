@@ -71,7 +71,7 @@ Wire the four-spec UI registry stack (TRL-413/414/415/416) into
 live theme switcher (default / dark / uithing / minimal) proving the
 `--icon-pack` re-render model, and motion/prose tokens replacing every hardcoded
 duration/easing in the gallery CSS. This makes the stack **demo-ready and
-provable in-browser**; the wedge-smoke gallery is the natural integration
+provable in-browser**: the wedge-smoke gallery is the natural integration
 surface for every headless component, so it is where developers and designers
 see the theme-decides-pack model live.
 
@@ -101,13 +101,13 @@ sections; out of scope for this wedge but the tokens ship in the CSS).
 ## Layout
 
 Three-band shell (ADR 0011):
-- **Nav**; fixed left, 220px, collapsible (`body.nav-collapsed` hides with
+- **Nav**: fixed left, 220px, collapsible (`body.nav-collapsed` hides with
   translateX + opacity transition). Contains search filter, component count, and
   a nav list where each item carries a `<trellis-icon>` alias (entity-issue,
   core-search, status-in-progress, etc.) before its label.
-- **Toolbar**; flex row: nav-collapse toggle `◧`, prev `‹` / next `›`, component
+- **Toolbar**: flex row: nav-collapse toggle `◧`, prev `‹` / next `›`, component
   title + type chip, **theme switcher** `<select>`, fullscreen toggle `⛶`.
-- **Content**; flexible canvas (`flex: 1`) + right controls panel (320px). The
+- **Content**: flexible canvas (`flex: 1`) + right controls panel (320px). The
   canvas hosts the active component's vanilla renderer and a live `--icon-pack`
   indicator proving the re-render. The controls panel has About (description +
   framework badges), State (live JSON), Actions (action buttons + reset).

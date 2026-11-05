@@ -67,7 +67,7 @@ turn is already an op. Failure is data, not silence.
 One generator over ops computes, per lane and per session: tokens in/out, cost,
 p50/p95 latency, tool-call counts, error rate, op count. Projections: the
 `report` `--usage` view (ADR 0050), a `wip` line, and the `admin` console. **No
-`Metrics` entity with maintained counters**; recompute, per ADR 0050 d3.
+`Metrics` entity with maintained counters**: recompute, per ADR 0050 d3.
 
 ### 4. Outcome joins evals
 
@@ -76,7 +76,7 @@ The rollup left-joins `EvalRun` (ADR 0043) by lane/session, yielding the
 
 ### 5. Capture is agent-agnostic, at the harness boundary
 
-Usage is captured where a **turn is observed**; the CLI `ask`/console, harness
+Usage is captured where a **turn is observed**: the CLI `ask`/console, harness
 hooks, and ACP hosts; never inside a model SDK. Any host (Claude, Cursor,
 Gemini, Codex, OpenCode, turtleOS `tsh`) is therefore measured identically. This
 is the precondition for the comparison to be science rather than anecdote.

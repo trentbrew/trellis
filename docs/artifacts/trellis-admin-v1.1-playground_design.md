@@ -112,7 +112,7 @@ island** (iframe to `/admin?embed=1`).
 **Thesis:** one outer rail (playground Operate), one inner console (kernel
 admin). No double rail. No playground OKLCH on TML surfaces.
 
-**Signature:** the **theme seam**; playground chrome may stay sharp OKLCH /
+**Signature:** the **theme seam**: playground chrome may stay sharp OKLCH /
 Geist; the island loads only `runtime-theme.css`. The seam is a quiet edge, not
 a second brand.
 
@@ -259,7 +259,7 @@ radii OK on rail only.
 | Narrow &lt;1100px | resize | island op-log drawer; playground rail remains |
 | Playground embed | `/vcs?embed=1` | hide playground rail; ConsoleEmbedBar; island embed |
 | Double chrome guard | N/A | never show kernel rail + playground rail together |
-| Kill lane watch | N/A | **out of this wedge**; separate parity harden |
+| Kill lane watch | N/A | **out of this wedge**: separate parity harden |
 
 ## Accessibility
 

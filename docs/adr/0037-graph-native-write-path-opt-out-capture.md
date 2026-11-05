@@ -201,7 +201,7 @@ separately from `.gitignore` because the overlap is large but not exact:
 `journalWorkingTreeToOps` is exposed as a standalone CLI command
 (`trellis git journal catch-up`), and the OpenCode plugin's
 `tool.execute.after` hook spawns it after every `Write | Edit | Bash` tool
-invocation. This is the correct **first step**; it closes the gap for the
+invocation. This is the correct **first step**: it closes the gap for the
 primary agent harness today; but it is harness-specific and not the final
 answer. When the daemon lands, the hook becomes a belt-and-suspenders
 backstop rather than the sole write path.
@@ -231,7 +231,7 @@ backstop rather than the sole write path.
     opt-in, few ops get in, so validation is trivial. Under opt-out, every
     file change hits validation. _Invalid ops must not contaminate the
     graph_ (hard product constraint from the checkpoint doc). The daemon step
-    (step 2 below) includes a **validation floor**; the step is not shipped
+    (step 2 below) includes a **validation floor**: the step is not shipped
     without it. See [migration path](#migration-path) for the split between
     floor validation and advanced validation.
 3. **Race-condition surface.** A continuous daemon contends with live writes

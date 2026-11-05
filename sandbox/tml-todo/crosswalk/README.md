@@ -1,4 +1,4 @@
-# Crosswalk — same todo list, five surfaces
+# Crosswalk; same todo list, five surfaces
 
 Identical behavior: live list of `Todo` entities, show `done` + `title`, **Remove** via generic `remove(id)`.
 
@@ -11,7 +11,7 @@ Identical behavior: live list of `Todo` entities, show `done` + `title`, **Remov
 | **Vue** | [`TodoList.vue`](./TodoList.vue) | External SDK flavor |
 | **Svelte** | [`TodoList.svelte`](./TodoList.svelte) | External SDK flavor |
 
-**Policy reminder:** Operate / admin stays TML (+ HTML IR). React/Vue/Svelte are for **external** apps or primitive wrappers — not shell substrate inside Trellis chrome. This folder is a teaching twin, not an invitation to rewrite admin in React.
+**Policy reminder:** Operate / admin stays TML (+ HTML IR). React/Vue/Svelte are for **external** apps or primitive wrappers; not shell substrate inside Trellis chrome. This folder is a teaching twin, not an invitation to rewrite admin in React.
 
 Shared contract:
 
@@ -45,14 +45,14 @@ when it leans into HTML syntax, assuming a Svelte-like compiler.
 | `op remove(@todo.id)` | `on:op={remove(@todo.id)}` | `on:click={handler}` |
 | `each todo in todos` | `each="todo of todos"` | `{#each todos as todo}` |
 | `@todo.title` | `{@todo.title}` | `{todo.title}` |
-| — | `{#if @todo.done}` | `{#if done}` |
-| — | `$: count = ...` | `$: count = ...` |
+|; | `{#if @todo.done}` | `{#if done}` |
+|; | `$: count = ...` | `$: count = ...` |
 
 **Key differences from Svelte:**
-- `on:op` instead of `on:click` — ops are generic verbs, not DOM events
-- `@entity.field` instead of `entity.field` — explicit entity binding
-- `<shell>` instead of `<div>` — semantic, compiles to data-trellis-* attrs
-- `<projection>` instead of `{#each}` — queries are first-class
+- `on:op` instead of `on:click`; ops are generic verbs, not DOM events
+- `@entity.field` instead of `entity.field`; explicit entity binding
+- `<shell>` instead of `<div>`; semantic, compiles to data-trellis-* attrs
+- `<projection>` instead of `{#each}`; queries are first-class
 
 **When to use:**
 - HTML-adjacent: Authoring in a code editor with HTML awareness (Emmet, etc.)

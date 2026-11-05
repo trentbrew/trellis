@@ -4,7 +4,7 @@
 
 ## Context
 
-The realtime sync infrastructure (ADR 0027) implements TLS enforcement, auth tokens, rate limiting, and audit trails (TRL-336). It lacks **authorization controls**; any connected peer can send ops to any branch or lane. The security audit (`docs/security-audit-sync.md`) flags this as HIGH severity.
+The realtime sync infrastructure (ADR 0027) implements TLS enforcement, auth tokens, rate limiting, and audit trails (TRL-336). It lacks **authorization controls**: any connected peer can send ops to any branch or lane. The security audit (`docs/security-audit-sync.md`) flags this as HIGH severity.
 
 The governance engine (`src/identity/governance.ts`) already has a policy evaluation system (`evaluatePolicy`) with `PolicyRule` objects that gate `push`, `merge`, `createMilestone`, and `deleteBranch` actions on `branch`, `path`, and `entityType` targets using `requiredSigners` and `minSignatures`. This spec defines how to extend that model to sync transport.
 

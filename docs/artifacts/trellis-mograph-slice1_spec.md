@@ -19,18 +19,18 @@ Ship two Trellis education demos in the existing mograph React app: **Genealogy 
 
 | Path | Action |
 | ---- | ------ |
-| `src/mograph/fixtures/matthew-genealogy.json` | **create**; topology for TreeVisualizer |
-| `src/mograph/fixtures/composer-task-1.json` | **create**; 6 EAV facts for task-1 |
-| `src/mograph/fixtures/genealogyTopology.js` | **create**; helper: load fixture + map person names |
-| `src/mograph/playbooks/eav-assert.js` | **create**; `generateEAVAssertPlaybook(facts, codeLines?)` |
-| `src/mograph/playbooks/eav-assert.test.js` | **create**; unit tests |
-| `src/mograph/components/FactTriplePanel.jsx` | **create**; triple row visualizer |
-| `src/mograph/components/FactTriplePanel.test.jsx` | **create**; render + row count |
-| `src/mograph/components/TreeVisualizer.jsx` | **modify**; optional `title` on nodes, label truncate helper |
-| `src/components/examples/GenealogyExample.jsx` | **create**; scene wrapper |
-| `src/components/examples/EAVExample.jsx` | **create**; scene wrapper |
-| `src/App.jsx` | **modify**; Trellis nav group + tab routes |
-| `e2e/mograph-trellis.spec.js` | **create**; seek snapshot tests |
+| `src/mograph/fixtures/matthew-genealogy.json` | **create**: topology for TreeVisualizer |
+| `src/mograph/fixtures/composer-task-1.json` | **create**: 6 EAV facts for task-1 |
+| `src/mograph/fixtures/genealogyTopology.js` | **create**: helper: load fixture + map person names |
+| `src/mograph/playbooks/eav-assert.js` | **create**: `generateEAVAssertPlaybook(facts, codeLines?)` |
+| `src/mograph/playbooks/eav-assert.test.js` | **create**: unit tests |
+| `src/mograph/components/FactTriplePanel.jsx` | **create**: triple row visualizer |
+| `src/mograph/components/FactTriplePanel.test.jsx` | **create**: render + row count |
+| `src/mograph/components/TreeVisualizer.jsx` | **modify**: optional `title` on nodes, label truncate helper |
+| `src/components/examples/GenealogyExample.jsx` | **create**: scene wrapper |
+| `src/components/examples/EAVExample.jsx` | **create**: scene wrapper |
+| `src/App.jsx` | **modify**: Trellis nav group + tab routes |
+| `e2e/mograph-trellis.spec.js` | **create**: seek snapshot tests |
 
 **Do not modify:** `schema.js`, `catalog.js`, `generateScene.js` (deferred slice 2).
 

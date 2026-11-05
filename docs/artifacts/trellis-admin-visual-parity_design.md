@@ -94,7 +94,7 @@ the same operator language as `lane watch`, without inventing new components or
 porting playground `SpreadsheetTable`.
 
 Emotional tone stays L3 operator: dense, dark, mono labels, inset kanban bodies.
-The signature of this pass is **full-bleed projections**; content uses the main pane
+The signature of this pass is **full-bleed projections**: content uses the main pane
 width; dialogs sit in the viewport center, not the origin.
 
 ## Colors

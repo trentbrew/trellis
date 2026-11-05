@@ -26,7 +26,7 @@
 Trellis now has several client surfaces that read the same graph: the web
 `realtime-app` (Svelte), the CLI (`src/cli`), and a proposed native TUI (OpenTUI,
 treated as a *separate ingestion target*, not a feature bolted onto the CLI).
-Each should render through a **shared DSL / projection engine**; the fractal
+Each should render through a **shared DSL / projection engine**: the fractal
 shell model (`node | row | card` at vantages 2/5/8) and the TQL query language
 are the two halves of that contract.
 
@@ -63,11 +63,11 @@ Do not build full sync transport until the DSL contract is frozen to v1.**
 
 Stabilize the two halves of the shared contract:
 
-- **Projection / authoring DSL**; the fractal shell + view-mode model
+- **Projection / authoring DSL**: the fractal shell + view-mode model
   (`demo/realtime-app/src/lib/fractal/shells.ts`, `src/lib/ui/page-variants.ts`):
   one vantage→shell mapping, one set of collection view modes, consumed
   identically by web, CLI, and (future) TUI.
-- **Query DSL (TQL)**; `src/core/query/`: fact/link patterns, `FILTER`,
+- **Query DSL (TQL)**: `src/core/query/`: fact/link patterns, `FILTER`,
   `AGGREGATE`, `ORDER BY`, `LIMIT/OFFSET`, with semantic enum ordering already
   implemented for `priority`/`status`.
 

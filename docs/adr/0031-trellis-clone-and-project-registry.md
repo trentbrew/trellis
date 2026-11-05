@@ -69,7 +69,7 @@ with a second peer from day one (the planning-doc row), no pull.
 The path-derived `repoKeyFromRoot` is the clone blocker. Change the identity
 contract:
 
-- **On clone/import:** the local repo adopts the **source repoId**; never
+- **On clone/import:** the local repo adopts the **source repoId**: never
   re-derives from its own path. This is what makes push-back after clone target
   the same ledger.
 - **On `trellis init`:** persist a stable repoId in `.trellis/config.json` at
@@ -124,7 +124,7 @@ index. Do not overload it:
 
 ### Positive
 
-- **One command restores a repo on a fresh machine**; the wipe-recovery story
+- **One command restores a repo on a fresh machine**: the wipe-recovery story
   graduates from `git clone` + 4 manual steps to `trellis clone`.
 - **repoId stability across machines** unblocks fork, multi-device push-back,
   and the eventual social layer.

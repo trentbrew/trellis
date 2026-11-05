@@ -10,16 +10,16 @@
 
 `@trellis.computer/icons` is a **detection + resolution model**, not a
 hand-authored SVG library. `<trellis-icon name="home">` names an icon **without
-a pack prefix**; the **active theme's `--icon-pack` token** decides which
+a pack prefix**: the **active theme's `--icon-pack` token** decides which
 Iconify set resolves it. The component also auto-detects **emojis** and
 **image URLs**, and resolves **semantic aliases** (`entity-issue`,
 `status-done`) from Trellis's own ontology.
 
-Pack choice is a **theme concern**; the same markup renders Lucide under one
+Pack choice is a **theme concern**: the same markup renders Lucide under one
 theme and Tabler under another, with zero component changes.
 
 Local-first: a curated set of Iconify JSON collections ships in the package, so
-the common icon sets resolve with **no network at runtime**; the long tail loads
+the common icon sets resolve with **no network at runtime**: the long tail loads
 on demand from Iconify and caches.
 
 ## Theme-Decided Pack
@@ -67,7 +67,7 @@ function detectKind(name: string): IconKind {
 | `alias` | `entity-issue`, `status-in-progress` | semantic alias → pack-aware resolution |
 
 **Bare-name resolution:** the icon name is looked up **within the active pack
-first**; if the pack lacks that name, resolution falls back through the alias
+first**: if the pack lacks that name, resolution falls back through the alias
 table, then to the registered fallback glyph; never a broken box.
 
 ## Semantic Alias Table

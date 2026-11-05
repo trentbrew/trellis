@@ -115,7 +115,7 @@ objects, as 0048 §2.4 already says.
 
 | Option | Pros | Cons | Why not |
 | ------ | ---- | ---- | ------- |
-| A; `trellis:Lexicon`, membership as a field (chosen) | Users can create groups; every client reads the same grouping; ids stay stable | One more system type and derived projection |; |
+| A; `trellis:Lexicon`, membership as a field (chosen) | Users can create groups; every client reads the same grouping; ids stay stable | One more system type and derived projection |: |
 | B; Keep "app" as the group | No work | Users can't create groups; grouping stays in client manifests | Problems 2 and 4 |
 | C; Use `OntologySchema` as is | Already exists | In memory only, not synced, code-only | Users can't create one; other peers never see it |
 | D; Put the group in ids (`rel:<app>…`, `<appId>.<databaseId>`) | Readable ids | Moving a type or renaming a group changes identity; ids depend on the caller | Problem 3 |

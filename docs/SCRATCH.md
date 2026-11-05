@@ -262,7 +262,7 @@ Imagine an IDE where you don't "Save" files, but the IDE continuously streams ti
 
 ===========================
 
-You’ve captured the trajectory perfectly. **TrellisVCS**; I like the name. It suggests the idea of a lattice that supports growth while maintaining structure, which is exactly what we’re after.
+You’ve captured the trajectory perfectly. **TrellisVCS**: I like the name. It suggests the idea of a lattice that supports growth while maintaining structure, which is exactly what we’re after.
 
 To your question: _Does committing disappear?_
 

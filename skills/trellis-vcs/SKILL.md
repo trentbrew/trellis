@@ -1,7 +1,7 @@
 ---
 name: trellis-vcs
 description: >
-  Skill for TrellisVCS — the graph-native version control and issue tracking system.
+  Skill for TrellisVCS; the graph-native version control and issue tracking system.
   Teaches agents how to manage branches, milestones, issues, the Idea Garden, and
   semantic AST-level diffs using the Trellis CLI. Use this skill when working
   inside a Trellis-enabled workspace or repository, context-switching between issues,
@@ -68,7 +68,7 @@ trellis garden search -k "<keyword>"
 
 ### 2. Issue Lifecycle (The Golden Path)
 
-Always use `trellis issue start TRL-N` (instead of manual branching) — it
+Always use `trellis issue start TRL-N` (instead of manual branching); it
 creates a linked branch with full traceability and automatically sets the status
 to `in_progress`.
 
@@ -106,13 +106,13 @@ Lanes give each agent an isolated op journal under
 `.trellis/lanes/lane-{uuid}/`. Promote explicitly into `main` (or another target
 branch) when work is ready.
 
-**Three “lane” concepts — do not confuse them:**
+**Three “lane” concepts; do not confuse them:**
 
 | Concept               | Id form                            | Purpose                                                |
 | :-------------------- | :--------------------------------- | :----------------------------------------------------- |
 | **VCS lane**          | `lane-{uuid}`                      | Isolated file/op journal; optional git worktree        |
 | **Graph MCP lane**    | `agent:<client-id>`                | Write attribution on graph entities (`create_node`, …) |
-| **Desk trail marker** | `graph/trail-markers/agent-*.json` | Coordination metadata only — not VCS                   |
+| **Desk trail marker** | `graph/trail-markers/agent-*.json` | Coordination metadata only; not VCS                   |
 
 **Enable per-lane git worktrees (W5, ADR 0014):** auto-enabled on `trellis init`
 when `.git` exists, or set in `.trellis/config.json`:
@@ -126,11 +126,11 @@ when `.git` exists, or set in `.trellis/config.json`:
 
 **Cursor tabs:** each conversation gets its own session lane automatically
 (`trellis lane ensure --session <id>` via hooks). Do **not** use profile-static
-lanes like `agent:agent-b` for isolation — session binding owns `lane_id`.
+lanes like `agent:agent-b` for isolation; session binding owns `lane_id`.
 
 Requires trellis **3.2.5+** (or local `bun src/cli/index.ts` during kernel dev).
 
-**Live dashboard:** `trellis lane watch` — browser SSE view of lanes, claims,
+**Live dashboard:** `trellis lane watch`; browser SSE view of lanes, claims,
 and promote lock (port 3939).
 
 ```bash
@@ -159,26 +159,26 @@ export TRELLIS_EDIT_ROOT=/path/to/worktree   # when worktreeBind on
 
 When `worktreeBind` is on, **edit files under the lane worktree**
 (`.trellis/worktrees/<shortId>/`), not the shared repo root. `enterLane` rebinds
-the file watcher to that path. **Git is a downstream mirror** — never
+the file watcher to that path. **Git is a downstream mirror**: never
 `git stash/checkout/merge`; Trellis owns semantics.
 
 **Git adapter:** successful `lane promote` runs `git sync` on `main` with a
 commit message derived from the op log + issue title. Agents must not commit
 manually.
 
-Promote before `trellis issue close` if the lane has unpromoted ops — **or** let
+Promote before `trellis issue close` if the lane has unpromoted ops; **or** let
 close auto-promote (default since 3.2.4).
 
 **Pre-close gate:** run `trellis lane status` and `trellis lane promote <id> --dry-run --explain`
 before close. Close refuses when auto-promote hits blocking conflicts.
 
 **Promote coordination metadata:** integration head wins on `status`, `description`,
-`labels`, and claim fields — stale lane journal facts on those attrs are skipped
+`labels`, and claim fields; stale lane journal facts on those attrs are skipped
 (pipeline labels like `needs-e2e` on integration are not blocked by lane replay).
 
 **Lane coherence:** when `lane status` shows `spread > 1` (mixed issues/domains),
 split before promote/close: `trellis lane split --name <domain>`. One bound issue
-per wedge — do not journal TRL-35/TRL-22 ops on a TRL-46 lane.
+per wedge; do not journal TRL-35/TRL-22 ops on a TRL-46 lane.
 
 ### Issue claim lock (Phase 2)
 
@@ -295,7 +295,7 @@ them on the graph for audit and re-entry (ADR 0015).
 # Record envelope as child issue (label: message | decision)
 trellis protocol send --parent TRL-41 \
   --from reviewer --to strategist --re TRL-41 --status HANDOFF \
-  --body "REVIEW: PASS — route to strategist"
+  --body "REVIEW: PASS; route to strategist"
 
 # Orientation after tab switch / human return
 trellis whereami
@@ -316,27 +316,27 @@ trellis milestone create "M1" --commit # integration branch: auto git commit
 
 **Promote gate:** `promote.require` includes `check` (project lint/typecheck)
 alongside smoke tests. Lane op **`laneId`** is envelope data (outside hash
-preimage) — existing lane journals migrate on open.
+preimage); existing lane journals migrate on open.
 
 ---
 
 ## Critical Rules
 
-- **Never** modify the `.trellis/` directory directly — let the Trellis engine
+- **Never** modify the `.trellis/` directory directly; let the Trellis engine
   handle operations.
-- **Lane writes only** — when `TRELLIS_LANE_ID` is set (or after `lane enter`),
+- **Lane writes only**: when `TRELLIS_LANE_ID` is set (or after `lane enter`),
   file ops go to the lane journal; promote before merging to integration.
-- **Worktree cwd** — with `lanes.worktreeBind`, edit under
+- **Worktree cwd**: with `lanes.worktreeBind`, edit under
   `.trellis/worktrees/<shortId>/`, not the shared repo root.
-- **Protocol messages** — on pipeline handoffs, prefer `trellis protocol send`
+- **Protocol messages**: on pipeline handoffs, prefer `trellis protocol send`
   over chat-only footers when graph audit matters.
-- **Re-entry** — run `trellis whereami` (or `whereami checkpoint` on session
+- **Re-entry**: run `trellis whereami` (or `whereami checkpoint` on session
   end) before resuming multi-agent work.
-- **Start issues, don't just branch** — `trellis issue start` provides deep
+- **Start issues, don't just branch**: `trellis issue start` provides deep
   integration, auto-lane, and history tracking.
-- **Pause before context-switching** — always run `trellis issue pause` to
+- **Pause before context-switching**: always run `trellis issue pause` to
   switch branches cleanly.
-- **Two-phase close gate** — all issue acceptance criteria must pass, and
+- **Two-phase close gate**: all issue acceptance criteria must pass, and
   `--confirm` is required to close an issue.
-- **Add descriptions** — use `--desc` on create or `trellis issue describe` for
+- **Add descriptions**: use `--desc` on create or `trellis issue describe` for
   short descriptions.

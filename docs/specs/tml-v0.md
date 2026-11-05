@@ -20,7 +20,7 @@
 ADR 0025 names TML as the _companion markup language_ to TQL; declarative
 attributes (`tml-query`, `tml-projection`, `tml-swap`) that bind a TQL query to
 a DOM element and project results into it. `trellis-ui-dsl.md` §11.1 sharpens
-this into **four primitives**; `query`, `op`, `live`, `ref`; and warns against
+this into **four primitives**: `query`, `op`, `live`, `ref`; and warns against
 the "string form" (raw TQL in an attribute string, invisible to tooling, no
 type-check). TML v0 takes that philosophy: **attributes bind scoped field
 expressions, not inline code.**
@@ -284,16 +284,16 @@ export function mount(root: HTMLElement, driver: TmlDriver): void;
 
 ## 8. Out of scope
 
-- **TauriDriver**; deferred to TRL-9 (desktop shell prototype).
-- **Full TQL client engine on WebDriver**; evaluator stays minimal (type +
+- **TauriDriver**: deferred to TRL-9 (desktop shell prototype).
+- **Full TQL client engine on WebDriver**: evaluator stays minimal (type +
   eq/comparison + OR groups + `not` OR groups). Prefer `PeerDriver` for real
   TQL.
-- **`/api/query` server-side TQL endpoint**; future work once the projection
+- **`/api/query` server-side TQL endpoint**: future work once the projection
   model is proven.
-- **Table / stats / op-log / search in TML**; stay in production `lanes.html`.
-- **Production Kanban migration**; `/` still uses hand-written `renderKanban`
+- **Table / stats / op-log / search in TML**: stay in production `lanes.html`.
+- **Production Kanban migration**: `/` still uses hand-written `renderKanban`
   until a follow-up.
-- **SemType / Block Protocol integration**; separate workstreams.
+- **SemType / Block Protocol integration**: separate workstreams.
 
 **In scope for v0.1:** issue Kanban on `/tml-lanes`; see
 [`tml-v0.1-kanban.md`](./tml-v0.1-kanban.md).
@@ -312,12 +312,12 @@ export function mount(root: HTMLElement, driver: TmlDriver): void;
 
 ## 10. Relationship to prior art
 
-- **ADR 0025**; TML is the "companion markup language." This spec names the
+- **ADR 0025**: TML is the "companion markup language." This spec names the
   concrete `tml-*` attributes (`tml-query` realized via `tml-query` +
   `tml-each`).
-- **`trellis-ui-dsl.md` §11.1**; takes the four primitives (`query`, `op`,
+- **`trellis-ui-dsl.md` §11.1**: takes the four primitives (`query`, `op`,
   `live`, `ref`) and resolves the open question: bind them to **scoped field
   expressions** (typed, tooling-visible) rather than raw TQL strings.
-- **§3 Option A / Option C**; explicitly rejected the novel-language and
+- **§3 Option A / Option C**: explicitly rejected the novel-language and
   string-attribute forms; TML v0 is the attribute DSL with typed bindings,
   aligned with the embedded-DSL recommendation.

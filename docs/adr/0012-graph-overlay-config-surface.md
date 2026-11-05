@@ -14,8 +14,8 @@ ADR 0011 locks **band** (who may see which chrome). This ADR locks how **config*
 Two-panel builders (config beside render) fail because:
 
 1. **Attention is phasic**, not a stable ratio; styling is 90/10 config; review is 10/90 render. A split correct on average is wrong in every moment.
-2. **Coupling direction varies**; DevTools is render→config; Webflow is config→render; published apps are render-only (kitchen).
-3. **Authorization and layout are the same question**; band is not a preview toggle; it is which directions of the coupling arrow a principal may render.
+2. **Coupling direction varies**: DevTools is render→config; Webflow is config→render; published apps are render-only (kitchen).
+3. **Authorization and layout are the same question**: band is not a preview toggle; it is which directions of the coupling arrow a principal may render.
 
 The configure/render tension resolves into **orthogonal axes on one surface**, not two panels whose widths we negotiate.
 
@@ -190,9 +190,9 @@ All config via scrubbing and in-place inspection.
 
 ## Open questions
 
-1. **Selection model**; click-to-select on projection only, or keyboard/roving focus counts?
-2. **Anchored inset layout**; sheet (right) vs bottom dock when spatial coupling is high?
-3. **Capability names**; inherit from ADR 0011 open questions (`can:edit`, `can:admin`, resource scope).
+1. **Selection model**: click-to-select on projection only, or keyboard/roving focus counts?
+2. **Anchored inset layout**: sheet (right) vs bottom dock when spatial coupling is high?
+3. **Capability names**: inherit from ADR 0011 open questions (`can:edit`, `can:admin`, resource scope).
 
 Resolve in TRL-25 spec; do not block inset binding model on these.
 

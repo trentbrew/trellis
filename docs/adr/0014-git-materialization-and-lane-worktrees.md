@@ -61,7 +61,7 @@ ADR 0001 rejected **git worktree only** for semantic isolation (`.trellis` is gi
 
 ## Decision
 
-**Trellis owns semantics; git is downstream materialization**; the same shape as "Trellis owns semantics, Iroh moves bytes." Git is never authoritative for branch head, lane status, or integration history.
+**Trellis owns semantics; git is downstream materialization**: the same shape as "Trellis owns semantics, Iroh moves bytes." Git is never authoritative for branch head, lane status, or integration history.
 
 ```mermaid
 flowchart LR

@@ -19,7 +19,7 @@ The repo's guard (`~/.config/opencode/plugins/trellis-lanes.ts` →
 That flow does **not** capture this work:
 
 - Session lane `lane-2e102bcd-efbb-4474-8fbd-46a02dba0886` has **0 ops in its
-  journal**; the file edits were never recorded as Trellis ops (no watcher
+  journal**: the file edits were never recorded as Trellis ops (no watcher
   captured them; `.trellis/ops.json` has zero ops referencing the new files).
 - `trellis lane promote` replays the lane journal → nothing to replay (it is
   also guard-`ask`, needing UI approval anyway).

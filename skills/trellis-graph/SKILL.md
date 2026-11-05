@@ -1,7 +1,7 @@
 ---
 name: trellis-graph
 description: >
-  Skill for working with the Trellis knowledge graph — creating, querying,
+  Skill for working with the Trellis knowledge graph; creating, querying,
   linking, and managing entities (tasks, events, notes, people, projects, etc.)
   using the TQL Graph API via MCP tools. Use this skill whenever the user asks
   you to interact with their Trellis data, create entities, query the graph,
@@ -14,7 +14,7 @@ updated: 2026-06-29
 
 Trellis is a personal knowledge graph where everything is an entity with typed
 properties and semantic links. The graph powers a Nuxt web app running on
-`localhost:$TRELLIS_PORT` with realtime sync — any mutations you make via MCP tools
+`localhost:$TRELLIS_PORT` with realtime sync; any mutations you make via MCP tools
 appear instantly in the browser UI.
 
 ## Remote room (`TRELLIS_ROOM_URL`)
@@ -24,7 +24,7 @@ When the MCP server points at a **deployed Trellis room** (Streamable HTTP at
 
 | Tool | Remote room |
 | ---- | ----------- |
-| `get_graph_summary` | Yes — call first |
+| `get_graph_summary` | Yes; call first |
 | `query_graph`, `get_node`, `create_node`, `update_node`, `delete_node`, `link_nodes` | Yes |
 | `graph_health` | Yes |
 | Platform tools (`list_orgs`, `create_tag`, …) | Local campus graph only |
@@ -39,7 +39,7 @@ When the MCP server points at a **deployed Trellis room** (Streamable HTTP at
 > **Disambiguation:** Graph MCP `agent:<id>` lanes attribute **EAV graph writes** only.
 > **VCS lanes** (`lane-{uuid}`, `trellis lane`, `TRELLIS_LANE_ID`) isolate **file/op journals**
 > in the repo and may bind a git worktree when `lanes.worktreeBind` is true in `.trellis/config.json`.
-> Desk **trail markers** (`graph/trail-markers/`) are coordination metadata — not VCS.
+> Desk **trail markers** (`graph/trail-markers/`) are coordination metadata; not VCS.
 > See skill `trellis-vcs` for the agent workflow.
 
 **Playground tenant targeting** (`playground.trellis.computer` hosted app uses
@@ -60,10 +60,10 @@ Match the Playground tab's `?room=` slug so MCP writes appear in that user's gra
 
 Environment variables:
 
-- `TRELLIS_ROOM_URL` — room base URL (bridge CLI reads `.trellis-db.json` when unset)
-- `TRELLIS_TENANT_ID` — default tenant for bridge (e.g. `embed-my-room`)
-- `TRELLIS_PLAYGROUND_ROOM` — playground `?room=` slug → `embed-{slug}`
-- `TRELLIS_MCP_GRAPH_IO_LIMIT` — optional daily request cap per tenant (0 = unlimited)
+- `TRELLIS_ROOM_URL`; room base URL (bridge CLI reads `.trellis-db.json` when unset)
+- `TRELLIS_TENANT_ID`; default tenant for bridge (e.g. `embed-my-room`)
+- `TRELLIS_PLAYGROUND_ROOM`; playground `?room=` slug → `embed-{slug}`
+- `TRELLIS_MCP_GRAPH_IO_LIMIT`; optional daily request cap per tenant (0 = unlimited)
 
 **Discovery gateway** (`/gateway/mcp` or `trellis mcp gateway serve`):
 
@@ -79,7 +79,7 @@ Well-known: `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authori
 ## IMPORTANT: Always Use MCP Tools
 
 **Never use `curl`, `fetch`, or raw HTTP requests to interact with the Trellis API.**
-You have 48 MCP tools available — use them directly. They handle authentication,
+You have 48 MCP tools available; use them directly. They handle authentication,
 error formatting, and JSON serialization automatically.
 
 | Instead of...                     | Use this MCP tool                                                    |
@@ -115,50 +115,50 @@ Every entity must have a `type` fact. `createdAt`/`updatedAt` are auto-managed.
 
 ### Common Fields (all entities)
 
-- `id` — Unique string identifier (e.g. `"task-abc123"`)
-- `type` — Entity type string
-- `title` — Display name (required)
-- `description` — Optional rich text
-- `tags` — String array
-- `owner` — User ID who owns the entity
-- `involved` — Array of user IDs
-- `category` — Optional classification string
-- `references` — Array of `FileReference | EntityReference` objects
-- `createdAt` / `updatedAt` — ISO 8601 timestamps
-- `zoneId` — Campus Zone this entity lives in (e.g. `"entity:founder-facility-lab"`) — see below
-- `facilityId` — Campus Facility containing the zone (Phase 0: always `"entity:founder-facility"`)
+- `id`; Unique string identifier (e.g. `"task-abc123"`)
+- `type`; Entity type string
+- `title`; Display name (required)
+- `description`; Optional rich text
+- `tags`; String array
+- `owner`; User ID who owns the entity
+- `involved`; Array of user IDs
+- `category`; Optional classification string
+- `references`; Array of `FileReference | EntityReference` objects
+- `createdAt` / `updatedAt`; ISO 8601 timestamps
+- `zoneId`; Campus Zone this entity lives in (e.g. `"entity:founder-facility-lab"`); see below
+- `facilityId`; Campus Facility containing the zone (Phase 0: always `"entity:founder-facility"`)
 
 ### Temporal Fields (temporal class only)
 
-- `startDate` — `YYYY-MM-DD` (required for most temporal types)
-- `endDate` — `YYYY-MM-DD` (optional, for multi-day items)
-- `allDay` — Boolean
-- `startTime` / `endTime` — `HH:mm` (when not all-day)
-- `priority` — `critical | high | medium | low`
-- `urgency` — `urgent | not-urgent`
-- `taskStatus` — `pending | in-progress | on-track | due-soon | overdue | completed` (tasks only)
-- `reminders` — Array of `{ id, timing, method }`
-- `recurrence` — `{ frequency, interval?, weekdays?, endDate?, occurrences? }`
+- `startDate`; `YYYY-MM-DD` (required for most temporal types)
+- `endDate`; `YYYY-MM-DD` (optional, for multi-day items)
+- `allDay`; Boolean
+- `startTime` / `endTime`; `HH:mm` (when not all-day)
+- `priority`; `critical | high | medium | low`
+- `urgency`; `urgent | not-urgent`
+- `taskStatus`; `pending | in-progress | on-track | due-soon | overdue | completed` (tasks only)
+- `reminders`; Array of `{ id, timing, method }`
+- `recurrence`; `{ frequency, interval?, weekdays?, endDate?, occurrences? }`
 
 ### Document Fields (document class only)
 
-- `content` — HTML rich text body
-- `pinned` — Boolean
-- `url` — String (bookmarks only)
-- `favicon` / `thumbnail` / `siteName` / `excerpt` — Bookmark metadata
+- `content`; HTML rich text body
+- `pinned`; Boolean
+- `url`; String (bookmarks only)
+- `favicon` / `thumbnail` / `siteName` / `excerpt`; Bookmark metadata
 
 ### Actor Fields (actor class only)
 
-- `email` / `phone` — Contact info
-- `avatar` — URL
-- `role` — String
+- `email` / `phone`; Contact info
+- `avatar`; URL
+- `role`; String
 
 ### Container Fields (container class only)
 
-- `children` — Array of child entity IDs
-- `progress` — 0–1 float
-- `status` — `active | archived | completed | on-hold`
-- `parentId` — Optional parent container ID
+- `children`; Array of child entity IDs
+- `progress`; 0–1 float
+- `status`; `active | archived | completed | on-hold`
+- `parentId`; Optional parent container ID
 
 ## Campus Substrate (Phase 0)
 
@@ -175,11 +175,11 @@ The graph is organized by a spatial ontology: every entity lives in a **Zone** i
 
 **Default zones** in the founder Facility:
 
-- `entity:founder-facility-lab` — private workspace (owner-only)
-- `entity:founder-facility-lobby` — public READ + access requests
-- `entity:founder-facility-workshop` — members-only collaboration
-- `entity:founder-facility-showroom` — publish artifacts + pages (public READ)
-- `entity:founder-facility-vault` — credentials + irreversible ops (owner + 2FA)
+- `entity:founder-facility-lab`; private workspace (owner-only)
+- `entity:founder-facility-lobby`; public READ + access requests
+- `entity:founder-facility-workshop`; members-only collaboration
+- `entity:founder-facility-showroom`; publish artifacts + pages (public READ)
+- `entity:founder-facility-vault`; credentials + irreversible ops (owner + 2FA)
 
 ### Tagging mutations with a zone
 
@@ -276,7 +276,7 @@ Always use `create_node` with:
   "entityId": "note-standup-feb10",
   "type": "note",
   "data": {
-    "title": "Standup Notes — Feb 10",
+    "title": "Standup Notes; Feb 10",
     "content": "<p>Discussed MCP integration and skill system.</p>",
     "pinned": false,
     "tags": ["standup", "engineering"]
@@ -348,10 +348,10 @@ FIND projects AS p WHERE p.status = "active" RETURN p.title, p.progress
 
 | Tool                | When to use                                                                                                       |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `get_graph_summary` | **Always call first** — compact overview of health, entity types, ontologies, attributes, links, recent mutations |
+| `get_graph_summary` | **Always call first**: compact overview of health, entity types, ontologies, attributes, links, recent mutations |
 | `graph_health`      | Quick liveness check only (fact/link counts)                                                                      |
 | `get_schema`        | Full ontology field definitions (when you need field-level detail)                                                |
-| `get_catalog`       | Full attribute distribution (77 attrs, verbose — prefer `get_graph_summary`)                                      |
+| `get_catalog`       | Full attribute distribution (77 attrs, verbose; prefer `get_graph_summary`)                                      |
 | `get_mutation_log`  | Full recent mutation history                                                                                      |
 
 ### `get_graph_summary` response shape
@@ -393,7 +393,7 @@ Optional `limit` parameter caps list lengths (default: 10).
 
 You can create new entity types at runtime using the ontology tools. When you create
 an ontology, the new type **automatically appears** in the Trellis UI sidebar, browse
-pages, and dialogs — zero code changes needed.
+pages, and dialogs; zero code changes needed.
 
 ### Field Value Types (Notion-compatible)
 
@@ -424,10 +424,10 @@ pages, and dialogs — zero code changes needed.
 
 The system infers entity class from fields:
 
-- **temporal** — Has `startDate`, `endDate`, `dueDate`, `allDay`, etc.
-- **document** — Has `content`, `pinned`, `body`, etc.
-- **actor** — Has `email`, `phone`, `avatar`, `firstName`, etc.
-- **container** — Default when no specific indicators found
+- **temporal**: Has `startDate`, `endDate`, `dueDate`, `allDay`, etc.
+- **document**: Has `content`, `pinned`, `body`, etc.
+- **actor**: Has `email`, `phone`, `avatar`, `firstName`, etc.
+- **container**: Default when no specific indicators found
 
 ### Update an Ontology
 
@@ -435,7 +435,7 @@ Use `update_ontology` with the full field list (replaces all existing fields).
 
 ### Delete an Ontology
 
-Use `delete_ontology` — removes the type schema. Existing entities of that type remain
+Use `delete_ontology`; removes the type schema. Existing entities of that type remain
 in the graph but the type disappears from the UI.
 
 ## Platform Tools
@@ -446,14 +446,14 @@ persists across restarts.
 
 ### Workspace Context
 
-- `list_orgs` — List all organizations
-- `create_org` — Create an org (idempotent by slug)
-- `get_org` — Get org by slug
-- `list_apps` — List apps/worlds (optionally scoped by orgId)
-- `create_app` — Create an app (idempotent by slug)
-- `update_app` — Update app properties
-- `delete_app` — Delete an app
-- `get_context` — Get current org + app context
+- `list_orgs`; List all organizations
+- `create_org`; Create an org (idempotent by slug)
+- `get_org`; Get org by slug
+- `list_apps`; List apps/worlds (optionally scoped by orgId)
+- `create_app`; Create an app (idempotent by slug)
+- `update_app`; Update app properties
+- `delete_app`; Delete an app
+- `get_context`; Get current org + app context
 
 ### Collections & Pages
 
@@ -462,21 +462,21 @@ persists across restarts.
 
 ### Entity Enrichment
 
-- `list_comments` — List comments on an entity
-- `add_comment` — Add a comment (auto-links to parent entity)
-- `list_tags` / `create_tag` — Tag management (idempotent)
-- `assign_tags` — Assign tags to entity (auto-creates missing tags)
+- `list_comments`; List comments on an entity
+- `add_comment`; Add a comment (auto-links to parent entity)
+- `list_tags` / `create_tag`; Tag management (idempotent)
+- `assign_tags`; Assign tags to entity (auto-creates missing tags)
 
 ### Bulk Operations & Workflows
 
-- `bulk_update` — Batch update entities matching an EQL-S query
-- `bulk_delete` — Batch delete entities matching an EQL-S query
+- `bulk_update`; Batch update entities matching an EQL-S query
+- `bulk_delete`; Batch delete entities matching an EQL-S query
 - `list_workflows` / `create_workflow` / `update_workflow` / `delete_workflow`
 
 ### Settings & Invites
 
-- `get_setting` / `set_setting` / `list_settings` — Key-value settings (app or user scoped)
-- `send_invite` — Send workspace invitation
+- `get_setting` / `set_setting` / `list_settings`; Key-value settings (app or user scoped)
+- `send_invite`; Send workspace invitation
 
 ### Platform ID Conventions
 
@@ -493,12 +493,12 @@ persists across restarts.
 
 ## Best Practices
 
-1. **Always set a title** — Every entity needs at minimum a `title` field
-2. **Use descriptive IDs** — `"task-deploy-v2"` not `"abc123"`
-3. **Set dates as ISO strings** — `"2026-02-10"` for dates, `"14:30"` for times
-4. **Link after creating** — Create both entities first, then link them
-5. **Check before creating** — Use `query_graph` to avoid duplicates
-6. **Use tags liberally** — Tags are the primary cross-cutting classification
-7. **Mutations are realtime** — The browser UI updates instantly via SSE
-8. **Creates are idempotent** — `create_org`, `create_app`, `create_tag`, `create_collection` return existing if slug matches
-9. **Use context** — Set org/app context once, then all scoped commands use it automatically
+1. **Always set a title**: Every entity needs at minimum a `title` field
+2. **Use descriptive IDs**: `"task-deploy-v2"` not `"abc123"`
+3. **Set dates as ISO strings**: `"2026-02-10"` for dates, `"14:30"` for times
+4. **Link after creating**: Create both entities first, then link them
+5. **Check before creating**: Use `query_graph` to avoid duplicates
+6. **Use tags liberally**: Tags are the primary cross-cutting classification
+7. **Mutations are realtime**: The browser UI updates instantly via SSE
+8. **Creates are idempotent**: `create_org`, `create_app`, `create_tag`, `create_collection` return existing if slug matches
+9. **Use context**: Set org/app context once, then all scoped commands use it automatically

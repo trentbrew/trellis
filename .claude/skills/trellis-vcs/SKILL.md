@@ -24,11 +24,11 @@ Every file save is an immutable op. You do not stage, commit, or push.
 
 ## Core Concepts
 
-- **Ops** — Immutable, content-addressed operations (file changes, branches, milestones)
-- **Milestones** — Narrative checkpoints spanning a range of ops (replace Git commits)
-- **Idea Garden** — Automatically detects abandoned work and lets you revive it
-- **Semantic Diff** — AST-level diffs showing symbolAdd, symbolRename, symbolMove
-- **Agent Lanes** — Per-agent op journals (`lane-{uuid}`); optional git worktree per lane when `lanes.worktreeBind` is true (ADR 0014)
+- **Ops**: Immutable, content-addressed operations (file changes, branches, milestones)
+- **Milestones**: Narrative checkpoints spanning a range of ops (replace Git commits)
+- **Idea Garden**: Automatically detects abandoned work and lets you revive it
+- **Semantic Diff**: AST-level diffs showing symbolAdd, symbolRename, symbolMove
+- **Agent Lanes**: Per-agent op journals (`lane-{uuid}`); optional git worktree per lane when `lanes.worktreeBind` is true (ADR 0014)
 
 ## Standard Workflow
 
@@ -47,7 +47,7 @@ trellis garden search -k "auth"
 
 If relevant abandoned work exists, revive it instead of starting from scratch.
 
-### 3. Work normally — ops are automatic
+### 3. Work normally; ops are automatic
 
 File changes during `trellis watch` are recorded automatically as Tier 0 ops.
 You do **not** need to stage or commit.
@@ -73,7 +73,7 @@ This shows AST-level changes (symbolAdd, symbolRemove, symbolRename) instead of 
 ```bash
 trellis issue start TRL-1              # branch + lane (use --no-lane to skip)
 trellis lane enter <lane-id>
-trellis lane promote <lane-id>         # replay onto integration — do before close
+trellis lane promote <lane-id>         # replay onto integration; do before close
 trellis lane promote <lane-id> --dry-run --explain   # gate before close/ship
 trellis lane promote <lane-id> --require-test   # gate on .trellis/tests.json promote.require
 trellis lane status                    # coherence spread > 1 → split before promote
@@ -89,7 +89,7 @@ trellis test unit
 trellis issue ac TRL-1 "Unit green" --suite unit
 ```
 
-**Not the same as graph MCP `agent:<id>` lanes** — those attribute graph writes only.
+**Not the same as graph MCP `agent:<id>` lanes**: those attribute graph writes only.
 
 ### 7. Agent handoff protocol (3.2.3+)
 
@@ -133,13 +133,13 @@ If the TrellisVCS MCP server is connected, use tool calls instead of CLI:
 
 ## Guidelines
 
-- **Never** modify `.trellis/` directly — use CLI or MCP tools
-- **Milestones, not commits** — create one per coherent unit of work
-- **Check the garden** — abandoned work may already solve your problem
+- **Never** modify `.trellis/` directly; use CLI or MCP tools
+- **Milestones, not commits**: create one per coherent unit of work
+- **Check the garden**: abandoned work may already solve your problem
 - **Prefer semantic diffs** for TypeScript/JavaScript changes
-- **Ops are immutable** — they are never rewritten, rebased, or deleted
-- **Lane isolation** — with `TRELLIS_LANE_ID` set, writes go to the lane journal; promote before closing issues
-- **Promote coordination metadata** — on promote, integration wins for `status`, `description`, `labels`, and claim fields; stale lane journal facts on those attrs are skipped (not blocking conflicts)
-- **Lane coherence** — `trellis lane status` warns when journal spans >1 issue/domain; run `trellis lane split` before promote/close
-- **Worktree cwd** — when `worktreeBind` is on, edit under the lane worktree path from `lane status`
-- **Protocol audit** — use `trellis protocol send` for durable handoffs; `trellis whereami` on re-entry
+- **Ops are immutable**: they are never rewritten, rebased, or deleted
+- **Lane isolation**: with `TRELLIS_LANE_ID` set, writes go to the lane journal; promote before closing issues
+- **Promote coordination metadata**: on promote, integration wins for `status`, `description`, `labels`, and claim fields; stale lane journal facts on those attrs are skipped (not blocking conflicts)
+- **Lane coherence**: `trellis lane status` warns when journal spans >1 issue/domain; run `trellis lane split` before promote/close
+- **Worktree cwd**: when `worktreeBind` is on, edit under the lane worktree path from `lane status`
+- **Protocol audit**: use `trellis protocol send` for durable handoffs; `trellis whereami` on re-entry

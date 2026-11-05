@@ -13,7 +13,7 @@ updated: 2026-05-30
 
 # Trellis
 
-> **The Agentic Framework**; A structured runtime for building agents that understand code, remember everything, and explain themselves. Trellis provides the durable, queryable, and versioned state layer that modern agentic systems require.
+> **The Agentic Framework**: A structured runtime for building agents that understand code, remember everything, and explain themselves. Trellis provides the durable, queryable, and versioned state layer that modern agentic systems require.
 
 | Use Case                       | How                                                                                                           |
 | :----------------------------- | :------------------------------------------------------------------------------------------------------------ |
@@ -103,40 +103,40 @@ Trellis is an event-sourced causal graph engine that unifies version control, kn
 
 The platform consists of multiple integrated surfaces:
 
-- **`trellis` npm package**; the published package exposing all platform APIs through modular subpaths
-- **`trellis` CLI**; command-line interface for repository management, semantic tooling, knowledge operations, and automation
-- **VS Code extension**; visual interface for timeline exploration, issue management, knowledge navigation, and collaborative features
-- **Core platform modules**; reusable building blocks for graph storage, semantic analysis, sync, knowledge graphs, embeddings, and decision traces
+- **`trellis` npm package**: the published package exposing all platform APIs through modular subpaths
+- **`trellis` CLI**: command-line interface for repository management, semantic tooling, knowledge operations, and automation
+- **VS Code extension**: visual interface for timeline exploration, issue management, knowledge navigation, and collaborative features
+- **Core platform modules**: reusable building blocks for graph storage, semantic analysis, sync, knowledge graphs, embeddings, and decision traces
 
 ### Core Capabilities
 
 #### 1. **Agentic State Kernel**
 
-- **EAV Store**; Entity-Attribute-Value graph database for structured agent memory
-- **Causal Stream**; Immutable, content-addressed operations with full auditability
-- **Branching & Forking**; Allow agents to simulate and explore multiple paths safely
-- **Ontology System**; Schema validation and built-in guardrails for agent actions
+- **EAV Store**: Entity-Attribute-Value graph database for structured agent memory
+- **Causal Stream**: Immutable, content-addressed operations with full auditability
+- **Branching & Forking**: Allow agents to simulate and explore multiple paths safely
+- **Ontology System**: Schema validation and built-in guardrails for agent actions
 
 #### 2. **Context & Reasoning**
 
-- **Decision Traces**; Automated capture and querying of agent tool calls and rationale
-- **Embeddings**; Native vector search for semantic indexing and RAG-based context injection
-- **Wiki-Links**; Bidirectional knowledge graph connecting files, issues, and decisions
-- **Idea Garden**; Detect and revive abandoned reasoning paths or code clusters
+- **Decision Traces**: Automated capture and querying of agent tool calls and rationale
+- **Embeddings**: Native vector search for semantic indexing and RAG-based context injection
+- **Wiki-Links**: Bidirectional knowledge graph connecting files, issues, and decisions
+- **Idea Garden**: Detect and revive abandoned reasoning paths or code clusters
 
 #### 3. **Autonomous Code Operations**
 
-- **Semantic Patching**; AST-aware changes enabling agents to modify code structure accurately
-- **Tool Registry**; Robust environment for defining and executing agent-available tools
-- **Multi-Repo Federation**; Cross-repository reasoning and relationship mapping
-- **Governance**; PGP-signed ops and policy enforcement for authorized agent actions
+- **Semantic Patching**: AST-aware changes enabling agents to modify code structure accurately
+- **Tool Registry**: Robust environment for defining and executing agent-available tools
+- **Multi-Repo Federation**: Cross-repository reasoning and relationship mapping
+- **Governance**: PGP-signed ops and policy enforcement for authorized agent actions
 
 #### 4. **Framework Infrastructure**
 
-- **LLM Layer**; Unified abstraction for OpenAI, Anthropic, Ollama, and more
-- **Peer Sync**; CRDT-based reconciliation for multi-agent or collaborative environments
-- **Client/Server/React**; Complete SDK for building agentic UIs and distributed backends
-- **VS Code Extension**; Visual timeline and decision inspector for human-in-the-loop oversight
+- **LLM Layer**: Unified abstraction for OpenAI, Anthropic, Ollama, and more
+- **Peer Sync**: CRDT-based reconciliation for multi-agent or collaborative environments
+- **Client/Server/React**: Complete SDK for building agentic UIs and distributed backends
+- **VS Code Extension**: Visual timeline and decision inspector for human-in-the-loop oversight
 
 ## Project Surfaces
 
@@ -369,14 +369,14 @@ The VS Code extension provides a rich visual interface for the entire Trellis pl
 
 ### Core Features
 
-- **Status Dashboard**; Real-time view of repository health, activity metrics, and system state
-- **Causal Timeline**; Interactive exploration of the complete operation history with filtering and search
-- **Knowledge Navigator**; Browse and traverse the wiki-link graph with visual connections
-- **Issue Management**; Full lifecycle issue management with drag-and-drop workflow automation
-- **Semantic Explorer**; Navigate code structure and relationships through AST-aware visualizations
-- **Decision Inspector**; Review decision traces and understand the reasoning behind changes
-- **Collaboration Hub**; Multi-repo federation view and cross-project relationship mapping
-- **Intelligence Panel**; Semantic search, RAG context, and AI-powered insights
+- **Status Dashboard**: Real-time view of repository health, activity metrics, and system state
+- **Causal Timeline**: Interactive exploration of the complete operation history with filtering and search
+- **Knowledge Navigator**: Browse and traverse the wiki-link graph with visual connections
+- **Issue Management**: Full lifecycle issue management with drag-and-drop workflow automation
+- **Semantic Explorer**: Navigate code structure and relationships through AST-aware visualizations
+- **Decision Inspector**: Review decision traces and understand the reasoning behind changes
+- **Collaboration Hub**: Multi-repo federation view and cross-project relationship mapping
+- **Intelligence Panel**: Semantic search, RAG context, and AI-powered insights
 
 The extension lives in [`vscode-extension/`](./vscode-extension) and publishes separately from the npm package.
 
@@ -900,7 +900,7 @@ just publish-dry-run
 just publish
 ```
 
-> **Requires [Bun](https://bun.sh) ≥ 1.0**; Trellis uses `bun:sqlite` for the vector store and Bun's native TypeScript support for optimal performance.
+> **Requires [Bun](https://bun.sh) ≥ 1.0**: Trellis uses `bun:sqlite` for the vector store and Bun's native TypeScript support for optimal performance.
 
 ---
 

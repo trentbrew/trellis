@@ -24,9 +24,9 @@ Three realtime layers must not be conflated:
 
 Prior art in-repo:
 
-- **Block LWW**; `demo/realtime-app/src/lib/schemas/block.ts`: one graph entity per block; concurrent edits to different blocks merge cleanly (`/editor` currently redirects to char CRDT `/collab`; block server code remains the better Notion-grain model for formatted prose).
-- **Wiki-links**; `trellis/links`: `[[entity:…]]` parse/resolve for markdown and doc-comments; bidirectional ref index and stale-ref lifecycle.
-- **Tiptap**; exists only in `apps/docs/` (CMS demo); not engine/SDK.
+- **Block LWW**: `demo/realtime-app/src/lib/schemas/block.ts`: one graph entity per block; concurrent edits to different blocks merge cleanly (`/editor` currently redirects to char CRDT `/collab`; block server code remains the better Notion-grain model for formatted prose).
+- **Wiki-links**: `trellis/links`: `[[entity:…]]` parse/resolve for markdown and doc-comments; bidirectional ref index and stale-ref lifecycle.
+- **Tiptap**: exists only in `apps/docs/` (CMS demo); not engine/SDK.
 
 Editor framework choice (Tiptap vs Plate) is **secondary** to the document semantic contract.
 
@@ -34,8 +34,8 @@ Editor framework choice (Tiptap vs Plate) is **secondary** to the document seman
 
 Adopt a **two-layer architecture**:
 
-1. **Editor substrate (commodity)**; ProseMirror-family editor via **Tiptap or Plate** (or equivalent). Handles caret, IME, selection, copy/paste DOM, accessibility, marks/blocks UI. **Not built from scratch.**
-2. **Trellis document semantic layer (moat)**; graph-native protocol for mentions, links, paste intake, derived metadata, and multi-vantage projections. Lives in **`trellis/links` + new `trellis/document` surface** (name TBD), **editor-agnostic**.
+1. **Editor substrate (commodity)**: ProseMirror-family editor via **Tiptap or Plate** (or equivalent). Handles caret, IME, selection, copy/paste DOM, accessibility, marks/blocks UI. **Not built from scratch.**
+2. **Trellis document semantic layer (moat)**: graph-native protocol for mentions, links, paste intake, derived metadata, and multi-vantage projections. Lives in **`trellis/links` + new `trellis/document` surface** (name TBD), **editor-agnostic**.
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
@@ -96,7 +96,7 @@ Extend `trellis/links`; do not invent a parallel mention syntax.
 | **1** | Local editor + graph LWW persist + record-level presence | **Yes; P0** |
 | **2** | Ephemeral plain-text draft via `RealtimeText` on `/rt`; debounce persist | Optional spike; **formatting lost** in live collab |
 | **3** | Block entities; graph LWW per block | **P1** for Notion-grain |
-| **4** | Yjs/Hocuspocus for formatted char collab | **Deferred**; parallel transport; Trellis remains system of record |
+| **4** | Yjs/Hocuspocus for formatted char collab | **Deferred**: parallel transport; Trellis remains system of record |
 
 **Rejected as default:** Yjs + Hocuspocus for v1 rich text; duplicates `/rt` investment without replacing graph durability.
 
@@ -104,9 +104,9 @@ Extend `trellis/links`; do not invent a parallel mention syntax.
 
 | Option | Verdict |
 | ------ | ------- |
-| **Tiptap / Plate on ProseMirror** | **Accepted**; substrate for TRL-10 and playground |
-| **Custom rich-text editor from scratch** | **Rejected**; caret/IME/paste/a11y cost dominates; not differentiated |
-| **Custom `trellis/document` semantic layer** | **Accepted**; mentions, paste, blocks, vantage metadata |
+| **Tiptap / Plate on ProseMirror** | **Accepted**: substrate for TRL-10 and playground |
+| **Custom rich-text editor from scratch** | **Rejected**: caret/IME/paste/a11y cost dominates; not differentiated |
+| **Custom `trellis/document` semantic layer** | **Accepted**: mentions, paste, blocks, vantage metadata |
 
 Framework choice (Tiptap vs Plate) is an **app-level** decision. Ship semantic APIs from `trellis/document` without binding to one editor package in `trellis/client`.
 
@@ -132,7 +132,7 @@ This is **infrastructure parity**, not a document-model change. Implement as fol
 
 ### Build a rich-text editor from scratch
 
-ProseMirror, Slate, and descendants exist because **editing surfaces are commodity infrastructure** with years of edge-case work. Trellis differentiation is **graph-native documents**; mentions that write ops, paste that suggests entities, diagrams as nodes, semantic zoom as projection; not caret rendering.
+ProseMirror, Slate, and descendants exist because **editing surfaces are commodity infrastructure** with years of edge-case work. Trellis differentiation is **graph-native documents**: mentions that write ops, paste that suggests entities, diagrams as nodes, semantic zoom as projection; not caret rendering.
 
 Building a custom editor would delay TRL-10 by quarters and still require a document model isomorphic to ProseMirror's anyway.
 
@@ -208,9 +208,9 @@ Works for P0 spikes; **rejected as long-term model** for large docs, Mermaid ent
 
 ## Open questions
 
-1. **P0 wire format**; HTML + `data-trellis-ref` vs markdown `[[…]]` for playground (spike decides).
-2. **Diagram entity type**; extend `core:Document` vs new `core:Diagram` in ontology.
-3. **Suggest-link threshold**; embedding score floor + always confirm vs auto-link for high-confidence issue ids.
-4. **Block vs inline Mermaid**; block entity only, or inline mark that lazily materializes entity on save.
+1. **P0 wire format**: HTML + `data-trellis-ref` vs markdown `[[…]]` for playground (spike decides).
+2. **Diagram entity type**: extend `core:Document` vs new `core:Diagram` in ontology.
+3. **Suggest-link threshold**: embedding score floor + always confirm vs auto-link for high-confidence issue ids.
+4. **Block vs inline Mermaid**: block entity only, or inline mark that lazily materializes entity on save.
 
 Resolve in TRL-10 spec and spike; do not block P0 editor on P1/P2 answers.

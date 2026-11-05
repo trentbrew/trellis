@@ -85,9 +85,9 @@ lane + claim + branch, never sent as a message. Zero-cost, always-current.
 
 ## Alternatives considered
 
-- **Reuse only the web realtime room**; rejected: the CLI agent never joins it,
+- **Reuse only the web realtime room**: rejected: the CLI agent never joins it,
   so it would not fix the agent-blind-spot that motivated this.
-- **Put presence in the op log**; rejected: liveness is ephemeral and would
+- **Put presence in the op log**: rejected: liveness is ephemeral and would
   pollute milestones, the garden's "abandoned cluster" detection, and Iroh sync.
-- **Build a chat-first protocol**; rejected: heavier than needed; stigmergy
+- **Build a chat-first protocol**: rejected: heavier than needed; stigmergy
   covers the immediate pain, and ADR 0015 already seeds async messaging.

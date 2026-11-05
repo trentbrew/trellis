@@ -1,8 +1,8 @@
-# State demo — Todo list + causal DAG
+# State demo; Todo list + causal DAG
 
 Browser demo for trellis.computer: **Alice** and **Bob** todo lists with a merged **VcsOp** DAG on the right.
 
-Uses real `createVcsOp` hashing, `SyncEngine`, and `MemorySyncRoom` (no full `TrellisVcsEngine` — keeps the static bundle small).
+Uses real `createVcsOp` hashing, `SyncEngine`, and `MemorySyncRoom` (no full `TrellisVcsEngine`; keeps the static bundle small).
 
 ## Run locally
 

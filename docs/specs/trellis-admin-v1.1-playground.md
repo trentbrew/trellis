@@ -25,12 +25,12 @@ source and **CLI fallback**. Do not rebuild boards in React. Do not soft-depreca
 | -------- | ------ |
 | Playground route | `/vcs`; add to `OPERATE_NAV` (not Demos `/issues`) |
 | Mount | **iframe** → `{kernelBase}/admin?embed=1&view={view}` |
-| Same-origin proxy | **Out of v1.1**; cross-origin iframe OK; SSE/mutations run **inside** iframe (kernel origin) |
+| Same-origin proxy | **Out of v1.1**: cross-origin iframe OK; SSE/mutations run **inside** iframe (kernel origin) |
 | Kernel auto-start | **`trellis admin` always starts** lanes-dashboard (unchanged), **then** probes playground |
 | CLI open order | `TRELLIS_ADMIN_URL` → probe playground `/vcs` → else kernel `/admin` |
 | Theme | Island loads only kernel `runtime-theme.css`; no Phase B copy into playground `globals.css` |
 | Double rail | Forbidden; kernel `.rail` hidden when `embed=1`; playground rail hidden only when playground `?embed=1` |
-| React TML remount | **Forbidden**; no second kanban/grid implementation |
+| React TML remount | **Forbidden**: no second kanban/grid implementation |
 | Kill `lane watch` | **Out of scope** (parity harden follow-up) |
 | `trellis watch` | Untouched (file watcher) |
 

@@ -114,5 +114,5 @@ signal.
 
 ## Note to implementers
 
-Per Principle 1, **implement this issue inside its own dedicated lane**; do not
+Per Principle 1, **implement this issue inside its own dedicated lane**: do not
 fold it into a catch-all session lane.

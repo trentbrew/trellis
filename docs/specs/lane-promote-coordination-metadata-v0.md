@@ -27,10 +27,10 @@ Existing skip (lines 407–416) only handles facts where `head === lane value`. 
 
 ## 2. Goals
 
-1. **Coordination attribute allowlist**; do not emit **blocking** soft conflicts for integration-owned issue metadata attrs the lane op did not write.
-2. **Integration-wins stale describe**; when a lane `issueUpdate` only sets `description` and integration head already changed `description` since fork, **skip replay** without hard conflict.
-3. **Integration-owned describe on soft axis**; `description` is coordination/orientation metadata; parallel lane title (or code) edits promote cleanly while integration describe is retained (TRL-289).
-4. **Close path**; after fix, `trellis issue close TRL-284 --confirm` succeeds.
+1. **Coordination attribute allowlist**: do not emit **blocking** soft conflicts for integration-owned issue metadata attrs the lane op did not write.
+2. **Integration-wins stale describe**: when a lane `issueUpdate` only sets `description` and integration head already changed `description` since fork, **skip replay** without hard conflict.
+3. **Integration-owned describe on soft axis**: `description` is coordination/orientation metadata; parallel lane title (or code) edits promote cleanly while integration describe is retained (TRL-289).
+4. **Close path**: after fix, `trellis issue close TRL-284 --confirm` succeeds.
 
 ## 3. Non-goals
 
@@ -66,7 +66,7 @@ Rationale: claim metadata and strategist/protocol `describe` on integration are 
 In the `addFacts` hard-conflict loop, before pushing `hard`:
 
 - If `fact.a === 'description'`, entity is `issue:*`, and `headValue !== fact.v` with `headValue !== baseValue`:
-  - Treat as **integration-wins**; do not push hard conflict; let outer loop skip replay (same as redundant-fact skip).
+  - Treat as **integration-wins**: do not push hard conflict; let outer loop skip replay (same as redundant-fact skip).
 
 ### 4.3 Promote boundary unchanged
 

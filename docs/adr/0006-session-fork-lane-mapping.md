@@ -10,7 +10,7 @@
 
 ## Context
 
-Trellis Studio and turtlecode/OpenCode expose **session fork**; a user or agent branches a chat into a sibling conversation while continuing the parent thread. In Trellis VCS:
+Trellis Studio and turtlecode/OpenCode expose **session fork**: a user or agent branches a chat into a sibling conversation while continuing the parent thread. In Trellis VCS:
 
 | Primitive | What it isolates today |
 | --------- | ---------------------- |
@@ -21,8 +21,8 @@ Forking a session must not be modeled as “create a Trellis branch” alone; co
 
 Two fork shapes appear in product UX:
 
-1. **Sibling fork**; new session continues from the **same integration snapshot** the parent lane had at fork time (`baseOpHash` unchanged). Both lanes replay from integration + their own journals. Promote conflicts are detectable via ADR 0003.
-2. **Child fork**; new session continues from the **parent lane’s current head** (parent journal ops included). Promote planner today only diffs against integration state at `baseOpHash`; child fork requires virtual integration, promote-chain, or lane-on-lane replay; **not implemented in W1–W4**.
+1. **Sibling fork**: new session continues from the **same integration snapshot** the parent lane had at fork time (`baseOpHash` unchanged). Both lanes replay from integration + their own journals. Promote conflicts are detectable via ADR 0003.
+2. **Child fork**: new session continues from the **parent lane’s current head** (parent journal ops included). Promote planner today only diffs against integration state at `baseOpHash`; child fork requires virtual integration, promote-chain, or lane-on-lane replay; **not implemented in W1–W4**.
 
 `LaneMeta` already carries optional `sessionId` and `issueId` (`kernel/src/vcs/lane.ts`). `trellis issue start` creates and enters a lane. Studio W5 must wire session lifecycle (create, fork, leave) without breaking promote invariants.
 
@@ -49,7 +49,7 @@ Parent session (lane A, active)
     → Child subprocess: TRELLIS_LANE_ID=<new lane id>
 ```
 
-**Sibling fork only in v1.** Child fork (`forkKind: 'child'`, parent head as virtual base) is **deferred**; see [Deferred](#deferred-child-fork).
+**Sibling fork only in v1.** Child fork (`forkKind: 'child'`, parent head as virtual base) is **deferred**: see [Deferred](#deferred-child-fork).
 
 ### LaneMeta extensions (W5+)
 
@@ -117,7 +117,7 @@ Thin wrapper around `createLane` with sibling defaults; Studio may call engine A
 
 ## Deferred: child fork
 
-Implemented in **[ADR 0007](./0007-child-fork-lane-base.md)**; virtual integration base at `parent.headOpHash`.
+Implemented in **[ADR 0007](./0007-child-fork-lane-base.md)**: virtual integration base at `parent.headOpHash`.
 
 ## Alternatives considered
 

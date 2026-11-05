@@ -155,7 +155,7 @@ click.
 | ------- | -------- |
 | Kanban empty col | Keep / add empty hint tone (lanes `.kanban-empty`) if missing |
 | Grid / table zero lanes | No phantom cards; empty host acceptable |
-| Search / embed | **Inherited**; do not re-spec |
+| Search / embed | **Inherited**: do not re-spec |
 
 ---
 
@@ -171,15 +171,15 @@ click.
 
 Add cases (extend existing file; do not replace shell smoke):
 
-1. **Dialog centered**; open a lane/issue dialog; assert dialog
+1. **Dialog centered**: open a lane/issue dialog; assert dialog
    `getBoundingClientRect()` center is within ~15% of viewport center on both
    axes (or `margin` computed as `auto` and not pinned at `top:0; left:0`).
-2. **Grid tracks**; `?view=grid` at viewport width ≥ 1280; if ≥2 `.lane-card`
+2. **Grid tracks**: `?view=grid` at viewport width ≥ 1280; if ≥2 `.lane-card`
    exist, assert `getComputedStyle(gridHost).gridTemplateColumns` splits into
    ≥2 non-empty tracks.
-3. **Kanban flex**; `#view-kanban .kanban` (or the flex container) has
+3. **Kanban flex**: `#view-kanban .kanban` (or the flex container) has
    `display: flex`.
-4. **Table width**; `?view=table`; `.table-wrap` `clientWidth` ≥ 90% of
+4. **Table width**: `?view=table`; `.table-wrap` `clientWidth` ≥ 90% of
    `#view-table` content width.
 
 Run: `CI=1 pnpm test:e2e e2e/admin.spec.cjs`

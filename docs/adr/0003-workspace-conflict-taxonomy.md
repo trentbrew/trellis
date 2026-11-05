@@ -1,6 +1,6 @@
 # ADR 0003: Workspace conflict taxonomy
 
-> **Terminology ([ADR 0005](./0005-agent-lane-naming.md)):** Conflicts during **`trellis lane promote`**; `laneOpHash` replaces `workspaceOpHash`.
+> **Terminology ([ADR 0005](./0005-agent-lane-naming.md)):** Conflicts during **`trellis lane promote`**: `laneOpHash` replaces `workspaceOpHash`.
 
 **Status:** Accepted  
 **Date:** 2026-05-29  

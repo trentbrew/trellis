@@ -285,7 +285,7 @@ The `depends` field in each schema lets the resolver enforce these rules at inst
 
 ### 8. Relationship to `core:Workflow` and `trellis:Pipeline`
 
-The existing `core:Workflow` schema (tier: core, immutable) acts as the **anchor**; it's the oldest, most stable schema in the system. All new schemas depend on it. The versioning system ensures that:
+The existing `core:Workflow` schema (tier: core, immutable) acts as the **anchor**: it's the oldest, most stable schema in the system. All new schemas depend on it. The versioning system ensures that:
 
 - `core:Workflow` never breaks the graph; it's `tier: 'core'`, so the kernel rejects runtime mutations
 - Newer schemas (`core:WorkflowStep`, etc.) can extend it safely by adding optional fields
@@ -297,13 +297,13 @@ The existing `core:Workflow` schema (tier: core, immutable) acts as the **anchor
 
 The versioning system covers:
 
-1. **`trellis add <type> <name>`**; fetch from registry, resolve constraints, verify hashes, write lockfile, register in graph
-2. **`trellis update [--scope <type>]`**; re-resolve constraints, verify hashes, update lockfile
-3. **`trellis list`**; show installed packages with versions and content hashes from lockfile
-4. **`trellis remove <type> <name>`**; remove from lockfile, check if dependent schemas remain, unregister from graph
-5. **Lockfile management**; `.trellis/deps.json` with all resolution metadata
-6. **Registry index client**; fetch and parse registry manifests
-7. **Constraint solver**; semver range matching with transitive closure and conflict detection
+1. **`trellis add <type> <name>`**: fetch from registry, resolve constraints, verify hashes, write lockfile, register in graph
+2. **`trellis update [--scope <type>]`**: re-resolve constraints, verify hashes, update lockfile
+3. **`trellis list`**: show installed packages with versions and content hashes from lockfile
+4. **`trellis remove <type> <name>`**: remove from lockfile, check if dependent schemas remain, unregister from graph
+5. **Lockfile management**: `.trellis/deps.json` with all resolution metadata
+6. **Registry index client**: fetch and parse registry manifests
+7. **Constraint solver**: semver range matching with transitive closure and conflict detection
 
 ### What's deferred
 

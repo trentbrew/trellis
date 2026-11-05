@@ -101,8 +101,8 @@ Each phase = one Trellis issue with acceptance criteria (`--ac`).
 
 ## 6. Parking lot
 
-- **Neovim embedding**; pty surface, keymap conflicts, state sync; only if TUI sdiff view proves insufficient
-- **Explorer/editor chrome in TUI**; "real development demands it" (user-confirmed) but deferred; pull at Phase 4+ when the tab surface proves it; Warp.app is the reference shape
-- **Kanban in terminal**; belongs in web app (`packages/app`) / Studio, not a terminal pty
-- **Upstream opencode tracking**; rejected; standalone + cherry-picks
+- **Neovim embedding**: pty surface, keymap conflicts, state sync; only if TUI sdiff view proves insufficient
+- **Explorer/editor chrome in TUI**: "real development demands it" (user-confirmed) but deferred; pull at Phase 4+ when the tab surface proves it; Warp.app is the reference shape
+- **Kanban in terminal**: belongs in web app (`packages/app`) / Studio, not a terminal pty
+- **Upstream opencode tracking**: rejected; standalone + cherry-picks
 - **TUI tab limit tuning, multi-agent desk (fork-scope Phase C):** presence contention, handoff affordances (ADR 0015) in-TUI

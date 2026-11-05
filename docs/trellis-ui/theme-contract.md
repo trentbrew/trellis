@@ -237,7 +237,7 @@ Products ship one or more `[data-theme="..."]` blocks. Consumers pick:
 - `high-contrast`; Accessibility theme
 - `uithing`; First-party theme that adopts the ui-thing visual language
   (colors, radii, shadows, motion, icon pack, typography). **Every pixel
-  decision of ui-thing lives in this theme block**; animations via
+  decision of ui-thing lives in this theme block**: animations via
   `--motion-*`, color scheme via the semantic groups, icon set via
   `--icon-pack`. Products opt in with `<html data-theme="uithing">`.
 

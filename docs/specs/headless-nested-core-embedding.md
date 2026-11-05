@@ -64,7 +64,7 @@ interface CodeBlockNodeJSON {
 ```
 
 - **Source of truth while embedded editing is inactive:** PM doc JSON (above).
-- **While embedded editing is active:** code-core owns a **draft buffer**; PM node content is stale until commit.
+- **While embedded editing is active:** code-core owns a **draft buffer**: PM node content is stale until commit.
 - **Plain text extraction:** `node.textContent` (already how editor-core projects `state.text` for non-code regions).
 
 ### 4.2 Editor core extensions (minimal)
@@ -183,7 +183,7 @@ interface EmbedFocusController {
 
 - React: ref handoff between PM view and CM view
 - Vue/Svelte: same controller, framework-specific refs
-- **No focus logic in cores**; cores expose `embed` state; adapters bind DOM focus
+- **No focus logic in cores**: cores expose `embed` state; adapters bind DOM focus
 
 ### 6.1 a11y
 
@@ -326,12 +326,12 @@ createCodeCore({
 
 ## 11. Implementation order
 
-1. **Editor embed state machine**; `EditorEmbedState`, `openCodeEmbed`, `closeCodeEmbed` in `editor-core` (no CodeMirror)
-2. **Tests**; Node suite for lifecycle + undo (§10)
-3. **Code-core factory**; standalone first; `embed` config stub
-4. **Adapter helper**; `createEditorWithCodeEmbed` in `editor/react` (one framework first)
-5. **CM view**; CodeMirror 6 adapter binds embed focus controller
-6. **Wedge-smoke**; simulated embed action on editor entry
+1. **Editor embed state machine**: `EditorEmbedState`, `openCodeEmbed`, `closeCodeEmbed` in `editor-core` (no CodeMirror)
+2. **Tests**: Node suite for lifecycle + undo (§10)
+3. **Code-core factory**: standalone first; `embed` config stub
+4. **Adapter helper**: `createEditorWithCodeEmbed` in `editor/react` (one framework first)
+5. **CM view**: CodeMirror 6 adapter binds embed focus controller
+6. **Wedge-smoke**: simulated embed action on editor entry
 
 **Gate:** steps 1–2 complete before CodeMirror dependency lands.
 

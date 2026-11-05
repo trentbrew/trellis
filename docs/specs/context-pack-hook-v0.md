@@ -35,8 +35,8 @@ default boot path.
 
 | Path                                                            | Role                                                                                 |
 | --------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `Projects/TRELLIS/.cursor/hooks/session-context.sh`             | **Required**; invoke pack when VCS root known                                       |
-| `Projects/TRELLIS/.cursor/hooks/trellis-harness/trellis-cli.sh` | **Preferred**; add `trellis_harness_context_pack` helper (CLI resolution + capture) |
+| `Projects/TRELLIS/.cursor/hooks/session-context.sh`             | **Required**: invoke pack when VCS root known                                       |
+| `Projects/TRELLIS/.cursor/hooks/trellis-harness/trellis-cli.sh` | **Preferred**: add `trellis_harness_context_pack` helper (CLI resolution + capture) |
 | `trellis-node/docs/specs/context-pack-hook-v0.md`               | This contract                                                                        |
 | `trellis-node/docs/specs/context-pack-v0.md` §8                 | Point at this consumer spec (one-paragraph link)                                     |
 

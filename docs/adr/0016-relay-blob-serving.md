@@ -16,7 +16,7 @@ promote), `src/vcs/blob-store.ts`, `src/realtime/relay-server.ts`
   route (`GET /`, `/health`) with CORS. Every client already connects to it.
 
 Downstream clients (the Threlte game engine, sprite-client, Raster) need to
-**distribute binary assets across machines**; a model uploaded on one device
+**distribute binary assets across machines**: a model uploaded on one device
 must resolve on another that has never seen the bytes. That is a _distribution_
 problem: a client-side cache (IndexedDB/OPFS) can't seed a cold machine;
 something reachable by all clients must hold the bytes.
@@ -94,7 +94,7 @@ the content-addressing guarantee end-to-end.
 
 - **The relay becomes stateful.** Today it's pure fan-out. A blob dir needs disk
   (or a bucket backend later), plus the write guardrails above (size cap, auth
-  hook). **GC / quota / eviction is out of scope for v1**; note as follow-up;
+  hook). **GC / quota / eviction is out of scope for v1**: note as follow-up;
   content-addressed blobs are safe to retain and dedupe by construction.
 - **"Reachable" assumes one shared deployment** (LAN: desktop relay; cloud: the
   deployed sprite relay via `VITE_RELAY_URL`). The fully-airgapped case is

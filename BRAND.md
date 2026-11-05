@@ -90,7 +90,7 @@ Line height: 130% normal / 150% large / 180% x-large / 200% 2x-large.
 | Page background | `--background-base` | `#101010`                    |
 | Body text       | `--text-base`       | `rgba(255, 255, 255, 0.618)` |
 
-The dark mode body text uses `0.618` — the golden ratio — as the opacity. Keep this; it's intentional.
+The dark mode body text uses `0.618`; the golden ratio; as the opacity. Keep this; it's intentional.
 
 ### Spacing
 
@@ -154,11 +154,11 @@ This is a sketch, not a commitment.
 
 ## Copy & writing rules
 
-- **No em-dashes (—).** Replace with commas, parens, colons, or new sentences. See user memory.
+- **No em-dashes (: ).** Replace with commas, parens, colons, or new sentences. See user memory.
 - **Wordmark capitalization:** "Trellis" and "Trellis Studio." Never "trellis" mid-sentence as a product reference; use "trellis" lowercase only when referring to the metaphor itself ("the trellis the engine provides").
 - **CLI commands** in monospace: `npx trellis studio`, `trellis milestone create`, etc. Use the `.kbd` style or markdown backticks.
 - **File paths and tokens** in monospace too: `.trellis/`, `--text-base`.
-- **No marketing superlatives.** "Industry-leading," "revolutionary," "next-generation" — cut them. The metaphor does the lifting.
+- **No marketing superlatives.** "Industry-leading," "revolutionary," "next-generation"; cut them. The metaphor does the lifting.
 - **Active voice. Short sentences. Specific nouns.** "Trellis captures the _why_" beats "Trellis enables organizations to capture decision rationale."
 
 ---
@@ -176,11 +176,11 @@ These are deliberately unanswered and worth revisiting when the product position
 
 ## References
 
-- [`turtlecode/ide/packages/ui/src/styles/theme.css`](../turtlecode/ide/packages/ui/src/styles/theme.css) — canonical Studio tokens
-- [`docs/specs/unified-theme-contract.md`](./docs/specs/unified-theme-contract.md) — kernel runtime HTML theme contract (Phase A)
-- [`docs/specs/unified-theme-contract-phase-b.md`](./docs/specs/unified-theme-contract-phase-b.md) — Phase B (client.html + Studio values)
-- [`trellis-package/logo.svg`](./logo.svg) — canonical logo
-- [`trellis-docs/www/app/assets/css/theme.css`](../trellis-docs/www/app/assets/css/theme.css) — docs site tokens (diverges from Studio)
-- [`trellis-pitch/`](../trellis-pitch/) — pitch kit with current marketing voice
-- [`brew.build/src/content/posts/trellis-studio/`](../brew.build/src/content/posts/trellis-studio/) — founding essay, source of the trellis/vine/garden metaphor
-- [`turtlecode/ide/packages/identity/`](../turtlecode/ide/packages/identity/) — logo PNG exports at standard sizes
+- [`turtlecode/ide/packages/ui/src/styles/theme.css`](../turtlecode/ide/packages/ui/src/styles/theme.css); canonical Studio tokens
+- [`docs/specs/unified-theme-contract.md`](./docs/specs/unified-theme-contract.md); kernel runtime HTML theme contract (Phase A)
+- [`docs/specs/unified-theme-contract-phase-b.md`](./docs/specs/unified-theme-contract-phase-b.md); Phase B (client.html + Studio values)
+- [`trellis-package/logo.svg`](./logo.svg); canonical logo
+- [`trellis-docs/www/app/assets/css/theme.css`](../trellis-docs/www/app/assets/css/theme.css); docs site tokens (diverges from Studio)
+- [`trellis-pitch/`](../trellis-pitch/); pitch kit with current marketing voice
+- [`brew.build/src/content/posts/trellis-studio/`](../brew.build/src/content/posts/trellis-studio/); founding essay, source of the trellis/vine/garden metaphor
+- [`turtlecode/ide/packages/identity/`](../turtlecode/ide/packages/identity/); logo PNG exports at standard sizes

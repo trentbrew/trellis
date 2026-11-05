@@ -92,7 +92,7 @@ defines an HTTP append verb.
 `content.trim().length > 0`. A whitespace-only `journal.md` **does not** win the
 ladder; fall through to `summary.md`, then `description`, then empty state.
 
-The server computes **`rendered`**; the client **must** use `rendered` (and the
+The server computes **`rendered`**: the client **must** use `rendered` (and the
 matching field) as authoritative; no client-side re-ladder (avoids divergence).
 
 | Step | Condition | `rendered` |
@@ -174,7 +174,7 @@ Per ADR **0040**, engine lands first.
 ```
 
 - **Truncation:** Read at most `maxBytes` **at the fd** (do not read whole file then
-  slice). Keep the **head**; cut on a **UTF-8 code-point boundary** (no split
+  slice). Keep the **head**: cut on a **UTF-8 code-point boundary** (no split
   multibyte chars). Set `truncated: true` if the file exceeded the cap. `rendered`
   still reflects which file won the ladder (even if truncated).
 - **Missing files:** `ENOENT` → field `null`, not an error for the whole request.
@@ -240,7 +240,7 @@ surface.
 
 | Option | Pros | Cons | Why not |
 | ------ | ---- | ---- | ------- |
-| **A; read projection (chosen)** | Git is source; matches 0053 | No in-app edit v1 |; |
+| **A; read projection (chosen)** | Git is source; matches 0053 | No in-app edit v1 |: |
 | B; sync into `RecordBody` | Reuses editor save | Forks UI db | Violates 0053 §6 |
 | C; editable + HTTP write | Notion-like | Append semantics | Defer |
 | D; full asset proxy v1 | Images work | Scope + attack surface | P2 |

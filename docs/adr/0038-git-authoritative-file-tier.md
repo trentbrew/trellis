@@ -23,7 +23,7 @@ ADR 0014 established git as a rebuildable blob-tree mirror with the op-log as
 carrier of record. ADR 0037 then made the op-log the mandatory write path with
 opt-out capture; journaling as the safety mechanism. Practice drifted anyway:
 agents edit files directly on disk, and materialization produced the same
-failure class **twice**; 9801056, then 5155578 via `trellis git sync`
+failure class **twice**: 9801056, then 5155578 via `trellis git sync`
 (reverting 77 files / −8809 lines vs b941575, recovered in 0dbfad4).
 
 The recurrence is the tell. Two systems that can each claim authority over the

@@ -48,13 +48,13 @@ our EAV graph"), not as integration targets.
 
 Several gaps are real and unrelated to missing Convex adapters:
 
-1. **Onboarding**; Trellis still expects you to run or provision a kernel (local
+1. **Onboarding**: Trellis still expects you to run or provision a kernel (local
    or Sprites), not a one-click BaaS dashboard.
-2. **Local live reads**; typed `liveEntities` / framework hooks are remote-mode
+2. **Local live reads**: typed `liveEntities` / framework hooks are remote-mode
    today; embedded-kernel live reads are planned.
-3. **First sync**; empty-remote bootstrap (ADR 0028) is still proposed; cold
+3. **First sync**: empty-remote bootstrap (ADR 0028) is still proposed; cold
    start between environments is harder than vendor BaaS defaults.
-4. **Mental model**; EAV graph + TQL + op-log vs document rows + vendor console.
+4. **Mental model**: EAV graph + TQL + op-log vs document rows + vendor console.
 
 Backend adapters would paper over (1)–(3) by making a vendor the write path,
 which trades the awkward middle for architectural contradiction.
@@ -100,7 +100,7 @@ Order of preference for "I need to ship multiplayer this week":
 
 ### 3. InstantDB and similar in Trellis Cloud
 
-Using InstantDB (or any vendor) for **Trellis product metadata**; workspace
+Using InstantDB (or any vendor) for **Trellis product metadata**: workspace
 status, billing, auth session tables; is in scope. Using the same vendor as the
 **customer graph kernel** is out of scope per §1.
 
@@ -116,10 +116,10 @@ The practitioner path for the awkward middle must be explicit:
 
 ### Positive
 
-- **Thesis stays honest**; no silent sovereignty regression.
-- **Clear integration surface**; transports and relays, not N× vendor backends.
+- **Thesis stays honest**: no silent sovereignty regression.
+- **Clear integration surface**: transports and relays, not N× vendor backends.
 - **Hosted Trellis is the answer** to "I don't want to run infra," not "plug into Neon."
-- **Stops recurring design debates**; documented non-goal.
+- **Stops recurring design debates**: documented non-goal.
 
 ### Negative
 

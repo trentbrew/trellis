@@ -1,6 +1,6 @@
-# sandbox/tml-admin — Operate as `.tml` (reference)
+# sandbox/tml-admin; Operate as `.tml` (reference)
 
-**Status:** north-star reference only — **not** loaded by `admin.html` or the TML runtime yet.  
+**Status:** north-star reference only; **not** loaded by `admin.html` or the TML runtime yet.  
 **Purpose:** Authoring shape for future compiler / validation; keep twins next to source.
 
 Related: planning note TBD `docs/planning/tml-shell-dsl.md` · live IR in [`src/ui/admin.html`](../../src/ui/admin.html).

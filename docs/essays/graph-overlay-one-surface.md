@@ -19,9 +19,9 @@ It isn't. It's one answer to a question that has better variables.
 
 Before layout, two pressures decide whether a second panel helps or hurts:
 
-**Loop tightness**; how fast must edit become visible? Styling and spatial layout are high-frequency diff tasks. A 200ms toggle isn't annoyance; it's amnesia; you lose the before/after in working memory. Terminal panes and backend config are low-frequency dwell tasks; toggling is cheap.
+**Loop tightness**: how fast must edit become visible? Styling and spatial layout are high-frequency diff tasks. A 200ms toggle isn't annoyance; it's amnesia; you lose the before/after in working memory. Terminal panes and backend config are low-frequency dwell tasks; toggling is cheap.
 
-**Referential coupling**; does config need to *point at* the render, or the render at config? DevTools starts at the artifact and asks why. Webflow starts at controls and asks show me. The kitchen is unidirectional by design: diners never see the pass.
+**Referential coupling**: does config need to *point at* the render, or the render at config? DevTools starts at the artifact and asks why. Webflow starts at controls and asks show me. The kitchen is unidirectional by design: diners never see the pass.
 
 Those aren't three layouts. They're three **permission models** for who gets to see which direction of the arrow.
 
@@ -39,7 +39,7 @@ In Trellis, **band is authorization projection**. A visitor on L1 doesn't lack a
 
 ## One surface, not two panels
 
-Fractal Responsiveness adds a continuous axis: **vantage**; how close to the bone you're looking at one identity. Same entity id. Same live kernel. Different shell at different focal depth: node, row, card.
+Fractal Responsiveness adds a continuous axis: **vantage**: how close to the bone you're looking at one identity. Same entity id. Same live kernel. Different shell at different focal depth: node, row, card.
 
 The configure/render split collapses:
 
@@ -76,9 +76,9 @@ If a non-builder can't answer "what am I looking at right now?" in one glance, t
 
 We're building two related capabilities with confusing names; worth separating:
 
-**Fractal responsiveness**; one identity, many representations. Vantage, shells, `--vantage`, dual-shell crossfade. The wedge lives in the Trellis explorer (`Thing.svelte`, `/fractal`).
+**Fractal responsiveness**: one identity, many representations. Vantage, shells, `--vantage`, dual-shell crossfade. The wedge lives in the Trellis explorer (`Thing.svelte`, `/fractal`).
 
-**Fractal projection**; many entities, animated layout modes. One graph row per entity, FLIP motion, expand overlays. The sketchpad lives in `Sandbox/fractal-playground/fractals-playground` (`docs/fractal-projection-contract.md`).
+**Fractal projection**: many entities, animated layout modes. One graph row per entity, FLIP motion, expand overlays. The sketchpad lives in `Sandbox/fractal-playground/fractals-playground` (`docs/fractal-projection-contract.md`).
 
 Collections need both: responsive cards *and* reconcile that doesn't pop when a peer reorders the list.
 

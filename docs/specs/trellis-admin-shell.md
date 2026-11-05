@@ -26,7 +26,7 @@ no `lane watch` kill-gate.
 | -------- | ------ |
 | Sidebar | **200px** labeled `.sidebar` (not 56px `.rail`); zone label `Operate` |
 | Nav contract | Mirror `fractal-playground/lib/shell/modes.ts` `OPERATE_NAV` **ids + order** |
-| Live surface | **VCS only**; `data-nav-id="vcs"` + `aria-current="page"` |
+| Live surface | **VCS only**: `data-nav-id="vcs"` + `aria-current="page"` |
 | Stubs | Collections → API: `aria-disabled="true"` **without** native `disabled`; accessible name `{Label} (coming soon)`; click no-ops |
 | Index route | **`GET /`** serves `admin.html` |
 | `/admin` | **302** (or 301) redirect to `/` **preserving query string** (`?embed=1`, `?view=`) |
@@ -132,15 +132,15 @@ Prefer `page.goto('/')` for shell smoke; keep at least one case that hits
 
 **Required cases (extend file):**
 
-1. **Operate nav**; on `/`: `nav[aria-label="Operate"]` has 8 `.nav-item`;
+1. **Operate nav**: on `/`: `nav[aria-label="Operate"]` has 8 `.nav-item`;
    `[data-nav-id="vcs"][aria-current="page"]`; stubs have `aria-disabled="true"`
    and no `disabled` attribute; first stub accessible name matches /coming soon/i
-2. **Index**; `GET /` shows sidebar + `#view-kanban` (or active view) + `#oplog`
-3. **Alias redirect**; `goto('/admin?view=grid')` → URL matches `/?view=grid`
+2. **Index**: `GET /` shows sidebar + `#view-kanban` (or active view) + `#oplog`
+3. **Alias redirect**: `goto('/admin?view=grid')` → URL matches `/?view=grid`
    (or equivalent path `/` with search)
-4. **Embed**; `/?embed=1`: `html.admin-embed`; `.sidebar` hidden; toolbar +
+4. **Embed**: `/?embed=1`: `html.admin-embed`; `.sidebar` hidden; toolbar +
    `#oplog` visible
-5. **Regression**; existing visual-parity cases still pass (dialog / grid /
+5. **Regression**: existing visual-parity cases still pass (dialog / grid /
    kanban / table / scroll)
 
 Run (impl / reviewer): `CI=1 pnpm test:e2e e2e/admin.spec.cjs`

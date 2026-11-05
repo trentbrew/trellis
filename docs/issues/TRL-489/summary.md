@@ -4,7 +4,7 @@
 
 ## Context
 
-The experiment design is frozen: a zero-dep pure-Node PB-subset backend must pass the shablon conformance corpus with **oracle shape parity** on the clone arm. This spec turns that design into a build contract; **clone arm only**; the bridge storage variant (`v-bridge`) is a deferred follow-on (one variable at a time).n
+The experiment design is frozen: a zero-dep pure-Node PB-subset backend must pass the shablon conformance corpus with **oracle shape parity** on the clone arm. This spec turns that design into a build contract; **clone arm only**: the bridge storage variant (`v-bridge`) is a deferred follow-on (one variable at a time).n
 
 ## Architecture
 
@@ -23,16 +23,16 @@ flowchart LR
 
 ## Goals
 
-1. **Artifact**; `experiments/pb-node/`:
+1. **Artifact**: `experiments/pb-node/`:
   - `server.mjs`; `node:http` + `node:sqlite`; collections schema, records CRUD, pb-compat filter via `trellis/formula` (relative import of `src/formula`), collection meta per ADR 0004 4d.
   - `SPEC.md`; the **frozen subset contract** (routes, shapes, guard semantics, non-goals, Node floor).
   - `package.json`; `{"type":"module","dependencies":{}}` (zero runtime deps; Node floor pinned in SPEC).
-2. **Corpus runner**; `run-corpus.mjs` executes the frozen `TRL-471/corpus/tasks.jsonl`:
+2. **Corpus runner**: `run-corpus.mjs` executes the frozen `TRL-471/corpus/tasks.jsonl`:
   - clone arms (`both`, `clone`) must pass with shape parity against `fixtures/` (recorded oracle responses);
   - `bridge` tasks are reported **deferred** (counted, not failed) this run;
   - **determinism**: run the corpus twice against one seeded db and require byte-identical GET bodies.
-3. **Boot smoke**; `smoke-boot.mjs`: boots `server.mjs`, hits `GET /api/health`, asserts 200, exits.
-4. **Adapter regression**; the shablon PB suites (`pb-schema-unit`, `pb-write-unit`, `pb-collection-meta-unit`) stay green unchanged (no adapter edits required by this spike).
+3. **Boot smoke**: `smoke-boot.mjs`: boots `server.mjs`, hits `GET /api/health`, asserts 200, exits.
+4. **Adapter regression**: the shablon PB suites (`pb-schema-unit`, `pb-write-unit`, `pb-collection-meta-unit`) stay green unchanged (no adapter edits required by this spike).
 
 
 

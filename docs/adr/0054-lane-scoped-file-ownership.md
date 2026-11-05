@@ -20,7 +20,7 @@ The cross-agent ownership guard (TRL-117 AC4) rejects a file write when a
 identities; but on the host **every session shares one per-machine identity**:
 all 77 lanes in `trellis-node` carry `agentId: "agent:trentbrew"`. The agentId
 comparison therefore never distinguishes concurrent sessions, and the guard is
-**inert on the host**; the exact situation it exists for (two tabs editing the
+**inert on the host**: the exact situation it exists for (two tabs editing the
 same checkout). The distinguishing key is the **lane** (unique per session); the
 lane meta already carries `sessionId`.
 
@@ -62,9 +62,9 @@ disabled, which is worse than no guard.
 
 ## Consequences
 
-**Good**; the guard actually enforces on the host; host and OS share one rule.
+**Good**: the guard actually enforces on the host; host and OS share one rule.
 
-**Costs**; lane-scoping is host-centric (cross-machine identity still uses
+**Costs**: lane-scoping is host-centric (cross-machine identity still uses
 agentId); the owner-map scan needs caching.
 
 ## Implementation phases

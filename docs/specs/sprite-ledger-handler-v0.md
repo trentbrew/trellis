@@ -24,11 +24,11 @@ routes the client already calls.
    - `POST /v0/ledger/push`
    - `GET /v0/ledger/checkpoints/:tailHash`
 2. **Filesystem store** on sprite; immutable checkpoints + advancing tip.
-3. **Bearer auth**; reject unauthenticated writes/reads when `LEDGER_API_KEY` set.
-4. **Checkpoint retention**; ring of last **8** checkpoints per `repoId` (mirror parity).
-5. **`trellis ledger-sprite deploy`**; bundle handler to Sprites (reuse `deploy-gateway` pattern).
-6. **`trellis remote provision`**; deploy + `remote add` + print URL/key for desk.
-7. **Contract tests**; handler must pass same scenarios as `MemoryRemoteSprite`.
+3. **Bearer auth**: reject unauthenticated writes/reads when `LEDGER_API_KEY` set.
+4. **Checkpoint retention**: ring of last **8** checkpoints per `repoId` (mirror parity).
+5. **`trellis ledger-sprite deploy`**: bundle handler to Sprites (reuse `deploy-gateway` pattern).
+6. **`trellis remote provision`**: deploy + `remote add` + print URL/key for desk.
+7. **Contract tests**: handler must pass same scenarios as `MemoryRemoteSprite`.
 
 ## 3. Non-goals (v0)
 
@@ -75,9 +75,9 @@ Rules:
 
 ### `GET /v0/ledger/checkpoints/:tailHash`
 
-**200**; raw JSONL body (same bytes pushed), or JSON wrapper `{ "checkpoint": "…" }` (client accepts both).
+**200**: raw JSONL body (same bytes pushed), or JSON wrapper `{ "checkpoint": "…" }` (client accepts both).
 
-**404**; unknown hash.
+**404**: unknown hash.
 
 ### Auth
 
@@ -160,6 +160,6 @@ Service name: `trellis-ledger`. HTTP port: `8080` (Sprites public port).
 
 | Question | Decision |
 | -------- | -------- |
-| Separate sprite vs room server? | **Yes**; dedicated ledger handler service |
-| Live Fly in CI? | **No**; in-process handler tests; optional `TRELLIS_LEDGER_SMOKE=1` manual |
+| Separate sprite vs room server? | **Yes**: dedicated ledger handler service |
+| Live Fly in CI? | **No**: in-process handler tests; optional `TRELLIS_LEDGER_SMOKE=1` manual |
 | Checkpoint retention | **8** (ring parity with local `.bak`) |

@@ -1,4 +1,4 @@
-# formula-core v1 — semantics (frozen slice 1)
+# formula-core v1; semantics (frozen slice 1)
 
 ADR [0059](../../docs/adr/0059-frozen-formula-core-dialect-adapters.md) slice 1.
 
@@ -33,7 +33,7 @@ Binary `+ - * /` coerce operands with `Number()`. Operand `null` → `0`.
 
 ## Builtins (kernel-fn)
 
-`$add`, `$sub`, `$mul`, `$div`, `$if`, `$gt`, `$eq` — arity per kernel `ExprEvaluator` v1 subset.
+`$add`, `$sub`, `$mul`, `$div`, `$if`, `$gt`, `$eq`; arity per kernel `ExprEvaluator` v1 subset.
 
 `$round(value, decimals = 0)` and `$concat(...values)` match `ExprEvaluator` exactly: `$round`
 coerces with `Number()` and rounds half up at `10^decimals`; `$concat` stringifies each value, `null`

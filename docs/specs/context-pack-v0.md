@@ -23,7 +23,7 @@ not machine-first JSON, and not wired as the default boot packet.
 
 ## 2. Goals
 
-1. Ship **`trellis context pack`**; budgeted, vantage-scoped projection.
+1. Ship **`trellis context pack`**: budgeted, vantage-scoped projection.
 2. Mirror it as MCP **`trellis_context_pack`** (same JSON shape).
 3. Ref-first: IDs + short summaries; no skill/rule prose in the pack.
 4. Provide a **hook-consumable** text/JSON path so desk session-context can

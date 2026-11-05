@@ -78,7 +78,7 @@ per-preset surface tokens in graph.
 ### 2.4 Runtime binding is a preset pointer, not Theme entities
 
 Client binds theme via `brandConfig.theme.presetId` on a per-app **settings
-blob**; not a graph `Theme` type. Preset dictionaries live in code
+blob**: not a graph `Theme` type. Preset dictionaries live in code
 (`theme-presets.ts`).
 
 ### 2.5 Page variants are layout chrome, not color

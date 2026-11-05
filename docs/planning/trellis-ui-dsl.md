@@ -37,7 +37,7 @@ The central decision this doc exists to force: **do we build a novel `.trl`
 language, or do we lean into the embedded-TS DSL that's already ~60% built?**
 Recommendation below: **embedded first, surface syntax later (maybe never).**
 
-Separately (§6): the **Block Protocol** (target **0.3**; 0.4 is paused) is a
+Separately (§6): the **Block Protocol** (target **0.3**: 0.4 is paused) is a
 strong candidate for the block↔embedder contract, and is the *correct*
 resolution of the original multi-framework "Omni" idea; interop via an
 isolation boundary, not a universal compiler. Steal its message contract; keep
@@ -46,11 +46,11 @@ ontology + TQL canonical.
 And (§7); **the most important section in this doc**: BP's *type* layer was
 rescued as **SemType** (working draft, © 2026, Apache-2.0/MIT, consumed by HASH
 and hgres). The block layer froze; the type layer survived and kept moving. It is
-our kernel already specified, and its **provenance model**; `actorType` ∈
+our kernel already specified, and its **provenance model**: `actorType` ∈
 {`user`, `machine`, `ai`} plus per-value `confidence` and `sources`; is the
 formalized trace format the AX/stigmergy thesis has been missing. Adopt the
 *shape* as a projection (**conforming producer, not native kernel**), subset
-hard, and **land provenance in the op-log now**; it's the one thing here that's
+hard, and **land provenance in the op-log now**: it's the one thing here that's
 painful to retrofit.
 
 ---
@@ -166,7 +166,7 @@ waves it away with "rules are query filters."
 security; it's a UI convenience.** If a peer has replicated the bytes to serve
 offline queries, a query filter on that peer's own machine protects nothing; the
 peer already holds the data. Real read-authorization in this model is about
-**what you replicate to whom**; capability-scoped replication and/or
+**what you replicate to whom**: capability-scoped replication and/or
 encryption; not about filtering at query time.
 
 So the "security is a type error" line inverts the actual difficulty:
@@ -228,7 +228,7 @@ A `view` **compiles to** a BP block; Studio consumes it as an embedder.
    JSON-Schema shapes and its subgraph is *fixed-depth resolution*, not Datalog.
    Trellis's power is open triples + recursive TQL. Adopting BP's type system
    *as* our ontology would cap query expressiveness. Ontology + TQL stay
-   canonical; **BP is the wire format at the block edge**; a deliberate, lossy
+   canonical; **BP is the wire format at the block edge**: a deliberate, lossy
    projection. (BP's type system is in any case superseded; see **§7 SemType**,
    which is the live successor and a much better fit.)
 2. **The isolation boundary trades away shared reactivity.** Framework-agnosticism
@@ -280,11 +280,11 @@ multiple types satisfied simultaneously via merged closure). That is EAV +
 Read the **type-closure** rules specifically; they are subtle enough that
 inventing them badly is a year of bugs:
 
-- *Data types (intersection):* `minimum` keeps the **greater**; `maximum` keeps
-  the **lesser**; `enum` **intersects** (empty ⇒ closure MUST fail); string
+- *Data types (intersection):* `minimum` keeps the **greater**: `maximum` keeps
+  the **lesser**: `enum` **intersects** (empty ⇒ closure MUST fail); string
   `format` MUST be equal across ancestors; conflicting `type` ⇒ closure MUST fail.
-- *Entity types (merge):* `properties` **union**; `required` **union**; `links`
-  **union**; but link **destination sets intersect**; `minItems` takes the
+- *Entity types (merge):* `properties` **union**: `required` **union**: `links`
+  **union**: but link **destination sets intersect**: `minItems` takes the
   greater, `maxItems` the lesser.
 
 Note the asymmetry: links union while their destinations intersect. That is
@@ -298,18 +298,18 @@ Every entity edition MUST carry `createdById`, `origin`, and **`actorType` ∈
 `location.uri`, and `loadedAt` / `firstPublished` / `lastUpdated`.
 
 Someone has specified, in an open standard, **per-value attribution of which
-agent asserted this, how confident it was, and what it read to decide**; with a
+agent asserted this, how confident it was, and what it read to decide**: with a
 first-class `ai` actor type. That is the substrate the AX / stigmergy thesis has
 been missing: if agents coordinate by leaving traces in a shared graph rather
-than messaging each other, **this is the trace format**; formalized,
+than messaging each other, **this is the trace format**: formalized,
 permissively licensed, already specified.
 
 **Take this early.** It is a schema decision, and schema decisions are painful to
 retrofit into an op-log.
 
-*Subtlety in the mapping:* SemType annotates **editions and value nodes**; a
+*Subtlety in the mapping:* SemType annotates **editions and value nodes**: a
 *state* model. The op-log is an *event* model. The asymmetry favours us (the log
-holds the whole confidence **trajectory**; a SemType value node holds only the
+holds the whole confidence **trajectory**: a SemType value node holds only the
 current one), but export must choose *which* edition's provenance it projects.
 Lossy outward, not inward.
 
@@ -336,7 +336,7 @@ ontology types prior to validation** and **MUST report unresolvable references a
 errors rather than treating them as permissive**. That reads like a DNS-and-HTTP
 assumption sitting inside a content-addressed, Iroh-transported system.
 
-**It isn't.** The spec is **silent on resolution mechanism**; it requires types
+**It isn't.** The spec is **silent on resolution mechanism**: it requires types
 be *resolvable*, not *fetched*. Versioned URLs function as **identifiers**
 resolvable by unspecified means (local store, cache, bundle, registry). So:
 **ontology records are entities in the room's graph**, replicated with it; `$id`
@@ -347,7 +347,7 @@ And it makes "a room is a file" strictly better: the room **carries its own
 types**, so it is self-describing to any peer or agent that receives it,
 **offline**. BP never had that property.
 
-**Closed-world.** Validators **MUST reject unknown fields**; SemType is
+**Closed-world.** Validators **MUST reject unknown fields**: SemType is
 explicitly closed-world. Centralized, that's a feature. In p2p with concurrent
 schema evolution, a peer holding an older ontology *rejecting* entities minted
 against a newer type is not a clean error; it's a **partition**.
@@ -355,13 +355,13 @@ against a newer type is not a clean error; it's a **partition**.
 **The spec hands us the answer in its own vocabulary: be a _forwarder_.** Of the
 four conformance targets, a **forwarder MAY preserve fields it does not
 recognize** and is **not required to validate, perform closure, or resolve
-references**; it may relay documents as opaque pass-throughs. Peer roles map
+references**: it may relay documents as opaque pass-throughs. Peer roles map
 directly onto conformance targets:
 
-- **Forwarder**; ops referencing types this peer hasn't replicated: relay,
+- **Forwarder**: ops referencing types this peer hasn't replicated: relay,
   preserve, **don't reject**.
-- **Validator**; only for types it has actually replicated.
-- **Producer**; when minting locally (MUST emit only spec-defined fields).
+- **Validator**: only for types it has actually replicated.
+- **Producer**: when minting locally (MUST emit only spec-defined fields).
 
 So "quarantine-and-backfill" isn't a semantic we must invent; it's
 **forwarder-until-you-can-be-a-validator**. Version pinning (v1 stays v1 forever)
@@ -550,7 +550,7 @@ clients via Iroh. Every layer under `view` already exists.
    - **Would change the answer:** an TQL + sql.js bundle too large for the
      browser (unmeasured); a real per-fact authorization need rooms cannot
      express.
-   - **This decision precedes 1 and 4 below**; a DSL binds to a substrate, and
+   - **This decision precedes 1 and 4 below**: a DSL binds to a substrate, and
      `tx-query`/`use:query` reads identically whether it runs locally or asks a
      server. Design it first and you may write syntax the client cannot execute.
 
@@ -590,15 +590,15 @@ clients via Iroh. Every layer under `view` already exists.
       model (server is authoritative; the live stream re-renders).
 2. **Read-authorization model** (§5); needs a dedicated ADR before `rule Read`
    is real. Blocking for Campus "room = file."
-3. **Reads/writes enforcement unification**; one mechanism or two? Today it's
+3. **Reads/writes enforcement unification**: one mechanism or two? Today it's
    two (TQL scope + capability middleware).
-4. **`view` target**; recommend Svelte 5 runes *inside* a **Block Protocol 0.3**
+4. **`view` target**: recommend Svelte 5 runes *inside* a **Block Protocol 0.3**
    block (§6), vs. own reactive runtime.
 5. **How much Block Protocol?** (§6); message contract only (recommended), or
    its type system too? The type system caps TQL expressiveness at the
    boundary. Also requires accepting that 0.4 is paused and we'd be targeting a
    de-facto frozen spec.
-6. **Is "CRDT" claimed or earned?**; need the graph conflict-semantics work
+6. **Is "CRDT" claimed or earned?**: need the graph conflict-semantics work
    before the marketing uses the word.
 7. **SemType subset; where's the line?** (§7); recommend in: three type kinds,
    `allOf` closure, `actorType`, `confidence`. Out: bi-temporal, conversions,

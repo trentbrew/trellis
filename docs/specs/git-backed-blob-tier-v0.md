@@ -32,7 +32,7 @@ content-addressed, idempotent `put`. The **policy and lifecycle** are not.
 ### 1.2 Restore gap (semantics + bytes)
 
 [TRL-222 / sprite v0](vcs-oplog-remote-sprite-v0.md) adds **peer #2 for the op
-log**; push/pull/install of `ops.json` JSONL. v0 **non-goals** explicitly
+log**: push/pull/install of `ops.json` JSONL. v0 **non-goals** explicitly
 exclude blob sync.
 
 After `trellis remote install`, materialize still calls `blobStore.get(hash)`
@@ -90,7 +90,7 @@ retain **L2A** (uploads, never-git files).
 
 1. **`BlobResolver`** (or extend `BlobStore`) with ordered lookup:
    1. `.trellis/blobs/{sha256}`; always wins (explicit upload / override)
-   2. **Git object**; when repo has `.git` and path + hash match
+   2. **Git object**: when repo has `.git` and path + hash match
    3. `null`; miss
 2. **Wire resolver** into all read paths that today call `blobStore.get`:
    - `materializeToDisk` (`src/vcs/lane-disk-materialize.ts`)
@@ -98,7 +98,7 @@ retain **L2A** (uploads, never-git files).
    - Realtime blob **GET** (unchanged source of truth for uploads)
 3. **Lazy blobbing on write:** do **not** `put` to `.trellis/blobs/` when git
    can attest the same SHA-256 at `filePath` (see §4.2).
-4. **Keep SHA-256 in ops**; no op-log migration; git uses different object
+4. **Keep SHA-256 in ops**: no op-log migration; git uses different object
    names internally; resolution is at read/write boundary only.
 5. **`trellis storage`** reports bytes by tier: local blobs / git-resolved /
    unreferenced / missing-referenced.
@@ -254,8 +254,8 @@ trellis init [--index-workspace]    # opt-in indexing; gate on size
 | File | Change |
 | ---- | ------ |
 | `src/vcs/blob-store.ts` | Optional: delegate get to resolver; keep put/delete |
-| `src/vcs/blob-resolver.ts` | **New**; ordered lookup |
-| `src/git/blob-resolve.ts` | **New**; git worktree / cat-file helpers |
+| `src/vcs/blob-resolver.ts` | **New**: ordered lookup |
+| `src/git/blob-resolve.ts` | **New**: git worktree / cat-file helpers |
 | `src/vcs/lane-disk-materialize.ts` | Pass `relPath` to resolver |
 | `src/engine.ts` | Lazy put; init gate delegation |
 | `src/vcs/types.ts` | `indexWorkspace: false`; storage config; ignore patterns |

@@ -238,24 +238,24 @@ transport.onMessage(async (message) => {
 ### Cross-Cutting Safety
 
 All four message types pass through the existing safety pipeline:
-1. **Rate limiter**; token bucket check
-2. **Risk classification**; `classifyChangeRisk()` per type
-3. **Policy check**; `shouldBlockMessage()` with env-specific policy
-4. **Quarantine**; encrypted store if blocked
+1. **Rate limiter**: token bucket check
+2. **Risk classification**: `classifyChangeRisk()` per type
+3. **Policy check**: `shouldBlockMessage()` with env-specific policy
+4. **Quarantine**: encrypted store if blocked
 
 ---
 
 ## 6. Open Questions
 
-1. **Snapshot compression**; Should `graph-snapshot` data be gzip-compressed before base64 encoding? 100 MB base64 = ~75 MB raw SQLite. Proposal: yes, compress.
+1. **Snapshot compression**: Should `graph-snapshot` data be gzip-compressed before base64 encoding? 100 MB base64 = ~75 MB raw SQLite. Proposal: yes, compress.
 
-2. **Chunking**; Should `entity-delta` messages > 1000 entities be auto-chunked by the sender? Proposal: yes, with sequence numbers for reassembly.
+2. **Chunking**: Should `entity-delta` messages > 1000 entities be auto-chunked by the sender? Proposal: yes, with sequence numbers for reassembly.
 
-3. **Conflict resolution for deltas**; If two peers send entity-deltas concurrently, how do we resolve? Proposal: last-writer-wins with `updatedAt` timestamp comparison, logged to audit trail.
+3. **Conflict resolution for deltas**: If two peers send entity-deltas concurrently, how do we resolve? Proposal: last-writer-wins with `updatedAt` timestamp comparison, logged to audit trail.
 
-4. **Lane journal pruning**; Lane journals grow unbounded. Should we snapshot + truncate after sync? Proposal: yes, with a `lane-snapshot` sub-message type.
+4. **Lane journal pruning**: Lane journals grow unbounded. Should we snapshot + truncate after sync? Proposal: yes, with a `lane-snapshot` sub-message type.
 
-5. **Snapshot scheduling**; Should `graph-snapshot` be sent on a schedule (e.g., daily) in addition to bootstrap? Proposal: not for MVP; only on bootstrap or explicit request.
+5. **Snapshot scheduling**: Should `graph-snapshot` be sent on a schedule (e.g., daily) in addition to bootstrap? Proposal: not for MVP; only on bootstrap or explicit request.
 
 ---
 

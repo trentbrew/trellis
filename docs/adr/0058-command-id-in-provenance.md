@@ -62,7 +62,7 @@ With the id in provenance, `undo <commandId>` resolves its target by scanning th
 
 | Option | Pros | Cons | Why not |
 | ------ | ---- | ---- | ------- |
-| **A; `commandId` in `OpProvenance`, null-normalized (chosen)** | provenance stays one place; fitness test covers it; ADR-0021 precedent | preimage change for new ops; hash of a given op changes vs the old shape |; |
+| **A; `commandId` in `OpProvenance`, null-normalized (chosen)** | provenance stays one place; fitness test covers it; ADR-0021 precedent | preimage change for new ops; hash of a given op changes vs the old shape |: |
 | B; separate `command_id` column on the op row | no preimage touch; queryable directly | provenance split across row + hashed body; a commandId outside the hash is forgeable/unaudited; two write paths | rejected |
 | C; session-tier only (status quo) | zero change | not durable; `undo <commandId>` dies on reload; not queryable | rejected (ADR-0016 §7 unmet) |
 | D; overload `origin` with `cli:cmd-3` | no new field | origin is a bounded transport enum; smuggling a command id breaks its meaning and the coverage test | rejected |

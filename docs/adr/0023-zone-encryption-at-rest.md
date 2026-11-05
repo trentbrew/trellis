@@ -47,7 +47,7 @@ a *boundary adapter*, not a kernel primitive.
 
 ### 1. Per-zone symmetric key, AES-256-GCM
 
-- Each zone has exactly one **zone key**; a 256-bit random symmetric key used
+- Each zone has exactly one **zone key**: a 256-bit random symmetric key used
   for AES-256-GCM over that zone's materialized facts and blob payloads.
 - AES-256-GCM gives authenticated encryption: tampering with ciphertext is
   detected at decrypt (no separate MAC). The 96-bit IV is randomized per

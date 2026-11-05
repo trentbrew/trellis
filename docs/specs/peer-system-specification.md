@@ -104,14 +104,14 @@ construction; local identity/device keys ∪ peer records:
 - A `signedBy` identity resolves when it matches a local identity or a peer
   record (`entityId`/`did`); the record's `publicKey` becomes resolvable.
 - **Revocation:** a key in `revokedKeys` never resolves. If a record's own
-  `publicKey` is listed, the record resolves to **no keys**; the identity is
+  `publicKey` is listed, the record resolves to **no keys**: the identity is
   effectively unknown and signature verification fails (safe by default).
 - **Fail-closed:** an unknown `signedBy` (no local identity, no peer record)
   resolves to nothing; there is no global directory to appeal to. A stale or
   wrong peer record (e.g. pre-rotation key) fails verification the same way.
 - **Key rotation** therefore requires updating the peer record; until then the
   peer's new ops quarantine at the gate (ADR 0035 §5).
-- Revocation is a **local trust fact**; it lives beside the handle that
+- Revocation is a **local trust fact**: it lives beside the handle that
   trusts it and propagates socially, not via a directory.
 
 ### CLI Commands

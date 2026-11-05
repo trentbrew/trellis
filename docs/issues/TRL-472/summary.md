@@ -6,7 +6,7 @@
 
 ADR 0059 decides a single zero-dep **formula core** (tokenize / parse / evaluate / serialize) with **dialect adapters** at the edges. Shablon phase 4a (`lab/oss/shablon` @ `619a730`) classifies PB vs CMS-numeric expressions but does not evaluate through one engine.
 
-This spec covers **slice 1 only**: incubate the core under `experiments/`, pin semantics in `SPEC.md`, and prove behavior via a **corpus runner**; before wiring `ExprEvaluator`, `trellis/cms`, or shablon proxy tests.
+This spec covers **slice 1 only**: incubate the core under `experiments/`, pin semantics in `SPEC.md`, and prove behavior via a **corpus runner**: before wiring `ExprEvaluator`, `trellis/cms`, or shablon proxy tests.
 
 ## Architecture
 

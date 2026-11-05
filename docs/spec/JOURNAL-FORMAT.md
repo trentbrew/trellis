@@ -102,7 +102,7 @@ Signing happens **after** the initial hash and **inside the payload**:
    and `signedWith` removed from `vcs` (remaining key order preserved):
    `bodyHash = "trellis:op:" + hex(sha256(utf8(preimage({…, vcs: rest}))))`
 2. `signature = Ed25519_sign(privateKey, utf8(bodyHash))`; base64.
-   Keys: private = **PKCS#8 DER, base64**; public = **SPKI DER, base64**.
+   Keys: private = **PKCS#8 DER, base64**: public = **SPKI DER, base64**.
 3. Stamp `vcs.signedBy` (identity entity id, e.g. `identity:did:key:…`),
    `vcs.signedWith` (device id, optional, ADR 0020), `vcs.signature`.
 4. **Recompute `op.hash`** over the full op including the signature fields, so
@@ -110,15 +110,15 @@ Signing happens **after** the initial hash and **inside the payload**:
 
 ### 3.4 Verification (normative order)
 
-1. **Structure**; `hash` matches `^trellis:op:[0-9a-f]{64}$`; `kind`,
+1. **Structure**: `hash` matches `^trellis:op:[0-9a-f]{64}$`; `kind`,
    `timestamp`, `agentId` are strings.
-2. **Hash**; recompute §3.1–§3.2 over the op as stored; must equal `hash`.
-3. **Chain**; the first op of a journal may omit `previousHash`; every later
+2. **Hash**: recompute §3.1–§3.2 over the op as stored; must equal `hash`.
+3. **Chain**: the first op of a journal may omit `previousHash`; every later
    op must carry it and it must equal the previous op's `hash`.
 4. **Signature**, when present; recompute the body hash (§3.3); resolve the
    key via a trusted keyring (`signedBy`; prefer `signedWith` device key when
    known); `verify(spkiPublicKey, signature, utf8(bodyHash))` must hold.
-5. **Signing policy**; unsigned ops are admissible only **before** the first
+5. **Signing policy**: unsigned ops are admissible only **before** the first
    signed op (repo initialization precedes identity creation); an unsigned op
    after a signed one is a violation. A signature from an unknown identity is
    a violation (no silent downgrade).
@@ -172,18 +172,18 @@ JSON.stringify({ v: 2, kind, timestamp, agentId, previousHash: x ?? null,
 2. **`parents: string[]`** replacing `previousHash`; the DAG required for
    concurrent agents/devices and lineage merges. Keep `previousHash` as an
    alias for `parents[0]` for one version, then retire it.
-3. **Canonical `vcs` key order**; remove mint-order sensitivity (§3.1).
+3. **Canonical `vcs` key order**: remove mint-order sensitivity (§3.1).
    Recommended: per-kind declared field order, hashed exactly as declared.
-4. **Signature placement decision**; status quo (`hash` covers the signature;
+4. **Signature placement decision**: status quo (`hash` covers the signature;
    body hash excludes it) vs **envelope signature** (`hash` covers content
    only; signing/re-signing never changes the content address). Recommended:
    envelope signature; it makes `hash` stable under re-signing and keeps
    tamper evidence identical.
-5. **`author`**; primary writer identity = DID (`signedBy`), with `agentId`
+5. **`author`**: primary writer identity = DID (`signedBy`), with `agentId`
    demoted to a display label.
 6. **Kind namespace registry + per-kind `schemaVersion`** where payload shape
    evolves independently of the envelope.
-7. **Conformance corpus extension**; add a diverged-DAG fixture when v2
+7. **Conformance corpus extension**: add a diverged-DAG fixture when v2
    lands; the validator's chain rule in §3.4.3 becomes a parents-set rule.
 
 ## 7. Non-goals

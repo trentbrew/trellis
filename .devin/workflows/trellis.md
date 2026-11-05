@@ -95,11 +95,11 @@ trellis realtime-sync quarantine reject <id>  # reject suspicious changes
 ## Key Rules
 
 - **Never** modify `.trellis/` directly
-- Ops are automatic — no staging or committing needed
+- Ops are automatic; no staging or committing needed
 - Milestones replace commits as the unit of narrative
 - Always check the garden for abandoned work before starting fresh
-- **Start issues, don't just branch** — `trellis issue start` provides better traceability
-- **Pause before context-switching** — `trellis issue pause` first
-- **Two-phase close gate** — all acceptance criteria must pass AND `--confirm` required
-- **Issues default to backlog** — use `trellis issue triage` to move to open, or `trellis issue start` to jump to in_progress
-- **Add descriptions** — use `--desc` on create or `trellis issue describe` for short descriptions
+- **Start issues, don't just branch**: `trellis issue start` provides better traceability
+- **Pause before context-switching**: `trellis issue pause` first
+- **Two-phase close gate**: all acceptance criteria must pass AND `--confirm` required
+- **Issues default to backlog**: use `trellis issue triage` to move to open, or `trellis issue start` to jump to in_progress
+- **Add descriptions**: use `--desc` on create or `trellis issue describe` for short descriptions

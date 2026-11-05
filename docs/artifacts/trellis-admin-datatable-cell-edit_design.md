@@ -153,7 +153,7 @@ box (`padding: 0 14px` inherited rhythm).
 | Single-click `td[data-editable=true]` | Begin edit: `stopPropagation`; add `cell-editing`; mount `<input>`; select value; dispatch `trellis:cell-activate` |
 | Single-click non-editable cell / row chrome (not editing) | Seam C: open `#dlg` |
 | Editing + click non-editable cell / row chrome | **Commit** current cell first; then open `#dlg` for that row (blur/commit completes before activate) |
-| Double-click any row | **Out of v1**; do not add; single-click Seam C + F2/edit click suffice |
+| Double-click any row | **Out of v1**: do not add; single-click Seam C + F2/edit click suffice |
 | Row focused + **F2** (or **e**) | Begin edit on **first editable** cell in that row (`branch`); do **not** open `#dlg` |
 | Enter (while editing) | Commit → `trellis:cell-commit` → same col, next visible row (stay if last) |
 | Tab / Shift+Tab (editing) | Commit → next / prev **editable** cell in row, then wrap to next/prev row’s editable |
@@ -164,7 +164,7 @@ box (`padding: 0 14px` inherited rhythm).
 | Search would hide editing row | **Cancel** edit (restore), then apply `.hidden-by-search` |
 | Invalid issue id on commit | Keep editing; `aria-invalid` on input + `td`; show `#cell-edit-error`; **no** `trellis:cell-commit` |
 | Empty issue on commit | Store null; display `: ` |
-| Empty branch on commit | **Reject**; keep editing; `aria-invalid` + error “Branch required” |
+| Empty branch on commit | **Reject**: keep editing; `aria-invalid` + error “Branch required” |
 | Mutation host rejects commit | Toast error via `#toast`; **restore** prior cell text; exit edit (do not leave dirty UI) |
 | Row Enter/Space (not editing) | Open `#dlg` (existing) |
 
@@ -198,7 +198,7 @@ not editing + Enter     → #dlg
 
 ## Mutation seam (Open for Architect; behavior lock)
 
-Design locks **UX**; Architect picks wire:
+Design locks **UX**: Architect picks wire:
 
 1. Module dispatches `trellis:cell-commit` with `{ entityId, field, value, col }`  
 2. Shell or host listens → mutate lane meta via existing admin/TML path  

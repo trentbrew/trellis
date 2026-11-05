@@ -15,7 +15,7 @@ From now on, **Trellis-built UI surfaces are TML-first**:
 - Markup + `tml-*` attributes + a `TmlDriver` (web / Tauri / peer)
 - **No new React, Svelte, or Vue apps** for Trellis product chrome
 - Existing framework SDKs may remain for **external** integrators
-- Fractal-playground / AppShell sketches are **prototypes**; kernel **admin** (and successors) are the durable Operate surface
+- Fractal-playground / AppShell sketches are **prototypes**: kernel **admin** (and successors) are the durable Operate surface
 
 TML is the companion markup language to TQL; declarative bind/project/mutate over the graph; not “another component framework.”
 
@@ -31,7 +31,7 @@ TML is the companion markup language to TQL; declarative bind/project/mutate ove
 
 ### Thing
 
-Ontology root. A Thing has **no canonical representation**; only identity and facts. Fractal thesis: representation is a function of **vantage** (focal depth), not of a hard-coded component type.
+Ontology root. A Thing has **no canonical representation**: only identity and facts. Fractal thesis: representation is a function of **vantage** (focal depth), not of a hard-coded component type.
 
 ### Shell
 
@@ -133,7 +133,7 @@ World (graph of Things)
 
 ### Compatibility verdict
 
-**High**, if we treat the 3D viewport as a **primitive** and museum UI chrome as **TML shells**; not if we try to express meshes, materials, or per-frame juice as `tml-*` attributes.
+**High**, if we treat the 3D viewport as a **primitive** and museum UI chrome as **TML shells**: not if we try to express meshes, materials, or per-frame juice as `tml-*` attributes.
 
 | Concern | Fit |
 | ------- | --- |

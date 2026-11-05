@@ -15,10 +15,10 @@ Everything that builds trust is open. Everything that costs money to run, or dep
 
 ## What's open (and why)
 
-**Trellis**; the graph kernel itself. AGPL-3.0.
-**Trellis Studio**; the flagship product surface (`npx trellis studio`).
-**Nodebook**; full-featured Trellis client/workspace.
-**Playlab**, **Grid Engine**, **Trellis TUI**; clients and tools built on the kernel.
+**Trellis**: the graph kernel itself. AGPL-3.0.
+**Trellis Studio**: the flagship product surface (`npx trellis studio`).
+**Nodebook**: full-featured Trellis client/workspace.
+**Playlab**, **Grid Engine**, **Trellis TUI**: clients and tools built on the kernel.
 
 These are open because the core Trellis claim; *servers may relay, accelerate, index, or back up, but never own state*; is only credible if the code enforcing it is inspectable. A promise about data ownership that you can't verify isn't a promise, it's marketing. Open-sourcing the whole client/kernel layer is what makes "local-first" mean something instead of being a slide.
 
@@ -26,8 +26,8 @@ It also does the unglamorous work of building the ecosystem: adoption, contribut
 
 ## What's closed / what's sold
 
-**TurtleDB**; hosted BaaS layer. The value is operating it, not the idea of it.
-**Studio's cloud sandboxes**; e2b.dev infrastructure has real, ongoing cost. Open client code doesn't give away the hosting bill.
+**TurtleDB**: hosted BaaS layer. The value is operating it, not the idea of it.
+**Studio's cloud sandboxes**: e2b.dev infrastructure has real, ongoing cost. Open client code doesn't give away the hosting bill.
 **Vertical deployments** (Raster.tv / SPEAK Minneapolis and future partners like it); the code is a small part of this. The value is the relationship, the domain-specific data model, the integration work, and being the one who shows up and runs it.
 
 These stay closed (or at least commercial) not to withhold code, but because none of them are things "open-sourcing" even helps with; you can't open a hosting bill or a client relationship.

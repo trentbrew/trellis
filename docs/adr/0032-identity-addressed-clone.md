@@ -46,7 +46,7 @@ trellis project list [{peer}]              # discovery, identity-scoped
 trellis project publish                    # L1+: register + make discoverable
 ```
 
-- `{peer}` is an **Ed25519 identity**; a DID (`did:key:…`), its `entityId`,
+- `{peer}` is an **Ed25519 identity**: a DID (`did:key:…`), its `entityId`,
   or a name bound to one in the local resolver. The repo is a **slug scoped
   under that identity**. `{peer}/{repo}` is a stable human handle for a repo
   whose true identity is its **causal chain** (`repoId`).
@@ -61,7 +61,7 @@ trellis project publish                    # L1+: register + make discoverable
 
 - Binds the person's identity (creates or reuses `~/.trellis/identity.json`),
   records `owner`, and slugs the project.
-- Writes the **genesis attestation**; the genesis op is signed by the owner:
+- Writes the **genesis attestation**: the genesis op is signed by the owner:
   "I, `identity:…`, created ledger `repoId` named `{repo}`".
 - **Onboarding REPL:** interactive prompts for project name and **kind**
   (code, knowledge base, notes, data, media, other). The kind is a graph fact,
@@ -78,7 +78,7 @@ and is shared by all repos on that machine.
 - **New VM, same person** via two supported paths:
   1. **Export/import** the person key (`trellis identity export/import`),
      like SSH keys.
-  2. **QR device pairing**; reuse ADR 0020's existing `pairStart/pairJoin/
+  2. **QR device pairing**: reuse ADR 0020's existing `pairStart/pairJoin/
      pairApprove` to enroll a new VM against the person's root identity.
 - The genesis attestation and every op sign with the **person key**, so push-back
   from any VM verifies against the same identity. VMs know they are the same
@@ -126,7 +126,7 @@ Because the target is an identity, clone can verify instead of assuming:
 There is no "private" bit. A project is either:
 
 - **local** (default); never pushed to a sprite, not discoverable anywhere, or
-- **published**; pushed to a sprite and listed in its `/v0/ledger/repos` index.
+- **published**: pushed to a sprite and listed in its `/v0/ledger/repos` index.
 
 "Private" is just *unpublished*. Access control is **not a project property** : 
 it is a **ledger policy** on the sprite (keyed read/push, ADR 0028), orthogonal
@@ -144,26 +144,26 @@ project into a published one (remote add + push + index registration).
 
 ### Positive
 
-- **Projects name people, not hosts**; `trellis project clone
+- **Projects name people, not hosts**: `trellis project clone
   trent/trellis-node`, matching the identity-first mental model of the graph.
-- **Lifecycle in one place**; create/clone/list/publish under `trellis
+- **Lifecycle in one place**: create/clone/list/publish under `trellis
   project`; a project is a first-class object, not an afterthought of init.
-- **Portable identity**; one person key across VMs via export/import or the
+- **Portable identity**: one person key across VMs via export/import or the
   existing QR pairing; same signature, same person, any machine.
-- **Transport freedom**; the resolver can later point a peer at a sprite, an
+- **Transport freedom**: the resolver can later point a peer at a sprite, an
   Iroh peer, or a relay with no CLI change.
-- **Verifiable provenance**; a clone proves the chain belongs to the named
+- **Verifiable provenance**: a clone proves the chain belongs to the named
   identity instead of trusting a URL.
-- **No URL parsing in the command surface**; smaller attack surface.
+- **No URL parsing in the command surface**: smaller attack surface.
 
 ### Negative
 
-- **v0 needs `peers.json`**; a peer's projects are only cloneable if their
+- **v0 needs `peers.json`**: a peer's projects are only cloneable if their
   sprite is already in the resolver (L1 discovery fills this later).
 - **Two namespaces to reconcile** (`{peer}/{repo}` handle vs content-addressed
   `repoId`); the binding lives in `remote.default` + the genesis attestation
   and must stay consistent.
-- **Person-key migration cost**; repos with an old per-repo identity need to
+- **Person-key migration cost**: repos with an old per-repo identity need to
   re-attest or adopt the person key.
 - **`project create` REPL is a new interactive surface** to build and test.
 

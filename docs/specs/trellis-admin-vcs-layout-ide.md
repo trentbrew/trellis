@@ -39,7 +39,7 @@ Static HTML/CSS/JS in `admin.html` only; no React port.
 | Default op-log | **`html.oplog-collapsed` by default** (no 4th column); `--oplog-w: 0px` in default shell grid |
 | Pin inspector | Class **`html.inspector-pinned`** adds 4th column; reuse `#oplog` as **Live ops** inspector; title **“Live ops”** (not “Op log”) |
 | Secondary toggle | **`#secondary-toggle`** moves from removed operate row → **`.view-header`** (all routes) |
-| Secondary width | CSS default **`--secondary-w: 224px`**; resize 160–360px (unchanged keys) |
+| Secondary width | CSS default **`--secondary-w: 224px`**: resize 160–360px (unchanged keys) |
 | Secondary collapse | Keep **`html.secondary-collapsed`** → 48px icon rail |
 | Crumb | Keep `#crumb-route` text **`vcs`** (do not append work/logs segment this wedge) |
 | Theme | `/theme/runtime-theme.css` only |

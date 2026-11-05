@@ -77,7 +77,7 @@ works for six hours stays live without re-announcing.
 ### 3. The presence ledger is refreshed at the harness boundary, not on `issue start`
 
 ADR 0024 keyed heartbeats to the canonical "heads down" moment. That is too
-coarse. The heartbeat is (re)written wherever a **turn is observed**; the same
+coarse. The heartbeat is (re)written wherever a **turn is observed**: the same
 boundary ADR 0051 d5 already establishes for usage; so one hook serves both
 metrics and presence. Extend `PresenceInfo` with: `provider`, `model`,
 `harness`, `task` (short, derived from lane/issue/plan title), and `dir`
@@ -89,7 +89,7 @@ Not every harness will announce, and third-party IDEs never will. A census
 adapter derives liveness from each harness's native record when no heartbeat is
 fresh: `opencode` → `opencode.db` `session.time_updated`; `claude` → session
 JSONL mtime; any → process `cwd` under the scope root. Adapters are **local,
-read-only, and best-effort**; they supplement the ledger, never replace it.
+read-only, and best-effort**: they supplement the ledger, never replace it.
 Adapters report `verified: false` (see d7) because activity is inferred, not
 asserted.
 

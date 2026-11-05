@@ -38,10 +38,10 @@ The application layer already has a location model, though it is implicit:
 
 So three different things are currently called "location":
 
-1. **A place**; a durable thing with coordinates and a name ("Ferry Building").
-2. **A role**; how a record relates to a place ("happened at", "departed from",
+1. **A place**: a durable thing with coordinates and a name ("Ferry Building").
+2. **A role**: how a record relates to a place ("happened at", "departed from",
    "going to").
-3. **A label**; human text on a record ("Ferry Building, SF"), which may be
+3. **A label**: human text on a record ("Ferry Building, SF"), which may be
    geocoded on demand.
 
 A `location` property type would collapse all three into one column and force

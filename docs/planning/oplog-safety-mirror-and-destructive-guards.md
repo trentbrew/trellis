@@ -83,15 +83,15 @@ target is a Trellis VCS root or trellis package checkout.
 
 ## Recovery playbook
 
-1. **Stop writers**; close agents, lane watch, IDE hooks running repair
-2. **Check mirror**; `~/.trellis/oplog-mirror/<repoKey>/journal.jsonl`
-3. **Compare line counts**; mirror vs repo `.trellis/ops.json`
-4. **Restore**; `trellis repair --confirm-destructive` (auto-prefers mirror when longer)
-5. **Remote**; `trellis remote pull` when TRL-222 lands
+1. **Stop writers**: close agents, lane watch, IDE hooks running repair
+2. **Check mirror**: `~/.trellis/oplog-mirror/<repoKey>/journal.jsonl`
+3. **Compare line counts**: mirror vs repo `.trellis/ops.json`
+4. **Restore**: `trellis repair --confirm-destructive` (auto-prefers mirror when longer)
+5. **Remote**: `trellis remote pull` when TRL-222 lands
 6. **Never** run repair on a journal that parses as valid JSONL without human triage
 
 ## Product note
 
-Local mirror is **one machine, one user**; protects against bad CLI and
+Local mirror is **one machine, one user**: protects against bad CLI and
 single-file overwrite, not disk loss or ransomware. Remote peer remains the
 cross-machine witness (GitHub-analog seed in TRL-222).

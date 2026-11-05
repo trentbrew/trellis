@@ -73,10 +73,10 @@ experimental.
 
 | Option | Pros | Cons | Why not |
 | ------ | ---- | ---- | ------- |
-| A; two roles, lexicon contract (chosen) | One place to author; projections stay small and generated | The exporter (TRL-498) becomes load-bearing |; |
+| A; two roles, lexicon contract (chosen) | One place to author; projections stay small and generated | The exporter (TRL-498) becomes load-bearing |: |
 | B; Shablon as a second authoring client | Reuses PocketBase's mature admin UI | Two schema editors over one graph; PocketBase's model can't express lexicons or shared relations | Drift |
 | C; one renderer for both | One codebase | Projections need a tiny, no-build, pinned runtime (Shablon 0008 §3); authoring needs a rich live client | Fits neither |
-| D; leave as is | No work | The duplicates in the table keep drifting |; |
+| D; leave as is | No work | The duplicates in the table keep drifting |: |
 
 ## Consequences
 

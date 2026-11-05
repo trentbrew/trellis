@@ -14,17 +14,17 @@ first-class **schedule entity + ephemeral runner** pair.
 
 ## Decision
 
-1. **Schedule as durable graph state**; `CronJob` / `CronRun` entities (all
+1. **Schedule as durable graph state**: `CronJob` / `CronRun` entities (all
    fields `sync: durable`). Explicit ids allowed (`cron:demo-ping`).
-2. **Runner as ephemeral process**; `CronScheduler` in `trellis/plugins/cron`,
+2. **Runner as ephemeral process**: `CronScheduler` in `trellis/plugins/cron`,
    started on `trellis db serve` / `TrellisServer` when `TRELLIS_CRON !== '0'`
    (default on). Not the presence relay in v1.
-3. **Primary schedule**; `intervalMs` (≥ 500). Optional crontab deferred.
-4. **Handlers**; registry with builtins `builtin:ping`, `builtin:counter`; apps
+3. **Primary schedule**: `intervalMs` (≥ 500). Optional crontab deferred.
+4. **Handlers**: registry with builtins `builtin:ping`, `builtin:counter`; apps
    may `registerHandler`.
-5. **Lease claim**; `leaseOwner` + `leaseExpiresAt` prevent double-fire across
+5. **Lease claim**: `leaseOwner` + `leaseExpiresAt` prevent double-fire across
    overlapping ticks / multi-runner.
-6. **Optional probe**; `GET /cron/status` → `{ running, tickMs, jobCount }`.
+6. **Optional probe**: `GET /cron/status` → `{ running, tickMs, jobCount }`.
 
 ## Consequences
 

@@ -20,7 +20,7 @@ A **host primitive**: push/pop inspect frames for a Thing id, with a stable layo
 | # | Decision |
 | - | -------- |
 | D1 | **Admin is the test bed** for stack + inspect chrome (not extract-first from trellis-client) |
-| D2 | Sidebar tabs: **Properties** · **References** · **Activity**; three top-level only |
+| D2 | Sidebar tabs: **Properties** · **References** · **Activity**: three top-level only |
 | D3 | **Activity** = one stream: change history (ops) **and** ad-hoc comments, interleaved. Not separate top-level tabs; not “ops ‖ comments” as two products |
 
 ## Scope (v0)
@@ -81,7 +81,7 @@ Two different things often get conflated:
 
 | Piece | Whose job? | Shared or per-kind? |
 | ----- | ---------- | ------------------- |
-| **Inspect host chrome** | Stack, resize, back, sidebar tab strip, Activity feed chrome | **Always universal**; one `InspectHost` |
+| **Inspect host chrome** | Stack, resize, back, sidebar tab strip, Activity feed chrome | **Always universal**: one `InspectHost` |
 | **Main preview** | How *this* Thing looks at inspect density | **Per-kind shells** (via resolve) |
 | **Properties panel** | Which fields / editors | **Per-kind** (schema or property pack); host only provides the tab slot |
 | **References** | Backlinks query UI | **Universal** list; row = mention-density shell of each linked Thing |
@@ -102,7 +102,7 @@ InspectHost (universal)
 - **Do** ship a **fallback** `thing.inspect` (title + id + raw facts) for unknown kinds so the host never blanks.
 - **Do** add `issue.inspect` / `lane.inspect` as real shells when admin needs richer previews; same resolve table as board cards.
 
-So: **universal host + fallback shell + per-kind preview shells as needed**; not “one mega shell” and not “N completely separate dialog components.”
+So: **universal host + fallback shell + per-kind preview shells as needed**: not “one mega shell” and not “N completely separate dialog components.”
 
 ```tml
 resolve kind {

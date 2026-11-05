@@ -12,10 +12,10 @@
 
 Build the **dynamic board projection** the admin UI's kanban view should have always been, as a proper headless core. The admin kanban is static today: three hard-coded columns mapping issue `status` values, rendered by a TML query. Notion-style boards generalize that:
 
-- **any property can drive the columns**; group rows by `status`, `priority`, `owner`, a `select`, a `date` granularity, or a boolean; and you can switch the grouping field live;
-- **columns are not fixed**; create, rename, reorder, sort, hide, collapse, and color-code them;
-- **cards are entity rows**; moving a card across columns updates that entity's group property, which is **one EQL-S write = one op** (the graph write-surface pattern already proven by `table-core`);
-- **boards are saved views**; many boards over one dataset, each a pure JSON descriptor.
+- **any property can drive the columns**: group rows by `status`, `priority`, `owner`, a `select`, a `date` granularity, or a boolean; and you can switch the grouping field live;
+- **columns are not fixed**: create, rename, reorder, sort, hide, collapse, and color-code them;
+- **cards are entity rows**: moving a card across columns updates that entity's group property, which is **one EQL-S write = one op** (the graph write-surface pattern already proven by `table-core`);
+- **boards are saved views**: many boards over one dataset, each a pure JSON descriptor.
 
 The core is framework-free and DOM-free (ADR 0034 §4.2 Tier 2): the row model adopts `@tanstack/table-core` (filter/sort/group), the same engine `table-core` wraps, and `undo-history-core` composes the transient edit layer. Visual rendering; drag-and-drop, column chrome, card layout; is adapter-tier DOM glue over core state.
 
@@ -182,7 +182,7 @@ export interface BoardDescriptor {
 **Card level** (data mutations; each is one undo step)
 
 - `addCard(columnId, draft)`; create a row with the group field set to the column's value; `onCardAdd` write hook → one op.
-- `moveCard(cardId, fromColumnId, toColumnId, opts?)`; **set the row's group-field value to the destination column's value**; `onCardMove(rowId, fieldId, value)` → one EQL-S entity write. If a rank field is configured, `opts.index` writes the rank (combined into the same step when the write hook reports an entity write).
+- `moveCard(cardId, fromColumnId, toColumnId, opts?)`; **set the row's group-field value to the destination column's value**: `onCardMove(rowId, fieldId, value)` → one EQL-S entity write. If a rank field is configured, `opts.index` writes the rank (combined into the same step when the write hook reports an entity write).
 - `reorderCard(cardId, columnId, index)`; manual order within a column; requires a configured `rankField`, else returns `false`.
 - `removeCard(cardId)`; delete the row; `onCardDelete` → one op.
 
@@ -219,7 +219,7 @@ The board is the graph write-surface pattern applied to grouping: **drag a card 
 
 ### 6.2 Undo boundary
 
-Data-affecting actions (`addCard`, `moveCard`, `reorderCard`, `removeCard`) push undo steps. **View-state actions are not undo steps**; column reorder/color/collapse/hide, sort mode, group-field switch are board-descriptor edits committed by `saveBoard` (matching Notion: reordering columns isn't an undo action; moving a task is). The undo core is composed via the standard `UndoLike` contract (`table-core` precedent):
+Data-affecting actions (`addCard`, `moveCard`, `reorderCard`, `removeCard`) push undo steps. **View-state actions are not undo steps**: column reorder/color/collapse/hide, sort mode, group-field switch are board-descriptor edits committed by `saveBoard` (matching Notion: reordering columns isn't an undo action; moving a task is). The undo core is composed via the standard `UndoLike` contract (`table-core` precedent):
 
 ```ts
 const undo = createUndoHistoryCore();

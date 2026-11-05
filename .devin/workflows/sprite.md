@@ -74,13 +74,13 @@ Wake-up is fast:
 - ~100–500ms for normal wakes
 - 1–2s on cold starts
 
-When a request hits your Sprite's URL, it wakes automatically. To make sure your web server is ready to handle that request, use **Services** — processes that auto-restart whenever your Sprite wakes up:
+When a request hits your Sprite's URL, it wakes automatically. To make sure your web server is ready to handle that request, use **Services**: processes that auto-restart whenever your Sprite wakes up:
 
 ```bash
 sprite-env services create my-server --cmd node --args server.js
 ```
 
-Services survive hibernation. TTY sessions don't — they're great for interactive work and debugging, but any process started with `sprite exec` or `sprite console` stops when the Sprite sleeps.
+Services survive hibernation. TTY sessions don't; they're great for interactive work and debugging, but any process started with `sprite exec` or `sprite console` stops when the Sprite sleeps.
 
 ### Idle Detection
 
@@ -106,7 +106,7 @@ sprite url update --auth default # make private again
 ```
 
 - Routes to port 8080 by default (or first HTTP port opened)
-- Wakes the Sprite on request — pair with a Service so your server is ready to handle it
+- Wakes the Sprite on request; pair with a Service so your server is ready to handle it
 - Private by default (auth token required)
 
 > **Security note:** Public URLs expose your Sprite to the internet. Only use public mode for demos, webhooks, or non-sensitive work.
@@ -216,7 +216,7 @@ Use before risky changes, upgrades, or experiments.
 **Good to know:**
 
 - Checkpoints count against your storage quota
-- Restoring replaces the entire filesystem—changes since the checkpoint are lost
+- Restoring replaces the entire filesystem: changes since the checkpoint are lost
 - Creation takes 10–30 seconds depending on data size
 
 ---
@@ -229,7 +229,7 @@ These features are useful once you're comfortable.
 
 Use SSHFS to mount your Sprite and edit files with your local tools.
 
-Sprites don't expose SSH directly—you'll need to install an SSH server on your Sprite and tunnel the connection through `sprite proxy`. This keeps your Sprite secure while still allowing local filesystem access.
+Sprites don't expose SSH directly: you'll need to install an SSH server on your Sprite and tunnel the connection through `sprite proxy`. This keeps your Sprite secure while still allowing local filesystem access.
 
 **1. Prepare an SSH server on your Sprite:**
 
@@ -329,7 +329,7 @@ sprite exec free -h     # memory usage
 
 ---
 
-Sprites are meant to feel like your own Linux box in the sky—fast to wake, persistent when you need it, and flexible enough to run whatever weird stack you're building. As you get more comfortable, the advanced features are there when you need them.
+Sprites are meant to feel like your own Linux box in the sky: fast to wake, persistent when you need it, and flexible enough to run whatever weird stack you're building. As you get more comfortable, the advanced features are there when you need them.
 
 ---
 

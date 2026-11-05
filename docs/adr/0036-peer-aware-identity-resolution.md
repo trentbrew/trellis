@@ -26,7 +26,7 @@ root key). It never consults `~/.trellis/peers.json`.
 Consequence: identity in Trellis is socially witnessed; a `{peer}` handle
 references a person *you know*, and the local peer graph is the trust data
 (`docs/specs/peer-system-specification.md`). A remote op signed by a known
-peer's identity is, to `pairingResolver`, an **unknown identity**; the entire
+peer's identity is, to `pairingResolver`, an **unknown identity**: the entire
 witness model is inert at the authenticity gate. The peer records *carry* the
 public key (`PeerRecord.publicKey`) but nothing ever reads it back out for
 verification.
@@ -41,7 +41,7 @@ Two further gaps, discovered in the audit:
 2. **`verifyOpBatch` has two consumers with no shared resolver construction**
    (`capability.ts:408` attribution; `project.ts:95` genesis verification), and
    the remote-apply path (`room-core.ts` `handleOps`) has **no resolver at
-   all**; only hash verification (`verifyVcsOpHash`, room-core.ts:308).
+   all**: only hash verification (`verifyVcsOpHash`, room-core.ts:308).
 
 ## Decision
 
@@ -68,7 +68,7 @@ site**, replacing direct `pairingResolver` use:
 ### 2. Revocation is a local trust fact on the peer record
 
 - `PeerRecord` gains `revokedKeys?: string[]` (`src/vcs/peer-resolver.ts`).
-- Semantics: a key listed in `revokedKeys` **never resolves**; the resolver
+- Semantics: a key listed in `revokedKeys` **never resolves**: the resolver
   filters it out of every path. If a record's own `publicKey` is listed, the
   record resolves to **no keys** (the identity is effectively unknown →
   signature verification fails → gate fails closed).
@@ -94,7 +94,7 @@ site**, replacing direct `pairingResolver` use:
 
 - **Attestation chains / trust levels** (peer system TRL-383/384); future
   strengthening of `resolvePublicKeys`; the interface does not change.
-- **Peer device registries**; peer records carry one root key today; per-peer
+- **Peer device registries**: peer records carry one root key today; per-peer
   device key lists are a peer-system extension, not this ADR's concern.
 - **Capability preconditions** (ADR 0035 §8); the resolver feeds attribution,
   not capability evaluation.

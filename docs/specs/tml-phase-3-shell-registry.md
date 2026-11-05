@@ -124,12 +124,12 @@ No runtime vantage selection in Phase 3.
 
 | File | Action |
 | ---- | ------ |
-| `src/ui/tml-shell-registry.ts` | **new**; register + hydrate |
+| `src/ui/tml-shell-registry.ts` | **new**: register + hydrate |
 | `src/ui/admin-shell.ts` | call `hydrateShellSlots` before `mount` |
 | `src/ui/admin.html` | `<template id="shell-issue-card">`; kanban slots |
 | `src/ui/lanes-dashboard.ts` | serve registry module if bundled separately |
 | `src/ui/ui-dev.ts` | add registry to dev entries if needed |
-| `test/ui/tml-shell-registry.test.ts` | **new**; register, hydrate, clone count |
+| `test/ui/tml-shell-registry.test.ts` | **new**: register, hydrate, clone count |
 
 ---
 

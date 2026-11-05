@@ -14,7 +14,7 @@
 Ship **`trellis admin`** as the operator console that can **replace**
 `trellis lane watch` at parity. Visual language follows the design mock
 (AffordanceShell: rail · header · TML projection · op-log). Materialization is
-**TML**; tokens from kernel **`runtime-theme.css` only**.
+**TML**: tokens from kernel **`runtime-theme.css` only**.
 
 **v1 host (locked):** kernel-served HTML on the lanes dashboard server (same
 process family as `lane watch`). fractal-playground AffordanceShell host is

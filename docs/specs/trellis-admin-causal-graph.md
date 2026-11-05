@@ -12,7 +12,7 @@
 
 ## 1. Intent
 
-Replace the **Logs → Branches** stub in admin with a **Causal History Graph**; vertical
+Replace the **Logs → Branches** stub in admin with a **Causal History Graph**: vertical
 git-client topology of integration milestones, agent lane forks, and promote merges.
 Complements (does not replace) the Logs/Ops linear op tail.
 
@@ -145,12 +145,12 @@ excluding trunk).
 
 | File | Change |
 | ---- | ------ |
-| `src/ui/causal-graph-snapshot.ts` | **New**; types + `buildCausalGraphSnapshot` + pure helpers |
-| `src/ui/admin-causal-graph.ts` | **New**; primitive mount/render/selection |
+| `src/ui/causal-graph-snapshot.ts` | **New**: types + `buildCausalGraphSnapshot` + pure helpers |
+| `src/ui/admin-causal-graph.ts` | **New**: primitive mount/render/selection |
 | `src/ui/lanes-dashboard.ts` | `GET /api/causal-graph`; bundle `/admin-causal-graph.js` |
 | `src/ui/admin.html` | Replace stub panel; graph CSS; import mount; route lifecycle; `updateViewMeta` for branches |
-| `test/ui/causal-graph-snapshot.test.ts` | **New**; projection + lane assignment |
-| `test/ui/admin-causal-graph.test.ts` | **New**; edge path + selection helpers |
+| `test/ui/causal-graph-snapshot.test.ts` | **New**: projection + lane assignment |
+| `test/ui/admin-causal-graph.test.ts` | **New**: edge path + selection helpers |
 | `e2e/admin.spec.cjs` | Branches route: host visible, row select meta, view-meta counts |
 | `docs/specs/trellis-admin-causal-graph.md` | This file |
 

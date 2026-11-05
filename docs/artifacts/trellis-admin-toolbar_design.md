@@ -128,11 +128,11 @@ medium sans. Search placeholder sans (drop mono-only search field).
 
 ### L→R toolbar order (normative)
 
-1. **View picker**; Grid · Kanban · Table (icon + **label only when active**)
-2. **Search composite**; `flex: 1`; search icon + input + clear
-3. **Filters**; ghost icon button; stub menu (table-oriented copy)
-4. **Export**; ghost icon; **disabled**; `aria-label="Export"`
-5. **+ New issue**; primary; **disabled** this wedge; name “New issue (coming soon)”
+1. **View picker**: Grid · Kanban · Table (icon + **label only when active**)
+2. **Search composite**: `flex: 1`; search icon + input + clear
+3. **Filters**: ghost icon button; stub menu (table-oriented copy)
+4. **Export**: ghost icon; **disabled**: `aria-label="Export"`
+5. **+ New issue**: primary; **disabled** this wedge; name “New issue (coming soon)”
 
 **Out of toolbar:** Upload, Physics, Hash/Query search modes, schema view
 eligibility, grid column-count control.

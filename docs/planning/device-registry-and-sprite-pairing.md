@@ -89,7 +89,7 @@ identity), so a paired device is recognized by every clone of the identity.
 3. Migration: `migrateUp`; on read, if the person-scoped store is empty but
    a legacy repo-scoped file exists, copy it up once (raw bytes, one-way
    ratchet). Repo copies remain as stale snapshots.
-4. **`pairingResolver` is no longer null-gated on local identity**; a machine
+4. **`pairingResolver` is no longer null-gated on local identity**: a machine
    with no identity still verifies remote ops signed by identities it knows
    through pairing (fail-closed: unknown identities resolve to nothing). The
    gate requires this: identity-less peers must see the device registry.
@@ -158,13 +158,13 @@ identity), so a paired device is recognized by every clone of the identity.
 
 ## 4. Sequencing
 
-1. **Slice A**; onboarding-first identity + pairing + device-signed ops;
+1. **Slice A**: onboarding-first identity + pairing + device-signed ops;
    prerequisite for everything; small diff; makes fresh repos signed from
    op #1 and pairing person-scope-correct.
-2. **Slice B**; registry follows the person before devices gain state
+2. **Slice B**: registry follows the person before devices gain state
    (otherwise Slice C's metadata is stranded per-clone).
-3. **Slice C**; management surface; feeds the sprite story's visibility.
-4. **Slice D**; sprite pairing + realtime sync + revocation propagation;
+3. **Slice C**: management surface; feeds the sprite story's visibility.
+4. **Slice D**: sprite pairing + realtime sync + revocation propagation;
    depends on A (onboarding/new-user default for headless provisioning, B
    (device follows person), and the ADR 0035/0036 gate being verifiable for
    device-signed ops.

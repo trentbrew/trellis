@@ -102,7 +102,7 @@ resolves; pass or fail.
 
 | Option | Pros | Cons | Why not |
 | --- | --- | --- | --- |
-| **A; extract frozen core; dialects become adapters (chosen)** | one semantics authority; client/PB/determinism surfaces can all ride it; zero-dep preserves ethos | corpus + SPEC must be pinned before migration; adapters to build |; |
+| **A; extract frozen core; dialects become adapters (chosen)** | one semantics authority; client/PB/determinism surfaces can all ride it; zero-dep preserves ethos | corpus + SPEC must be pinned before migration; adapters to build |: |
 | B; merge into kernel `ExprEvaluator` (the handoff's fallback) | fewest moving parts; stays in-repo | TQL post-processor, not a standalone artifact; CMS client path, PB fence, and museum-oss determinism can't ride it | fallback only, if the spike fails its corpus |
 | C; adopt a third-party expression lib (JSONata / expr-eval / jsep) | less parser to own | deps + unpinnable semantics; PB compat and round-trip serialization become fights | rejected |
 | D; invent a new DSL | clean sheet | breaks `trellis/schema` ergonomics and persisted `computedExpression`; the need is extraction, not syntax | rejected |

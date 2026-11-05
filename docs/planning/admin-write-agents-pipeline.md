@@ -10,7 +10,7 @@ hooks (`trellis-agent-pipeline`), `docs/planning/lane-agent-experience.md`
 ## Intent
 
 Grow `trellis admin` from a live **situation room** into a thin **Hokage
-surface**; human writes that match what the board already shows; then later
+surface**: human writes that match what the board already shows; then later
 agent roster + configurable pipeline. Do **not** turn admin into a second Studio
 or a workflow IDE before pipeline topology is Trellis-owned data.
 

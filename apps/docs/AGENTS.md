@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This app is the documentation website for **Trellis** — a local-first agentic OS runtime published on npm as `trellis`. The site is built on a Nuxt-first stack (Vue 3, Nuxt 4, Reka UI, Tailwind CSS v4, Nuxt Content) and uses a shadcn/ui-inspired component system for the UI.
+This app is the documentation website for **Trellis**: a local-first agentic OS runtime published on npm as `trellis`. The site is built on a Nuxt-first stack (Vue 3, Nuxt 4, Reka UI, Tailwind CSS v4, Nuxt Content) and uses a shadcn/ui-inspired component system for the UI.
 
 The canonical source docs live in `../../docs`. The published website content lives in `content/` and covers getting started, vision, architecture, protocol, guides, API, and roadmap. The `app/components/Ui` files power the site's design system.
 

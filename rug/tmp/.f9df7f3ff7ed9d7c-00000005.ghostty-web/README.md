@@ -2,10 +2,10 @@
 
 [![NPM Version](https://img.shields.io/npm/v/ghostty-web)](https://npmjs.com/package/ghostty-web) [![NPM Downloads](https://img.shields.io/npm/dw/ghostty-web)](https://npmjs.com/package/ghostty-web) [![npm bundle size](https://img.shields.io/bundlephobia/minzip/ghostty-web)](https://npmjs.com/package/ghostty-web) [![license](https://img.shields.io/github/license/coder/ghostty-web)](./LICENSE)
 
-[Ghostty](https://github.com/ghostty-org/ghostty) for the web with [xterm.js](https://github.com/xtermjs/xterm.js) API compatibility — giving you a proper VT100 implementation in the browser.
+[Ghostty](https://github.com/ghostty-org/ghostty) for the web with [xterm.js](https://github.com/xtermjs/xterm.js) API compatibility; giving you a proper VT100 implementation in the browser.
 
 - Migrate from xterm by changing your import: `@xterm/xterm` → `ghostty-web`
-- WASM-compiled parser from Ghostty—the same code that runs the native app
+- WASM-compiled parser from Ghostty: the same code that runs the native app
 - Zero runtime dependencies, ~400KB WASM bundle
 
 Originally created for [Mux](https://github.com/coder/mux) (a desktop app for isolated, parallel agentic development), but designed to be used anywhere.
@@ -26,14 +26,14 @@ Originally created for [Mux](https://github.com/coder/mux) (a desktop app for is
 
 ## Comparison with xterm.js
 
-xterm.js is everywhere—VS Code, Hyper, countless web terminals. But it has fundamental issues:
+xterm.js is everywhere: VS Code, Hyper, countless web terminals. But it has fundamental issues:
 
 | Issue                                    | xterm.js                                                         | ghostty-web                |
 | ---------------------------------------- | ---------------------------------------------------------------- | -------------------------- |
 | **Complex scripts** (Devanagari, Arabic) | Rendering issues                                                 | ✓ Proper grapheme handling |
 | **XTPUSHSGR/XTPOPSGR**                   | [Not supported](https://github.com/xtermjs/xterm.js/issues/2570) | ✓ Full support             |
 
-xterm.js reimplements terminal emulation in JavaScript. Every escape sequence, every edge case, every Unicode quirk—all hand-coded. Ghostty's emulator is the same battle-tested code that runs the native Ghostty app.
+xterm.js reimplements terminal emulation in JavaScript. Every escape sequence, every edge case, every Unicode quirk: all hand-coded. Ghostty's emulator is the same battle-tested code that runs the native Ghostty app.
 
 ## Installation
 

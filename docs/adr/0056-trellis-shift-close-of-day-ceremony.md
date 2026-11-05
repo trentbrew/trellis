@@ -60,10 +60,10 @@ The read is `buildShift(engine, { … })` on `trellis/operator`, so host and OS
 
 ## Consequences
 
-**Good**; context survives; the ceremony cannot rot because it is derived and
+**Good**: context survives; the ceremony cannot rot because it is derived and
 gated; re-entry is one command.
 
-**Costs**; a generator is more work than a note once; the gate can annoy (must
+**Costs**: a generator is more work than a note once; the gate can annoy (must
 gate something real, e.g. unpushed commits).
 
 ## Implementation phases

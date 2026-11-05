@@ -43,7 +43,7 @@ A new `src/forms/` module derives a pure, JSON-serializable
 framework, no components, no store. Any client renders it; new clients stop
 hand-writing forms.
 
-- **`deriveFormDescriptor(schema, { mode })`**; pure function (no kernel, no
+- **`deriveFormDescriptor(schema, { mode })`**: pure function (no kernel, no
   graph): maps every field's `valueType` to a `FieldControl` (`text`,
   `textarea`, `number`, `checkbox`, `select`, `multi_select`, `date`,
   `relation`, `people`, `files`, `json`, `readonly`), lifts validation
@@ -98,7 +98,7 @@ Derivation is the default; the exception is a first-class graph entity:
 The descriptor answers *what a form is*; the engine answers *how a form
 behaves*. Both ship, so clients get a complete headless stack:
 
-- **`trellis/forms/core`**; `createFormCore(formSchema, initialValues?)`, a
+- **`trellis/forms/core`**: `createFormCore(formSchema, initialValues?)`, a
   framework-free state machine holding `values`, `errors`, `dirty`,
   `touched`, `isSubmitting`, computed `isValid`/`isDirty`. Actions:
   `setValue`/`setValues`, `setError`/`setErrors`, `setTouched`, `setDirty`,

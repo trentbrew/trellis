@@ -1,6 +1,6 @@
 # trellis-node
 
-Local-first semantic graph OS — EAV kernel, EQL-S, SQLite op-log, Iroh peer sync.
+Local-first semantic graph OS; EAV kernel, EQL-S, SQLite op-log, Iroh peer sync.
 
 ## What this repo is
 
@@ -16,10 +16,10 @@ The Node.js implementation of Trellis. Contains the graph runtime, VCS engine, M
 
 ## Key paths
 
-- `src/` — runtime source (graph kernel, VCS, MCP, SDK)
-- `demo/` — demo apps (realtime-app uses Svelte)
-- `docs/` — framework guide (`docs/AGENTS.md`)
-- `.trellis/` — VCS metadata (never edit directly)
+- `src/`; runtime source (graph kernel, VCS, MCP, SDK)
+- `demo/`; demo apps (realtime-app uses Svelte)
+- `docs/`; framework guide (`docs/AGENTS.md`)
+- `.trellis/`; VCS metadata (never edit directly)
 
 ## Testing
 
@@ -33,13 +33,13 @@ bun run test:e2e   # playwright e2e
 
 - TypeScript, ESM, Bun runtime for scripts
 - Markdown docs (not docx)
-- Graph writes use the Trellis CLI or MCP tools — never modify `.trellis/` by hand
+- Graph writes use the Trellis CLI or MCP tools; never modify `.trellis/` by hand
 - Native-ESM tooling: APIs mean signatures are authoritative, plus **includes** the records
-- **Never commit personal data or secrets** — this repo is public and a guard blocks it.
+- **Never commit personal data or secrets**: this repo is public and a guard blocks it.
   Rules in `scripts/sensitive-patterns.json`; scanner `scripts/scan-sensitive.mjs`
   (`pnpm sensitive-scan`). Enforced on pre-commit, pre-push (lefthook) and CI. Fix a
   false positive via `allowPaths`, never `--no-verify`.
-- **Performance spikes are workshop lanes** — same lane carries the spike + impl, promote once
+- **Performance spikes are workshop lanes**: same lane carries the spike + impl, promote once
   measured & parity-proven (see TRL-20 spike, `lane-8daf05b`)
 
 ## Performance patterns (bench + spikes)
@@ -51,8 +51,8 @@ Established with TRL-18/TRL-20. Standardize on these:
   Data I/O lives in `BENCH_WORK_DIR` (default `tmpdir`), never on the repo/worktree fs.
 - **Every experiment = control vs candidate** (benchable pair), raw runs to
   `bench/results/*.jsonl` (gitignored), gate in `bench/check.ts` against `bench/budget.json`.
-  A change ships on a **repeatable end-to-end win**; loss ⇒ revert; inconclusive ⇒ default
-  unchanged — always recorded in `docs/performance/experiment-inventory.md`.
+  A change ships on a **repeatable end-to-end win**: loss ⇒ revert; inconclusive ⇒ default
+  unchanged; always recorded in `docs/performance/experiment-inventory.md`.
 - **Cold runs need root** (`drop_caches`); local runs are warm. Cold truth lands on TRL-23
   NixOS substrate / CI.
 - **Bounded-reader pattern** (TRL-20): sync and replay must not materialize the whole op log

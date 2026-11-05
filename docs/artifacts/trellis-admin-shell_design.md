@@ -105,7 +105,7 @@ playground OKLCH `--shell-rail`.
 
 ## Typography
 
-Zone eyebrow: mono uppercase (`Operate`) at **10px / 600 / 0.08em**; shell-specific;
+Zone eyebrow: mono uppercase (`Operate`) at **10px / 600 / 0.08em**: shell-specific;
 do not equate with projection label tokens (visual-parity ~11px / 500 / 0.04em).
 Nav labels: 13px sans medium. Header brand: 14px bold. Icons: 16px stroke,
 currentColor.
@@ -140,7 +140,7 @@ Legacy `lanes.html` on `/` moves aside (Architect: redirect `/lanes` or drop; op
 
 Playground `PrimarySidebar` is icon-only (`w-14`) + tooltips. Kernel admin uses a
 **labeled 200px sidebar** so standalone `trellis admin` reads as a real console
-without React tooltips. Same **`OPERATE_NAV` order and ids**; icons are lucide
+without React tooltips. Same **`OPERATE_NAV` order and ids**: icons are lucide
 shapes as inline SVG (no npm lucide).
 
 ### Embed
@@ -191,7 +191,7 @@ Mirror `fractal-playground/lib/shell/modes.ts` `OPERATE_NAV`:
 | Load `/` | Navigate | Admin shell; VCS surface active; sidebar VCS current |
 | Load `/admin` | Navigate | Same shell (redirect/alias to `/`) |
 | Idle VCS | Click Grid / Kanban / Table | Projection swap (existing) |
-| Idle VCS | Activate stub nav (e.g. Collections) | **No navigation**; item stays disabled visually; accessible name includes “coming soon” |
+| Idle VCS | Activate stub nav (e.g. Collections) | **No navigation**: item stays disabled visually; accessible name includes “coming soon” |
 | Idle | Activate VCS | Ensure VCS surface visible |
 | Embed `?embed=1` | Load | Sidebar hidden; focus starts at header → main → op-log |
 | Search / dialog / promote | Existing | Unchanged from visual-parity (**search inherited; present in production header; mock may show inert field**) |
@@ -226,7 +226,7 @@ Mirror `fractal-playground/lib/shell/modes.ts` `OPERATE_NAV`:
 2. AC: sidebar 200px; 8 `OPERATE_NAV` items; VCS `aria-current`; stubs `aria-disabled` (no native `disabled`), accessible name “… (coming soon)”.
 3. AC: e2e; `/` has Operate nav + VCS current; embed hides sidebar; existing admin e2e migrate paths.
 4. Decide fate of legacy `lanes.html` on `/` (recommend `/lanes` fallback or keep behind flag).
-5. Stub click: **locked**; no navigation; `title` / `aria-label` only (simplest).
+5. Stub click: **locked**: no navigation; `title` / `aria-label` only (simplest).
 6. Out of scope AC: datatable, collections materialization, kill-gate.
 
 ### Cohesion (pre-architect · synthesist)

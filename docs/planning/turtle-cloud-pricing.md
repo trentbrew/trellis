@@ -89,7 +89,7 @@ Passthrough at cost (no markup target):
 | **Pro** | $19 | 10 projects, hobby caps × 10 | Pay-as-you-go on meters |
 | **Team** | Custom | SSO, backup SLA, dedicated room | Contract |
 
-Studio AI billing remains on **token meters**; never conflate with graph meters.
+Studio AI billing remains on **token meters**: never conflate with graph meters.
 
 ---
 
@@ -188,11 +188,11 @@ Daily rollups → Stripe meters (same cron pattern as `cloud/scripts/stripe-mete
 
 ## Open questions
 
-1. **Blob CDN**; passthrough egress vs bundled CDN margin?
-2. **Cross-region (C4)**; storage multiplier for geo replicas?
-3. **P2P assist (C5)**; charge for Iroh relay bytes or treat as egress?
-4. **Studio bundle**; single invoice (Studio + TurtleDB) vs separate products?
-5. **Self-host parity**; publish meter definitions so self-hosters can estimate cloud migration cost.
+1. **Blob CDN**: passthrough egress vs bundled CDN margin?
+2. **Cross-region (C4)**: storage multiplier for geo replicas?
+3. **P2P assist (C5)**: charge for Iroh relay bytes or treat as egress?
+4. **Studio bundle**: single invoice (Studio + TurtleDB) vs separate products?
+5. **Self-host parity**: publish meter definitions so self-hosters can estimate cloud migration cost.
 
 ---
 

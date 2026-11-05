@@ -530,17 +530,17 @@ packages, the manifest should carry optional fields: `model`, `provider`,
 
 #### Gaps
 
-1. **`handleAdd` never creates entities**; only registers schemas via
+1. **`handleAdd` never creates entities**: only registers schemas via
    `kernel.createOntology()`. For `agent` type, it should create a `core:Agent`
    entity with the package's agent config. For `workflow` type, a `core:Workflow`
    entity. Etc.
 
-2. **No `trellis publish init <type> <name>`**; `scaffoldPackage` creates a
+2. **No `trellis publish init <type> <name>`**: `scaffoldPackage` creates a
    bare package body with a placeholder schema. No type-specific scaffolding
    (e.g., `publish init agent` should populate `model`, `provider`,
    `systemPrompt`, `tools`, `capabilities`).
 
-3. **No `trellis publish` command**; `publishPackage` exists but has no CLI
+3. **No `trellis publish` command**: `publishPackage` exists but has no CLI
    binding.
 
 #### Proposed agent package manifest
@@ -583,7 +583,7 @@ On `trellis add agent strategist`:
    traversal.
 
 2. **Agent→tools relation:** Should `core:Agent` get a `tools` relation to
-   `core:Tool`? **Decision: yes**; this is the most impactful single change.
+   `core:Tool`? **Decision: yes**: this is the most impactful single change.
    It enables `TQL.agent(id).tools` and makes the graph the source of truth for
    agent capabilities. The current `AgentDef.tools: string[]` can be derived
    from the relation.
@@ -592,7 +592,7 @@ On `trellis add agent strategist`:
    become a relation to `core:Agent`? This would enable reusing the same agent
    definition across phases. On the other hand, a phase defines *what role to
    run*, not *which specific agent instance*; the agent is resolved at
-   runtime. **Deferred**; revisit when pipeline execution needs dynamic agent
+   runtime. **Deferred**: revisit when pipeline execution needs dynamic agent
    resolution.
 
 4. **Schema tier:** `core:Agent` and `core:Handoff` are `system` tier

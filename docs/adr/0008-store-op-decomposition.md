@@ -66,9 +66,9 @@ Tests: `kernel/test/vcs/decompose.test.ts` (store assert/retract/link cases).
 
 When the Database panel looks empty but agents recently created CMS entities:
 
-1. **Confirm ops on disk**; search `.trellis/ops.json` for `vcs:storeAssert` and entity ids (e.g. `person:sam-altman`).
-2. **Confirm materialized store**; `GET /trellis/store/stats?directory=<home>` then paginate `/store/entities`; expect `person`, `organization`, etc. if decompose is correct.
-3. **Do not treat VCS-only counts as deletion**; high `Decision` count + zero `person` with store ops present ⇒ materialization bug, not op loss.
+1. **Confirm ops on disk**: search `.trellis/ops.json` for `vcs:storeAssert` and entity ids (e.g. `person:sam-altman`).
+2. **Confirm materialized store**: `GET /trellis/store/stats?directory=<home>` then paginate `/store/entities`; expect `person`, `organization`, etc. if decompose is correct.
+3. **Do not treat VCS-only counts as deletion**: high `Decision` count + zero `person` with store ops present ⇒ materialization bug, not op loss.
 4. **Restart backend** after updating `decompose.ts` in the bundled `trellis` package.
 
 ## Related
