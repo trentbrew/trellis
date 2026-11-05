@@ -1750,7 +1750,8 @@ for (const event of scanEvents) {
    *
    * 1. Auto-commit the lane worktree (the agent's actual bytes) onto its
    *    `lane/<shortId>` branch.
-   * 2. Merge that branch into the integration head of the main worktree.
+   * 2. Fetch that branch from the lane's independent clone, then merge it
+   *    into the integration head of the main worktree.
    * 3. Root sync: commit the lane's own paths still dirty in the root (lanes
    *    without a worktree edit there) + push when configured. Other root dirt
    *    belongs to other agents or the human and is never swept in.
@@ -1791,6 +1792,7 @@ for (const event of scanEvents) {
       const laneBranch = laneWorktreeMod.laneGitBranch(opts.lane.id);
       const merged = laneWorktreeMod.mergeLaneWorktree(
         rootPath,
+        worktreePath,
         laneBranch,
         message,
       );
