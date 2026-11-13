@@ -325,14 +325,18 @@ export function compileCollectionSchema(
       }
       if (row.valueType === 'relation') {
         const target = parseRelationTarget(row.relationTarget);
-        return {
-          name: row.key,
-          valueType: 'relation',
-          description: row.label,
-          relation: target
-            ? { targetSchema: collectionSchemaId(target.targetCollection), cardinality: target.cardinality }
-            : { cardinality: 'many' },
-        };
+        // A malformed (but present) targetCollection must not crash the whole
+        // collection's schema compile — degrade to the same shape a missing
+        // target already gets, same as `collectionSchemaId` would otherwise throw.
+        let relation: PropertyValueSpecification['relation'] = { cardinality: 'many' };
+        if (target) {
+          try {
+            relation = { targetSchema: collectionSchemaId(target.targetCollection), cardinality: target.cardinality };
+          } catch {
+            relation = { cardinality: target.cardinality };
+          }
+        }
+        return { name: row.key, valueType: 'relation', description: row.label, relation };
       }
       if (row.valueType === 'rollup') {
         const config = parseRollupConfig(row.rollupConfig);
@@ -503,6 +507,8 @@ export interface CollectionFieldValidationContext {
  * path is that separate, deferred work. Returns an error message, or `null`
  * when the field is valid.
  */
+const ROLLUP_AGGREGATIONS: ReadonlySet<string> = new Set(['count', 'sum', 'avg', 'min', 'max', 'median', 'mode']);
+
 export function validateCollectionField(
   row: CollectionFieldRow,
   ctx: CollectionFieldValidationContext,
@@ -524,6 +530,9 @@ export function validateCollectionField(
     );
     if (!relationField || relationField.valueType !== 'relation') {
       return `field "${row.key}": rollup.relationField "${config.relationField}" is not a relation field on this collection`;
+    }
+    if (!ROLLUP_AGGREGATIONS.has(config.aggregation)) {
+      return `field "${row.key}": rollup.aggregation "${config.aggregation}" is not a recognized aggregation`;
     }
     return null;
   }

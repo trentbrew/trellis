@@ -214,6 +214,27 @@ describe('compileCollectionSchema', () => {
       formula: '$add($f_roll, 1)',
     });
   });
+
+  it('degrades a malformed relation target instead of throwing', () => {
+    expect(() =>
+      compileCollectionSchema(books, [
+        row({
+          key: 'f_bad_rel',
+          valueType: 'relation',
+          relationTarget: JSON.stringify({ targetCollection: 'not-a-valid-id', cardinality: 'one' }),
+        }),
+      ]),
+    ).not.toThrow();
+    const field = compileCollectionSchema(books, [
+      row({
+        key: 'f_bad_rel',
+        valueType: 'relation',
+        relationTarget: JSON.stringify({ targetCollection: 'not-a-valid-id', cardinality: 'one' }),
+      }),
+    ]).fields.find((f) => f.name === 'f_bad_rel');
+    expect(field).toMatchObject({ valueType: 'relation', relation: { cardinality: 'one' } });
+    expect(field?.relation).not.toHaveProperty('targetSchema');
+  });
 });
 
 describe('validateCollectionField', () => {
@@ -315,6 +336,25 @@ describe('validateCollectionField', () => {
     expect(
       validateCollectionField(formula, { siblingFields: [rollup, formula], knownCollectionIds: new Set() }),
     ).toBeNull();
+  });
+
+  it('rejects a rollup field with an unrecognized aggregation', () => {
+    const relation = row({
+      key: 'f_rel',
+      valueType: 'relation',
+      relationTarget: JSON.stringify({ targetCollection: 'collectionMeta:books', cardinality: 'many' }),
+    });
+    const rollup = row({
+      key: 'f_roll',
+      valueType: 'rollup',
+      rollupConfig: JSON.stringify({ relationField: 'f_rel', targetField: 'pages', aggregation: 'bogus' }),
+    });
+    expect(
+      validateCollectionField(rollup, {
+        siblingFields: [relation, rollup],
+        knownCollectionIds: new Set(['collectionMeta:books']),
+      }),
+    ).toMatch(/not a recognized aggregation/);
   });
 
   it('rejects a formula cycle through another formula field', () => {
