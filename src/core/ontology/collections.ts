@@ -17,8 +17,14 @@
 import type {
   PropertyType,
   PropertyValueSpecification,
+  RollupConfig,
   SchemaDefinition,
 } from './types.js';
+import type { EAVStore } from '../store/eav-store.js';
+import { evaluateRollup } from '../computation/rollup.js';
+import { parse as parseFormula } from '../../formula/parse.js';
+import { parseAndEvaluate } from '../../formula/index.js';
+import type { ExprNode } from '../../formula/ir.js';
 
 const VERSION = '1.0.0';
 
@@ -70,6 +76,9 @@ export const COLLECTION_FIELD_TYPES = [
   'tags',
   'date',
   'checkbox',
+  'relation',
+  'rollup',
+  'formula',
 ] as const;
 
 export type CollectionFieldType = (typeof COLLECTION_FIELD_TYPES)[number];
@@ -79,6 +88,22 @@ export interface CollectionOption {
   id: string;
   label: string;
   color?: string;
+}
+
+/** A `relation` field's target, stored as JSON on `CollectionFieldRow.relationTarget`. */
+export interface CollectionRelationTarget {
+  /** A `collectionMeta:<slug>` id — must name an existing collection. */
+  targetCollection: string;
+  cardinality: 'one' | 'many';
+}
+
+/** A `rollup` field's config, stored as JSON on `CollectionFieldRow.rollupConfig`. */
+export interface CollectionRollupConfig {
+  /** Key of a `relation` field on this same collection. */
+  relationField: string;
+  /** Field key to read on each related record; `"id"` counts related ids. */
+  targetField: string;
+  aggregation: RollupConfig['aggregation'];
 }
 
 /** A `CollectionField` entity's attributes. `options` is JSON `CollectionOption[]`. */
@@ -95,6 +120,12 @@ export interface CollectionFieldRow {
    */
   vocabulary?: string;
   order: number;
+  /** For `relation` fields: JSON `CollectionRelationTarget`. */
+  relationTarget?: string;
+  /** For `rollup` fields: JSON `CollectionRollupConfig`. */
+  rollupConfig?: string;
+  /** For `formula` fields: `kernel-fn` dialect source (`src/formula/`). */
+  formula?: string;
 }
 
 /** Attributes every row has; never user field keys. */
@@ -128,6 +159,40 @@ export function parseCollectionOptions(raw: string | undefined): CollectionOptio
     );
   } catch {
     return [];
+  }
+}
+
+/** Parse a `relation` field's `relationTarget` JSON; `null` if missing or malformed. */
+export function parseRelationTarget(raw: string | undefined): CollectionRelationTarget | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<CollectionRelationTarget>;
+    if (typeof parsed.targetCollection !== 'string' || !parsed.targetCollection) return null;
+    return { targetCollection: parsed.targetCollection, cardinality: parsed.cardinality === 'one' ? 'one' : 'many' };
+  } catch {
+    return null;
+  }
+}
+
+/** Parse a `rollup` field's `rollupConfig` JSON; `null` if missing or malformed. */
+export function parseRollupConfig(raw: string | undefined): CollectionRollupConfig | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<CollectionRollupConfig>;
+    if (
+      typeof parsed.relationField !== 'string' || !parsed.relationField ||
+      typeof parsed.targetField !== 'string' || !parsed.targetField ||
+      typeof parsed.aggregation !== 'string'
+    ) {
+      return null;
+    }
+    return {
+      relationField: parsed.relationField,
+      targetField: parsed.targetField,
+      aggregation: parsed.aggregation as CollectionRollupConfig['aggregation'],
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -217,8 +282,11 @@ function safeJson(text: string): unknown {
   }
 }
 
-/** `tags` is a relation to `core:Tag`, compiled separately. */
-const KERNEL_TYPE: Record<Exclude<CollectionFieldType, 'tags'>, PropertyType> = {
+/** `tags`/`relation`/`rollup`/`formula` compile to their own `PropertyValueSpecification` shape below. */
+const KERNEL_TYPE: Record<
+  Exclude<CollectionFieldType, 'tags' | 'relation' | 'rollup' | 'formula'>,
+  PropertyType
+> = {
   text: 'rich_text',
   number: 'number',
   select: 'select',
@@ -255,9 +323,39 @@ export function compileCollectionSchema(
           relation: { targetSchema: 'core:Tag', cardinality: 'many' },
         };
       }
+      if (row.valueType === 'relation') {
+        const target = parseRelationTarget(row.relationTarget);
+        return {
+          name: row.key,
+          valueType: 'relation',
+          description: row.label,
+          relation: target
+            ? { targetSchema: collectionSchemaId(target.targetCollection), cardinality: target.cardinality }
+            : { cardinality: 'many' },
+        };
+      }
+      if (row.valueType === 'rollup') {
+        const config = parseRollupConfig(row.rollupConfig);
+        return {
+          name: row.key,
+          valueType: 'rollup',
+          description: row.label,
+          ...(config
+            ? { rollup: { relationProperty: config.relationField, targetProperty: config.targetField, aggregation: config.aggregation } }
+            : {}),
+        };
+      }
+      if (row.valueType === 'formula') {
+        return {
+          name: row.key,
+          valueType: 'formula',
+          description: row.label,
+          ...(row.formula ? { formula: row.formula } : {}),
+        };
+      }
       return {
         name: row.key,
-        valueType: KERNEL_TYPE[row.valueType as Exclude<CollectionFieldType, 'tags'>],
+        valueType: KERNEL_TYPE[row.valueType as Exclude<CollectionFieldType, 'tags' | 'relation' | 'rollup' | 'formula'>],
         description: row.label,
       };
     });
@@ -336,6 +434,9 @@ export const COLLECTION_FIELD_SCHEMA: SchemaDefinition = {
     f('options', 'rich_text'),
     f('vocabulary', 'rich_text'),
     f('order', 'number', true),
+    f('relationTarget', 'rich_text'),
+    f('rollupConfig', 'rich_text'),
+    f('formula', 'rich_text'),
   ],
 };
 
@@ -344,3 +445,163 @@ export const COLLECTION_SCHEMAS: SchemaDefinition[] = [
   COLLECTION_RECORD_SCHEMA,
   COLLECTION_FIELD_SCHEMA,
 ];
+
+// ---------------------------------------------------------------------------
+// Validating relation/rollup/formula field definitions (ADR 0045 Phase 2)
+// ---------------------------------------------------------------------------
+
+/** Field keys a `formula` directly reads (`$key` references; `scope: 'request'` refs are ignored — not a collection field). */
+function formulaFieldRefs(node: ExprNode): string[] {
+  switch (node.kind) {
+    case 'field':
+      return node.scope === 'record' ? [node.path[0]!] : [];
+    case 'binop':
+      return [...formulaFieldRefs(node.left), ...formulaFieldRefs(node.right)];
+    case 'unary':
+      return formulaFieldRefs(node.arg);
+    case 'call':
+      return node.args.flatMap(formulaFieldRefs);
+    default:
+      return [];
+  }
+}
+
+/** True if following formula→formula field refs from `refs` ever reaches `startKey` again. */
+function hasFormulaCycle(
+  startKey: string,
+  refs: readonly string[],
+  fieldsByKey: ReadonlyMap<string, CollectionFieldRow>,
+  visiting: Set<string>,
+): boolean {
+  for (const ref of refs) {
+    if (ref === startKey) return true;
+    const field = fieldsByKey.get(ref);
+    if (!field || field.valueType !== 'formula' || !field.formula || visiting.has(ref)) continue;
+    visiting.add(ref);
+    let ast: ExprNode;
+    try {
+      ast = parseFormula(field.formula, 'kernel-fn');
+    } catch {
+      continue;
+    }
+    if (hasFormulaCycle(startKey, formulaFieldRefs(ast), fieldsByKey, visiting)) return true;
+  }
+  return false;
+}
+
+export interface CollectionFieldValidationContext {
+  /** Every `CollectionField` row on this same collection (including the one being validated). */
+  siblingFields: readonly CollectionFieldRow[];
+  /** Every known `collectionMeta:<slug>` id, to check a `relation` field's target exists. */
+  knownCollectionIds: ReadonlySet<string>;
+}
+
+/**
+ * Validates one field definition against its collection's other fields and
+ * known collections. Pure — this is the check ADR 0045 §5 names as needed
+ * before collection writes are gated; wiring it into the live create/update
+ * path is that separate, deferred work. Returns an error message, or `null`
+ * when the field is valid.
+ */
+export function validateCollectionField(
+  row: CollectionFieldRow,
+  ctx: CollectionFieldValidationContext,
+): string | null {
+  if (row.valueType === 'relation') {
+    const target = parseRelationTarget(row.relationTarget);
+    if (!target) return `field "${row.key}": relation field needs a target collection`;
+    if (!ctx.knownCollectionIds.has(target.targetCollection)) {
+      return `field "${row.key}": relation target "${target.targetCollection}" does not exist`;
+    }
+    return null;
+  }
+
+  if (row.valueType === 'rollup') {
+    const config = parseRollupConfig(row.rollupConfig);
+    if (!config) return `field "${row.key}": rollup field needs relationField, targetField, and aggregation`;
+    const relationField = ctx.siblingFields.find(
+      (f) => f.collection === row.collection && f.key === config.relationField,
+    );
+    if (!relationField || relationField.valueType !== 'relation') {
+      return `field "${row.key}": rollup.relationField "${config.relationField}" is not a relation field on this collection`;
+    }
+    return null;
+  }
+
+  if (row.valueType === 'formula') {
+    if (!row.formula?.trim()) return `field "${row.key}": formula field needs a formula`;
+    let ast: ExprNode;
+    try {
+      ast = parseFormula(row.formula, 'kernel-fn');
+    } catch (error) {
+      return `field "${row.key}": formula does not parse — ${(error as Error).message}`;
+    }
+    const fieldsByKey = new Map(
+      ctx.siblingFields.filter((f) => f.collection === row.collection).map((f) => [f.key, f] as const),
+    );
+    const refs = formulaFieldRefs(ast);
+    for (const ref of refs) {
+      if (RESERVED_RECORD_KEYS.has(ref)) continue;
+      const sibling = fieldsByKey.get(ref);
+      if (!sibling) return `field "${row.key}": formula references unknown field "${ref}"`;
+      if (sibling.valueType === 'relation' || sibling.valueType === 'tags') {
+        return `field "${row.key}": formula cannot reference relation field "${ref}" directly; use a rollup`;
+      }
+    }
+    if (hasFormulaCycle(row.key, refs, fieldsByKey, new Set([row.key]))) {
+      return `field "${row.key}": formula has a circular reference`;
+    }
+    return null;
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Computing rollup/formula values at read time (ADR 0045 Phase 2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Computes `rollup` and `formula` field values for one `CollectionRecord`,
+ * from its collection's `CollectionField` rows. Pure composition over the
+ * kernel's existing `evaluateRollup` (`src/core/computation/rollup.ts`) and
+ * formula engine (`src/formula/`) — no new computation engine. Rollups are
+ * computed first, so a formula may read an already-computed rollup value.
+ *
+ * Returns a plain `{ fieldKey: value }` map; nothing is written back to the
+ * store — the caller merges this into whatever it renders or returns.
+ */
+export function computeCollectionFieldValues(
+  record: { id: string; collectionId: string; [key: string]: unknown },
+  fields: readonly CollectionFieldRow[],
+  store: EAVStore,
+): Record<string, unknown> {
+  const collectionFields = fields.filter((f) => f.collection === record.collectionId);
+  const values: Record<string, unknown> = {};
+
+  for (const field of collectionFields) {
+    if (field.valueType !== 'rollup') continue;
+    const config = parseRollupConfig(field.rollupConfig);
+    if (!config) continue;
+    const relationField = collectionFields.find(
+      (f) => f.key === config.relationField && f.valueType === 'relation',
+    );
+    if (!relationField) continue;
+    values[field.key] = evaluateRollup(
+      { relationProperty: config.relationField, targetProperty: config.targetField, aggregation: config.aggregation },
+      { store, entityId: record.id },
+    );
+  }
+
+  const recordForFormulas: Record<string, unknown> = { ...record, ...values };
+  for (const field of collectionFields) {
+    if (field.valueType !== 'formula' || !field.formula) continue;
+    try {
+      values[field.key] = parseAndEvaluate(field.formula, 'kernel-fn', { record: recordForFormulas });
+    } catch {
+      values[field.key] = null;
+    }
+  }
+
+  return values;
+}

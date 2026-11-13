@@ -45,6 +45,9 @@ export const CollectionField = defineType(
     options: z.string().optional(),
     vocabulary: z.string().optional(),
     order: z.number(),
+    relationTarget: z.string().optional(),
+    rollupConfig: z.string().optional(),
+    formula: z.string().optional(),
   },
   { title: 'label', extends: 'core:Thing', tier: 'system', label: 'Collection Field' },
 );
@@ -57,14 +60,21 @@ export {
   collectionSchemaId,
   collectionSlug,
   compileCollectionSchema,
+  computeCollectionFieldValues,
   isCollectionFieldType,
   legacyOptionId,
   migrateCollectionOptions,
   migrateOptionValue,
   parseCollectionOptions,
+  parseRelationTarget,
+  parseRollupConfig,
+  validateCollectionField,
 } from '../core/ontology/collections.js';
 export type {
   CollectionFieldRow,
   CollectionFieldType,
+  CollectionFieldValidationContext,
   CollectionOption,
+  CollectionRelationTarget,
+  CollectionRollupConfig,
 } from '../core/ontology/collections.js';

@@ -56,6 +56,25 @@ describe('rollup evaluator', () => {
     expect(total).toBe(35);
   });
 
+  test('sum rollup falls back to a plain multi-valued fact when there are no links', () => {
+    // Collections (ADR 0045) write relation field values as a plain fact — an
+    // array of related ids — not a graph link. The rollup evaluator must find
+    // related entities either way.
+    const store = new EAVStore();
+    store.addFacts([
+      { e: 'author:1', a: 'type', v: 'CollectionRecord' },
+      { e: 'author:1', a: 'books', v: ['book:1', 'book:2'] as unknown as string },
+      { e: 'book:1', a: 'pages', v: 100 },
+      { e: 'book:2', a: 'pages', v: 150 },
+    ]);
+
+    const total = evaluateRollup(
+      { relationProperty: 'books', targetProperty: 'pages', aggregation: 'sum' },
+      { store, entityId: 'author:1' },
+    );
+    expect(total).toBe(250);
+  });
+
   test('count via join-entity foreign key', () => {
     const store = new EAVStore();
     store.addFacts([
