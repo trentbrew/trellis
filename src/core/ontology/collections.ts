@@ -331,7 +331,10 @@ function safeJson(text: string): unknown {
 
 /** `tags`/`relation`/`rollup`/`formula` compile to their own `PropertyValueSpecification` shape below. */
 const KERNEL_TYPE: Record<
-  Exclude<CollectionFieldType, 'tags' | 'relation' | 'rollup' | 'formula'>,
+  Exclude<
+    CollectionFieldType,
+    'tags' | 'relation' | 'rollup' | 'formula' | 'schedule'
+  >,
   PropertyType
 > = {
   text: 'rich_text',
@@ -404,9 +407,23 @@ export function compileCollectionSchema(
           ...(row.formula ? { formula: row.formula } : {}),
         };
       }
+      // schedule carries no field-level config; each record stores its own
+      // JSON value (CollectionScheduleValue), so the row schema sees json.
+      if (row.valueType === 'schedule') {
+        return {
+          name: row.key,
+          valueType: 'json',
+          description: row.label,
+        };
+      }
       return {
         name: row.key,
-        valueType: KERNEL_TYPE[row.valueType as Exclude<CollectionFieldType, 'tags' | 'relation' | 'rollup' | 'formula'>],
+        valueType: KERNEL_TYPE[
+          row.valueType as Exclude<
+            CollectionFieldType,
+            'tags' | 'relation' | 'rollup' | 'formula' | 'schedule'
+          >
+        ],
         description: row.label,
       };
     });
