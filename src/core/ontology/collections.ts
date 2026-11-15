@@ -80,6 +80,8 @@ export const COLLECTION_FIELD_TYPES = [
   'rollup',
   'formula',
   'schedule',
+  'sequence',
+  'place',
 ] as const;
 
 export type CollectionFieldType = (typeof COLLECTION_FIELD_TYPES)[number];
@@ -105,6 +107,20 @@ export interface CollectionRollupConfig {
   /** Field key to read on each related record; `"id"` counts related ids. */
   targetField: string;
   aggregation: RollupConfig['aggregation'];
+}
+
+/**
+ * A `sequence` field's config, stored as JSON on `CollectionFieldRow.sequenceConfig`
+ * — generalizes the built-in Issue noun's `nextIssueId` (`guest/tsh-dispatch.mjs`
+ * in os-sandbox: scan existing `issue:SYS-N` ids for the max `N`, increment) into
+ * a declarable field any collection can have. The record stores the raw integer
+ * (`PropertyType: 'number'`, same as a plain `number` field); `prefix` is a
+ * display-only hint for rendering it as `PREFIX-N` (e.g. `TICKET-7`) — never part
+ * of the stored value, so a prefix rename never rewrites existing rows.
+ */
+export interface CollectionSequenceConfig {
+  /** Prepended with a dash when rendering, e.g. "TICKET" -> "TICKET-7". Empty: bare number. */
+  prefix: string;
 }
 
 /**
@@ -144,6 +160,8 @@ export interface CollectionFieldRow {
   rollupConfig?: string;
   /** For `formula` fields: `kernel-fn` dialect source (`src/formula/`). */
   formula?: string;
+  /** For `sequence` fields: JSON `CollectionSequenceConfig`. */
+  sequenceConfig?: string;
 }
 
 /** Attributes every row has; never user field keys. */
@@ -211,6 +229,23 @@ export function parseRollupConfig(raw: string | undefined): CollectionRollupConf
     };
   } catch {
     return null;
+  }
+}
+
+/**
+ * Parse a `sequence` field's `sequenceConfig` JSON. Unlike `relation`/`rollup`
+ * (which have a required target), a sequence is valid with no config at all —
+ * missing or malformed JSON degrades to an empty prefix (bare number) rather
+ * than `null`, so a sequence field never needs its own validation branch in
+ * `validateCollectionField`.
+ */
+export function parseSequenceConfig(raw: string | undefined): CollectionSequenceConfig {
+  if (!raw) return { prefix: '' };
+  try {
+    const parsed = JSON.parse(raw) as Partial<CollectionSequenceConfig>;
+    return { prefix: typeof parsed.prefix === 'string' ? parsed.prefix : '' };
+  } catch {
+    return { prefix: '' };
   }
 }
 
@@ -343,6 +378,12 @@ const KERNEL_TYPE: Record<
   multi_select: 'multi_select',
   date: 'date',
   checkbox: 'checkbox',
+  // A sequence's record value is the raw integer; `sequenceConfig`'s prefix
+  // is display-only (see CollectionSequenceConfig) and never changes this.
+  sequence: 'number',
+  // Minimum viable shape per TRL-62 item B.4: a label/address string. lat/lng
+  // is an explicit open question, deferred to a future spec.
+  place: 'rich_text',
 };
 
 /**
@@ -505,6 +546,7 @@ export const COLLECTION_FIELD_SCHEMA: SchemaDefinition = {
     f('relationTarget', 'rich_text'),
     f('rollupConfig', 'rich_text'),
     f('formula', 'rich_text'),
+    f('sequenceConfig', 'rich_text'),
   ],
 };
 
@@ -631,6 +673,10 @@ export function validateCollectionField(
   // (see CollectionScheduleValue); it falls through to `return null` below,
   // same as date/select/checkbox. Its own *value* shape is validated by
   // parseScheduleValue, called by consumers against record data, never here.
+
+  // 'sequence'/'place' also fall through: sequence's prefix is optional
+  // (parseSequenceConfig always returns a value, never null) and place's
+  // minimum shape is a plain string, same as text/date/checkbox.
 
   return null;
 }

@@ -21,6 +21,7 @@ import {
   migrateCollectionOptions,
   migrateOptionValue,
   parseCollectionOptions,
+  parseSequenceConfig,
   validateCollectionField,
   type CollectionFieldRow,
 } from '../../src/schema/index.js';
@@ -215,6 +216,31 @@ describe('compileCollectionSchema', () => {
     });
   });
 
+  it('compiles sequence and place fields (TRL-64)', () => {
+    const tickets = { id: 'collectionMeta:tickets', title: 'Tickets' };
+    const schema = compileCollectionSchema(tickets, [
+      row({
+        key: 'f_seq',
+        label: 'Ticket #',
+        valueType: 'sequence',
+        sequenceConfig: JSON.stringify({ prefix: 'TICKET' }),
+        collection: tickets.id,
+      }),
+      row({
+        key: 'f_place',
+        label: 'Location',
+        valueType: 'place',
+        collection: tickets.id,
+      }),
+    ]);
+
+    // Record value is a plain number; the prefix is display-only, so it
+    // never changes the compiled PropertyType.
+    expect(schema.fields.find((f) => f.name === 'f_seq')).toMatchObject({ valueType: 'number', description: 'Ticket #' });
+    // Minimum viable shape per TRL-62 item B.4: a plain string.
+    expect(schema.fields.find((f) => f.name === 'f_place')).toMatchObject({ valueType: 'rich_text', description: 'Location' });
+  });
+
   it('degrades a malformed relation target instead of throwing', () => {
     expect(() =>
       compileCollectionSchema(books, [
@@ -363,5 +389,27 @@ describe('validateCollectionField', () => {
     expect(
       validateCollectionField(a, { siblingFields: [a, b], knownCollectionIds: new Set() }),
     ).toMatch(/circular/);
+  });
+
+  it('accepts sequence and place fields with no required config (TRL-64)', () => {
+    const seq = row({ key: 'f_seq', valueType: 'sequence', sequenceConfig: JSON.stringify({ prefix: 'TICKET' }) });
+    expect(validateCollectionField(seq, { siblingFields: [seq], knownCollectionIds: new Set() })).toBeNull();
+    // Even with no sequenceConfig at all — a sequence is valid bare.
+    const bareSeq = row({ key: 'f_seq', valueType: 'sequence' });
+    expect(validateCollectionField(bareSeq, { siblingFields: [bareSeq], knownCollectionIds: new Set() })).toBeNull();
+    const place = row({ key: 'f_place', valueType: 'place' });
+    expect(validateCollectionField(place, { siblingFields: [place], knownCollectionIds: new Set() })).toBeNull();
+  });
+});
+
+describe('parseSequenceConfig', () => {
+  it('defaults to an empty prefix when missing or malformed', () => {
+    expect(parseSequenceConfig(undefined)).toEqual({ prefix: '' });
+    expect(parseSequenceConfig('not json')).toEqual({ prefix: '' });
+    expect(parseSequenceConfig(JSON.stringify({ prefix: 42 }))).toEqual({ prefix: '' });
+  });
+
+  it('reads a configured prefix', () => {
+    expect(parseSequenceConfig(JSON.stringify({ prefix: 'TICKET' }))).toEqual({ prefix: 'TICKET' });
   });
 });
