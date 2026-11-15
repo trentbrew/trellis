@@ -154,6 +154,21 @@ function padTerminalCell(text: string, width: number): string {
   return pad > 0 ? text + ' '.repeat(pad) : text;
 }
 
+/**
+ * Truncate from the middle (`collectionRecord:…a3f7` not `collectionReco…`),
+ * keeping both ends visible. For id/path-like values the informative part is
+ * often at both ends (a type prefix, a meaningful suffix); end-truncation
+ * only ever keeps the prefix.
+ */
+function centerTruncate(text: string, max: number): string {
+  if (text.length <= max) return text;
+  if (max <= 1) return '…';
+  const keep = max - 1;
+  const head = Math.ceil(keep / 2);
+  const tail = Math.floor(keep / 2);
+  return `${text.slice(0, head)}…${text.slice(text.length - tail)}`;
+}
+
 export interface FormatTerminalHints {
   layout?: 'auto' | 'table' | 'kv';
   title?: string;
@@ -215,7 +230,7 @@ function formatTerminalCell(v: unknown, s: Style): string {
   if (typeof v === 'boolean') return v ? s.green('true') : s.red('false');
   if (typeof v === 'number') return String(v);
   if (typeof v === 'string') {
-    return v.length > 56 ? `${v.slice(0, 53)}…` : v;
+    return centerTruncate(v, TERMINAL_CELL_MAX);
   }
   if (Array.isArray(v)) {
     if (v.length === 0) return s.dim('[]');
@@ -278,10 +293,7 @@ function terminalTableLines(
     activeCols.map((col, i) => {
       if (truncated && i === activeCols.length - 1) return padTerminalCell(s.dim('…'), activeWidths[i]);
       const plainText = formatTerminalCell(row[col], plain);
-      const clipped =
-        plainText.length > TERMINAL_CELL_MAX
-          ? `${plainText.slice(0, TERMINAL_CELL_MAX - 1)}…`
-          : plainText;
+      const clipped = centerTruncate(plainText, TERMINAL_CELL_MAX);
       let display: string;
       if (typeof row[col] === 'boolean') display = formatTerminalCell(row[col], s);
       else if (row[col] === null || row[col] === undefined) display = formatTerminalCell(row[col], s);
