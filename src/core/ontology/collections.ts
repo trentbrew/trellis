@@ -79,6 +79,7 @@ export const COLLECTION_FIELD_TYPES = [
   'relation',
   'rollup',
   'formula',
+  'schedule',
 ] as const;
 
 export type CollectionFieldType = (typeof COLLECTION_FIELD_TYPES)[number];
@@ -106,6 +107,18 @@ export interface CollectionRollupConfig {
   aggregation: RollupConfig['aggregation'];
 }
 
+/**
+ * A `schedule` field's config, stored as JSON on `CollectionFieldRow.scheduleConfig`
+ * (turtleOS ADR-0048 §3). `once` is an ISO-8601 timestamp; `recurring` uses
+ * iCalendar RRULE rather than cron, which has no clean one-off-timestamp case.
+ * This type declares *when*, as data (Lexicon) — nothing here fires anything;
+ * a Harness-side scheduler reads live `schedule` fields and invokes whatever
+ * action is declared for the record (turtleOS ADR-0047).
+ */
+export type CollectionScheduleConfig =
+  | { kind: 'once'; at: string }
+  | { kind: 'recurring'; rrule: string };
+
 /** A `CollectionField` entity's attributes. `options` is JSON `CollectionOption[]`. */
 export interface CollectionFieldRow {
   collection: string;
@@ -126,6 +139,8 @@ export interface CollectionFieldRow {
   rollupConfig?: string;
   /** For `formula` fields: `kernel-fn` dialect source (`src/formula/`). */
   formula?: string;
+  /** For `schedule` fields: JSON `CollectionScheduleConfig` (turtleOS ADR-0048). */
+  scheduleConfig?: string;
 }
 
 /** Attributes every row has; never user field keys. */
@@ -191,6 +206,25 @@ export function parseRollupConfig(raw: string | undefined): CollectionRollupConf
       targetField: parsed.targetField,
       aggregation: parsed.aggregation as CollectionRollupConfig['aggregation'],
     };
+  } catch {
+    return null;
+  }
+}
+
+/** Parse a `schedule` field's `scheduleConfig` JSON; `null` if missing or malformed. */
+export function parseScheduleConfig(raw: string | undefined): CollectionScheduleConfig | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<CollectionScheduleConfig>;
+    if (parsed.kind === 'once') {
+      if (typeof (parsed as { at?: unknown }).at !== 'string' || !(parsed as { at: string }).at) return null;
+      return { kind: 'once', at: (parsed as { at: string }).at };
+    }
+    if (parsed.kind === 'recurring') {
+      if (typeof (parsed as { rrule?: unknown }).rrule !== 'string' || !(parsed as { rrule: string }).rrule) return null;
+      return { kind: 'recurring', rrule: (parsed as { rrule: string }).rrule };
+    }
+    return null;
   } catch {
     return null;
   }
@@ -441,6 +475,7 @@ export const COLLECTION_FIELD_SCHEMA: SchemaDefinition = {
     f('relationTarget', 'rich_text'),
     f('rollupConfig', 'rich_text'),
     f('formula', 'rich_text'),
+    f('scheduleConfig', 'rich_text'),
   ],
 };
 
@@ -559,6 +594,18 @@ export function validateCollectionField(
     }
     if (hasFormulaCycle(row.key, refs, fieldsByKey, new Set([row.key]))) {
       return `field "${row.key}": formula has a circular reference`;
+    }
+    return null;
+  }
+
+  if (row.valueType === 'schedule') {
+    const config = parseScheduleConfig(row.scheduleConfig);
+    if (!config) return `field "${row.key}": schedule field needs { kind: "once", at } or { kind: "recurring", rrule }`;
+    if (config.kind === 'once' && Number.isNaN(Date.parse(config.at))) {
+      return `field "${row.key}": schedule.at "${config.at}" is not a parseable timestamp`;
+    }
+    if (config.kind === 'recurring' && !config.rrule.startsWith('FREQ=')) {
+      return `field "${row.key}": schedule.rrule "${config.rrule}" does not look like an RRULE (must start with FREQ=)`;
     }
     return null;
   }
