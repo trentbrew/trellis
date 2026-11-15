@@ -177,6 +177,9 @@ export const RESERVED_RECORD_KEYS: ReadonlySet<string> = new Set([
   'createdBy',
   'tenantId',
   'laneId',
+  // TRL-65: op-log-derived provenance, never a declarable field.
+  'lastEditedBy',
+  'lastEditedAt',
 ]);
 
 export function isCollectionFieldType(value: string): value is CollectionFieldType {
@@ -619,6 +622,10 @@ export function validateCollectionField(
   row: CollectionFieldRow,
   ctx: CollectionFieldValidationContext,
 ): string | null {
+  if (RESERVED_RECORD_KEYS.has(row.key)) {
+    return `field "${row.key}": "${row.key}" is a reserved record attribute, not a declarable field`;
+  }
+
   if (row.valueType === 'relation') {
     const target = parseRelationTarget(row.relationTarget);
     if (!target) return `field "${row.key}": relation field needs a target collection`;

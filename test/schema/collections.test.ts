@@ -274,6 +274,15 @@ describe('validateCollectionField', () => {
     ...overrides,
   });
 
+  it('rejects a reserved record attribute as a field key (TRL-65)', () => {
+    for (const key of ['createdBy', 'createdAt', 'lastEditedBy', 'lastEditedAt', 'id', 'title']) {
+      const field = row({ key });
+      expect(
+        validateCollectionField(field, { siblingFields: [field], knownCollectionIds: new Set() }),
+      ).toMatch(/reserved record attribute/);
+    }
+  });
+
   it('rejects a relation field whose target collection does not exist', () => {
     const field = row({
       key: 'f_rel',
