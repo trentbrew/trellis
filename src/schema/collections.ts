@@ -48,7 +48,6 @@ export const CollectionField = defineType(
     relationTarget: z.string().optional(),
     rollupConfig: z.string().optional(),
     formula: z.string().optional(),
-    scheduleConfig: z.string().optional(),
   },
   { title: 'label', extends: 'core:Thing', tier: 'system', label: 'Collection Field' },
 );
@@ -69,7 +68,7 @@ export {
   parseCollectionOptions,
   parseRelationTarget,
   parseRollupConfig,
-  parseScheduleConfig,
+  parseScheduleValue,
   validateCollectionField,
 } from '../core/ontology/collections.js';
 export type {
@@ -79,5 +78,5 @@ export type {
   CollectionOption,
   CollectionRelationTarget,
   CollectionRollupConfig,
-  CollectionScheduleConfig,
+  CollectionScheduleValue,
 } from '../core/ontology/collections.js';

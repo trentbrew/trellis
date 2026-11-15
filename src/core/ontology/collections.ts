@@ -108,14 +108,19 @@ export interface CollectionRollupConfig {
 }
 
 /**
- * A `schedule` field's config, stored as JSON on `CollectionFieldRow.scheduleConfig`
- * (turtleOS ADR-0048 §3). `once` is an ISO-8601 timestamp; `recurring` uses
- * iCalendar RRULE rather than cron, which has no clean one-off-timestamp case.
- * This type declares *when*, as data (Lexicon) — nothing here fires anything;
- * a Harness-side scheduler reads live `schedule` fields and invokes whatever
- * action is declared for the record (turtleOS ADR-0047).
+ * A `schedule` field's *record value* shape (turtleOS ADR-0048 §3) — unlike
+ * `relationTarget`/`rollupConfig`, this is never stored on the field
+ * definition. A relation/rollup's behavior is the same for every row in the
+ * collection; a reminder's due time is not shared across rows at all, so
+ * `schedule` carries no field-level config, the same as `date`/`select` carry
+ * none — each `CollectionRecord` stores its own JSON value for the field.
+ * `once` is an ISO-8601 timestamp; `recurring` uses iCalendar RRULE rather
+ * than cron, which has no clean one-off-timestamp case. This type declares
+ * *when*, as data (Lexicon) — nothing here fires anything; a Harness-side
+ * scheduler reads live values and invokes whatever action is declared for
+ * the record (turtleOS ADR-0047).
  */
-export type CollectionScheduleConfig =
+export type CollectionScheduleValue =
   | { kind: 'once'; at: string }
   | { kind: 'recurring'; rrule: string };
 
@@ -139,8 +144,6 @@ export interface CollectionFieldRow {
   rollupConfig?: string;
   /** For `formula` fields: `kernel-fn` dialect source (`src/formula/`). */
   formula?: string;
-  /** For `schedule` fields: JSON `CollectionScheduleConfig` (turtleOS ADR-0048). */
-  scheduleConfig?: string;
 }
 
 /** Attributes every row has; never user field keys. */
@@ -211,18 +214,28 @@ export function parseRollupConfig(raw: string | undefined): CollectionRollupConf
   }
 }
 
-/** Parse a `schedule` field's `scheduleConfig` JSON; `null` if missing or malformed. */
-export function parseScheduleConfig(raw: string | undefined): CollectionScheduleConfig | null {
-  if (!raw) return null;
+/**
+ * Parse a `schedule`-type field's *record value* JSON; `null` if missing or
+ * malformed. Operates on a `CollectionRecord`'s own attribute value (e.g.
+ * `record.due`), never on field-definition JSON — `schedule` has no
+ * field-level config to parse (see `CollectionScheduleValue`). Exported for
+ * consumers (a Harness scheduler, a pack installer validating seed rows) —
+ * the kernel's own `validateCollectionField` never calls this, since it
+ * validates field definitions, not record values, for any field type.
+ */
+export function parseScheduleValue(raw: unknown): CollectionScheduleValue | null {
+  if (typeof raw !== 'string' || !raw) return null;
   try {
-    const parsed = JSON.parse(raw) as Partial<CollectionScheduleConfig>;
+    const parsed = JSON.parse(raw) as Partial<CollectionScheduleValue>;
     if (parsed.kind === 'once') {
-      if (typeof (parsed as { at?: unknown }).at !== 'string' || !(parsed as { at: string }).at) return null;
-      return { kind: 'once', at: (parsed as { at: string }).at };
+      const at = (parsed as { at?: unknown }).at;
+      if (typeof at !== 'string' || !at || Number.isNaN(Date.parse(at))) return null;
+      return { kind: 'once', at };
     }
     if (parsed.kind === 'recurring') {
-      if (typeof (parsed as { rrule?: unknown }).rrule !== 'string' || !(parsed as { rrule: string }).rrule) return null;
-      return { kind: 'recurring', rrule: (parsed as { rrule: string }).rrule };
+      const rrule = (parsed as { rrule?: unknown }).rrule;
+      if (typeof rrule !== 'string' || !rrule.startsWith('FREQ=')) return null;
+      return { kind: 'recurring', rrule };
     }
     return null;
   } catch {
@@ -475,7 +488,6 @@ export const COLLECTION_FIELD_SCHEMA: SchemaDefinition = {
     f('relationTarget', 'rich_text'),
     f('rollupConfig', 'rich_text'),
     f('formula', 'rich_text'),
-    f('scheduleConfig', 'rich_text'),
   ],
 };
 
@@ -598,17 +610,10 @@ export function validateCollectionField(
     return null;
   }
 
-  if (row.valueType === 'schedule') {
-    const config = parseScheduleConfig(row.scheduleConfig);
-    if (!config) return `field "${row.key}": schedule field needs { kind: "once", at } or { kind: "recurring", rrule }`;
-    if (config.kind === 'once' && Number.isNaN(Date.parse(config.at))) {
-      return `field "${row.key}": schedule.at "${config.at}" is not a parseable timestamp`;
-    }
-    if (config.kind === 'recurring' && !config.rrule.startsWith('FREQ=')) {
-      return `field "${row.key}": schedule.rrule "${config.rrule}" does not look like an RRULE (must start with FREQ=)`;
-    }
-    return null;
-  }
+  // 'schedule' needs no field-level config check — it has none, by design
+  // (see CollectionScheduleValue); it falls through to `return null` below,
+  // same as date/select/checkbox. Its own *value* shape is validated by
+  // parseScheduleValue, called by consumers against record data, never here.
 
   return null;
 }
