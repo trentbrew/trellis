@@ -25,6 +25,7 @@ import {
 import { TrellisVcsEngine } from '../engine.js';
 import { issueEntityId } from '../vcs/types.js';
 import { PROVENANCE } from '../core/persist/canonical-op.js';
+import { summarizeDecisions, parseTimeArg, type StatsGroup } from '../decisions/stats.js';
 import { TrellisKernel } from '../core/kernel/trellis-kernel.js';
 import { SqliteKernelBackend } from '../core/persist/sqlite-backend.js';
 import { QueryEngine, parseQuery, parseSimple } from '../core/query/index.js';
@@ -3048,6 +3049,158 @@ function listDecisionsAction(opts: any): void {
     if (d.rationale) {
       console.log(`  ${chalk.dim('→')} ${d.rationale}`);
     }
+  }
+}
+
+function formatGap(ms: number | null): string {
+  if (ms === null) return '–';
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
+  if (ms < 3_600_000) return `${Math.round(ms / 60_000)}m`;
+  return `${(ms / 3_600_000).toFixed(1)}h`;
+}
+
+function shorten(value: string, max: number): string {
+  return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
+}
+
+function printGroupTable(title: string, header: string[], rows: string[][]): void {
+  const widths = header.map((h, i) =>
+    Math.max(h.length, ...rows.map((row) => row[i].length)),
+  );
+  const line = (cells: string[]) =>
+    cells.map((cell, i) => cell.padEnd(widths[i])).join('  ').trimEnd();
+  console.log('');
+  console.log(chalk.bold(title));
+  console.log(chalk.dim(line(header)));
+  console.log(chalk.dim(widths.map((width) => '─'.repeat(width)).join('  ')));
+  for (const row of rows.slice(0, 10)) console.log(line(row));
+  if (rows.length > 10) {
+    console.log(chalk.dim(`… +${rows.length - 10} more`));
+  }
+}
+
+decisionCmd
+  .command('stats')
+  .description('Aggregate decision traces: tools, sessions, gaps, repeats')
+  .option('-p, --path <path>', 'Repository path', '.')
+  .option('--since <when>', 'Only decisions at/after this time (ISO or 7d/36h)')
+  .option('--until <when>', 'Only decisions at/before this time (ISO or 7d/36h)')
+  .option('-t, --tool <pattern>', 'Filter by tool name pattern')
+  .option('-n, --limit <n>', 'Max newest decisions to consider', '5000')
+  .option('--by <group>', 'Render one table: tool, session, or day')
+  .option('--json', 'Emit machine-readable JSON (no color)')
+  .action((opts) => {
+    decisionStatsAction(opts);
+  });
+
+function decisionStatsAction(opts: any): void {
+  const by = typeof opts.by === 'string' ? opts.by : undefined;
+  if (by && !['tool', 'session', 'day'].includes(by)) {
+    console.error(chalk.red(`invalid --by "${by}" (use tool, session, or day)`));
+    process.exit(2);
+  }
+
+  const limit = Number(opts.limit);
+  if (!Number.isSafeInteger(limit) || limit <= 0) {
+    console.error(chalk.red(`invalid --limit "${opts.limit}" (use a positive integer)`));
+    process.exit(2);
+  }
+
+  let since: string | undefined;
+  let until: string | undefined;
+  try {
+    since = opts.since ? parseTimeArg(opts.since) : undefined;
+    until = opts.until ? parseTimeArg(opts.until) : undefined;
+  } catch (err) {
+    console.error(chalk.red((err as Error).message));
+    process.exit(2);
+  }
+
+  const rootPath = resolveRepoRoot(opts.path);
+  const engine = new TrellisVcsEngine({ rootPath, provenance: PROVENANCE.cli });
+  engine.open();
+
+  const decisions = engine.queryDecisions({
+    toolPattern: opts.tool,
+    since,
+    until,
+    limit,
+    includeRelated: false,
+  });
+  const report = summarizeDecisions(decisions, {
+    since: since ?? null,
+    until: until ?? null,
+    limit,
+  });
+
+  if (opts.json) {
+    console.log(JSON.stringify(report, null, 2));
+    return;
+  }
+
+  const totals = report.totals;
+  if (totals.decisions === 0) {
+    console.log(chalk.dim('no decision traces found'));
+    return;
+  }
+
+  const span =
+    totals.firstAt && totals.lastAt
+      ? `${totals.firstAt.slice(0, 10)} → ${totals.lastAt.slice(0, 10)}`
+      : 'no timestamps';
+  console.log(
+    chalk.bold('Decision traces') +
+      chalk.dim(
+        ` · ${totals.decisions} total · ${totals.sessions} session(s) · ${totals.tools} tool(s) · ${span}`,
+      ),
+  );
+
+  if (!by || by === 'tool') {
+    printGroupTable(
+      'By tool',
+      ['tool', 'calls', 'sessions', 'med gap', 'p90 gap', 'repeats', 'err', 'empty'],
+      report.byTool.map((group) => [
+        group.name,
+        String(group.decisions),
+        group.sessions === null ? '–' : String(group.sessions),
+        formatGap(group.medianGapMs),
+        formatGap(group.p90GapMs),
+        String(group.repeatedRuns),
+        String(group.class.error),
+        String(group.class.empty),
+      ]),
+    );
+  }
+
+  if (!by || by === 'session') {
+    printGroupTable(
+      'By session',
+      ['session', 'calls', 'tools', 'span', 'med gap', 'repeats'],
+      report.bySession.map((group) => [
+        shorten(group.name, 24),
+        String(group.decisions),
+        group.tools === null ? '–' : String(group.tools),
+        formatGap(group.spanMs),
+        formatGap(group.medianGapMs),
+        String(group.repeatedRuns),
+      ]),
+    );
+  }
+
+  if (!by || by === 'day') {
+    printGroupTable(
+      'By day',
+      ['day', 'calls', 'tools', 'sessions', 'err', 'empty'],
+      report.byDay.map((group) => [
+        group.name,
+        String(group.decisions),
+        group.tools === null ? '–' : String(group.tools),
+        group.sessions === null ? '–' : String(group.sessions),
+        String(group.class.error),
+        String(group.class.empty),
+      ]),
+    );
   }
 }
 

@@ -60,6 +60,11 @@ export interface DecisionFilter {
   entityId?: string;
   /** Max results */
   limit?: number;
+  /**
+   * Resolve relatedTo links (default true). Set false for aggregate views that
+   * do not need per-decision related entities — avoids a full link scan per row.
+   */
+  includeRelated?: boolean;
 }
 
 // ---------------------------------------------------------------------------
