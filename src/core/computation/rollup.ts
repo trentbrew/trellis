@@ -38,7 +38,15 @@ export function collectRollupRelatedIds(
   const links = ctx.store.getLinksByEntityAndAttribute(ctx.entityId, linkAttr);
   if (links.length > 0) return links.map((l) => l.e2);
 
-  return [];
+  // Relation fields written through the generic create/update path (collections,
+  // ADR 0045) store their value as a plain fact — an id, or an array of ids for
+  // cardinality "many" — rather than a graph link. Fall back to reading it
+  // directly so rollups work over both representations.
+  const fact = ctx.store.getFactsByEntity(ctx.entityId).find((f) => f.a === linkAttr);
+  if (fact === undefined) return [];
+  const raw = fact.v as unknown;
+  if (Array.isArray(raw)) return raw.filter((v): v is string => typeof v === 'string');
+  return typeof raw === 'string' && raw ? [raw] : [];
 }
 
 function resolveLinkAttribute(

@@ -4,6 +4,48 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [4.2.1] — 2026-11-17
+
+_Draft generated from commits since v4.2.0 — review and tighten before publishing._
+
+- **feat(decisions)** decision trace rollup + stats CLI (TRL-61) (`e3d22b9`)
+
+## trellis [4.2.0] — 2026-11-15
+
+**Collection fields grow up: relation/rollup/formula/schedule/sequence/place, plus Nushell-parity terminal tables.**
+
+- **Relation, rollup, and formula collection fields (ADR 0045 Phase 2)** —
+  `CollectionField.valueType`'s 7-type allowlist grows into real relation
+  targeting (any collection), rollup aggregation over a sibling relation, and
+  a formula field reusing the kernel's existing formula engine —
+  `compileCollectionSchema`/`validateCollectionField`/`computeCollectionFieldValues`
+  all extended, no new computation engine.
+- **Schedule field type (turtleOS ADR-0048 Phase 2)** — a `schedule` field
+  declares *when* (`once` ISO-8601 or `recurring` RRULE) as data; a
+  Harness-side scheduler (ADR-0047) reads it and fires whatever action a
+  record declares. This kernel change is the Lexicon half only.
+- **Sequence and place collection fields** — generalizes the built-in Issue
+  noun's auto-incrementing `SYS-N` pattern into a declarable `sequence` field
+  any collection can use (display format `PREFIX-N`, record value is a plain
+  integer), and adds `place` as a real, minimum-viable valueType (a
+  label/address string; lat/lng is an explicit open question for later).
+- **Reserved record attributes are now enforced** — `validateCollectionField`
+  rejects a field key that collides with a reserved record attribute
+  (`createdBy`, `createdAt`, `lastEditedBy`, `lastEditedAt`, …), closing a gap
+  where such a field could silently shadow the real value in every render.
+- **Nushell-parity terminal tables** — `formatTerminalCell`/`terminalTableLines`
+  drop trailing columns into a single `…` column when the table is wider than
+  the terminal (instead of hard-wrapping), repeat the header above the bottom
+  border only when the table actually overflows the terminal's visible rows,
+  switch the header color to bold green and drop the "first column is cyan"
+  convention (Nushell has neither), support an optional per-column header
+  icon, and center-truncate long values instead of end-truncating them.
+- **Build/CI hygiene** — standardized on bun at the repo root (dropped the
+  stray `pnpm-lock.yaml`/`pnpm-workspace.yaml`), committed `bun.lock` with
+  frozen installs in CI (an unpinned dependency drift was OOM-ing the
+  declaration build), and invoke `tsc` with an explicit 8GB heap so the
+  declaration build no longer OOMs at Node's ~4GB default.
+
 ## trellis [4.1.4]; 2026-11-17
 
 **Reflink lane worktrees, `bwrap` lane shell isolation, and CLI verb guards.**
@@ -41,7 +83,7 @@ site copy.
   stays display text, and geocoding remains an adapter/cache.
 - **Supersedes** the unshipped 2026-07-31 graph-native geodata proposal.
 
-## trellis [4.1.0]; 2026-10-15
+## trellis [4.1.0] — 2026-10-15
 
 **Peer wire, forms, and formula core: Iroh-backed pair sync, a form ontology,
 and a hardened release pipeline.**

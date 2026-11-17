@@ -662,6 +662,65 @@ export function decompose(op: VcsOp): DecomposedOp {
           v: vcs.decisionToolOutput,
         });
       }
+      if (vcs.decisionOk !== undefined) {
+        result.addFacts.push({ e: did, a: 'ok', v: vcs.decisionOk });
+      }
+      if (vcs.decisionErrorKind) {
+        result.addFacts.push({
+          e: did,
+          a: 'errorKind',
+          v: vcs.decisionErrorKind,
+        });
+      }
+      if (vcs.decisionDurationMs !== undefined) {
+        result.addFacts.push({
+          e: did,
+          a: 'durationMs',
+          v: vcs.decisionDurationMs,
+        });
+      }
+      if (vcs.decisionResultBytes !== undefined) {
+        result.addFacts.push({
+          e: did,
+          a: 'resultBytes',
+          v: vcs.decisionResultBytes,
+        });
+      }
+      if (vcs.decisionResultRows !== undefined) {
+        result.addFacts.push({
+          e: did,
+          a: 'resultRows',
+          v: vcs.decisionResultRows,
+        });
+      }
+      if (vcs.decisionSessionId) {
+        result.addFacts.push({
+          e: did,
+          a: 'sessionId',
+          v: vcs.decisionSessionId,
+        });
+      }
+      if (vcs.decisionIssueId) {
+        result.addFacts.push({
+          e: did,
+          a: 'issueId',
+          v: vcs.decisionIssueId,
+        });
+      }
+      if (vcs.decisionLaneId) {
+        result.addFacts.push({
+          e: did,
+          a: 'laneId',
+          v: vcs.decisionLaneId,
+        });
+      }
+      if (vcs.decisionQueryShape) {
+        result.addFacts.push({
+          e: did,
+          a: 'queryShape',
+          v: vcs.decisionQueryShape,
+        });
+      }
       if (vcs.decisionContext) {
         result.addFacts.push({ e: did, a: 'context', v: vcs.decisionContext });
       }

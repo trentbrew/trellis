@@ -198,7 +198,7 @@ describe('migrateCollectionFieldsToRelations and compile parity', () => {
       collection: books.id,
       key: 'f_formula',
       label: 'Invalid',
-      valueType: 'formula',
+      valueType: 'bogus_type',
       order: 8,
     },
     {

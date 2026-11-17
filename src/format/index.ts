@@ -154,12 +154,50 @@ function padTerminalCell(text: string, width: number): string {
   return pad > 0 ? text + ' '.repeat(pad) : text;
 }
 
+/**
+ * Truncate from the middle (`collectionRecord:…a3f7` not `collectionReco…`),
+ * keeping both ends visible. For id/path-like values the informative part is
+ * often at both ends (a type prefix, a meaningful suffix); end-truncation
+ * only ever keeps the prefix.
+ */
+function centerTruncate(text: string, max: number): string {
+  if (text.length <= max) return text;
+  if (max <= 1) return '…';
+  const keep = max - 1;
+  const head = Math.ceil(keep / 2);
+  const tail = Math.floor(keep / 2);
+  return `${text.slice(0, head)}…${text.slice(text.length - tail)}`;
+}
+
 export interface FormatTerminalHints {
   layout?: 'auto' | 'table' | 'kv';
   title?: string;
   emptyMessage?: string;
   columns?: string[];
   maxRows?: number;
+  /** Table border style (default `'rounded'`, Nushell/tabled-style boxes). */
+  border?: 'rounded' | 'none';
+  /**
+   * Total visible terminal width. When the full box is wider than this,
+   * trailing columns are dropped (Nushell-style) and replaced with a single
+   * `…` column, rather than letting the terminal hard-wrap the box lines.
+   */
+  maxWidth?: number;
+  /**
+   * Terminal height (visible rows). Mirrors Nushell's `footer_mode: Auto` —
+   * the header is repeated above the bottom border only when the table, as
+   * rendered, would exceed this and scroll the top header out of view.
+   * Unset (height unknown, e.g. non-interactive callers): always repeat for
+   * more than one row, the prior unconditional behavior.
+   */
+  maxHeight?: number;
+  /**
+   * Per-column header glyph, already resolved to a concrete string by the
+   * caller (ADR-0038) — this module stays pure and never does capability
+   * detection (env/TTY/nerd-font) itself. Keyed by the same column key used
+   * for data lookup; purely cosmetic on the header, never touches cell data.
+   */
+  columnIcons?: Record<string, string>;
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -192,7 +230,7 @@ function formatTerminalCell(v: unknown, s: Style): string {
   if (typeof v === 'boolean') return v ? s.green('true') : s.red('false');
   if (typeof v === 'number') return String(v);
   if (typeof v === 'string') {
-    return v.length > 56 ? `${v.slice(0, 53)}…` : v;
+    return centerTruncate(v, TERMINAL_CELL_MAX);
   }
   if (Array.isArray(v)) {
     if (v.length === 0) return s.dim('[]');
@@ -219,39 +257,83 @@ function terminalTableLines(
   if (cols.length === 0) return terminalKvLines(rows[0] ?? {}, s, hints);
 
   const slice = rows.slice(0, maxRows);
-  const widths = cols.map((col) => {
-    let w = col.length;
+  const fullWidths = cols.map((col) => {
+    const icon = hints.columnIcons?.[col];
+    let w = col.length + (icon ? visibleTerminalWidth(icon) + 1 : 0);
     for (const row of slice) {
       w = Math.max(w, formatTerminalCell(row[col], plain).length);
     }
     return Math.min(w, TERMINAL_CELL_MAX);
   });
 
-  const gap = ' '.repeat(TERMINAL_COL_GAP);
-  const lines: string[] = [];
+  const border = hints.border ?? 'rounded';
   const title = hints.title ?? `Rows (${rows.length})`;
-  lines.push(s.bold(title), '');
-  lines.push(
-    `  ${cols.map((c, i) => padTerminalCell(s.dim(c), widths[i])).join(gap)}`,
-  );
-  lines.push(
-    `  ${cols.map((_, i) => s.dim('─'.repeat(widths[i]))).join(gap)}`,
-  );
-  for (const row of slice) {
-    const cells = cols.map((col, i) => {
+  const lines: string[] = [s.bold(title), ''];
+
+  // `│ w1 │ w2 │ … │ wN │` = left bar + N × (space + content + space + bar).
+  const boxWidth = (widths: number[]) => widths.reduce((sum, w) => sum + w + 3, 1);
+
+  let activeCols = cols;
+  let activeWidths = fullWidths;
+  let truncated = false;
+
+  if (border !== 'none' && hints.maxWidth && boxWidth(fullWidths) > hints.maxWidth) {
+    // Nushell-style: drop trailing columns until what's left (+ a 1-wide `…`
+    // column) fits, rather than letting the terminal hard-wrap the box.
+    let n = cols.length;
+    while (n > 1 && boxWidth([...fullWidths.slice(0, n), 1]) > hints.maxWidth) n--;
+    if (n < cols.length) {
+      activeCols = [...cols.slice(0, n), '…'];
+      activeWidths = [...fullWidths.slice(0, n), 1];
+      truncated = true;
+    }
+  }
+
+  const dataCells = (row: Record<string, unknown>) =>
+    activeCols.map((col, i) => {
+      if (truncated && i === activeCols.length - 1) return padTerminalCell(s.dim('…'), activeWidths[i]);
       const plainText = formatTerminalCell(row[col], plain);
-      const clipped =
-        plainText.length > TERMINAL_CELL_MAX
-          ? `${plainText.slice(0, TERMINAL_CELL_MAX - 1)}…`
-          : plainText;
+      const clipped = centerTruncate(plainText, TERMINAL_CELL_MAX);
       let display: string;
-      if (i === 0) display = s.cyan(clipped);
-      else if (typeof row[col] === 'boolean') display = formatTerminalCell(row[col], s);
+      if (typeof row[col] === 'boolean') display = formatTerminalCell(row[col], s);
       else if (row[col] === null || row[col] === undefined) display = formatTerminalCell(row[col], s);
       else display = clipped;
-      return padTerminalCell(display, widths[i]);
+      return padTerminalCell(display, activeWidths[i]);
     });
-    lines.push(`  ${cells.join(gap)}`);
+
+  // Nushell's default color_config: header/row_index are green_bold; every
+  // other cell type (string/int/float/record/nothing) is uncolored.
+  const headerCells = () =>
+    activeCols.map((c, i) => {
+      const icon = hints.columnIcons?.[c];
+      const label = icon ? `${icon} ${c}` : c;
+      return padTerminalCell(s.bold(s.green(label)), activeWidths[i]);
+    });
+
+  if (border === 'none') {
+    const gap = ' '.repeat(TERMINAL_COL_GAP);
+    lines.push(`  ${headerCells().join(gap)}`);
+    lines.push(`  ${activeWidths.map((w) => s.dim('─'.repeat(w))).join(gap)}`);
+    for (const row of slice) lines.push(`  ${dataCells(row).join(gap)}`);
+  } else {
+    const rule = (l: string, m: string, r: string) =>
+      s.dim(`${l}${activeWidths.map((w) => '─'.repeat(w + 2)).join(m)}${r}`);
+    const bar = s.dim('│');
+    const boxRow = (cells: string[]) => `${bar} ${cells.join(` ${bar} `)} ${bar}`;
+    lines.push(rule('╭', '┬', '╮'));
+    lines.push(boxRow(headerCells()));
+    lines.push(rule('├', '┼', '┤'));
+    for (const row of slice) lines.push(boxRow(dataCells(row)));
+    // Nushell's `footer_mode: Auto` — repeat the header only once the table,
+    // as rendered without a repeat (lines.length so far + the closing rule),
+    // would scroll the top header out of view. Height unknown: keep the
+    // prior unconditional repeat.
+    const wouldOverflow = hints.maxHeight ? lines.length + 1 > hints.maxHeight : true;
+    if (slice.length > 1 && wouldOverflow) {
+      lines.push(rule('├', '┼', '┤'));
+      lines.push(boxRow(headerCells()));
+    }
+    lines.push(rule('╰', '┴', '╯'));
   }
   if (rows.length > maxRows) {
     lines.push(s.dim(`  … +${rows.length - maxRows} more`));

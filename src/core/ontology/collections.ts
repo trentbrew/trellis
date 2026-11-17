@@ -19,8 +19,14 @@ import {
   type PropertyType,
   type PropertyValueSpecification,
   type RelationConfig,
+  type RollupConfig,
   type SchemaDefinition,
 } from './types.js';
+import type { EAVStore } from '../store/eav-store.js';
+import { evaluateRollup } from '../computation/rollup.js';
+import { parse as parseFormula } from '../../formula/parse.js';
+import { parseAndEvaluate } from '../../formula/index.js';
+import type { ExprNode } from '../../formula/ir.js';
 
 const VERSION = '1.0.0';
 
@@ -72,6 +78,12 @@ export const COLLECTION_FIELD_TYPES = [
   'tags',
   'date',
   'checkbox',
+  'relation',
+  'rollup',
+  'formula',
+  'schedule',
+  'sequence',
+  'place',
 ] as const;
 
 export type CollectionFieldType = (typeof COLLECTION_FIELD_TYPES)[number];
@@ -82,6 +94,53 @@ export interface CollectionOption {
   label: string;
   color?: string;
 }
+
+/** A `relation` field's target, stored as JSON on `CollectionFieldRow.relationTarget`. */
+export interface CollectionRelationTarget {
+  /** A `collectionMeta:<slug>` id — must name an existing collection. */
+  targetCollection: string;
+  cardinality: 'one' | 'many';
+}
+
+/** A `rollup` field's config, stored as JSON on `CollectionFieldRow.rollupConfig`. */
+export interface CollectionRollupConfig {
+  /** Key of a `relation` field on this same collection. */
+  relationField: string;
+  /** Field key to read on each related record; `"id"` counts related ids. */
+  targetField: string;
+  aggregation: RollupConfig['aggregation'];
+}
+
+/**
+ * A `sequence` field's config, stored as JSON on `CollectionFieldRow.sequenceConfig`
+ * — generalizes the built-in Issue noun's `nextIssueId` (`guest/tsh-dispatch.mjs`
+ * in os-sandbox: scan existing `issue:SYS-N` ids for the max `N`, increment) into
+ * a declarable field any collection can have. The record stores the raw integer
+ * (`PropertyType: 'number'`, same as a plain `number` field); `prefix` is a
+ * display-only hint for rendering it as `PREFIX-N` (e.g. `TICKET-7`) — never part
+ * of the stored value, so a prefix rename never rewrites existing rows.
+ */
+export interface CollectionSequenceConfig {
+  /** Prepended with a dash when rendering, e.g. "TICKET" -> "TICKET-7". Empty: bare number. */
+  prefix: string;
+}
+
+/**
+ * A `schedule` field's *record value* shape (turtleOS ADR-0048 §3) — unlike
+ * `relationTarget`/`rollupConfig`, this is never stored on the field
+ * definition. A relation/rollup's behavior is the same for every row in the
+ * collection; a reminder's due time is not shared across rows at all, so
+ * `schedule` carries no field-level config, the same as `date`/`select` carry
+ * none — each `CollectionRecord` stores its own JSON value for the field.
+ * `once` is an ISO-8601 timestamp; `recurring` uses iCalendar RRULE rather
+ * than cron, which has no clean one-off-timestamp case. This type declares
+ * *when*, as data (Lexicon) — nothing here fires anything; a Harness-side
+ * scheduler reads live values and invokes whatever action is declared for
+ * the record (turtleOS ADR-0047).
+ */
+export type CollectionScheduleValue =
+  | { kind: 'once'; at: string }
+  | { kind: 'recurring'; rrule: string };
 
 /** A `CollectionField` entity's attributes. `options` is JSON `CollectionOption[]`. */
 export interface CollectionFieldRow {
@@ -97,6 +156,14 @@ export interface CollectionFieldRow {
    */
   vocabulary?: string;
   order: number;
+  /** For `relation` fields: JSON `CollectionRelationTarget`. */
+  relationTarget?: string;
+  /** For `rollup` fields: JSON `CollectionRollupConfig`. */
+  rollupConfig?: string;
+  /** For `formula` fields: `kernel-fn` dialect source (`src/formula/`). */
+  formula?: string;
+  /** For `sequence` fields: JSON `CollectionSequenceConfig`. */
+  sequenceConfig?: string;
 }
 
 /**
@@ -267,6 +334,9 @@ export const RESERVED_RECORD_KEYS: ReadonlySet<string> = new Set([
   'createdBy',
   'tenantId',
   'laneId',
+  // TRL-65: op-log-derived provenance, never a declarable field.
+  'lastEditedBy',
+  'lastEditedAt',
 ]);
 
 export function isCollectionFieldType(value: string): value is CollectionFieldType {
@@ -285,6 +355,86 @@ export function parseCollectionOptions(raw: string | undefined): CollectionOptio
     );
   } catch {
     return [];
+  }
+}
+
+/** Parse a `relation` field's `relationTarget` JSON; `null` if missing or malformed. */
+export function parseRelationTarget(raw: string | undefined): CollectionRelationTarget | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<CollectionRelationTarget>;
+    if (typeof parsed.targetCollection !== 'string' || !parsed.targetCollection) return null;
+    return { targetCollection: parsed.targetCollection, cardinality: parsed.cardinality === 'one' ? 'one' : 'many' };
+  } catch {
+    return null;
+  }
+}
+
+/** Parse a `rollup` field's `rollupConfig` JSON; `null` if missing or malformed. */
+export function parseRollupConfig(raw: string | undefined): CollectionRollupConfig | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<CollectionRollupConfig>;
+    if (
+      typeof parsed.relationField !== 'string' || !parsed.relationField ||
+      typeof parsed.targetField !== 'string' || !parsed.targetField ||
+      typeof parsed.aggregation !== 'string'
+    ) {
+      return null;
+    }
+    return {
+      relationField: parsed.relationField,
+      targetField: parsed.targetField,
+      aggregation: parsed.aggregation as CollectionRollupConfig['aggregation'],
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Parse a `sequence` field's `sequenceConfig` JSON. Unlike `relation`/`rollup`
+ * (which have a required target), a sequence is valid with no config at all —
+ * missing or malformed JSON degrades to an empty prefix (bare number) rather
+ * than `null`, so a sequence field never needs its own validation branch in
+ * `validateCollectionField`.
+ */
+export function parseSequenceConfig(raw: string | undefined): CollectionSequenceConfig {
+  if (!raw) return { prefix: '' };
+  try {
+    const parsed = JSON.parse(raw) as Partial<CollectionSequenceConfig>;
+    return { prefix: typeof parsed.prefix === 'string' ? parsed.prefix : '' };
+  } catch {
+    return { prefix: '' };
+  }
+}
+
+/**
+ * Parse a `schedule`-type field's *record value* JSON; `null` if missing or
+ * malformed. Operates on a `CollectionRecord`'s own attribute value (e.g.
+ * `record.due`), never on field-definition JSON — `schedule` has no
+ * field-level config to parse (see `CollectionScheduleValue`). Exported for
+ * consumers (a Harness scheduler, a pack installer validating seed rows) —
+ * the kernel's own `validateCollectionField` never calls this, since it
+ * validates field definitions, not record values, for any field type.
+ */
+export function parseScheduleValue(raw: unknown): CollectionScheduleValue | null {
+  if (typeof raw !== 'string' || !raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<CollectionScheduleValue>;
+    if (parsed.kind === 'once') {
+      const at = (parsed as { at?: unknown }).at;
+      if (typeof at !== 'string' || !at || Number.isNaN(Date.parse(at))) return null;
+      return { kind: 'once', at };
+    }
+    if (parsed.kind === 'recurring') {
+      const rrule = (parsed as { rrule?: unknown }).rrule;
+      if (typeof rrule !== 'string' || !rrule.startsWith('FREQ=')) return null;
+      return { kind: 'recurring', rrule };
+    }
+    return null;
+  } catch {
+    return null;
   }
 }
 
@@ -374,14 +524,26 @@ function safeJson(text: string): unknown {
   }
 }
 
-/** `tags` is a relation to `core:Tag`, compiled separately. */
-const KERNEL_TYPE: Record<Exclude<CollectionFieldType, 'tags'>, PropertyType> = {
+/** `tags`/`relation`/`rollup`/`formula` compile to their own `PropertyValueSpecification` shape below. */
+const KERNEL_TYPE: Record<
+  Exclude<
+    CollectionFieldType,
+    'tags' | 'relation' | 'rollup' | 'formula' | 'schedule'
+  >,
+  PropertyType
+> = {
   text: 'rich_text',
   number: 'number',
   select: 'select',
   multi_select: 'multi_select',
   date: 'date',
   checkbox: 'checkbox',
+  // A sequence's record value is the raw integer; `sequenceConfig`'s prefix
+  // is display-only (see CollectionSequenceConfig) and never changes this.
+  sequence: 'number',
+  // Minimum viable shape per TRL-62 item B.4: a label/address string. lat/lng
+  // is an explicit open question, deferred to a future spec.
+  place: 'rich_text',
 };
 
 function compileRelationToField(rel: RelationRow): PropertyValueSpecification | null {
@@ -394,13 +556,6 @@ function compileRelationToField(rel: RelationRow): PropertyValueSpecification | 
       relation: { targetSchema: 'core:Tag', cardinality: 'many' },
     };
   }
-  if (isCollectionFieldType(rel.valueType)) {
-    return {
-      name: rel.key,
-      valueType: KERNEL_TYPE[rel.valueType as Exclude<CollectionFieldType, 'tags'>],
-      description: rel.label,
-    };
-  }
   if (rel.valueType === 'relation') {
     const link = fromRelationLinkConfig(parseRelationLinkConfig(rel.relation));
     return {
@@ -408,6 +563,20 @@ function compileRelationToField(rel: RelationRow): PropertyValueSpecification | 
       valueType: 'relation',
       description: rel.label,
       ...(link ? { relation: link } : {}),
+    };
+  }
+  if (rel.valueType === 'schedule') {
+    return {
+      name: rel.key,
+      valueType: 'json',
+      description: rel.label,
+    };
+  }
+  if (Object.prototype.hasOwnProperty.call(KERNEL_TYPE, rel.valueType)) {
+    return {
+      name: rel.key,
+      valueType: KERNEL_TYPE[rel.valueType as keyof typeof KERNEL_TYPE],
+      description: rel.label,
     };
   }
   if ((PropertyTypeSchema as readonly string[]).includes(rel.valueType)) {
@@ -485,9 +654,57 @@ export function compileCollectionSchema(
             relation: { targetSchema: 'core:Tag', cardinality: 'many' },
           };
         }
+        if (row.valueType === 'relation') {
+          const target = parseRelationTarget(row.relationTarget);
+          // A malformed (but present) targetCollection must not crash the whole
+          // collection's schema compile — degrade to the same shape a missing
+          // target already gets, same as `collectionSchemaId` would otherwise throw.
+          let relation: PropertyValueSpecification['relation'] = { cardinality: 'many' };
+          if (target) {
+            try {
+              relation = { targetSchema: collectionSchemaId(target.targetCollection), cardinality: target.cardinality };
+            } catch {
+              relation = { cardinality: target.cardinality };
+            }
+          }
+          return { name: row.key, valueType: 'relation', description: row.label, relation };
+        }
+        if (row.valueType === 'rollup') {
+          const config = parseRollupConfig(row.rollupConfig);
+          return {
+            name: row.key,
+            valueType: 'rollup',
+            description: row.label,
+            ...(config
+              ? { rollup: { relationProperty: config.relationField, targetProperty: config.targetField, aggregation: config.aggregation } }
+              : {}),
+          };
+        }
+        if (row.valueType === 'formula') {
+          return {
+            name: row.key,
+            valueType: 'formula',
+            description: row.label,
+            ...(row.formula ? { formula: row.formula } : {}),
+          };
+        }
+        // schedule carries no field-level config; each record stores its own
+        // JSON value (CollectionScheduleValue), so the row schema sees json.
+        if (row.valueType === 'schedule') {
+          return {
+            name: row.key,
+            valueType: 'json',
+            description: row.label,
+          };
+        }
         return {
           name: row.key,
-          valueType: KERNEL_TYPE[row.valueType as Exclude<CollectionFieldType, 'tags'>],
+          valueType: KERNEL_TYPE[
+            row.valueType as Exclude<
+              CollectionFieldType,
+              'tags' | 'relation' | 'rollup' | 'formula' | 'schedule'
+            >
+          ],
           description: row.label,
         };
       });
@@ -568,6 +785,10 @@ export const COLLECTION_FIELD_SCHEMA: SchemaDefinition = {
     f('options', 'rich_text'),
     f('vocabulary', 'rich_text'),
     f('order', 'number', true),
+    f('relationTarget', 'rich_text'),
+    f('rollupConfig', 'rich_text'),
+    f('formula', 'rich_text'),
+    f('sequenceConfig', 'rich_text'),
   ],
 };
 
@@ -576,3 +797,181 @@ export const COLLECTION_SCHEMAS: SchemaDefinition[] = [
   COLLECTION_RECORD_SCHEMA,
   COLLECTION_FIELD_SCHEMA,
 ];
+
+// ---------------------------------------------------------------------------
+// Validating relation/rollup/formula field definitions (ADR 0045 Phase 2)
+// ---------------------------------------------------------------------------
+
+/** Field keys a `formula` directly reads (`$key` references; `scope: 'request'` refs are ignored — not a collection field). */
+function formulaFieldRefs(node: ExprNode): string[] {
+  switch (node.kind) {
+    case 'field':
+      return node.scope === 'record' ? [node.path[0]!] : [];
+    case 'binop':
+      return [...formulaFieldRefs(node.left), ...formulaFieldRefs(node.right)];
+    case 'unary':
+      return formulaFieldRefs(node.arg);
+    case 'call':
+      return node.args.flatMap(formulaFieldRefs);
+    default:
+      return [];
+  }
+}
+
+/** True if following formula→formula field refs from `refs` ever reaches `startKey` again. */
+function hasFormulaCycle(
+  startKey: string,
+  refs: readonly string[],
+  fieldsByKey: ReadonlyMap<string, CollectionFieldRow>,
+  visiting: Set<string>,
+): boolean {
+  for (const ref of refs) {
+    if (ref === startKey) return true;
+    const field = fieldsByKey.get(ref);
+    if (!field || field.valueType !== 'formula' || !field.formula || visiting.has(ref)) continue;
+    visiting.add(ref);
+    let ast: ExprNode;
+    try {
+      ast = parseFormula(field.formula, 'kernel-fn');
+    } catch {
+      continue;
+    }
+    if (hasFormulaCycle(startKey, formulaFieldRefs(ast), fieldsByKey, visiting)) return true;
+  }
+  return false;
+}
+
+export interface CollectionFieldValidationContext {
+  /** Every `CollectionField` row on this same collection (including the one being validated). */
+  siblingFields: readonly CollectionFieldRow[];
+  /** Every known `collectionMeta:<slug>` id, to check a `relation` field's target exists. */
+  knownCollectionIds: ReadonlySet<string>;
+}
+
+/**
+ * Validates one field definition against its collection's other fields and
+ * known collections. Pure — this is the check ADR 0045 §5 names as needed
+ * before collection writes are gated; wiring it into the live create/update
+ * path is that separate, deferred work. Returns an error message, or `null`
+ * when the field is valid.
+ */
+const ROLLUP_AGGREGATIONS: ReadonlySet<string> = new Set(['count', 'sum', 'avg', 'min', 'max', 'median', 'mode']);
+
+export function validateCollectionField(
+  row: CollectionFieldRow,
+  ctx: CollectionFieldValidationContext,
+): string | null {
+  if (RESERVED_RECORD_KEYS.has(row.key)) {
+    return `field "${row.key}": "${row.key}" is a reserved record attribute, not a declarable field`;
+  }
+
+  if (row.valueType === 'relation') {
+    const target = parseRelationTarget(row.relationTarget);
+    if (!target) return `field "${row.key}": relation field needs a target collection`;
+    if (!ctx.knownCollectionIds.has(target.targetCollection)) {
+      return `field "${row.key}": relation target "${target.targetCollection}" does not exist`;
+    }
+    return null;
+  }
+
+  if (row.valueType === 'rollup') {
+    const config = parseRollupConfig(row.rollupConfig);
+    if (!config) return `field "${row.key}": rollup field needs relationField, targetField, and aggregation`;
+    const relationField = ctx.siblingFields.find(
+      (f) => f.collection === row.collection && f.key === config.relationField,
+    );
+    if (!relationField || relationField.valueType !== 'relation') {
+      return `field "${row.key}": rollup.relationField "${config.relationField}" is not a relation field on this collection`;
+    }
+    if (!ROLLUP_AGGREGATIONS.has(config.aggregation)) {
+      return `field "${row.key}": rollup.aggregation "${config.aggregation}" is not a recognized aggregation`;
+    }
+    return null;
+  }
+
+  if (row.valueType === 'formula') {
+    if (!row.formula?.trim()) return `field "${row.key}": formula field needs a formula`;
+    let ast: ExprNode;
+    try {
+      ast = parseFormula(row.formula, 'kernel-fn');
+    } catch (error) {
+      return `field "${row.key}": formula does not parse — ${(error as Error).message}`;
+    }
+    const fieldsByKey = new Map(
+      ctx.siblingFields.filter((f) => f.collection === row.collection).map((f) => [f.key, f] as const),
+    );
+    const refs = formulaFieldRefs(ast);
+    for (const ref of refs) {
+      if (RESERVED_RECORD_KEYS.has(ref)) continue;
+      const sibling = fieldsByKey.get(ref);
+      if (!sibling) return `field "${row.key}": formula references unknown field "${ref}"`;
+      if (sibling.valueType === 'relation' || sibling.valueType === 'tags') {
+        return `field "${row.key}": formula cannot reference relation field "${ref}" directly; use a rollup`;
+      }
+    }
+    if (hasFormulaCycle(row.key, refs, fieldsByKey, new Set([row.key]))) {
+      return `field "${row.key}": formula has a circular reference`;
+    }
+    return null;
+  }
+
+  // 'schedule' needs no field-level config check — it has none, by design
+  // (see CollectionScheduleValue); it falls through to `return null` below,
+  // same as date/select/checkbox. Its own *value* shape is validated by
+  // parseScheduleValue, called by consumers against record data, never here.
+
+  // 'sequence'/'place' also fall through: sequence's prefix is optional
+  // (parseSequenceConfig always returns a value, never null) and place's
+  // minimum shape is a plain string, same as text/date/checkbox.
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Computing rollup/formula values at read time (ADR 0045 Phase 2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Computes `rollup` and `formula` field values for one `CollectionRecord`,
+ * from its collection's `CollectionField` rows. Pure composition over the
+ * kernel's existing `evaluateRollup` (`src/core/computation/rollup.ts`) and
+ * formula engine (`src/formula/`) — no new computation engine. Rollups are
+ * computed first, so a formula may read an already-computed rollup value.
+ *
+ * Returns a plain `{ fieldKey: value }` map; nothing is written back to the
+ * store — the caller merges this into whatever it renders or returns.
+ */
+export function computeCollectionFieldValues(
+  record: { id: string; collectionId: string; [key: string]: unknown },
+  fields: readonly CollectionFieldRow[],
+  store: EAVStore,
+): Record<string, unknown> {
+  const collectionFields = fields.filter((f) => f.collection === record.collectionId);
+  const values: Record<string, unknown> = {};
+
+  for (const field of collectionFields) {
+    if (field.valueType !== 'rollup') continue;
+    const config = parseRollupConfig(field.rollupConfig);
+    if (!config) continue;
+    const relationField = collectionFields.find(
+      (f) => f.key === config.relationField && f.valueType === 'relation',
+    );
+    if (!relationField) continue;
+    values[field.key] = evaluateRollup(
+      { relationProperty: config.relationField, targetProperty: config.targetField, aggregation: config.aggregation },
+      { store, entityId: record.id },
+    );
+  }
+
+  const recordForFormulas: Record<string, unknown> = { ...record, ...values };
+  for (const field of collectionFields) {
+    if (field.valueType !== 'formula' || !field.formula) continue;
+    try {
+      values[field.key] = parseAndEvaluate(field.formula, 'kernel-fn', { record: recordForFormulas });
+    } catch {
+      values[field.key] = null;
+    }
+  }
+
+  return values;
+}

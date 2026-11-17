@@ -7,14 +7,27 @@
  */
 
 import type { HookRegistry } from './hooks.js';
-import type { DecisionInput, DecisionContext } from './types.js';
+import type {
+  DecisionInput,
+  DecisionContext,
+  DecisionEnrichment,
+} from './types.js';
+import { deriveQueryShape } from './query-shape.js';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-/** A generic MCP tool handler: receives params, returns a result. */
-export type ToolHandler = (params: Record<string, unknown>) => Promise<unknown>;
+/** Minimal structural shape of MCP's second handler argument. */
+export interface ToolExtra {
+  sessionId?: string;
+}
+
+/** A generic MCP tool handler: receives params + optional transport extra. */
+export type ToolHandler = (
+  params: Record<string, unknown>,
+  extra?: ToolExtra,
+) => Promise<unknown>;
 
 /** Callback invoked after auto-capture builds the DecisionInput. */
 export type DecisionRecorder = (decision: DecisionInput) => Promise<void>;
@@ -40,10 +53,10 @@ export function wrapToolHandler(
   handler: ToolHandler,
   opts: AutoCaptureOpts,
 ): ToolHandler {
-  return async (params: Record<string, unknown>) => {
+  return async (params, extra) => {
     // Skip excluded tools
     if (opts.exclude?.has(toolName)) {
-      return handler(params);
+      return handler(params, extra);
     }
 
     // Run pre-hooks
@@ -52,8 +65,26 @@ export function wrapToolHandler(
       params,
     );
 
-    // Execute the actual tool
-    const result = await handler(params);
+    // Execute the actual tool. A throw must still leave a trace (TRL-74):
+    // failures are the calls a quality signal needs most.
+    const startedAt = performance.now();
+    let result: unknown;
+    try {
+      result = await handler(params, extra);
+    } catch (error) {
+      const durationMs = elapsedSince(startedAt);
+      const decision = buildDecisionInput(toolName, params, preContext, {
+        ok: false,
+        errorKind: 'thrown',
+        durationMs,
+        outputSummary: errorSummary(error),
+        sessionId: sessionIdFrom(extra, preContext),
+      });
+      record(opts, decision);
+      throw error;
+    }
+
+    const durationMs = elapsedSince(startedAt);
 
     // Run post-hooks
     const enrichment = await opts.hooks.runPostHooks(
@@ -63,27 +94,25 @@ export function wrapToolHandler(
       preContext,
     );
 
-    // Build the decision input
-    const decision: DecisionInput = {
+    const failed = isErrorResult(result);
+    const decision = buildDecisionInput(
       toolName,
-      input: sanitizeInput(params),
-      outputSummary: summarize(result),
-      context: preContext.prompt ?? preContext.conversationId,
-      rationale: enrichment.rationale,
-      alternatives: enrichment.alternatives,
-      confidence: enrichment.confidence,
-      relatedEntities: enrichment.relatedEntities,
-      custom: {
-        ...preContext.custom,
-        ...enrichment.custom,
-        agentModel: preContext.agentModel,
+      params,
+      preContext,
+      {
+        ok: !failed,
+        ...(failed ? { errorKind: 'mcp_is_error' as const } : {}),
+        durationMs,
+        outputSummary: summarize(result),
+        resultBytes: byteSize(result),
+        resultRows: resultRowCount(result),
+        sessionId: sessionIdFrom(extra, preContext),
       },
-    };
+      enrichment,
+    );
 
     // Record asynchronously — don't block tool response
-    opts.recorder(decision).catch(() => {
-      // Silently ignore recording failures
-    });
+    record(opts, decision);
 
     return result;
   };
@@ -131,6 +160,105 @@ function summarize(result: unknown): string {
   const str =
     typeof result === 'string' ? result : JSON.stringify(result, null, 0);
   return str.length > 500 ? str.slice(0, 500) + '…' : str;
+}
+
+function elapsedSince(start: number): number {
+  return Math.max(0, Math.round(performance.now() - start));
+}
+
+function record(opts: AutoCaptureOpts, decision: DecisionInput): void {
+  opts.recorder(decision).catch(() => {
+    // Silently ignore recording failures.
+  });
+}
+
+function isErrorResult(result: unknown): boolean {
+  return Boolean(
+    result &&
+      typeof result === 'object' &&
+      (result as { isError?: unknown }).isError === true,
+  );
+}
+
+function byteSize(result: unknown): number | undefined {
+  try {
+    const json = JSON.stringify(result);
+    return json === undefined ? undefined : Buffer.byteLength(json, 'utf8');
+  } catch {
+    return undefined;
+  }
+}
+
+function resultRowCount(result: unknown): number | undefined {
+  if (!result || typeof result !== 'object') return undefined;
+  const record = result as {
+    rowCount?: unknown;
+    structuredContent?: { rowCount?: unknown };
+  };
+  for (const value of [record.rowCount, record.structuredContent?.rowCount]) {
+    if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function textOrUndefined(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function envValue(name: string): string | undefined {
+  return textOrUndefined(process.env[name]);
+}
+
+function sessionIdFrom(
+  extra: ToolExtra | undefined,
+  preContext: DecisionContext,
+): string | undefined {
+  return (
+    textOrUndefined(extra?.sessionId) ??
+    textOrUndefined(preContext.conversationId)
+  );
+}
+
+function errorSummary(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const text = `Error: ${message}`;
+  return text.length > 500 ? `${text.slice(0, 500)}…` : text;
+}
+
+function buildDecisionInput(
+  toolName: string,
+  params: Record<string, unknown>,
+  preContext: DecisionContext,
+  extra: Partial<DecisionInput>,
+  enrichment?: DecisionEnrichment,
+): DecisionInput {
+  const custom = {
+    ...preContext.custom,
+    ...(enrichment?.custom ?? {}),
+    ...(preContext.agentModel ? { agentModel: preContext.agentModel } : {}),
+  };
+  return {
+    toolName,
+    input: sanitizeInput(params),
+    context: preContext.prompt ?? preContext.conversationId,
+    queryShape: deriveQueryShape(toolName, params),
+    issueId:
+      textOrUndefined(preContext.custom?.issueId) ??
+      envValue('TRELLIS_ISSUE_ID'),
+    laneId: envValue('TRELLIS_LANE_ID'),
+    ...extra,
+    ...(enrichment
+      ? {
+          rationale: enrichment.rationale,
+          alternatives: enrichment.alternatives,
+          confidence: enrichment.confidence,
+          relatedEntities: enrichment.relatedEntities,
+        }
+      : {}),
+    custom,
+  };
 }
 
 export { summarize as _summarizeForTest };

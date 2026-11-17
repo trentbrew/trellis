@@ -28,6 +28,20 @@ export type {
   DecisionPreHook,
   DecisionPostHook,
 } from './types.js';
+export {
+  summarizeDecisions,
+  classifySummary,
+  stableInputKey,
+  percentile,
+  median,
+  parseTimeArg,
+  emptyClassCounts,
+  type StatsReport,
+  type StatsGroup,
+  type RepeatPattern,
+  type SummaryClass,
+  type ClassCounts,
+} from './stats.js';
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
@@ -87,6 +101,15 @@ export async function recordDecision(
       decisionAlternatives: input.alternatives
         ? JSON.stringify(input.alternatives)
         : undefined,
+      decisionOk: input.ok,
+      decisionErrorKind: input.errorKind,
+      decisionDurationMs: input.durationMs,
+      decisionResultBytes: input.resultBytes,
+      decisionResultRows: input.resultRows,
+      decisionSessionId: input.sessionId,
+      decisionIssueId: input.issueId,
+      decisionLaneId: input.laneId,
+      decisionQueryShape: input.queryShape,
     },
   });
   await ctx.applyOp(op);
@@ -118,7 +141,11 @@ export async function recordDecision(
 /**
  * Build a Decision from EAV facts for a given entity ID.
  */
-function buildDecision(ctx: EngineContext, entityId: string): Decision {
+function buildDecision(
+  ctx: EngineContext,
+  entityId: string,
+  opts: { includeRelated?: boolean } = {},
+): Decision {
   const facts = ctx.store.getFactsByEntity(entityId);
   const get = (a: string) => {
     const matches = facts.filter((f) => f.a === a);
@@ -127,11 +154,32 @@ function buildDecision(ctx: EngineContext, entityId: string): Decision {
       : undefined;
   };
 
-  // Gather related entity links
-  const links = ctx.store.getLinksByAttribute('relatedTo');
-  const related = links.filter((l) => l.e1 === entityId).map((l) => l.e2);
+  // Related links cost a full scan of the link table; callers that only need
+  // timings/counts (decision stats) opt out.
+  const related =
+    opts.includeRelated === false
+      ? []
+      : ctx.store
+          .getLinksByAttribute('relatedTo')
+          .filter((l) => l.e1 === entityId)
+          .map((l) => l.e2);
 
   const bareId = entityId.replace(/^decision:/, '');
+
+  // toolInput is stored as a JSON string by recordDecision. It is sanitized at
+  // capture, but malformed/legacy rows must not break queries.
+  const inputRaw = get('toolInput');
+  let input: Record<string, unknown> | undefined;
+  if (inputRaw !== undefined) {
+    try {
+      const parsed = JSON.parse(inputRaw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        input = parsed as Record<string, unknown>;
+      }
+    } catch {
+      input = undefined;
+    }
+  }
 
   const alternativesRaw = get('alternatives');
   let alternatives: string[] | undefined;
@@ -147,10 +195,41 @@ function buildDecision(ctx: EngineContext, entityId: string): Decision {
   const confidence =
     confidenceRaw !== undefined ? parseFloat(confidenceRaw) : undefined;
 
+  const bool = (a: string): boolean | undefined => {
+    const raw = get(a);
+    if (typeof raw === 'boolean') return raw;
+    if (raw === 'true') return true;
+    if (raw === 'false') return false;
+    return undefined;
+  };
+  const num = (a: string): number | undefined => {
+    const raw = get(a);
+    if (typeof raw === 'number') return Number.isFinite(raw) ? raw : undefined;
+    if (typeof raw === 'string' && raw.trim()) {
+      const parsed = Number(raw);
+      return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    return undefined;
+  };
+  const str = (a: string): string | undefined => {
+    const raw = get(a);
+    return typeof raw === 'string' && raw.trim() ? raw : undefined;
+  };
+
   return {
     id: bareId,
     toolName: get('toolName') ?? '',
+    input,
     outputSummary: get('outputSummary'),
+    ok: bool('ok'),
+    errorKind: str('errorKind') as Decision['errorKind'],
+    durationMs: num('durationMs'),
+    resultBytes: num('resultBytes'),
+    resultRows: num('resultRows'),
+    sessionId: str('sessionId'),
+    issueId: str('issueId'),
+    laneId: str('laneId'),
+    queryShape: str('queryShape'),
     context: get('context'),
     rationale: get('rationale'),
     alternatives,
@@ -172,7 +251,9 @@ export function queryDecisions(
     .getFactsByAttribute('type')
     .filter((f) => f.v === 'Decision');
 
-  let decisions = decisionFacts.map((f) => buildDecision(ctx, f.e));
+  let decisions = decisionFacts.map((f) =>
+    buildDecision(ctx, f.e, { includeRelated: filter?.includeRelated }),
+  );
 
   if (filter?.toolPattern) {
     const pattern = filter.toolPattern;

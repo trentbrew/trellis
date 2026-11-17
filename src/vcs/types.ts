@@ -190,6 +190,15 @@ export interface VcsPayload {
   decisionToolName?: string;
   decisionToolInput?: string;
   decisionToolOutput?: string;
+  decisionOk?: boolean;
+  decisionErrorKind?: string;
+  decisionDurationMs?: number;
+  decisionResultBytes?: number;
+  decisionResultRows?: number;
+  decisionSessionId?: string;
+  decisionIssueId?: string;
+  decisionLaneId?: string;
+  decisionQueryShape?: string;
 
   // Harness chat transcripts (vcs:chatMessage)
   chatMessageId?: string;
