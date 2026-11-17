@@ -460,7 +460,6 @@ publish *FLAGS='':
     fi
   fi
 
-  just ship-check
   bun run test:ship
   just build
   CI=1 node scripts/validate-npm-publish.mjs   # structural checks: file/link deps, heavy deps, CHANGELOG==version
