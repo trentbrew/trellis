@@ -1320,7 +1320,11 @@ gitCmd
 program
   .command('branch')
   .description('Manage branches')
-  .argument('[name]', 'Branch name to create or switch to')
+  .argument(
+    '[action]',
+    '"list", "create <name>", "switch <name>", "delete <name>", or a branch name to switch to (creating it if absent)',
+  )
+  .argument('[name]', 'Branch name (for create/switch/delete)')
   .option('-d, --delete <name>', 'Delete a branch')
   .option('-l, --list', 'List all branches')
   .option('--json', 'Emit machine-readable JSON (no color)')
@@ -1329,7 +1333,7 @@ program
     '--confirm-destructive',
     'Allow branch delete (or set TRELLIS_CONFIRM_DESTRUCTIVE=1)',
   )
-  .action(async (name, opts) => {
+  .action(async (action, name, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
     const engine = new TrellisVcsEngine({
@@ -1338,87 +1342,128 @@ program
     });
     engine.open();
 
-    // Delete
-    if (opts.delete) {
+    const fail = (message: string): never => {
+      console.error(chalk.red(message));
+      process.exit(1);
+    };
+
+    const showList = () => {
+      const branches = engine.listBranches();
+      if (branches.length === 0) {
+        if (opts.json) {
+          console.log(JSON.stringify({ branches: [] }, null, 2));
+        } else {
+          console.log(chalk.dim('No branches'));
+        }
+        return;
+      }
+
+      if (opts.json) {
+        console.log(
+          JSON.stringify(
+            {
+              branches: branches.map((b) => ({
+                name: b.name,
+                isCurrent: b.isCurrent,
+                createdAt: b.createdAt ?? null,
+              })),
+            },
+            null,
+            2,
+          ),
+        );
+        return;
+      }
+
+      console.log(chalk.bold('Branches\n'));
+      for (const b of branches) {
+        const marker = b.isCurrent ? chalk.green('* ') : '  ';
+        const label = b.isCurrent ? chalk.green(b.name) : b.name;
+        const age = b.createdAt
+          ? chalk.dim(formatRelativeTime(b.createdAt))
+          : '';
+        console.log(`${marker}${label} ${age}`);
+      }
+    };
+
+    const switchTo = (target: string) => {
+      try {
+        engine.switchBranch(target);
+        console.log(chalk.green(`✓ Switched to branch '${target}'`));
+      } catch (err: any) {
+        fail(err.message);
+      }
+    };
+
+    const create = async (target: string) => {
+      try {
+        await engine.createBranch(target);
+        engine.switchBranch(target);
+        console.log(chalk.green(`✓ Created and switched to branch '${target}'`));
+      } catch (err: any) {
+        fail(err.message);
+      }
+    };
+
+    const remove = async (target: string) => {
       try {
         requireDestructiveConfirm({
           action: 'branch-delete',
           confirmDestructive: opts.confirmDestructive,
         });
-        await engine.deleteBranch(opts.delete);
-        console.log(chalk.green(`✓ Deleted branch '${opts.delete}'`));
+        await engine.deleteBranch(target);
+        console.log(chalk.green(`✓ Deleted branch '${target}'`));
       } catch (err: any) {
-        console.error(chalk.red(err.message));
-        process.exit(1);
+        fail(err.message);
       }
+    };
+
+    if (opts.delete) {
+      await remove(opts.delete);
       return;
     }
 
-    // Create or switch
+    // Verbs win over bare names, so `branch list` lists instead of creating a
+    // branch called "list". A branch that genuinely needs a verb for its name
+    // is still reachable through the explicit `branch create <name>` form.
+    switch (action) {
+      case 'list':
+      case 'ls':
+        showList();
+        return;
+      case 'create':
+        if (!name) fail('Usage: trellis branch create <name>');
+        await create(name);
+        return;
+      case 'switch':
+        if (!name) fail('Usage: trellis branch switch <name>');
+        if (!engine.listBranches().some((b) => b.name === name)) {
+          fail(`No such branch: '${name}' (create it with: branch create ${name})`);
+        }
+        switchTo(name);
+        return;
+      case 'delete':
+        if (!name) fail('Usage: trellis branch delete <name>');
+        await remove(name);
+        return;
+    }
+
     if (name) {
-      const branches = engine.listBranches();
-      const exists = branches.find((b) => b.name === name);
+      fail(`Unknown action: '${action}' (expected list, create, switch, or delete)`);
+    }
 
+    // Bare `branch <name>` stays a switch-or-create shorthand.
+    if (action) {
+      const exists = engine.listBranches().some((b) => b.name === action);
       if (exists) {
-        // Switch to existing branch
-        try {
-          engine.switchBranch(name);
-          console.log(chalk.green(`✓ Switched to branch '${name}'`));
-        } catch (err: any) {
-          console.error(chalk.red(err.message));
-          process.exit(1);
-        }
+        switchTo(action);
       } else {
-        // Create new branch
-        try {
-          await engine.createBranch(name);
-          engine.switchBranch(name);
-          console.log(
-            chalk.green(`✓ Created and switched to branch '${name}'`),
-          );
-        } catch (err: any) {
-          console.error(chalk.red(err.message));
-          process.exit(1);
-        }
+        await create(action);
       }
       return;
     }
 
-    // List (default)
-    const branches = engine.listBranches();
-    if (branches.length === 0) {
-      if (opts.json) {
-        console.log(JSON.stringify({ branches: [] }, null, 2));
-      } else {
-        console.log(chalk.dim('No branches'));
-      }
-      return;
-    }
-
-    if (opts.json) {
-      console.log(
-        JSON.stringify(
-          {
-            branches: branches.map((b) => ({
-              name: b.name,
-              isCurrent: b.isCurrent,
-              createdAt: b.createdAt ?? null,
-            })),
-          },
-          null,
-          2,
-        ),
-      );
-      return;
-    }
-
-    console.log(chalk.bold('Branches\n'));
-    for (const b of branches) {
-      const marker = b.isCurrent ? chalk.green('* ') : '  ';
-      const name = b.isCurrent ? chalk.green(b.name) : b.name;
-      const age = b.createdAt ? chalk.dim(formatRelativeTime(b.createdAt)) : '';
-      console.log(`${marker}${name} ${age}`);
-    }
+    showList();
   });
 
 // ---------------------------------------------------------------------------
@@ -1439,6 +1484,8 @@ program
   .option('--json', 'Emit machine-readable JSON (no color)')
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (action, opts) => {
+    requireKnownAction(action, ['create', 'list']);
+
     const rootPath = resolveRepoRoot(opts.path);
 
     const engine = new TrellisVcsEngine({
@@ -1558,6 +1605,8 @@ program
   .argument('[action]', '"create" or "list" (default: list)')
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (action, opts) => {
+    requireKnownAction(action, ['create', 'list']);
+
     const rootPath = resolveRepoRoot(opts.path);
 
     const engine = new TrellisVcsEngine({
@@ -1883,6 +1932,10 @@ program
   .option('-p, --path <path>', 'Local repository path', '.')
   .option('--remote <remote>', 'Remote repository path')
   .action((action, opts) => {
+    // push and pull are documented but unbuilt; they fall through to the
+    // transport-pending notice below rather than being rejected here.
+    requireKnownAction(action, ['push', 'pull', 'status', 'reconcile']);
+
     const rootPath = resolveRepoRoot(opts.path);
 
     const engine = new TrellisVcsEngine({
@@ -1969,6 +2022,8 @@ program
   .option('-n, --limit <n>', 'Max results', parseInt as any)
   .option('--json', 'Emit machine-readable JSON (no color)')
   .action((action, id, opts) => {
+    requireKnownAction(action, ['list', 'show', 'search', 'revive', 'stats']);
+
     const rootPath = resolveRepoRoot(opts.path);
 
     const engine = new TrellisVcsEngine({
@@ -3147,6 +3202,8 @@ program
   .option('--local', 'Write/read the legacy per-repo identity, not the person key')
   .option('--out <file>', 'export: write the identity (with private key) to an owner-only file instead of stdout')
   .action(async (action, opts) => {
+    requireKnownAction(action, ['init', 'show', 'export', 'import']);
+
     const rootPath = resolve(opts.path);
     const trellisDir = join(rootPath, '.trellis');
     const usePerson = !opts.local;
@@ -6074,6 +6131,25 @@ function formatOpKind(kind: string): string {
   return kindMap[kind] ?? chalk.dim(kind);
 }
 
+// Commands taking a bare `[action]` used to fall through to their read path when
+// the verb was not recognized, so a typo silently ran a different operation. An
+// unknown verb is an error; omitting the action still takes the documented
+// default.
+function requireKnownAction(
+  action: string | undefined,
+  known: readonly string[],
+): void {
+  if (!action || known.includes(action)) return;
+  console.error(
+    chalk.red(
+      `Unknown action: '${action}' (expected ${known
+        .map((a) => `"${a}"`)
+        .join(', ')})`,
+    ),
+  );
+  process.exit(1);
+}
+
 function formatRelativeTime(iso: string): string {
   const now = Date.now();
   const then = new Date(iso).getTime();
@@ -8010,6 +8086,10 @@ program
   .option('--status <status>', 'active | idle | away', 'active')
   .option('-p, --path <path>', 'Repository path', '.')
   .action((action, opts) => {
+    // The default here is a write, so an unrecognized verb used to announce a
+    // heartbeat rather than report the typo.
+    requireKnownAction(action, ['announce', 'clear']);
+
     const rootPath = resolveRepoRoot(opts.path);
 
     if (action === 'clear') {
