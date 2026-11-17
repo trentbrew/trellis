@@ -30,6 +30,12 @@ export interface StatsGroup {
   repeatedRuns: number;
   maxRepeatStreak: number;
   class: ClassCounts;
+  /** Outcome counts from TRL-74 `ok`/`errorKind` facts; absent on pre-TRL-74 traces. */
+  ok: number;
+  error: number;
+  unknownOutcome: number;
+  medianDurationMs: number | null;
+  p90DurationMs: number | null;
 }
 
 export interface RepeatPattern {
@@ -41,7 +47,7 @@ export interface RepeatPattern {
 }
 
 export interface StatsReport {
-  v: 1;
+  v: 2;
   generatedAt: string;
   window: {
     since: string | null;
@@ -56,6 +62,12 @@ export interface StatsReport {
     lastAt: string | null;
     unknownTime: number;
     class: ClassCounts;
+    ok: number;
+    error: number;
+    unknownOutcome: number;
+    errorKinds: Record<string, number>;
+    durationMs: { median: number | null; p90: number | null };
+    resultBytes: { median: number | null; p90: number | null };
   };
   byTool: StatsGroup[];
   bySession: StatsGroup[];
@@ -202,9 +214,28 @@ function addTo(acc: Acc, row: Row): void {
   if (acc.sessions) acc.sessions.add(row.decision.context ?? '(none)');
 }
 
+/** `ok`/`error`/`unknownOutcome` tally from `Decision.ok`; absent on pre-TRL-74 traces. */
+function tallyOutcomes(rows: Row[]): { ok: number; error: number; unknownOutcome: number } {
+  let ok = 0;
+  let error = 0;
+  let unknownOutcome = 0;
+  for (const row of rows) {
+    if (row.decision.ok === true) ok++;
+    else if (row.decision.ok === false) error++;
+    else unknownOutcome++;
+  }
+  return { ok, error, unknownOutcome };
+}
+
 function buildGroup(acc: Acc): StatsGroup {
   const cls = emptyClassCounts();
   for (const row of acc.rows) cls[classifySummary(row.decision.outputSummary)]++;
+
+  const outcomes = tallyOutcomes(acc.rows);
+  const durations = acc.rows
+    .map((r) => r.decision.durationMs)
+    .filter((d): d is number => typeof d === 'number' && Number.isFinite(d))
+    .sort((a, b) => a - b);
 
   const times = acc.rows
     .map((r) => r.at)
@@ -253,6 +284,11 @@ function buildGroup(acc: Acc): StatsGroup {
     repeatedRuns,
     maxRepeatStreak,
     class: cls,
+    ok: outcomes.ok,
+    error: outcomes.error,
+    unknownOutcome: outcomes.unknownOutcome,
+    medianDurationMs: median(durations),
+    p90DurationMs: percentile(durations, 0.9),
   };
 }
 
@@ -274,6 +310,12 @@ export function summarizeDecisions(
   let unknownTime = 0;
   let firstAt: number | null = null;
   let lastAt: number | null = null;
+  let totalOk = 0;
+  let totalError = 0;
+  let totalUnknownOutcome = 0;
+  const errorKinds: Record<string, number> = {};
+  const allDurations: number[] = [];
+  const allBytes: number[] = [];
 
   const toolAccs = new Map<string, Acc>();
   const sessionAccs = new Map<string, Acc>();
@@ -293,6 +335,19 @@ export function summarizeDecisions(
     } else {
       firstAt = firstAt === null ? at : Math.min(firstAt, at);
       lastAt = lastAt === null ? at : Math.max(lastAt, at);
+    }
+
+    if (decision.ok === true) totalOk++;
+    else if (decision.ok === false) {
+      totalError++;
+      const kind = decision.errorKind ?? 'unknown';
+      errorKinds[kind] = (errorKinds[kind] ?? 0) + 1;
+    } else totalUnknownOutcome++;
+    if (typeof decision.durationMs === 'number' && Number.isFinite(decision.durationMs)) {
+      allDurations.push(decision.durationMs);
+    }
+    if (typeof decision.resultBytes === 'number' && Number.isFinite(decision.resultBytes)) {
+      allBytes.push(decision.resultBytes);
     }
 
     const row: Row = { toolName, inputKey: key, at, decision };
@@ -360,8 +415,11 @@ export function summarizeDecisions(
     })
     .slice(0, 20);
 
+  const sortedDurations = [...allDurations].sort((a, b) => a - b);
+  const sortedBytes = [...allBytes].sort((a, b) => a - b);
+
   return {
-    v: 1,
+    v: 2,
     generatedAt: opts.generatedAt ?? new Date().toISOString(),
     window: {
       since: opts.since ?? null,
@@ -376,6 +434,18 @@ export function summarizeDecisions(
       lastAt: lastAt === null ? null : new Date(lastAt).toISOString(),
       unknownTime,
       class: totalClass,
+      ok: totalOk,
+      error: totalError,
+      unknownOutcome: totalUnknownOutcome,
+      errorKinds,
+      durationMs: {
+        median: median(sortedDurations),
+        p90: percentile(sortedDurations, 0.9),
+      },
+      resultBytes: {
+        median: median(sortedBytes),
+        p90: percentile(sortedBytes, 0.9),
+      },
     },
     byTool,
     bySession,

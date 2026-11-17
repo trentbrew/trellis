@@ -4,6 +4,12 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [4.2.1] — 2026-11-17
+
+_Draft generated from commits since v4.2.0 — review and tighten before publishing._
+
+- **feat(decisions)** decision trace rollup + stats CLI (TRL-61) (`e3d22b9`)
+
 ## trellis [4.2.0] — 2026-11-15
 
 **Collection fields grow up: relation/rollup/formula/schedule/sequence/place, plus Nushell-parity terminal tables.**

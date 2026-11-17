@@ -73,6 +73,35 @@ describe('Decision Traces', () => {
     expect(d!.rationale).toBe('All tests passing, feature complete');
   });
 
+  test('getDecision round-trips TRL-74 outcome fields', async () => {
+    const engine = await initEngine();
+
+    await engine.recordDecision({
+      toolName: 'trellis_issue_create',
+      ok: false,
+      errorKind: 'mcp_is_error',
+      durationMs: 42,
+      resultBytes: 256,
+      resultRows: 0,
+      sessionId: 'sess-abc',
+      issueId: 'issue:TRL-5',
+      laneId: 'agent:executor',
+      queryShape: 'trellis_issue_create',
+    });
+
+    const d = engine.getDecision('DEC-1');
+    expect(d).not.toBeNull();
+    expect(d!.ok).toBe(false);
+    expect(d!.errorKind).toBe('mcp_is_error');
+    expect(d!.durationMs).toBe(42);
+    expect(d!.resultBytes).toBe(256);
+    expect(d!.resultRows).toBe(0);
+    expect(d!.sessionId).toBe('sess-abc');
+    expect(d!.issueId).toBe('issue:TRL-5');
+    expect(d!.laneId).toBe('agent:executor');
+    expect(d!.queryShape).toBe('trellis_issue_create');
+  });
+
   test('getDecision returns null for nonexistent ID', async () => {
     const engine = await initEngine();
     expect(engine.getDecision('DEC-999')).toBeNull();

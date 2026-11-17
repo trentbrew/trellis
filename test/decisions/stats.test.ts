@@ -152,7 +152,7 @@ describe('summarizeDecisions', () => {
   test('totals and deterministic ordering', () => {
     const report = summarizeDecisions(rows, { generatedAt: 'fixed' });
 
-    expect(report.v).toBe(1);
+    expect(report.v).toBe(2);
     expect(report.generatedAt).toBe('fixed');
     expect(report.totals).toMatchObject({
       decisions: 4,
@@ -162,6 +162,13 @@ describe('summarizeDecisions', () => {
       lastAt: '2026-11-01T00:01:30.000Z',
       unknownTime: 0,
       class: { error: 1, empty: 1, unknown: 2 },
+      // Pre-TRL-74 fixtures carry no `ok` fact: every row is unknownOutcome.
+      ok: 0,
+      error: 0,
+      unknownOutcome: 4,
+      errorKinds: {},
+      durationMs: { median: null, p90: null },
+      resultBytes: { median: null, p90: null },
     });
     expect(report.byTool.map((g) => g.name)).toEqual(['tool_a', 'tool_b']);
     expect(report.bySession.map((g) => g.name)).toEqual(['ses_1', 'ses_2']);
@@ -185,6 +192,56 @@ describe('summarizeDecisions', () => {
     expect(session.tools).toBe(1);
     expect(session.sessions).toBeNull();
     expect(session.spanMs).toBe(90_000);
+  });
+
+  test('v2 outcome and duration rollup (TRL-74)', () => {
+    const outcomeRows: Decision[] = [
+      decision({
+        id: 'DEC-10',
+        toolName: 'tool_a',
+        context: 'ses_1',
+        createdAt: '2026-11-02T00:00:00.000Z',
+        ok: true,
+        durationMs: 10,
+        resultBytes: 100,
+      }),
+      decision({
+        id: 'DEC-11',
+        toolName: 'tool_a',
+        context: 'ses_1',
+        createdAt: '2026-11-02T00:00:10.000Z',
+        ok: false,
+        errorKind: 'thrown',
+        durationMs: 20,
+      }),
+      decision({
+        id: 'DEC-12',
+        toolName: 'tool_a',
+        context: 'ses_1',
+        createdAt: '2026-11-02T00:00:20.000Z',
+        ok: false,
+        errorKind: 'mcp_is_error',
+        durationMs: 30,
+        resultBytes: 50,
+      }),
+    ];
+
+    const report = summarizeDecisions(outcomeRows, { generatedAt: 'fixed' });
+
+    expect(report.v).toBe(2);
+    expect(report.totals.ok).toBe(1);
+    expect(report.totals.error).toBe(2);
+    expect(report.totals.unknownOutcome).toBe(0);
+    expect(report.totals.errorKinds).toEqual({ thrown: 1, mcp_is_error: 1 });
+    expect(report.totals.durationMs.median).toBe(20);
+    expect(report.totals.resultBytes.median).toBe(75);
+
+    const a = report.byTool.find((g) => g.name === 'tool_a')!;
+    expect(a.ok).toBe(1);
+    expect(a.error).toBe(2);
+    expect(a.unknownOutcome).toBe(0);
+    expect(a.medianDurationMs).toBe(20);
+    expect(a.p90DurationMs).toBe(30);
   });
 
   test('repeat patterns are hashed, not raw args', () => {

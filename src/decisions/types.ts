@@ -10,12 +10,29 @@
 // Decision Entity
 // ---------------------------------------------------------------------------
 
+export type DecisionErrorKind = 'thrown' | 'mcp_is_error';
+
 export interface Decision {
   id: string;
   toolName: string;
   input?: Record<string, unknown>;
   outputSummary?: string;
   context?: string;
+  /** Did the handler succeed? Absent on traces captured before TRL-58. */
+  ok?: boolean;
+  errorKind?: DecisionErrorKind;
+  /** Monotonic handler duration, integer ms. */
+  durationMs?: number;
+  /** UTF-8 byte length of the JSON-serialized raw result. */
+  resultBytes?: number;
+  /** Only when the result exposes a numeric rowCount. */
+  resultRows?: number;
+  /** Stable session key (MCP extra.sessionId, else hook conversationId). */
+  sessionId?: string;
+  issueId?: string;
+  laneId?: string;
+  /** Value-free query fingerprint (tool + mode/type/filter keys). */
+  queryShape?: string;
   rationale?: string;
   alternatives?: string[];
   confidence?: number;
@@ -35,6 +52,15 @@ export interface DecisionInput {
   input?: Record<string, unknown>;
   outputSummary?: string;
   context?: string;
+  ok?: boolean;
+  errorKind?: DecisionErrorKind;
+  durationMs?: number;
+  resultBytes?: number;
+  resultRows?: number;
+  sessionId?: string;
+  issueId?: string;
+  laneId?: string;
+  queryShape?: string;
   rationale?: string;
   alternatives?: string[];
   confidence?: number;

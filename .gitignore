@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Linked worktrees (local only; never commit as gitlinks)
+.worktrees/
+
 # Build output
 dist/
 trellis-*.tgz

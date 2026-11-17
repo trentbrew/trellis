@@ -3064,6 +3064,12 @@ function shorten(value: string, max: number): string {
   return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
 }
 
+/** `–` when no TRL-74 outcome facts exist (pre-TRL-74 traces are all unknownOutcome). */
+function formatOkRate(ok: number, error: number): string {
+  const total = ok + error;
+  return total === 0 ? '–' : `${Math.round((ok / total) * 100)}%`;
+}
+
 function printGroupTable(title: string, header: string[], rows: string[][]): void {
   const widths = header.map((h, i) =>
     Math.max(h.length, ...rows.map((row) => row[i].length)),
@@ -3152,20 +3158,23 @@ function decisionStatsAction(opts: any): void {
   console.log(
     chalk.bold('Decision traces') +
       chalk.dim(
-        ` · ${totals.decisions} total · ${totals.sessions} session(s) · ${totals.tools} tool(s) · ${span}`,
+        ` · ${totals.decisions} total · ${totals.sessions} session(s) · ${totals.tools} tool(s) · ${span}` +
+          ` · ok ${formatOkRate(totals.ok, totals.error)}`,
       ),
   );
 
   if (!by || by === 'tool') {
     printGroupTable(
       'By tool',
-      ['tool', 'calls', 'sessions', 'med gap', 'p90 gap', 'repeats', 'err', 'empty'],
+      ['tool', 'calls', 'sessions', 'med gap', 'p90 gap', 'ok%', 'p90 dur', 'repeats', 'err', 'empty'],
       report.byTool.map((group) => [
         group.name,
         String(group.decisions),
         group.sessions === null ? '–' : String(group.sessions),
         formatGap(group.medianGapMs),
         formatGap(group.p90GapMs),
+        formatOkRate(group.ok, group.error),
+        formatGap(group.p90DurationMs),
         String(group.repeatedRuns),
         String(group.class.error),
         String(group.class.empty),
@@ -3176,13 +3185,15 @@ function decisionStatsAction(opts: any): void {
   if (!by || by === 'session') {
     printGroupTable(
       'By session',
-      ['session', 'calls', 'tools', 'span', 'med gap', 'repeats'],
+      ['session', 'calls', 'tools', 'span', 'med gap', 'ok%', 'p90 dur', 'repeats'],
       report.bySession.map((group) => [
         shorten(group.name, 24),
         String(group.decisions),
         group.tools === null ? '–' : String(group.tools),
         formatGap(group.spanMs),
         formatGap(group.medianGapMs),
+        formatOkRate(group.ok, group.error),
+        formatGap(group.p90DurationMs),
         String(group.repeatedRuns),
       ]),
     );
@@ -3191,12 +3202,13 @@ function decisionStatsAction(opts: any): void {
   if (!by || by === 'day') {
     printGroupTable(
       'By day',
-      ['day', 'calls', 'tools', 'sessions', 'err', 'empty'],
+      ['day', 'calls', 'tools', 'sessions', 'ok%', 'err', 'empty'],
       report.byDay.map((group) => [
         group.name,
         String(group.decisions),
         group.tools === null ? '–' : String(group.tools),
         group.sessions === null ? '–' : String(group.sessions),
+        formatOkRate(group.ok, group.error),
         String(group.class.error),
         String(group.class.empty),
       ]),

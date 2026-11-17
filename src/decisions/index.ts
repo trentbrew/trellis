@@ -101,6 +101,15 @@ export async function recordDecision(
       decisionAlternatives: input.alternatives
         ? JSON.stringify(input.alternatives)
         : undefined,
+      decisionOk: input.ok,
+      decisionErrorKind: input.errorKind,
+      decisionDurationMs: input.durationMs,
+      decisionResultBytes: input.resultBytes,
+      decisionResultRows: input.resultRows,
+      decisionSessionId: input.sessionId,
+      decisionIssueId: input.issueId,
+      decisionLaneId: input.laneId,
+      decisionQueryShape: input.queryShape,
     },
   });
   await ctx.applyOp(op);
@@ -186,11 +195,41 @@ function buildDecision(
   const confidence =
     confidenceRaw !== undefined ? parseFloat(confidenceRaw) : undefined;
 
+  const bool = (a: string): boolean | undefined => {
+    const raw = get(a);
+    if (typeof raw === 'boolean') return raw;
+    if (raw === 'true') return true;
+    if (raw === 'false') return false;
+    return undefined;
+  };
+  const num = (a: string): number | undefined => {
+    const raw = get(a);
+    if (typeof raw === 'number') return Number.isFinite(raw) ? raw : undefined;
+    if (typeof raw === 'string' && raw.trim()) {
+      const parsed = Number(raw);
+      return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    return undefined;
+  };
+  const str = (a: string): string | undefined => {
+    const raw = get(a);
+    return typeof raw === 'string' && raw.trim() ? raw : undefined;
+  };
+
   return {
     id: bareId,
     toolName: get('toolName') ?? '',
     input,
     outputSummary: get('outputSummary'),
+    ok: bool('ok'),
+    errorKind: str('errorKind') as Decision['errorKind'],
+    durationMs: num('durationMs'),
+    resultBytes: num('resultBytes'),
+    resultRows: num('resultRows'),
+    sessionId: str('sessionId'),
+    issueId: str('issueId'),
+    laneId: str('laneId'),
+    queryShape: str('queryShape'),
     context: get('context'),
     rationale: get('rationale'),
     alternatives,
