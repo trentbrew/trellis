@@ -67,6 +67,9 @@ function cloneReflink(rootPath: string, worktreePath: string): void {
         stdio: ['pipe', 'pipe', 'pipe'],
       });
     } catch {
+      // A failed --reflink=always may have created an empty/partial `dst` dir;
+      // remove it before falling back so `cp -r` doesn't nest `src` inside `dst`.
+      rmSync(dst, { recursive: true, force: true });
       execSync(`cp -r "${src}" "${dst}"`, {
         stdio: ['pipe', 'pipe', 'pipe'],
       });
