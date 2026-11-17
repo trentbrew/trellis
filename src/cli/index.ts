@@ -1484,6 +1484,8 @@ program
   .option('--json', 'Emit machine-readable JSON (no color)')
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (action, opts) => {
+    requireKnownAction(action, ['create', 'list']);
+
     const rootPath = resolveRepoRoot(opts.path);
 
     const engine = new TrellisVcsEngine({
@@ -1603,6 +1605,8 @@ program
   .argument('[action]', '"create" or "list" (default: list)')
   .option('-p, --path <path>', 'Repository path', '.')
   .action(async (action, opts) => {
+    requireKnownAction(action, ['create', 'list']);
+
     const rootPath = resolveRepoRoot(opts.path);
 
     const engine = new TrellisVcsEngine({
@@ -1928,6 +1932,10 @@ program
   .option('-p, --path <path>', 'Local repository path', '.')
   .option('--remote <remote>', 'Remote repository path')
   .action((action, opts) => {
+    // push and pull are documented but unbuilt; they fall through to the
+    // transport-pending notice below rather than being rejected here.
+    requireKnownAction(action, ['push', 'pull', 'status', 'reconcile']);
+
     const rootPath = resolveRepoRoot(opts.path);
 
     const engine = new TrellisVcsEngine({
@@ -2014,6 +2022,8 @@ program
   .option('-n, --limit <n>', 'Max results', parseInt as any)
   .option('--json', 'Emit machine-readable JSON (no color)')
   .action((action, id, opts) => {
+    requireKnownAction(action, ['list', 'show', 'search', 'revive', 'stats']);
+
     const rootPath = resolveRepoRoot(opts.path);
 
     const engine = new TrellisVcsEngine({
@@ -3192,6 +3202,8 @@ program
   .option('--local', 'Write/read the legacy per-repo identity, not the person key')
   .option('--out <file>', 'export: write the identity (with private key) to an owner-only file instead of stdout')
   .action(async (action, opts) => {
+    requireKnownAction(action, ['init', 'show', 'export', 'import']);
+
     const rootPath = resolve(opts.path);
     const trellisDir = join(rootPath, '.trellis');
     const usePerson = !opts.local;
@@ -6117,6 +6129,25 @@ function formatOpKind(kind: string): string {
     'vcs:checkpointCreate': chalk.dim('●checkpoint'),
   };
   return kindMap[kind] ?? chalk.dim(kind);
+}
+
+// Commands taking a bare `[action]` used to fall through to their read path when
+// the verb was not recognized, so a typo silently ran a different operation. An
+// unknown verb is an error; omitting the action still takes the documented
+// default.
+function requireKnownAction(
+  action: string | undefined,
+  known: readonly string[],
+): void {
+  if (!action || known.includes(action)) return;
+  console.error(
+    chalk.red(
+      `Unknown action: '${action}' (expected ${known
+        .map((a) => `"${a}"`)
+        .join(', ')})`,
+    ),
+  );
+  process.exit(1);
 }
 
 function formatRelativeTime(iso: string): string {
