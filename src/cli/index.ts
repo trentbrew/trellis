@@ -1320,7 +1320,11 @@ gitCmd
 program
   .command('branch')
   .description('Manage branches')
-  .argument('[name]', 'Branch name to create or switch to')
+  .argument(
+    '[action]',
+    '"list", "create <name>", "switch <name>", "delete <name>", or a branch name to switch to (creating it if absent)',
+  )
+  .argument('[name]', 'Branch name (for create/switch/delete)')
   .option('-d, --delete <name>', 'Delete a branch')
   .option('-l, --list', 'List all branches')
   .option('--json', 'Emit machine-readable JSON (no color)')
@@ -1329,7 +1333,7 @@ program
     '--confirm-destructive',
     'Allow branch delete (or set TRELLIS_CONFIRM_DESTRUCTIVE=1)',
   )
-  .action(async (name, opts) => {
+  .action(async (action, name, opts) => {
     const rootPath = resolveRepoRoot(opts.path);
 
     const engine = new TrellisVcsEngine({
@@ -1338,87 +1342,128 @@ program
     });
     engine.open();
 
-    // Delete
-    if (opts.delete) {
+    const fail = (message: string): never => {
+      console.error(chalk.red(message));
+      process.exit(1);
+    };
+
+    const showList = () => {
+      const branches = engine.listBranches();
+      if (branches.length === 0) {
+        if (opts.json) {
+          console.log(JSON.stringify({ branches: [] }, null, 2));
+        } else {
+          console.log(chalk.dim('No branches'));
+        }
+        return;
+      }
+
+      if (opts.json) {
+        console.log(
+          JSON.stringify(
+            {
+              branches: branches.map((b) => ({
+                name: b.name,
+                isCurrent: b.isCurrent,
+                createdAt: b.createdAt ?? null,
+              })),
+            },
+            null,
+            2,
+          ),
+        );
+        return;
+      }
+
+      console.log(chalk.bold('Branches\n'));
+      for (const b of branches) {
+        const marker = b.isCurrent ? chalk.green('* ') : '  ';
+        const label = b.isCurrent ? chalk.green(b.name) : b.name;
+        const age = b.createdAt
+          ? chalk.dim(formatRelativeTime(b.createdAt))
+          : '';
+        console.log(`${marker}${label} ${age}`);
+      }
+    };
+
+    const switchTo = (target: string) => {
+      try {
+        engine.switchBranch(target);
+        console.log(chalk.green(`✓ Switched to branch '${target}'`));
+      } catch (err: any) {
+        fail(err.message);
+      }
+    };
+
+    const create = async (target: string) => {
+      try {
+        await engine.createBranch(target);
+        engine.switchBranch(target);
+        console.log(chalk.green(`✓ Created and switched to branch '${target}'`));
+      } catch (err: any) {
+        fail(err.message);
+      }
+    };
+
+    const remove = async (target: string) => {
       try {
         requireDestructiveConfirm({
           action: 'branch-delete',
           confirmDestructive: opts.confirmDestructive,
         });
-        await engine.deleteBranch(opts.delete);
-        console.log(chalk.green(`✓ Deleted branch '${opts.delete}'`));
+        await engine.deleteBranch(target);
+        console.log(chalk.green(`✓ Deleted branch '${target}'`));
       } catch (err: any) {
-        console.error(chalk.red(err.message));
-        process.exit(1);
+        fail(err.message);
       }
+    };
+
+    if (opts.delete) {
+      await remove(opts.delete);
       return;
     }
 
-    // Create or switch
+    // Verbs win over bare names, so `branch list` lists instead of creating a
+    // branch called "list". A branch that genuinely needs a verb for its name
+    // is still reachable through the explicit `branch create <name>` form.
+    switch (action) {
+      case 'list':
+      case 'ls':
+        showList();
+        return;
+      case 'create':
+        if (!name) fail('Usage: trellis branch create <name>');
+        await create(name);
+        return;
+      case 'switch':
+        if (!name) fail('Usage: trellis branch switch <name>');
+        if (!engine.listBranches().some((b) => b.name === name)) {
+          fail(`No such branch: '${name}' (create it with: branch create ${name})`);
+        }
+        switchTo(name);
+        return;
+      case 'delete':
+        if (!name) fail('Usage: trellis branch delete <name>');
+        await remove(name);
+        return;
+    }
+
     if (name) {
-      const branches = engine.listBranches();
-      const exists = branches.find((b) => b.name === name);
+      fail(`Unknown action: '${action}' (expected list, create, switch, or delete)`);
+    }
 
+    // Bare `branch <name>` stays a switch-or-create shorthand.
+    if (action) {
+      const exists = engine.listBranches().some((b) => b.name === action);
       if (exists) {
-        // Switch to existing branch
-        try {
-          engine.switchBranch(name);
-          console.log(chalk.green(`✓ Switched to branch '${name}'`));
-        } catch (err: any) {
-          console.error(chalk.red(err.message));
-          process.exit(1);
-        }
+        switchTo(action);
       } else {
-        // Create new branch
-        try {
-          await engine.createBranch(name);
-          engine.switchBranch(name);
-          console.log(
-            chalk.green(`✓ Created and switched to branch '${name}'`),
-          );
-        } catch (err: any) {
-          console.error(chalk.red(err.message));
-          process.exit(1);
-        }
+        await create(action);
       }
       return;
     }
 
-    // List (default)
-    const branches = engine.listBranches();
-    if (branches.length === 0) {
-      if (opts.json) {
-        console.log(JSON.stringify({ branches: [] }, null, 2));
-      } else {
-        console.log(chalk.dim('No branches'));
-      }
-      return;
-    }
-
-    if (opts.json) {
-      console.log(
-        JSON.stringify(
-          {
-            branches: branches.map((b) => ({
-              name: b.name,
-              isCurrent: b.isCurrent,
-              createdAt: b.createdAt ?? null,
-            })),
-          },
-          null,
-          2,
-        ),
-      );
-      return;
-    }
-
-    console.log(chalk.bold('Branches\n'));
-    for (const b of branches) {
-      const marker = b.isCurrent ? chalk.green('* ') : '  ';
-      const name = b.isCurrent ? chalk.green(b.name) : b.name;
-      const age = b.createdAt ? chalk.dim(formatRelativeTime(b.createdAt)) : '';
-      console.log(`${marker}${name} ${age}`);
-    }
+    showList();
   });
 
 // ---------------------------------------------------------------------------
