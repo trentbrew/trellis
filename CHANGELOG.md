@@ -4,6 +4,14 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [4.1.4]; 2026-11-17
+
+**Reflink lane worktrees, `bwrap` lane shell isolation, and CLI verb guards.**
+
+- **Reflink lane worktrees**: `provisionWorktree` uses Btrfs reflink clones (with `cp -r` fallback) instead of `git worktree add`, avoiding shared `.git` worktree drift.
+- **`trellis lane shell`**: runs interactive lane sessions inside `bwrap` mount/pid/net isolation (no network by default unless `--net`), auto-committing on exit.
+- **CLI verb & action guards**: `trellis branch` dispatches `list`/`ls`/`create`/`switch`/`delete` ahead of bare branch names, and `milestone`, `checkpoint`, `identity`, `garden`, `sync`, and `presence` reject unknown bare actions instead of falling through.
+
 ## trellis [4.1.3]; 2026-10-28
 
 **ADR 0048 kernel: global Relations and shared overlay binding.**
