@@ -8086,6 +8086,10 @@ program
   .option('--status <status>', 'active | idle | away', 'active')
   .option('-p, --path <path>', 'Repository path', '.')
   .action((action, opts) => {
+    // The default here is a write, so an unrecognized verb used to announce a
+    // heartbeat rather than report the typo.
+    requireKnownAction(action, ['announce', 'clear']);
+
     const rootPath = resolveRepoRoot(opts.path);
 
     if (action === 'clear') {

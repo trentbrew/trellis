@@ -25,6 +25,9 @@ const COMMANDS: Array<{ name: string; valid: string; expected: string[] }> = [
   { name: 'garden', valid: 'stats', expected: ['list', 'show', 'stats'] },
   { name: 'sync', valid: 'status', expected: ['push', 'pull', 'status'] },
   { name: 'identity', valid: 'show', expected: ['init', 'show', 'export'] },
+  // presence is the one whose default is a write, so an unrecognized verb used
+  // to announce a heartbeat instead of reporting the typo.
+  { name: 'presence', valid: 'clear', expected: ['announce', 'clear'] },
 ];
 
 describe('bare [action] guards', () => {
