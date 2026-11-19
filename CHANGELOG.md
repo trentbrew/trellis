@@ -4,6 +4,13 @@ Notable changes by release date and version. See
 [trellis.computer/changelog](https://trellis.computer/changelog) for the public
 site copy.
 
+## trellis [4.2.2] — 2026-11-19
+
+- **`db serve --host`** — bind the database server to one interface. Default is
+  unchanged (all interfaces). The local hub uses `--host 127.0.0.1` so its
+  unauthenticated presence relay, which carries live desktop state, is not
+  reachable off-machine. (`b286b9d`)
+
 ## trellis [4.2.1] — 2026-11-17
 
 _Draft generated from commits since v4.2.0 — review and tighten before publishing._
