@@ -6389,6 +6389,7 @@ db.command('init')
 db.command('serve')
   .description('Start the Trellis DB HTTP + WebSocket server')
   .option('-p, --port <port>', 'Override port from config')
+  .option('--host <host>', 'Interface to bind (default: all interfaces)')
   .option('--config-dir <dir>', 'Directory containing .trellis-db.json', '.')
   .action(async (opts) => {
     const { readConfig } = await import('../client/config.js');
@@ -6423,6 +6424,7 @@ db.command('serve')
     // (cross-browser). Cross-tab still works via BroadcastChannel without this.
     const server = await startServerCrossRuntime({
       port,
+      host: opts.host,
       config,
       pool,
       presenceRelay: true,

@@ -108,6 +108,8 @@ export type PresenceRelayOptions = boolean | RealtimeRelayOptions;
 
 export interface ServerConfig {
   port?: number;
+  /** Interface to bind. Omitted: all interfaces (Node's default). */
+  host?: string;
   config: TrellisDbConfig;
   pool: TenantPool;
   permissions?: PermissionRegistry;
@@ -231,6 +233,7 @@ async function startServerNode(opts: ServerConfig): Promise<TrellisHttpServer> {
 
   const server = await startNodeServer({
     port,
+    hostname: opts.host,
     fetch: handleHttp,
     attachPresenceRelay: opts.presenceRelay,
     websocket: {
