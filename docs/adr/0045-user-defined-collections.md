@@ -268,3 +268,8 @@ form layouts, views) stays as reference for what to build there.
 Not done: `core:Record.tags` (still a `multi_select` of strings) is not migrated. It needs a kernel-wide plan,
 because every Record subtype inherits it. FINANCE `Category` also stays its own entity: it carries a budget
 `group` and feeds reports and Plaid categorisation, so folding it into `core:Tag` is a separate decision.
+
+## Addendum — 2026-11-19: one key per field; removing a field keeps row values
+
+- **One key per collection.** A record attribute is named by its field's `key`, so two `CollectionField`s with the same key in one collection would be one column with two definitions. `validateCollectionField` doesn't see siblings' keys against each other and no client checked, so the schema middleware does: a field can't be created, or re-keyed, onto a key another field in its collection has (nor can one op create two). It applies to every writer: `turtle pack`, host tsh (`collection add-field`) and turtlenote.
+- **Removing a field retracts the field, not the data.** `collection rm-field` deletes the `CollectionField` entity only. Row values stay as attributes, no longer a declared column, and come back if a field with the same key is added again (keys are stable ids, §3). So removal is undoable by the command id, and nothing is destroyed.

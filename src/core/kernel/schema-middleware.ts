@@ -39,6 +39,11 @@ export interface SchemaMiddlewareConfig {
    * be validated against the entity's schema. Without it they are not validated.
    */
   getEntityFacts?: (entityId: string) => Fact[];
+  /**
+   * Stored facts with this attribute value. Lets a new collection field be checked
+   * against its siblings (one key per collection). Without it that check is skipped.
+   */
+  getFactsByValue?: (attribute: string, value: Atom) => Fact[];
 }
 
 export function createSchemaMiddleware(
@@ -142,6 +147,8 @@ export function createSchemaMiddleware(
         }
       }
 
+      errors.push(...duplicateFieldKeyErrors(op, config));
+
       if (errors.length > 0 && strict) {
         const errorMsg = [...new Set(errors)].join('; ');
         throw new Error(`Schema validation failed: ${errorMsg}`);
@@ -150,6 +157,47 @@ export function createSchemaMiddleware(
       return next(op, ctx);
     },
   };
+}
+
+/**
+ * One key per collection: a record attribute is named by its field's key, so two
+ * `CollectionField`s with the same key in one collection would be one column with
+ * two definitions. Neither the field validator nor the dispatcher checks it, so
+ * the hub does, for packs, tsh and turtlenote alike. Looks at fields this op
+ * creates or re-keys, against stored siblings and the op's other fields.
+ */
+function duplicateFieldKeyErrors(op: KernelOp, config: SchemaMiddlewareConfig): string[] {
+  if (!op.facts?.length || !config.getEntityFacts) return [];
+  const isField = (type: unknown) =>
+    typeof type === 'string' && (type.includes(':') ? type.split(':').pop() : type) === 'CollectionField';
+  const attr = (id: string, a: string) =>
+    (op.facts!.find((f) => f.e === id && f.a === a) ??
+      config.getEntityFacts!(id).find((f) => f.a === a))?.v;
+
+  const fields = new Map<string, { collection: unknown; key: unknown }>();
+  for (const id of new Set(op.facts.map((f) => f.e))) {
+    if (!isField(attr(id, 'type'))) continue;
+    if (!op.facts.some((f) => f.e === id && (f.a === 'type' || f.a === 'key' || f.a === 'collection'))) continue;
+    fields.set(id, { collection: attr(id, 'collection'), key: attr(id, 'key') });
+  }
+  const errors: string[] = [];
+  const claimed = new Map<string, string>();
+  for (const [id, { collection, key }] of fields) {
+    if (typeof collection !== 'string' || typeof key !== 'string' || !key) continue;
+    const tag = `${collection}\u0000${key}`;
+    const other = claimed.get(tag);
+    if (other && other !== id) errors.push(`Duplicate field key "${key}" in ${collection}`);
+    claimed.set(tag, id);
+    for (const sibling of config.getFactsByValue?.('collection', collection) ?? []) {
+      if (sibling.e === id || fields.has(sibling.e)) continue;
+      const stored = config.getEntityFacts(sibling.e);
+      if (!isField(stored.find((f) => f.a === 'type')?.v)) continue;
+      if (stored.find((f) => f.a === 'key')?.v === key) {
+        errors.push(`Duplicate field key "${key}" in ${collection}`);
+      }
+    }
+  }
+  return errors;
 }
 
 function findPerCollectionRecordSchema(

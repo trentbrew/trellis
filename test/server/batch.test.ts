@@ -283,3 +283,30 @@ describe('facts in reads (?facts=1, ADR 0065 §5)', () => {
     expect(list.data[0]!['@facts'].length).toBeGreaterThan(3);
   });
 });
+
+describe('one key per collection field (schema middleware)', () => {
+  const field = (id: string, collection: string, key: string) => ({
+    op: 'create',
+    id,
+    type: 'CollectionField',
+    attributes: { collection, key, label: key, valueType: 'text', order: 0 },
+  });
+
+  it('refuses a second field with the same key in a collection, but not in another', async () => {
+    expect((await post({ actions: [field('collectionField:a1', 'collectionMeta:x', 'pages')] })).status).toBe(201);
+    const dup = await post({ actions: [field('collectionField:a2', 'collectionMeta:x', 'pages')] });
+    expect(dup.status).toBe(422);
+    expect(((await dup.json()) as { error: string }).error).toContain('Duplicate field key "pages"');
+    expect(pool.get().getEntity('collectionField:a2')).toBeNull();
+    expect((await post({ actions: [field('collectionField:a3', 'collectionMeta:y', 'pages')] })).status).toBe(201);
+  });
+
+  it('refuses two same-key fields created in one op, and re-keying onto a sibling', async () => {
+    const both = await post({ actions: [field('collectionField:b1', 'collectionMeta:z', 'k'), field('collectionField:b2', 'collectionMeta:z', 'k')] });
+    expect(both.status).toBe(422);
+    await post({ actions: [field('collectionField:c1', 'collectionMeta:w', 'one'), field('collectionField:c2', 'collectionMeta:w', 'two')] });
+    const rekey = await post({ actions: [{ op: 'update', id: 'collectionField:c2', attributes: { key: 'one' } }] });
+    expect(rekey.status).toBe(422);
+    expect((await post({ actions: [{ op: 'update', id: 'collectionField:c2', attributes: { label: 'Two!' } }] })).status).toBe(201);
+  });
+});

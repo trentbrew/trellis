@@ -40,6 +40,7 @@ export function attachStandardMiddleware(kernel: TrellisKernel): void {
     createSchemaMiddleware({
       getOntologies,
       getEntityFacts: (entityId) => kernel.getStore().getFactsByEntity(entityId),
+      getFactsByValue: (attribute, value) => kernel.getStore().getFactsByValue(attribute, value),
     }),
   );
 
