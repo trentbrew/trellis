@@ -43,6 +43,7 @@ import { parseSimple } from '../core/query/index.js';
 import { PROVENANCE } from '../core/persist/canonical-op.js';
 import type { MiddlewareContext } from '../core/kernel/middleware.js';
 import { RealtimeFieldError } from '../core/ontology/sync-policy.js';
+import { BatchError, compileBatch, isEmptyBatch, parseBatch } from './batch.js';
 import {
   entityRecordToPlain,
   hydrateBindings,
@@ -438,10 +439,15 @@ async function route(
   const entityMatch = path.match(/^\/entities\/([^/]+)$/);
   if (entityMatch) {
     const id = decodeURIComponent(entityMatch[1]!);
-    if (method === 'GET') return handleRead(id, auth, tenantId, ctx);
+    if (method === 'GET') return handleRead(id, auth, tenantId, ctx, wantsLinks(url));
     if (method === 'PUT' || method === 'PATCH')
       return handleUpdate(req, id, auth, tenantId, ctx);
     if (method === 'DELETE') return handleDelete(id, auth, tenantId, ctx);
+  }
+
+  // ── Batch writes (ADR 0065) ───────────────────────────────────────────────
+  if (method === 'POST' && (path === '/batch' || path === '/batch/')) {
+    return handleBatch(req, auth, tenantId, ctx);
   }
 
   // ── Ops (causal stream) ───────────────────────────────────────────────────
@@ -576,6 +582,84 @@ async function handleCreate(
 }
 
 // ---------------------------------------------------------------------------
+// Handler: Batch (ADR 0065)
+// ---------------------------------------------------------------------------
+
+/**
+ * Several entity writes as one op: validated together, written together, with
+ * the caller's command id in the op's provenance (ADR 0058).
+ */
+async function handleBatch(
+  req: Request,
+  auth: import('./auth.js').AuthContext,
+  tenantId: string | null,
+  ctx: RouteCtx,
+): Promise<Response> {
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: 'body must be JSON' }, 400);
+  }
+  const kernel = await ctx.pool.preload(tenantId);
+  let parsed: ReturnType<typeof parseBatch>;
+  let compiled: ReturnType<typeof compileBatch>;
+  try {
+    parsed = parseBatch(body);
+    const store = kernel.getStore();
+    compiled = compileBatch(
+      parsed.actions,
+      {
+        factsOf: (id) => store.getFactsByEntity(id),
+        linksOf: (id) => store.getLinksByEntity(id),
+        ontologies: () => kernel.listOntologies(),
+      },
+      (type, verb) => ctx.permissions?.assert(auth, type, verb),
+    );
+  } catch (err) {
+    if (err instanceof BatchError) {
+      return json({ error: err.message, index: err.index }, err.status);
+    }
+    if (err instanceof RealtimeFieldError) {
+      return json({ error: err.message, field: err.field }, 400);
+    }
+    throw err;
+  }
+  if (isEmptyBatch(compiled)) {
+    return json({ op: null, commandId: parsed.commandId ?? null, created: compiled.created });
+  }
+
+  const write = httpWriteContext(auth);
+  const provenance = parsed.commandId
+    ? { ...(write.provenance ?? PROVENANCE.http), commandId: parsed.commandId }
+    : write.provenance;
+  try {
+    const result = await kernel.mutate(
+      compiled.kind,
+      {
+        facts: compiled.facts,
+        links: compiled.links.length ? compiled.links : undefined,
+        deleteFacts: compiled.deleteFacts.length ? compiled.deleteFacts : undefined,
+        deleteLinks: compiled.deleteLinks.length ? compiled.deleteLinks : undefined,
+      },
+      { ...write, provenance },
+    );
+    recordGraphIo(ctx, tenantId);
+    await ctx.subs.notify(tenantId);
+    return json(
+      { op: result.op.hash, commandId: parsed.commandId ?? null, created: compiled.created },
+      201,
+    );
+  } catch (err) {
+    if (err instanceof RealtimeFieldError) {
+      return json({ error: err.message, field: err.field }, 400);
+    }
+    // Middleware (schema validation) refused the op: nothing was written.
+    return json({ error: err instanceof Error ? err.message : String(err) }, 422);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Handler: Read entity
 // ---------------------------------------------------------------------------
 
@@ -603,6 +687,7 @@ async function handleRead(
   auth: import('./auth.js').AuthContext,
   tenantId: string | null,
   ctx: RouteCtx,
+  links = false,
 ): Promise<Response> {
   const kernel = await ctx.pool.preload(tenantId);
   const entity = kernel.getEntity(id);
@@ -610,7 +695,7 @@ async function handleRead(
 
   ctx.permissions?.assert(auth, entity.type, 'read', entity);
 
-  return json(entityToJson(entity));
+  return json(entityToJson(entity, links));
 }
 
 // ---------------------------------------------------------------------------
@@ -712,8 +797,9 @@ async function handleList(
   }
 
   const page = entities.slice(offset, offset + limit);
+  const links = wantsLinks(url);
   return json({
-    data: page.map(entityToJson),
+    data: page.map((e) => entityToJson(e, links)),
     total: entities.length,
     limit,
     offset,
@@ -1314,8 +1400,17 @@ function handleAdminUsage(
 
 function entityToJson(
   entity: import('../core/kernel/trellis-kernel.js').EntityRecord,
+  links = false,
 ) {
-  return entityRecordToPlain(entity);
+  const plain = entityRecordToPlain(entity);
+  // ADR 0065 §2: opt-in, under a key no attribute can be called.
+  return links ? { ...plain, '@links': entity.links } : plain;
+}
+
+/** `?links=1` (or `true`) on entity reads (ADR 0065 §2). */
+function wantsLinks(url: URL): boolean {
+  const v = url.searchParams.get('links');
+  return v === '1' || v === 'true';
 }
 
 function json(data: unknown, status = 200): Response {

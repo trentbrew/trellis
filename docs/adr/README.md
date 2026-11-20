@@ -58,6 +58,7 @@ Desk issue: **TRL-35** (W0), **TRL-36** (W1). Plan:
 | [0062](./0062-authoring-clients-and-projections.md) | Authoring clients and generated projections | Authoring clients own schema; projections (Shablon) render compiled lexicons; the lexicon export is the contract; share shapes, not components (proposed) |
 | [0063](./0063-location-graph-native.md) | Location is graph-native, not a property type | No `location` property type; `Place` entities + role relations + numeric coordinates; text stays a label; geocoding is an adapter/cache (accepted) |
 | [0064](./0064-saved-views-as-kernel-data.md) | Saved views as kernel data | `View` becomes a system type with `targetType`/`targetScope`; `ViewConfig` + EQL-S compiler move to `trellis/view/query`; room MCP `list_views` / `run_view` / `describe_database`; no room plugin hook (proposed) |
+| [0065](./0065-http-batch-writes-and-links-in-reads.md) | HTTP batch writes; links in reads | `POST /batch` compiles create/update/delete/link/unlink into one op (all or nothing) with the caller's `commandId` in provenance; `?links=1` adds `@links` to entity reads (proposed) |
 
 ### Product / explorer shell
 
