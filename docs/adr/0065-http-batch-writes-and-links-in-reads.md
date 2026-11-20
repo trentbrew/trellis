@@ -81,3 +81,11 @@ One `mutate()`, so middleware (schema validation) runs over the whole op and not
 ### Why the log is enough for undo
 
 `/batch` writes the net difference, so an op already holds the old values it replaced (`deleteFacts`) and the new ones (`facts`). Undo needs nothing stored beside it: it writes `apply` with the lists swapped, under its own command id, after checking that nothing later touched the same entity and attribute.
+
+## Addendum — 2026-11-19: facts in reads
+
+### 5. `?facts=1`: every stored fact
+
+The flat attributes in `GET /entities` keep one value per attribute (the last), so a client that computes a delta from them can't see a second value. A host tsh `unset` or `untag` then deletes one fact and leaves the other, and the undo it records inverts the wrong delta.
+
+`GET /entities/:id?facts=1` and `GET /entities?…&facts=1` add `@facts: [{ e, a, v }]` to each entity: every stored fact, `type` and repeated values included, values as stored. It follows `@links` (§2): opt-in, under a key no attribute can be called, composes with `links=1`, and leaves the flat attributes and existing clients unchanged. A client computing a write should read pre-images from `@facts`, not from the flat attributes.

@@ -247,3 +247,39 @@ describe('POST /batch { apply } and GET /ops?full=1 (ADR 0065 §3)', () => {
     expect(pool.get().getEntity('poison:9')).toBeNull();
   });
 });
+
+describe('facts in reads (?facts=1, ADR 0065 §5)', () => {
+  it('returns every stored fact, repeated values included, and composes with links', async () => {
+    await post({ actions: [{ op: 'create', id: 'multi:1', type: 'Multi', attributes: { title: 'T' } }] });
+    // Two values for one attribute: only an exact delta can write that.
+    expect(
+      (
+        await post({
+          apply: {
+            facts: [
+              { e: 'multi:1', a: 'label', v: 'a' },
+              { e: 'multi:1', a: 'label', v: 'b' },
+            ],
+          },
+        })
+      ).status,
+    ).toBe(201);
+
+    const flat = (await (await fetch(`${base}/entities/multi:1`)).json()) as Record<string, unknown>;
+    expect(flat['@facts']).toBeUndefined();
+    expect(typeof flat.label).toBe('string'); // the flat view keeps one value
+
+    const read = (await (await fetch(`${base}/entities/multi:1?facts=1&links=1`)).json()) as {
+      '@facts': { e: string; a: string; v: unknown }[];
+      '@links': unknown[];
+      type: string;
+    };
+    expect(read['@facts'].filter((f) => f.a === 'label').map((f) => f.v).sort()).toEqual(['a', 'b']);
+    expect(read['@facts'].some((f) => f.a === 'type' && f.v === 'Multi')).toBe(true);
+    expect(read['@links']).toEqual([]);
+    expect(read.type).toBe('Multi');
+
+    const list = (await (await fetch(`${base}/entities?type=Multi&facts=1`)).json()) as { data: { '@facts': unknown[] }[] };
+    expect(list.data[0]!['@facts'].length).toBeGreaterThan(3);
+  });
+});

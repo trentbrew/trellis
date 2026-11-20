@@ -439,7 +439,7 @@ async function route(
   const entityMatch = path.match(/^\/entities\/([^/]+)$/);
   if (entityMatch) {
     const id = decodeURIComponent(entityMatch[1]!);
-    if (method === 'GET') return handleRead(id, auth, tenantId, ctx, wantsLinks(url));
+    if (method === 'GET') return handleRead(id, auth, tenantId, ctx, readOptions(url));
     if (method === 'PUT' || method === 'PATCH')
       return handleUpdate(req, id, auth, tenantId, ctx);
     if (method === 'DELETE') return handleDelete(id, auth, tenantId, ctx);
@@ -750,7 +750,7 @@ async function handleRead(
   auth: import('./auth.js').AuthContext,
   tenantId: string | null,
   ctx: RouteCtx,
-  links = false,
+  opts: ReadOptions = {},
 ): Promise<Response> {
   const kernel = await ctx.pool.preload(tenantId);
   const entity = kernel.getEntity(id);
@@ -758,7 +758,7 @@ async function handleRead(
 
   ctx.permissions?.assert(auth, entity.type, 'read', entity);
 
-  return json(entityToJson(entity, links));
+  return json(entityToJson(entity, opts));
 }
 
 // ---------------------------------------------------------------------------
@@ -869,9 +869,9 @@ async function handleList(
   }
 
   const page = entities.slice(offset, offset + limit);
-  const links = wantsLinks(url);
+  const opts = readOptions(url);
   return json({
-    data: page.map((e) => entityToJson(e, links)),
+    data: page.map((e) => entityToJson(e, opts)),
     total: entities.length,
     limit,
     offset,
@@ -1470,19 +1470,33 @@ function handleAdminUsage(
   return json(ctx.meter.getUsage(tenant, day));
 }
 
-function entityToJson(
-  entity: import('../core/kernel/trellis-kernel.js').EntityRecord,
-  links = false,
-) {
-  const plain = entityRecordToPlain(entity);
-  // ADR 0065 §2: opt-in, under a key no attribute can be called.
-  return links ? { ...plain, '@links': entity.links } : plain;
+interface ReadOptions {
+  links?: boolean;
+  facts?: boolean;
 }
 
-/** `?links=1` (or `true`) on entity reads (ADR 0065 §2). */
-function wantsLinks(url: URL): boolean {
-  const v = url.searchParams.get('links');
-  return v === '1' || v === 'true';
+function entityToJson(
+  entity: import('../core/kernel/trellis-kernel.js').EntityRecord,
+  opts: ReadOptions = {},
+) {
+  const plain = entityRecordToPlain(entity);
+  // ADR 0065 §2, §5: opt-in, under keys no attribute can be called.
+  return {
+    ...plain,
+    ...(opts.links ? { '@links': entity.links } : {}),
+    // Every stored fact, `type` and repeated values included: the flat
+    // attributes keep only the last value of an attribute.
+    ...(opts.facts ? { '@facts': entity.facts } : {}),
+  };
+}
+
+/** `?links=1` and `?facts=1` (or `true`) on entity reads (ADR 0065 §2, §5). */
+function readOptions(url: URL): ReadOptions {
+  const on = (k: string) => {
+    const v = url.searchParams.get(k);
+    return v === '1' || v === 'true';
+  };
+  return { links: on('links'), facts: on('facts') };
 }
 
 function json(data: unknown, status = 200): Response {
