@@ -25,12 +25,16 @@ export interface ListKernelOpsOptions {
   kind?: string;
   /** Return ops that touch this entity id (facts or links). */
   entity?: string;
+  /** Return ops written under this command id (`provenance.commandId`, ADR 0058). */
+  commandId?: string;
+  /** Return whole ops (facts, links, deletions, provenance) instead of summaries (ADR 0065). */
+  full?: boolean;
   limit?: number;
   offset?: number;
 }
 
 export interface KernelOpsPage {
-  data: KernelOpSummary[];
+  data: (KernelOpSummary | (KernelOp & { index: number }))[];
   total: number;
   limit: number;
   offset: number;
@@ -100,10 +104,16 @@ export function listKernelOpsFromJournal(
     const entityId = opts.entity;
     filtered = filtered.filter((op) => opTouchesEntity(op, entityId));
   }
+  if (opts.commandId) {
+    const id = opts.commandId;
+    filtered = filtered.filter((op) => op.provenance?.commandId === id);
+  }
   const total = filtered.length;
   const page = filtered.slice(offset, offset + limit);
   return {
-    data: page.map((op, index) => summarizeKernelOp(op, offset + index)),
+    data: page.map((op, index) =>
+      opts.full ? { ...op, index: offset + index } : summarizeKernelOp(op, offset + index),
+    ),
     total,
     limit,
     offset,

@@ -261,3 +261,45 @@ export function compileBatch(
 /** Whether a compiled batch changes anything. */
 export const isEmptyBatch = (b: CompiledBatch) =>
   !b.facts.length && !b.links.length && !b.deleteFacts.length && !b.deleteLinks.length;
+
+const APPLY_KINDS = new Set(['addFacts', 'addLinks', 'deleteFacts', 'deleteLinks', 'undo', 'redo']);
+
+/** Parse `{ commandId?, apply: { kind?, facts?, links?, deleteFacts?, deleteLinks? } }` (ADR 0065 §3). */
+export function parseApply(body: object): {
+  commandId?: string;
+  kind: string;
+  facts: Fact[];
+  links: Link[];
+  deleteFacts: Fact[];
+  deleteLinks: Link[];
+} {
+  const { commandId, apply } = body as { commandId?: unknown; apply?: unknown };
+  if (commandId !== undefined && commandId !== null && !str(commandId)) {
+    throw new BatchError('commandId must be a non-empty string', 400);
+  }
+  if (!apply || typeof apply !== 'object' || Array.isArray(apply)) throw new BatchError('apply must be an object', 400);
+  const a = apply as Record<string, unknown>;
+  const kind = a.kind === undefined ? 'addFacts' : String(a.kind);
+  if (!APPLY_KINDS.has(kind)) throw new BatchError(`apply.kind must be one of ${[...APPLY_KINDS].join(', ')}`, 400);
+  const list = <T>(key: string, ok: (x: Record<string, unknown>) => boolean): T[] => {
+    const v = a[key];
+    if (v === undefined) return [];
+    if (!Array.isArray(v)) throw new BatchError(`apply.${key} must be an array`, 400);
+    for (const x of v) {
+      if (!x || typeof x !== 'object' || !ok(x as Record<string, unknown>)) {
+        throw new BatchError(`apply.${key} has a malformed entry`, 400);
+      }
+    }
+    return v as T[];
+  };
+  const isFact = (x: Record<string, unknown>) => typeof x.e === 'string' && typeof x.a === 'string' && 'v' in x;
+  const isLink = (x: Record<string, unknown>) => ['e1', 'a', 'e2'].every((k) => typeof x[k] === 'string');
+  const facts = list<Fact>('facts', isFact);
+  const links = list<Link>('links', isLink);
+  const deleteFacts = list<Fact>('deleteFacts', isFact);
+  const deleteLinks = list<Link>('deleteLinks', isLink);
+  const n = facts.length + links.length + deleteFacts.length + deleteLinks.length;
+  if (n === 0) throw new BatchError('apply is empty', 400);
+  if (n > 5 * MAX_BATCH_ACTIONS) throw new BatchError(`at most ${5 * MAX_BATCH_ACTIONS} entries per apply (got ${n})`, 400);
+  return { commandId: str(commandId) ?? undefined, kind, facts, links, deleteFacts, deleteLinks };
+}

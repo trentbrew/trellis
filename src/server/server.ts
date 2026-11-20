@@ -43,7 +43,7 @@ import { parseSimple } from '../core/query/index.js';
 import { PROVENANCE } from '../core/persist/canonical-op.js';
 import type { MiddlewareContext } from '../core/kernel/middleware.js';
 import { RealtimeFieldError } from '../core/ontology/sync-policy.js';
-import { BatchError, compileBatch, isEmptyBatch, parseBatch } from './batch.js';
+import { BatchError, compileBatch, isEmptyBatch, parseApply, parseBatch } from './batch.js';
 import {
   entityRecordToPlain,
   hydrateBindings,
@@ -602,6 +602,11 @@ async function handleBatch(
     return json({ error: 'body must be JSON' }, 400);
   }
   const kernel = await ctx.pool.preload(tenantId);
+  // `apply`: the caller computed an exact delta (facts and links to add and
+  // delete) and wants it written as one op under a command id (ADR 0065 §3).
+  if (body && typeof body === 'object' && 'apply' in body) {
+    return handleApply(body, auth, tenantId, ctx, kernel);
+  }
   let parsed: ReturnType<typeof parseBatch>;
   let compiled: ReturnType<typeof compileBatch>;
   try {
@@ -655,6 +660,64 @@ async function handleBatch(
       return json({ error: err.message, field: err.field }, 400);
     }
     // Middleware (schema validation) refused the op: nothing was written.
+    return json({ error: err instanceof Error ? err.message : String(err) }, 422);
+  }
+}
+
+/**
+ * `POST /batch { commandId?, apply: { kind?, facts?, links?, deleteFacts?,
+ * deleteLinks? } }`: one op, exactly as given (ADR 0065 §3). For clients that
+ * already hold the delta, like tsh writing a record or undoing a command by
+ * swapping an op's added and deleted lists. Middleware (schema validation)
+ * still runs over the whole op; the entity conveniences of `actions` (stamps,
+ * 409 on existing ids, realtime filtering) don't, because the caller said
+ * exactly what to write. Permissions are checked per touched entity type.
+ */
+async function handleApply(
+  body: object,
+  auth: import('./auth.js').AuthContext,
+  tenantId: string | null,
+  ctx: RouteCtx,
+  kernel: import('../core/kernel/trellis-kernel.js').TrellisKernel,
+): Promise<Response> {
+  let parsed: ReturnType<typeof parseApply>;
+  try {
+    parsed = parseApply(body);
+    const store = kernel.getStore();
+    if (ctx.permissions) {
+      const types = new Map<string, string>();
+      for (const f of [...parsed.facts, ...parsed.deleteFacts]) {
+        if (f.a === 'type' && typeof f.v === 'string') types.set(f.e, f.v);
+        else if (!types.has(f.e)) {
+          const stored = store.getFactsByEntity(f.e).find((x) => x.a === 'type')?.v;
+          if (typeof stored === 'string') types.set(f.e, stored);
+        }
+      }
+      for (const type of new Set(types.values())) ctx.permissions.assert(auth, type, 'update');
+    }
+  } catch (err) {
+    if (err instanceof BatchError) return json({ error: err.message }, err.status);
+    throw err;
+  }
+  const write = httpWriteContext(auth);
+  const provenance = parsed.commandId
+    ? { ...(write.provenance ?? PROVENANCE.http), commandId: parsed.commandId }
+    : write.provenance;
+  try {
+    const result = await kernel.mutate(
+      parsed.kind,
+      {
+        facts: parsed.facts,
+        links: parsed.links.length ? parsed.links : undefined,
+        deleteFacts: parsed.deleteFacts.length ? parsed.deleteFacts : undefined,
+        deleteLinks: parsed.deleteLinks.length ? parsed.deleteLinks : undefined,
+      },
+      { ...write, provenance },
+    );
+    recordGraphIo(ctx, tenantId);
+    await ctx.subs.notify(tenantId);
+    return json({ op: result.op.hash, commandId: parsed.commandId ?? null }, 201);
+  } catch (err) {
     return json({ error: err instanceof Error ? err.message : String(err) }, 422);
   }
 }
@@ -764,12 +827,21 @@ async function handleListOps(
 ): Promise<Response> {
   const kind = url.searchParams.get('kind') ?? undefined;
   const entity = url.searchParams.get('entity') ?? undefined;
+  const commandId = url.searchParams.get('commandId') ?? undefined;
+  const full = url.searchParams.get('full') === '1' || url.searchParams.get('full') === 'true';
   const limit = Math.min(parseInt(url.searchParams.get('limit') ?? '100', 10), 500);
   const offset = parseInt(url.searchParams.get('offset') ?? '0', 10);
 
   const kernel = await ctx.pool.preload(tenantId);
   return json(
-    listKernelOpsFromJournal(kernel.readAllOps(), { kind, entity, limit, offset }),
+    listKernelOpsFromJournal(kernel.readAllOps(), {
+      kind,
+      entity,
+      commandId,
+      full,
+      limit,
+      offset,
+    }),
   );
 }
 

@@ -203,3 +203,47 @@ describe('links in reads (?links=1)', () => {
     expect(list.data[0]!['@links']).toEqual([{ e1: 'person:a', a: 'memberOf', e2: 'org:x' }]);
   });
 });
+
+describe('POST /batch { apply } and GET /ops?full=1 (ADR 0065 §3)', () => {
+  it('writes the exact delta as one op under the command id, and /ops finds it by command id', async () => {
+    await post({ actions: [{ op: 'create', id: 'rec:1', type: 'Rec', attributes: { status: 'todo' } }] });
+    const before = pool.get().readAllOps().length;
+    const res = await post({
+      commandId: 'cmd:apply:1',
+      apply: {
+        facts: [{ e: 'rec:1', a: 'status', v: 'done' }],
+        deleteFacts: [{ e: 'rec:1', a: 'status', v: 'todo' }],
+      },
+    });
+    expect(res.status).toBe(201);
+    expect(pool.get().readAllOps().length).toBe(before + 1);
+    expect(pool.get().getEntity('rec:1')!.facts.filter((f) => f.a === 'status').map((f) => f.v)).toEqual(['done']);
+
+    const ops = (await (await fetch(`${base}/ops?full=1&commandId=cmd:apply:1`)).json()) as {
+      data: { facts: unknown[]; deleteFacts: unknown[]; provenance: { commandId: string } }[];
+      total: number;
+    };
+    expect(ops.total).toBe(1);
+    expect(ops.data[0]!.deleteFacts).toEqual([{ e: 'rec:1', a: 'status', v: 'todo' }]);
+    expect(ops.data[0]!.provenance.commandId).toBe('cmd:apply:1');
+  });
+
+  it('swapping an op\'s lists is its inverse (what undo writes)', async () => {
+    const ops = (await (await fetch(`${base}/ops?full=1&commandId=cmd:apply:1`)).json()) as {
+      data: { facts: unknown[]; deleteFacts: unknown[] }[];
+    };
+    const fwd = ops.data[0]!;
+    const res = await post({ commandId: 'cmd:undo:1', apply: { kind: 'undo', facts: fwd.deleteFacts, deleteFacts: fwd.facts } });
+    expect(res.status).toBe(201);
+    expect(pool.get().getEntity('rec:1')!.facts.filter((f) => f.a === 'status').map((f) => f.v)).toEqual(['todo']);
+  });
+
+  it('refuses malformed or empty applies and unknown kinds; middleware can still refuse', async () => {
+    expect((await post({ apply: {} })).status).toBe(400);
+    expect((await post({ apply: { facts: [{ e: 'x' }] } })).status).toBe(400);
+    expect((await post({ apply: { kind: 'nuke', facts: [{ e: 'x', a: 'a', v: 1 }] } })).status).toBe(400);
+    const res = await post({ apply: { facts: [{ e: 'poison:9', a: 'type', v: 'Thing' }] } });
+    expect(res.status).toBe(422);
+    expect(pool.get().getEntity('poison:9')).toBeNull();
+  });
+});

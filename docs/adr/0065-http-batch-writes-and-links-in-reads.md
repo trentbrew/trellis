@@ -57,3 +57,27 @@ POST /batch
 - **A transaction protocol (begin/commit over several requests).** Rejected: needs server-side session state and timeouts for what one request already expresses.
 - **Raw op upload (`POST /ops` with facts and links).** Rejected for now: it bypasses the entity rules (`createdAt`, realtime filtering, 409 on existing ids, permissions per type) that clients would then reimplement. Sync already has its own path for raw ops.
 - **Links always in reads.** Rejected: changes the JSON every existing client parses, and `@links` can be large for hub entities with many relations.
+
+## Addendum — 2026-11-19: apply a delta; full ops by command id
+
+Host tsh (turtleos) writes collection records and undoes commands through os-sandbox's dispatcher, whose whole write path is one call: write this exact delta (facts and links to add, facts and links to delete) as one op. Undo is that call with an op's two lists swapped, and its conflict check scans later ops for the same entity and attribute. Two additions serve it.
+
+### 3. `POST /batch { apply }`: an exact delta as one op
+
+```http
+POST /batch
+{ "commandId": "cmd:…", "apply": { "kind": "addFacts",   // or addLinks, deleteFacts, deleteLinks, undo, redo
+                                    "facts": [{ "e": "…", "a": "…", "v": … }], "links": [{ "e1": "…", "a": "…", "e2": "…" }],
+                                    "deleteFacts": [ … ], "deleteLinks": [ … ] } }
+→ 201 { "op": "trellis:op:…", "commandId": "…" }
+```
+
+One `mutate()`, so middleware (schema validation) runs over the whole op and nothing is written if it refuses (422). The entity conveniences of `actions` don't apply: no stamps, no 409 on existing ids, no realtime-attribute filtering, because the caller said exactly what to write. Permissions are checked per touched entity type. Up to 5,000 entries; an empty apply or an unknown `kind` is a 400. `apply` and `actions` are separate request shapes.
+
+### 4. `GET /ops?full=1&commandId=…`
+
+`full=1` returns whole ops (`facts`, `links`, `deleteFacts`, `deleteLinks`, `provenance`, `previousHash`) instead of summaries, so a client can invert an op and look for later ops that touch the same attributes. `commandId` keeps ops whose `provenance.commandId` matches (ADR 0058). Both compose with the existing `kind`, `entity`, `limit` and `offset` filters.
+
+### Why the log is enough for undo
+
+`/batch` writes the net difference, so an op already holds the old values it replaced (`deleteFacts`) and the new ones (`facts`). Undo needs nothing stored beside it: it writes `apply` with the lists swapped, under its own command id, after checking that nothing later touched the same entity and attribute.
